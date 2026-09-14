@@ -27,7 +27,29 @@ import java.util.Optional;
 import java.util.Set;
 
 public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEntity> implements ITaskRequiresGrounded {
-    private static final Task getPickaxeFirstTask = new SatisfyMiningRequirementTask(MiningRequirement.STONE);
+    // ⛔ THE PICKAXE FETCHED FOR A DROP MUST NOT BE MADE FROM THAT DROP (G89, round 46,
+    // 2026-09-14). This asked for a STONE pickaxe, and a stone pickaxe is three cobblestone --
+    // the very item the pickup was after. The 16:24 recording: the bot's wooden pickaxe lay lost,
+    // its cobblestone in a pocket two blocks down behind dirt, and the chain closed on itself for
+    // seven minutes: "Pickup cobblestone x3 -> Collecting pickaxe first -> Satisfy Mining Req:
+    // STONE -> craft a stone pickaxe -> Collect cobblestone x3 -> Pickup Dropped Items -> Getting
+    // to drop cobblestone" -- the operator watching it stare at a dirt wall. A drop behind rock
+    // needs SOME pickaxe, and a wooden one (planks and sticks, which the pack held) digs stone;
+    // a player makes that one. WOOD is the requirement, and a drop that feeds the wooden
+    // pickaxe's own recipe (logs, planks, sticks) gets no diversion at all.
+    private static final Task getPickaxeFirstTask = new SatisfyMiningRequirementTask(MiningRequirement.WOOD);
+    /** G89: diversions into a wooden pickaxe, and diversions skipped because the drop would have fed the recipe. */
+    public static volatile int puWoodFirst, puFeedsSkipped;
+
+    /** G89: would fetching a wooden pickaxe need the very item this drop is? */
+    private static boolean dropFeedsThePickaxe(ItemEntity drop) {
+        if (drop == null || drop.getStack().isEmpty()) return false;
+        Item it = drop.getStack().getItem();
+        if (it == net.minecraft.item.Items.STICK) return true;
+        for (Item p : adris.altoclef.util.helpers.ItemHelper.PLANKS) if (p == it) return true;
+        for (Item l : adris.altoclef.util.helpers.ItemHelper.LOG) if (l == it) return true;
+        return false;
+    }
     // Not clean practice, but it helps keep things self contained I think.
     private static boolean isGettingPickaxeFirstFlag = false;
     private final TimeoutWanderTask wanderTask = new TimeoutWanderTask(5, true);
@@ -247,14 +269,14 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
             puTrace++;
             Debug.logMessage("PICKUPDEC gettingPickaxeFirst=" + isIsGettingPickaxeFirst(mod)
                     + " forThisResource=" + _collectingPickaxeForThisResource
-                    + " stoneMet=" + StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE));
+                    + " woodMet=" + StorageHelper.miningRequirementMetInventory(MiningRequirement.WOOD));
         }
-        if (isIsGettingPickaxeFirst(mod) && _collectingPickaxeForThisResource && !StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE)) {
+        if (isIsGettingPickaxeFirst(mod) && _collectingPickaxeForThisResource && !StorageHelper.miningRequirementMetInventory(MiningRequirement.WOOD)) {
             progressChecker.reset();
-            setDebugState("Collecting pickaxe first");
+            setDebugState("Collecting a wooden pickaxe first");
             return getPickaxeFirstTask;
         } else {
-            if (StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE)) {
+            if (StorageHelper.miningRequirementMetInventory(MiningRequirement.WOOD)) {
                 isGettingPickaxeFirstFlag = false;
             }
             _collectingPickaxeForThisResource = false;
@@ -396,11 +418,19 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
             }
             if (_currentDrop != null && !_currentDrop.getStack().isEmpty()) {
                 // We might want to get a pickaxe first.
-                if (!isGettingPickaxeFirstFlag && mod.getModSettings().shouldCollectPickaxeFirst() && !StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE)) {
-                    Debug.logMessage("Failed to pick up drop, will try to collect a stone pickaxe first and try again!");
-                    _collectingPickaxeForThisResource = true;
-                    isGettingPickaxeFirstFlag = true;
-                    return getPickaxeFirstTask;
+                if (!isGettingPickaxeFirstFlag && mod.getModSettings().shouldCollectPickaxeFirst()
+                        && !StorageHelper.miningRequirementMetInventory(MiningRequirement.WOOD)) {
+                    if (dropFeedsThePickaxe(_currentDrop)) {
+                        // G89: a wooden pickaxe is made of this very drop -- no diversion, the drop
+                        // stays the target and is judged on its own (unreachable below).
+                        puFeedsSkipped++;
+                    } else {
+                        Debug.logMessage("Failed to pick up drop, will try to collect a wooden pickaxe first and try again!");
+                        puWoodFirst++;
+                        _collectingPickaxeForThisResource = true;
+                        isGettingPickaxeFirstFlag = true;
+                        return getPickaxeFirstTask;
+                    }
                 }
                 Debug.logMessage(StlHelper.toString(_blacklist, element -> element == null ? "(null)" : element.getStack().getItem().getTranslationKey()));
                 Debug.logMessage("Failed to pick up drop, suggesting it's unreachable.");

@@ -956,6 +956,23 @@ armed cell no longer satisfies the goal's own arrival test (`goalLeft` counter).
 `drop_fall_test.py` (a cobblestone on the lid of a three-deep shaft; the lid is pulled a second
 after the task starts).
 
+**G89. The pickaxe fetched for a drop must not be made from that drop.** Round 46 stood seven
+minutes at a dirt wall (the operator: "staring at a wall of dirt for ten minutes, the items lying a
+block away"). Its wooden pickaxe was lost (a drop in its own cell, never picked up — open), its
+cobblestone lay in a pocket two blocks down behind dirt, and `PickupDroppedItemTask`'s "pickaxe
+first" diversion asked for a **stone** pickaxe — three cobblestone, the item being picked up — so
+the chain closed on itself: "Pickup cobblestone x3 → Collecting pickaxe first → Satisfy Mining Req:
+STONE → craft a stone pickaxe → Collect cobblestone x3 → Pickup Dropped Items → Getting to drop
+cobblestone". The "arrived (2.3)" in the log was another route's arrival (adjacent on the block
+under the feet, which "failed to break" and was avoided for a minute); the pocket itself is
+diggable in ten seconds with any pickaxe (`pocket_drop_test.py` PASS x2). A player makes a wooden
+pickaxe from the planks and sticks in the pack and digs. The diversion now asks for WOOD, and a
+drop that feeds the wooden pickaxe's own recipe (logs, planks, sticks) gets no diversion.
+Counters `puPick=woodFirst/feedsSkipped`. Bench: `pocket_drop_test.py --nopick` (planks, sticks and
+a table, no pickaxe). Open from the same stand: how the wooden pickaxe became a drop (18 throws
+in the run, BeatMinecraftTask:389; 33 clicks on the pickaxe's slot dropped by a four-second
+muzzle mid-swap), and why a drop in the bot's own cell was not picked up.
+
 **G83. One click gets one verdict; a muzzle dies with the body that earned it.** Round 42 stood
 from 22:48 to 22:57 with a log in hotbar slot 38 and the plank craft asking for it — "mv=4706/
 3754/952/0/0", 952 pick-ups asked, none delivered, no line in the log — and walked again at
