@@ -233,6 +233,8 @@ public class InteractWithBlockTask extends Task {
      * Read as iw=cantReach/waiting/clicked/wanderFallback.
      */
     public static volatile int iwCantReach, iwWaiting, iwClicked, iwWanderFallback;
+    /** G84: stalls declared to the blacklist ("Failed, blacklisting and wandering"), one per stall. */
+    public static volatile int iwStallFailed;
 
     @Override
     protected Task onTick() {
@@ -301,6 +303,15 @@ public class InteractWithBlockTask extends Task {
         if (!moveChecker.check(mod)) {
             Debug.logMessage("Failed, blacklisting and wandering.");
             mod.getBlockScanner().requestBlockUnreachable(target);
+            // ⛔ ONE STALL IS ONE FAILURE (G84, 2026-09-13). The 22:39 recording: "Failed,
+            // blacklisting and wandering" three times in the same second, "Costing 96,105,-109:
+            // attempt 1 / 4", "2 / 4", "3 / 4" -- the crafting table three quarters of the way to
+            // its ban from ONE stand under a carpet, because a checker that has failed keeps
+            // failing on every tick until something resets it, and the wander that resets it did
+            // not take the body on the next tick. Reset it here: the next failure needs a fresh
+            // window of no progress, as the blacklist's "attempt" is meant to count.
+            moveChecker.reset();
+            iwStallFailed++;
             return wanderTask;
         }
 

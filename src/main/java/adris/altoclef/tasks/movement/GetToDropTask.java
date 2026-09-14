@@ -46,8 +46,11 @@ public class GetToDropTask extends CustomBaritoneGoalTask implements ITaskRequir
     private static final double SETTLED_SPEED_SQ = 0.0025;
 
     private final ItemEntity drop;
-    /** The cell the drop rested in when the task was built; settled drops do not move. */
-    private final BlockPos cell;
+    /** The cell the drop last rested in. Settled drops do move after all (G88): the block under
+     *  one gets mined, water or a blast shoves it, and the cell has to follow it. */
+    private BlockPos cell;
+    /** G88: drops that settled in a new cell while a task was on their old one. */
+    public static volatile int dropMoved;
 
     public GetToDropTask(ItemEntity drop) {
         this.drop = drop;
@@ -62,6 +65,21 @@ public class GetToDropTask extends CustomBaritoneGoalTask implements ITaskRequir
 
     @Override
     protected Task onTick() {
+        // ⛔ A SETTLED DROP THAT SETTLES AGAIN SOMEWHERE ELSE IS A NEW PLACE (G88, round 44,
+        // 2026-09-14). The cobblestone the bot had just mined fell three blocks into a one-wide
+        // shaft beside it; this task kept the cell it was built with, the drive stood in that
+        // cell ("atGoal=146 ... @GetToDropTask@block(-342,77,-548) x61") and the pickup timed
+        // out on the same drop eleven times in seven minutes. The cell follows the drop the
+        // moment it rests again; the goal is rebuilt, and the armed route re-planned (G88 in
+        // the drive) toward where it now lies.
+        if (settled(drop)) {
+            BlockPos now = drop.getBlockPos();
+            if (!now.equals(cell)) {
+                cell = now;
+                dropMoved++;
+                resetGoal();
+            }
+        }
         if (driveTungstenPrimary(AltoClef.getInstance())) return null;
         return super.onTick();
     }

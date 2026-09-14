@@ -75,13 +75,81 @@ public class SlotHandler {
     private final TimerGame slotActionTimer = new TimerGame(0);
     private boolean overrideTimerOnce = false;
 
-    private record PendingSlotAction(long timeMs, int syncId, int windowSlot, ItemStack before) {}
+    /** {@code alone}: no other click was in flight when this one went out (G83b). */
+    private record PendingSlotAction(long timeMs, int syncId, int windowSlot, ItemStack before, boolean alone) {}
     private final Deque<PendingSlotAction> _pendingSlotActions = new ArrayDeque<>();
 
     private record BlacklistKey(int syncId, int windowSlot) {}
     private final Map<BlacklistKey, Long> _slotBlacklist = new HashMap<>();
     private final Map<BlacklistKey, Integer> _slotCancelCount = new HashMap<>();
     private static final long SLOT_BLACKLIST_MS = 4000;
+
+    // ── G83 (2026-09-13): a muzzle is earned one click at a time, and dies with its cause ──
+    //
+    // ⛔ ONE CLICK CLIMBED THE WHOLE LADDER. Round 42, 22:47:19: "Server cancelled slot action:
+    // window slot 38 (flint x1) — blacklisting for 4s (cancel #1)" -- and nothing more in the
+    // log, yet the bot stood from 22:48 to 22:57 with a log in that slot and the plank craft
+    // asking for it (mv=4706/3754/952/0/0: 952 pick-ups asked, none delivered), and walked
+    // again at 22:57:23, six hundred seconds after the muzzle. The pending action was never
+    // consumed by its verdict: every further server packet for that slot inside 600 ms -- a
+    // full inventory sync carries every slot -- matched the SAME click again, "cancel #2",
+    // "cancel #3", 4 s -> 30 s -> 600 s in one burst, printed once because the slot was
+    // "already blocked". Then a death, a new body, a log in the muzzled slot, ten minutes of
+    // silence. Three rules now: a click gets ONE verdict (the pending action is removed when
+    // it is judged); the ladder only climbs on cancels within a minute of each other (a slot
+    // the server truly refuses still reaches the ten-minute muzzle in half a minute, a
+    // one-off revert decays); and the muzzles belong to the body that earned them -- a new
+    // ClientPlayerEntity (respawn, dimension change) starts with none. And a dropped click is
+    // COUNTED and SAID, once every five seconds, so the next silent stand names its slot.
+    /** Clicks dropped by a muzzle; ladders restarted because the last cancel was over a
+     *  minute old; muzzle sets cleared with a new body; the slot a click was last dropped on. */
+    public static volatile int shBanDropped, shBanDecayed, shBanClearedOnRespawn;
+    /** G83b: "reverts" not judged because other clicks were in flight when the packet came. */
+    public static volatile int shBanUnattributed;
+    public static volatile int shBanDropSlot = -1;
+    private final Map<BlacklistKey, Long> _slotCancelAt = new HashMap<>();
+    private static final long CANCEL_LADDER_MS = 60_000L;
+    private long banDropLogMs;
+    private ClientPlayerEntity bansOwner;
+
+    /** The muzzles belong to one body; a new one (respawn) starts clean. */
+    private void adoptBody(ClientPlayerEntity player) {
+        if (bansOwner == player) return;
+        if (!_slotBlacklist.isEmpty() || !_slotCancelCount.isEmpty()) shBanClearedOnRespawn++;
+        _slotBlacklist.clear();
+        _slotCancelCount.clear();
+        _slotCancelAt.clear();
+        _pendingSlotActions.clear();
+        bansOwner = player;
+    }
+
+    /**
+     * G83 bench hook: one click on {@code windowSlot} followed by {@code packets} server updates
+     * that all carry the pre-click stack -- the burst a full inventory sync produces. Returns
+     * the muzzle this left on the slot, in ms (0 = none; negative = no body / no such slot).
+     * Client thread only.
+     */
+    public long debugRevertBurst(int windowSlot, int packets) {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null) return -1;
+        if (windowSlot < 0 || windowSlot >= player.currentScreenHandler.slots.size()) return -2;
+        adoptBody(player);
+        int syncId = player.currentScreenHandler.syncId;
+        ItemStack before = player.currentScreenHandler.getSlot(windowSlot).getStack().copy();
+        long now = System.currentTimeMillis();
+        _pendingSlotActions.removeIf(a -> now - a.timeMs() > 600);
+        _pendingSlotActions.add(new PendingSlotAction(now, syncId, windowSlot, before, _pendingSlotActions.isEmpty()));
+        for (int i = 0; i < packets; i++) onServerSlotUpdate(syncId, windowSlot, before.copy());
+        return banRemainingMs(windowSlot);
+    }
+
+    /** How much longer clicks on {@code windowSlot} of the current screen are dropped (ms). */
+    public long banRemainingMs(int windowSlot) {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null) return -1;
+        Long exp = _slotBlacklist.get(new BlacklistKey(player.currentScreenHandler.syncId, windowSlot));
+        return exp == null ? 0 : Math.max(0, exp - System.currentTimeMillis());
+    }
 
     public SlotHandler(AltoClef mod) {
         this.mod = mod;
@@ -229,11 +297,22 @@ public class SlotHandler {
         }
         registerSlotAction();
         int syncId = player.currentScreenHandler.syncId;
+        adoptBody(player);
 
-        // Check blacklist before clicking
+        // Check blacklist before clicking -- and say so (G83): a click that vanishes here looks
+        // exactly like a click that landed and did nothing, and round 42 stood eight minutes on it.
         BlacklistKey blKey = new BlacklistKey(syncId, windowSlot);
         Long blExpiry = _slotBlacklist.get(blKey);
         if (blExpiry != null && System.currentTimeMillis() < blExpiry) {
+            shBanDropped++;
+            shBanDropSlot = windowSlot;
+            long now = System.currentTimeMillis();
+            if (now - banDropLogMs > 5000) {
+                banDropLogMs = now;
+                Debug.logMessage(String.format(
+                        "SlotHandler: window slot %d is muzzled for %.0fs more (cancel #%d) — dropping clicks on it",
+                        windowSlot, (blExpiry - now) / 1000.0, _slotCancelCount.getOrDefault(blKey, 0)));
+            }
             return;
         }
 
@@ -245,7 +324,8 @@ public class SlotHandler {
                 ItemStack before = player.currentScreenHandler.getSlot(windowSlot).getStack().copy();
                 long now = System.currentTimeMillis();
                 _pendingSlotActions.removeIf(a -> now - a.timeMs() > 600);
-                _pendingSlotActions.add(new PendingSlotAction(now, syncId, windowSlot, before));
+                boolean alone = _pendingSlotActions.isEmpty();
+                _pendingSlotActions.add(new PendingSlotAction(now, syncId, windowSlot, before, alone));
             }
         } catch (Exception ignored) {}
 
@@ -275,34 +355,69 @@ public class SlotHandler {
                 return;
             }
         } catch (Exception ignored) {}
-        for (PendingSlotAction action : _pendingSlotActions) {
-            if (now - action.timeMs() > 600) continue;
-            if (action.syncId() == syncId && action.windowSlot() == slot
-                    && !action.before().isEmpty()
-                    && ItemStack.areEqual(serverStack, action.before())) {
-                BlacklistKey key = new BlacklistKey(syncId, slot);
-                boolean alreadyBlocked = _slotBlacklist.containsKey(key)
-                        && now < _slotBlacklist.get(key);
-                // ESCALATING blacklist (operator/dev 2026-06-21, fdmc.pw anti-cheat): a slot the server
-                // keeps REVERTING is protected/locked (e.g. hub "menu" hotbar items: compass/feather/dye
-                // on anti-cheat servers). Re-clicking it every 4s forever spams "Server cancelled slot
-                // action" and gets the bot anti-cheat-KICKED. So the more times it's cancelled, the LONGER
-                // we give up on it: 4s -> 30s -> 10min. Normal inventory slots are ~never cancelled, so
-                // they never escalate; this only muzzles slots the server actively refuses.
-                // WHICH SLOTS GET MUZZLED? Reading says a crafting OUTPUT looks identical to a
-                // cancellation when it refills with the same stack, and the escalation would then
-                // silence it for ten minutes. Record the slot so that stops being a reading.
-                shBlacklisted++;
-                shLastBlacklistedSlot = slot;
-                int cancels = _slotCancelCount.merge(key, 1, Integer::sum);
-                long blacklistMs = cancels >= 3 ? 600_000L : (cancels == 2 ? 30_000L : SLOT_BLACKLIST_MS);
-                _slotBlacklist.put(key, now + blacklistMs);
-                if (!alreadyBlocked) {
-                    Debug.logMessage("[WARN] Server cancelled slot action: window slot " + slot
-                            + " (" + serverStack.getItem().getTranslationKey()
-                            + " x" + serverStack.getCount()
-                            + ") — blacklisting for " + (blacklistMs / 1000) + "s (cancel #" + cancels + ")");
-                }
+        java.util.Iterator<PendingSlotAction> it = _pendingSlotActions.iterator();
+        while (it.hasNext()) {
+            PendingSlotAction action = it.next();
+            if (now - action.timeMs() > 600) { it.remove(); continue; }
+            if (action.syncId() != syncId || action.windowSlot() != slot) continue;
+            // ONE CLICK, ONE VERDICT (G83): whatever this packet says about the click, the click
+            // has been judged. Left in the deque, the same click was re-judged by every packet
+            // for its slot inside 600 ms -- a full inventory sync is one packet per slot -- and
+            // climbed the ladder below to ten minutes in a single burst.
+            it.remove();
+            if (action.before().isEmpty() || !ItemStack.areEqual(serverStack, action.before())) {
+                continue;   // the click landed (the slot changed): not a cancellation
+            }
+            // ⛔ A VERDICT NEEDS THE CLICK TO HAVE BEEN ALONE IN FLIGHT (G83b, round 43). "window
+            // slot 37 is muzzled for 569s more (cancel #6)" -- the stone pickaxe's slot, six
+            // "cancels" inside a minute, each one the tool-swap's three clicks in one tick, and
+            // three slots "cancelled" in the same second twice during a craft. The server answers
+            // a click whose revision does not match with a FULL sync of the state after THAT click
+            // -- in which the slots of the clicks still queued behind it are, correctly, untouched,
+            // and equal to their "before". Read as a revert, that is a lie: the server had not seen
+            // those clicks yet. A packet can only judge a click that had no company: the hub-menu
+            // slot the ladder was built for is clicked once and reverted once, and still counts.
+            int others = 0;
+            for (PendingSlotAction o : _pendingSlotActions) if (now - o.timeMs() <= 600) others++;
+            if (!action.alone() || others > 0) {
+                shBanUnattributed++;
+                continue;
+            }
+            BlacklistKey key = new BlacklistKey(syncId, slot);
+            boolean alreadyBlocked = _slotBlacklist.containsKey(key)
+                    && now < _slotBlacklist.get(key);
+            // ESCALATING blacklist (operator/dev 2026-06-21, fdmc.pw anti-cheat): a slot the server
+            // keeps REVERTING is protected/locked (e.g. hub "menu" hotbar items: compass/feather/dye
+            // on anti-cheat servers). Re-clicking it every 4s forever spams "Server cancelled slot
+            // action" and gets the bot anti-cheat-KICKED. So the more times it's cancelled, the LONGER
+            // we give up on it: 4s -> 30s -> 10min. Normal inventory slots are ~never cancelled, so
+            // they never escalate; this only muzzles slots the server actively refuses.
+            // WHICH SLOTS GET MUZZLED? Reading says a crafting OUTPUT looks identical to a
+            // cancellation when it refills with the same stack, and the escalation would then
+            // silence it for ten minutes. Record the slot so that stops being a reading.
+            // THE LADDER DECAYS (G83): a cancel more than a minute after the previous one starts
+            // the count over. The hub-menu slot the ladder was built for is refused on every
+            // click and still reaches ten minutes in thirty-four seconds; a slot reverted once
+            // in a run no longer carries that first step for the rest of the session.
+            shBlacklisted++;
+            shLastBlacklistedSlot = slot;
+            Long lastCancel = _slotCancelAt.get(key);
+            int cancels;
+            if (lastCancel != null && now - lastCancel > CANCEL_LADDER_MS) {
+                shBanDecayed++;
+                cancels = 1;
+            } else {
+                cancels = _slotCancelCount.getOrDefault(key, 0) + 1;
+            }
+            _slotCancelCount.put(key, cancels);
+            _slotCancelAt.put(key, now);
+            long blacklistMs = cancels >= 3 ? 600_000L : (cancels == 2 ? 30_000L : SLOT_BLACKLIST_MS);
+            _slotBlacklist.put(key, now + blacklistMs);
+            if (!alreadyBlocked) {
+                Debug.logMessage("[WARN] Server cancelled slot action: window slot " + slot
+                        + " (" + serverStack.getItem().getTranslationKey()
+                        + " x" + serverStack.getCount()
+                        + ") — blacklisting for " + (blacklistMs / 1000) + "s (cancel #" + cancels + ")");
             }
         }
     }

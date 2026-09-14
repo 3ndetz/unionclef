@@ -29,8 +29,22 @@ public class PillarTask {
     private static int climbGoalY;   // the FINAL height this climb is heading to (for the visual);
                                      // the tower is built in chunks, but the whole column is drawn.
     private static int placed;
-    private static int stuckTicks;
+    /** Ticks since the body last RESTED a rung higher (G82); NaN lastY = it has not rested yet. */
+    private static int sinceRung;
     private static double lastY;
+    /**
+     * ⛔ A TOWER WITH NO RUNG IN FIVE SECONDS HAS FAILED (G82, 2026-09-13). The old test was
+     * "the height has not changed by 0.02 for eighty ticks" -- and a HOPPING body never holds
+     * still, so a tower that could not place (a carpet under the feet, 22:39 recording) hopped
+     * for 488 airborne ticks before the verdict came, three times over, while the column's
+     * refusal memory (G62, sixty seconds) expired between towers. Baritone bounds every
+     * movement by its cost plus {@code movementTimeoutTicks} (100) and cancels the path; a
+     * rung costs about twenty ticks, so a hundred ticks without one is that bound here.
+     */
+    private static final int RUNG_TIMEOUT_TICKS = 100;
+    /** G82: towers stopped for want of a rung, and towers refused at once because the feet
+     *  stood inside a thin block (carpet, snow layers) that vanilla will not place into. */
+    public static volatile int pillarNoRung, pillarThinFeet;
     /** Ticks spent walking the body to the middle of its cell before the first jump (G42). */
     private static int centerTicks;
     private static final double CENTER_TOL = 0.2;
@@ -105,14 +119,16 @@ public class PillarTask {
         targetY = ty;
         climbGoalY = ty;
         placed = 0;
-        stuckTicks = 0;
+        sinceRung = 0;
         centerTicks = 0;
         dAir = dPlaceAt = dReadyNull = dTryFalse = dPlaced = dInsideCell = dJumpStolen = 0;
         jumpAsked = false;
         dApex = -1e9;
         dLastPlaceAt = null;
         climbingLastTick = false;
-        lastY = p.getY();
+        // The first rung is measured from where the body first RESTS: a task started mid-hop
+        // would otherwise demand a rung half a block above the apex.
+        lastY = p.isOnGround() ? p.getY() : Double.NaN;
         active = true;
         Debug.logMessage("Pillaring up to y=" + ty);
         return true;
@@ -178,6 +194,29 @@ public class PillarTask {
             return;
         }
 
+        // ⛔ NO TOWER STARTS FROM INSIDE A CARPET (G82, 2026-09-13). The feet cell holding a
+        // non-air, non-replaceable block with a collision box -- a carpet, two or more snow
+        // layers -- is a cell vanilla will not place into: the click lands on the block's top
+        // face, the cobblestone goes to the cell above, and the body is in the way (22:39
+        // recording: 488 airborne ticks, placeAt=0). The navigator clears such a cell before it
+        // asks for a tower (FastNavigator, G82); any other caller gets the refusal at once,
+        // with the column remembered, instead of the hop. A climbable cell is the ladder
+        // branch (G66) and is not this.
+        if (player.isOnGround() && !player.isClimbing()) {
+            int fy = net.minecraft.util.math.MathHelper.floor(player.getY());
+            BlockPos col = supportedColumnUnder(player, world);
+            if (col == null) col = BlockPos.ofFloored(player.getX(), fy, player.getZ());
+            var fst = world.getBlockState(col);
+            if (!fst.isAir() && !fst.isReplaceable() && !isAir(world, col)) {
+                Debug.logMessage("Pillar refused: the feet stand in " + fst.getBlock() + " at "
+                        + col.toShortString() + " — a tower cannot start from inside it (clear it first)");
+                pillarThinFeet++;
+                noteRefusal(col);
+                stop();
+                return;
+            }
+        }
+
         // Same re-equip as BridgeTask: a tower that stops halfway because one stack ended is
         // not a tower. One policy, one place — helpers/BlockPlaceHelper.equipThrowaway.
         if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.equipThrowaway(player)) {
@@ -237,6 +276,7 @@ public class PillarTask {
                 opts.sprintKey.setPressed(false);
                 opts.jumpKey.setPressed(false);
                 lastY = player.getY();   // centring is not a stuck tower
+                sinceRung = 0;
                 return;
             }
             if (centerTicks >= CENTER_TICKS_MAX && centerTicks < CENTER_TICKS_MAX + 1) {
@@ -341,43 +381,46 @@ public class PillarTask {
             }
         }
 
-        // Progress / stuck detection on Y.
-        if (player.getY() - lastY > 0.5) {
+        // Progress: a RUNG is the body RESTING higher than it last rested -- on the ground, or on
+        // a climbable it is going up (G66). A hop's apex is not a rung (G82): the old test
+        // credited "y rose by 0.5" from mid-air and then could not see a hopping body as stuck.
+        boolean resting = player.isOnGround() || climbing;
+        if (resting && Double.isNaN(lastY)) lastY = player.getY();
+        if (resting && player.getY() - lastY > 0.5) {
             placed++;
             lastY = player.getY();
-            stuckTicks = 0;
-        } else if (Math.abs(player.getY() - lastY) < 0.02) {
-            if (++stuckTicks > 80) { // ~4s no vertical progress
-                // SAY WHY, NOT JUST THAT. A tower that places nothing has one of four reasons --
-                // never airborne, no cell to place into, the crosshair not on the support's top
-                // face, or the click refused -- and "stuck" alone named none of them (canopy_drop
-                // and pit_escape, 2026-09-11: 0 placed, 16 restarts, no idea which).
-                String hitS = "-";
-                try {
-                    var lh = kaptainwutax.tungsten.path.movements.RotationHelper.liveHit(player);
-                    if (lh instanceof BlockHitResult bh) {
-                        hitS = bh.getBlockPos().toShortString() + "/" + String.valueOf(bh.getSide());
-                    } else if (lh != null) {
-                        hitS = lh.getType().name();
-                    }
-                } catch (Throwable ignored) {
-                    // a diagnostic never breaks the tick it rides on
+            sinceRung = 0;
+        } else if (++sinceRung > RUNG_TIMEOUT_TICKS) {
+            // SAY WHY, NOT JUST THAT. A tower that places nothing has one of four reasons --
+            // never airborne, no cell to place into, the crosshair not on the support's top
+            // face, or the click refused -- and "stuck" alone named none of them (canopy_drop
+            // and pit_escape, 2026-09-11: 0 placed, 16 restarts, no idea which).
+            String hitS = "-";
+            try {
+                var lh = kaptainwutax.tungsten.path.movements.RotationHelper.liveHit(player);
+                if (lh instanceof BlockHitResult bh) {
+                    hitS = bh.getBlockPos().toShortString() + "/" + String.valueOf(bh.getSide());
+                } else if (lh != null) {
+                    hitS = lh.getType().name();
                 }
-                Debug.logMessage(String.format(
-                        "Pillar stuck at y=%.1f  air=%d insideCell=%d placeAt=%d readyNull=%d tryFalse=%d placed=%d"
-                        + " pitch=%.0f onGround=%b hit=%s lastPlaceAt=%s hand=%s center=%d/%d at=(%.2f,%.2f)"
-                        + " apex=%.2f jumpStolen=%d",
-                        player.getY(), dAir, dInsideCell, dPlaceAt, dReadyNull, dTryFalse, dPlaced,
-                        player.getPitch(), player.isOnGround(), hitS,
-                        dLastPlaceAt == null ? "-" : dLastPlaceAt.toShortString(),
-                        player.getMainHandStack().getItem().toString(),
-                        centerTicks, CENTER_TICKS_MAX, player.getX(), player.getZ(), dApex,
-                        dJumpStolen));
-                if (dPlaced == 0) {
-                    noteRefusal(supportedColumnUnder(player, world));
-                }
-                stop();
+            } catch (Throwable ignored) {
+                // a diagnostic never breaks the tick it rides on
             }
+            Debug.logMessage(String.format(
+                    "Pillar stuck at y=%.1f (no rung in %d ticks) air=%d insideCell=%d placeAt=%d readyNull=%d tryFalse=%d placed=%d"
+                    + " pitch=%.0f onGround=%b hit=%s lastPlaceAt=%s hand=%s center=%d/%d at=(%.2f,%.2f)"
+                    + " apex=%.2f jumpStolen=%d",
+                    player.getY(), sinceRung, dAir, dInsideCell, dPlaceAt, dReadyNull, dTryFalse, dPlaced,
+                    player.getPitch(), player.isOnGround(), hitS,
+                    dLastPlaceAt == null ? "-" : dLastPlaceAt.toShortString(),
+                    player.getMainHandStack().getItem().toString(),
+                    centerTicks, CENTER_TICKS_MAX, player.getX(), player.getZ(), dApex,
+                    dJumpStolen));
+            pillarNoRung++;
+            if (dPlaced == 0) {
+                noteRefusal(supportedColumnUnder(player, world));
+            }
+            stop();
         }
     }
 

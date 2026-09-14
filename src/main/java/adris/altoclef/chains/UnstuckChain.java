@@ -405,8 +405,10 @@ public class UnstuckChain extends SingleTaskChain {
                 return;
             }
             consecutiveStuckDetections++;
-            // Exponential backoff: 30s → 60s → 120s max 120s
-            int cooldownSec = Math.min(30 << (consecutiveStuckDetections - 1), 120);
+            // Exponential backoff: 30s → 60s → 120s max 120s. The shift is capped (G85): at the
+            // 28th detection `30 << 27` wrapped negative, min() took the negative, and the round-42
+            // log read "cooldown=-268435456s" with the shimmy firing every ten seconds.
+            int cooldownSec = consecutiveStuckDetections >= 3 ? 120 : 30 << (consecutiveStuckDetections - 1);
             stuckCooldown = new TimerGame(cooldownSec);
             // G81: name what the drive was doing when the body stopped -- the 00:38 run stood eight
             // minutes with this line forty-six times and NOTHING else in the log, the drive's own

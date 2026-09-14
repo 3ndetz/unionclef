@@ -1522,26 +1522,86 @@ public final class FastPlanner {
         // Room for the body one block higher, and nothing already occupying our own cell.
         if (!PlayerFit.bodyFits(world, from.x + 0.5, upY, from.z + 0.5)) return;
         BlockPos feet = new BlockPos(from.x, from.y, from.z);
-        if (!world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()) return;
         // We must be standing on something to jump off in the first place — including the
         // block the previous pillar step of this same route placed, without which a tower is
         // capped at a single block for exactly the reason a bridge was.
         scratch.set(from.x, from.y, from.z);
-        if (Double.isNaN(PlayerFit.supportTop(world, scratch))
-                && !branchPlaced(from, from.x, from.y - 1, from.z)) return;
+        double support = PlayerFit.supportTop(world, scratch);
+        // A block THIS ROUTE placed under the feet is a full cube the world does not hold yet:
+        // the body will stand on its top, at the cell's base. Without this the second step of
+        // every tower read the WORLD's support -- the carpet a block below -- and the rule under
+        // it refused the step (carpet_tower, round 43: planPillarIn=19/19, one-block towers only).
+        if (branchPlaced(from, from.x, from.y - 1, from.z)) support = from.y;
+        if (Double.isNaN(support)) return;
+        // ⛔ A TOWER IS BUILT FROM THE BASE OF ITS CELL, NOT FROM INSIDE THE CELL BELOW (G82,
+        // 2026-09-13). The 22:39 recording: the bot on a MOSS CARPET in a lush cave, feet at
+        // 91.06, "Wall too high to jump — pillaring to y=93", and then twenty-four seconds of
+        // hopping per tower, three towers, nothing placed. supportTop() answers 91.06 for BOTH
+        // the carpet's own cell (91) and the cell above it (92), so this generator saw a node
+        // at y=92 whose feet cell was air and planned "place a block at 92 under yourself" --
+        // a block the body would have to clear by rising above 93.05 from 91.06, 0.7 beyond a
+        // jump. A body that stands more than a fifth of a block below its cell's base is
+        // inside the cell below, and no tower starts from there. Baritone's MovementPillar
+        // refuses the same stance for a bottom slab (MovementPillar.java:156-158); this is that
+        // rule for every thin floor -- carpet, snow layers, lily pad, slab -- at once.
+        if (!Double.isNaN(support) && support < from.y - TOWER_SUPPORT_TOL) {
+            planPillarInsideRefused++;
+            return;
+        }
+        // ⛔ AND THE FEET CELL IS AIR, OR IT IS CLEARED FIRST (G82). The carpet's own node (91)
+        // is the honest stance -- the body does stand there -- but the cell holds the carpet,
+        // and vanilla will not put a cobblestone INTO a carpet: the click lands on its top
+        // face, the block goes to 92, the body is in the way. Baritone's MovementPillar breaks
+        // whatever non-air, non-replaceable block is in the source cell before it jumps
+        // (MovementPillar.updateState: "!(fr instanceof AirBlock || canBeReplaced) -> CLICK_LEFT").
+        // Price that break here and list the cell, so the route is honest about the dig; the
+        // navigator's hand-off mines it before PillarTask starts (FastNavigator, G82).
+        net.minecraft.block.BlockState feetSt = cachedState(world, from.x, from.y, from.z, scratch);
+        List<BlockPos> clear = null;
+        double clearTicks = 0;
+        if (!feetSt.getCollisionShape(world, feet).isEmpty()) {
+            // Only a THIN block the body stands IN (carpet, snow layers, a lily pad) is cleared
+            // for a tower. A full or tall block in the feet cell is a wall: a node inside one is
+            // a dig's destination whose break the dig already priced, and round 43 relaxed a
+            // clear-first tower from every such cell (planPillarIn=0/74009 on one playthrough).
+            if (feetSt.getCollisionShape(world, feet)
+                    .getMax(net.minecraft.util.math.Direction.Axis.Y) > 0.5) return;
+            if (!feetSt.isReplaceable()) {
+                if (!TungstenConfig.get().allowBreak) return;
+                net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
+                if (player == null) return;
+                if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, feet, feetSt)) return;
+                clearTicks = kaptainwutax.tungsten.path.movements.MovementHelperB
+                        .getMiningDurationTicks(world, player, from.x, from.y, from.z, feetSt, false);
+                if (clearTicks >= 1_000_000) return;                    // unbreakable here
+                clear = new ArrayList<>(List.of(feet));
+                planPillarFeetCleared++;
+            }
+        }
         // The stances a pillar cannot be started from at all — see pillarImpossible.
         if (pillarImpossible(world, from, scratch)) return;
         // Same place policy as placeAcross, on the cell our feet are in (that is where the block
         // goes): MovementPillar.costOfPlacingAt asks PlaceRules.canPlace for this exact cell
-        // (MovementPillar.java:459-467) and prices a refusal COST_INF.
-        if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, feet)) return;
+        // (MovementPillar.java:459-467) and prices a refusal COST_INF. A cell that is cleared
+        // first is air by the time the block goes in, so only the policy half applies to it.
+        if (clear == null
+                ? !kaptainwutax.tungsten.path.PlaceRules.canPlace(world, feet)
+                : !kaptainwutax.tungsten.path.PlaceRules.allowedByPolicy(feet)) return;
 
         double cost = ActionCosts.JUMP_ONE_BLOCK_COST
-                + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
+                + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier
+                + clearTicks * TungstenConfig.get().breakCostMultiplier;
         cntPillar++;
-        relax(map, open, from, from.x, upY, from.z, cost, goal, true, null,
+        relax(map, open, from, from.x, upY, from.z, cost, goal, true, clear,
                 new java.util.ArrayList<>(java.util.List.of(feet)));
     }
+
+    /** G82: how far below its cell's base a body may stand and still tower from that cell. A
+     *  farmland / path top (15/16) passes; a carpet (1/16), a bottom slab (1/2), a lily pad do not. */
+    private static final double TOWER_SUPPORT_TOL = 0.2;
+    /** G82: towers refused because the body stood inside the cell below (a thin floor), and
+     *  towers planned with the feet cell's thin block cleared first. */
+    public static volatile int planPillarInsideRefused, planPillarFeetCleared;
 
     /**
      * The stances {@code MovementPillar.cost} prices COST_INF, i.e. the pillars the executor refuses

@@ -538,6 +538,14 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      * {@link AltoGoal}, so everything downstream — the tungsten drive, isFinished — knows exactly
      * one type and the files can be moved over one at a time without a flag day.
      */
+    /** G88: forget the cached goal so the next ask rebuilds it (a drop that settled elsewhere). */
+    protected void resetGoal() {
+        cachedAlto = null;
+    }
+
+    /** G88: routes re-armed because the cell they were armed for no longer satisfies the goal. */
+    public static volatile int pdGoalLeft;
+
     protected AltoGoal goal(AltoClef mod) {
         if (cachedAlto != null) return cachedAlto;
         cachedAlto = newAltoGoal(mod);
@@ -846,7 +854,17 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             net.minecraft.util.math.BlockPos gpCell = net.minecraft.util.math.BlockPos.ofFloored(gp);
             // Goal moved far from what it is building toward -> stop and let the normal drive
             // (or a fresh escalation) re-plan on the new goal next tick.
-            if (twFnGoal.getSquaredDistance(gpCell) > 16.0) {
+            // ⛔ OR THE CELL THE ROUTE WAS ARMED FOR NO LONGER SATISFIES THE GOAL (G88, round 44,
+            // 2026-09-14). A cobblestone drop fell three blocks into a one-wide shaft after the
+            // route to its cell was armed; three is under the four-block "moved far" bar, so the
+            // navigator kept planning to the old cell -- which the body stood in: "atGoal=146",
+            // zero-length plans, "no progress", "Drop not getting closer" x11, seven minutes.
+            // Baritone re-plans the moment the path's end is no longer in the goal
+            // (PathingBehavior: !goal.isInGoal(path.getDest())); this is that test on the armed
+            // cell, with the drive's own arrival verdict.
+            boolean goalLeft = !reachedAt(mod, goal, twFnGoal, false);
+            if (twFnGoal.getSquaredDistance(gpCell) > 16.0 || goalLeft) {
+                if (goalLeft) pdGoalLeft++;
                 kaptainwutax.tungsten.task.FastNavigator.stop();
                 twFnGoal = null;
                 twFnCooldownUntilMs = nowMs + 1500;

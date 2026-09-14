@@ -1921,10 +1921,10 @@ public class PathFinder {
         if (TungstenModDataContainer.EXECUTOR.isRunning()) emitAppended++; else emitFresh++;
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
             TungstenModDataContainer.EXECUTOR.addPath(path);
-            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);   // G87: orElseGet(null) threw on an empty guide
         } else {
         	TungstenModDataContainer.EXECUTOR.setPath(path);
-            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);   // G87: orElseGet(null) threw on an empty guide
         }
         TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
@@ -1976,7 +1976,7 @@ public class PathFinder {
             resetEmit++;
             resetEmitNodes += path.size();
             TungstenModDataContainer.EXECUTOR.setPath(path);
-            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);   // G87: orElseGet(null) threw on an empty guide
             TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
             }
             TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
@@ -2089,8 +2089,16 @@ public class PathFinder {
         // silently threw off every such comparison. One counter, one increment.
         salvageEmit++;
         salvageEmitNodes += result.get().size();
+        // ⛔ orElseGet(null) THROWS ON AN EMPTY OPTIONAL (G87, 2026-09-14). Optional.orElseGet
+        // takes a Supplier and CALLS it, and null is not one: "Cannot invoke Supplier.get()
+        // because <parameter1> is null", here, on every hand-over with no guide (the guide
+        // vanished, the exhaustion branch, the give-up). Two to eleven times per client session
+        // in every log since 09-12, each one killing the search thread AFTER the route was
+        // accepted -- so the navigator waited for a jump nobody was computing and read "physics
+        // found no way". All four sites of it in this file now say orElse(null), which is what
+        // was meant.
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
-        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);   // G87: orElseGet(null) threw on an empty guide
         TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
         // Continue A* from the last node of the emitted path — don't reset the

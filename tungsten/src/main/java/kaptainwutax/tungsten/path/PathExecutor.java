@@ -589,10 +589,18 @@ public class PathExecutor {
         // WALKED THROUGH, which is the question that actually decides whether a dig is needed,
         // and that predicate came over with the port (MovementHelperB.canWalkThrough, from
         // MovementHelper.java:187-195 with its NO-list of exactly these blocks).
+        // ⛔ AND A CARPET IS STILL THERE (G82, round 44). canWalkThrough answers YES for a carpet
+        // and for snow layers -- you can walk over them, which is baritone's question -- so a dig
+        // queued to REMOVE one (the navigator clearing the feet cell before a tower) reported
+        // "Mining done — passage open" twelve ticks later with the carpet untouched, the re-plan
+        // asked for the same dig, and the bench stood on its carpet for ninety seconds, "at the
+        // dig" a hundred and twenty times. A cell that still has a collision box has not been
+        // dug, whatever can be walked through it.
         net.minecraft.util.math.BlockPos target = null;
         for (net.minecraft.util.math.BlockPos pos : breakQueue) {
             if (!kaptainwutax.tungsten.path.movements.MovementHelperB.canWalkThrough(
-                    world, pos.getX(), pos.getY(), pos.getZ())) {
+                    world, pos.getX(), pos.getY(), pos.getZ())
+                    || !world.getBlockState(pos).getCollisionShape(world, pos).isEmpty()) {
                 target = pos;
                 break;
             }

@@ -129,6 +129,9 @@ public final class FastNavigator {
     /** G56: wall hand-offs that mined the ceiling above the body before the tower, and routes
      *  given up because that ceiling could not be broken. */
     public static volatile int navCeilingMined, navCeilingRefused;
+    /** G82: towers whose feet cell (a carpet, snow layers) was mined before the tower, and routes
+     *  given up because that block could not be broken. */
+    public static volatile int navFeetCleared, navFeetRefused;
     /** G58: searches re-run once with four times the budget before a goal below is given up,
      *  because the first search had spent its whole budget. */
     public static volatile int navBudgetBoosted;
@@ -893,6 +896,42 @@ public final class FastNavigator {
                     kaptainwutax.tungsten.task.PillarTask.pillarColumnRefused++;
                     pendingGiveUp = true;
                     return;
+                }
+                // ⛔ A TOWER FROM INSIDE A CARPET IS A DIG FIRST (G82, 2026-09-13). The 22:39
+                // recording, a lush cave: the body on a MOSS CARPET at (80,91,-112), feet at
+                // 91.06, "Wall too high to jump — pillaring to y=93", and PillarTask hopping for
+                // twenty-four seconds three times over -- "air=488 insideCell=324 placeAt=0
+                // placed=0 apex=92.31". A jump from a carpet peaks 1.25 above 91.06; the cell
+                // the block would go into is 92, and the click is only allowed with the feet
+                // above 93.05. Vanilla will not place INTO a carpet, so no tower can start from
+                // one. Baritone's MovementPillar breaks a non-air, non-replaceable source block
+                // before it jumps (MovementPillar.updateState: CLICK_LEFT, JUMP off); this is
+                // that branch, through the navigator's own dig -- the same run the ceiling gets
+                // below -- and the re-plan after it brings the tower back on bare floor.
+                if (rise > PlayerFitJumpHeight() && horiz < 2.5 && TungstenConfig.get().planPlaceMoves
+                        && canPillar && !player.isTouchingWater()
+                        && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
+                    BlockPos feetC = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player);
+                    var fst = world.getBlockState(feetC);
+                    if (!fst.isAir() && !fst.isReplaceable()
+                            && !fst.getCollisionShape(world, feetC).isEmpty() && !player.isClimbing()) {
+                        if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, feetC, fst)) {
+                            Debug.logWarning("Wall too high to jump and the " + fst.getBlock()
+                                    + " the feet stand in cannot be broken — giving the route up");
+                            navFeetRefused++;
+                            pendingGiveUp = true;
+                            return;
+                        }
+                        Debug.logMessage("Wall too high to jump — clearing the " + fst.getBlock()
+                                + " the feet stand in at " + feetC.toShortString() + " before the tower");
+                        navFeetCleared++;
+                        java.util.List<BlockPos> one = new java.util.ArrayList<>();
+                        one.add(feetC);
+                        pendingBreakCells = one;
+                        pendingBreakStand = feetC;
+                        awaitingPhysics = false;
+                        return;   // the dig runs next tick; the re-plan after it brings the tower back
+                    }
                 }
                 // ⛔ A TOWER THROUGH ROCK IS A DIG FIRST (G56, 2026-09-11). pit_escape on round
                 // 14: the goal cell was the surface pad itself, the plan climbed into it with a

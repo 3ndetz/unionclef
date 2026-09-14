@@ -2086,6 +2086,30 @@ public class Py4jEntryPoint {
             return true;
         } catch (Exception e) { return false; }
     }
+
+    /**
+     * G83 bench hook: one click on a window slot of the current screen, then {@code packets}
+     * server updates that all carry the pre-click stack (the burst a full inventory sync
+     * produces). Returns "ban=<ms>" -- how long clicks on that slot are dropped afterwards.
+     */
+    public String debugSlotRevertBurst(int windowSlot, int packets) {
+        try {
+            long ms = net.minecraft.client.MinecraftClient.getInstance().submit(() ->
+                    AltoClef.getInstance().getSlotHandler().debugRevertBurst(windowSlot, packets))
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS);
+            return "ban=" + ms;
+        } catch (Exception e) { return "error=" + e; }
+    }
+
+    /** G83: how long clicks on a window slot of the current screen are still dropped (ms). */
+    public String slotBanRemainingMs(int windowSlot) {
+        try {
+            long ms = net.minecraft.client.MinecraftClient.getInstance().submit(() ->
+                    AltoClef.getInstance().getSlotHandler().banRemainingMs(windowSlot))
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS);
+            return "ban=" + ms;
+        } catch (Exception e) { return "error=" + e; }
+    }
     /**
      * Refuse to BREAK anything inside a cube, from now until the bot is told otherwise.
      *
@@ -2988,6 +3012,19 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.path.fast.FastPlanner.planCreeperPriced = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbToolEquipped = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbAimWait = 0;
+        kaptainwutax.tungsten.task.FastNavigator.navFeetCleared = 0;
+        kaptainwutax.tungsten.task.FastNavigator.navFeetRefused = 0;
+        kaptainwutax.tungsten.task.PillarTask.pillarThinFeet = 0;
+        kaptainwutax.tungsten.task.PillarTask.pillarNoRung = 0;
+        kaptainwutax.tungsten.path.fast.FastPlanner.planPillarInsideRefused = 0;
+        kaptainwutax.tungsten.path.fast.FastPlanner.planPillarFeetCleared = 0;
+        adris.altoclef.tasks.InteractWithBlockTask.iwStallFailed = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdGoalLeft = 0;
+        adris.altoclef.tasks.movement.GetToDropTask.dropMoved = 0;
+        adris.altoclef.control.SlotHandler.shBanDropped = 0;
+        adris.altoclef.control.SlotHandler.shBanDecayed = 0;
+        adris.altoclef.control.SlotHandler.shBanClearedOnRespawn = 0;
+        adris.altoclef.control.SlotHandler.shBanUnattributed = 0;
         kaptainwutax.tungsten.task.FastNavigator.navPartialWalked = 0;
         kaptainwutax.tungsten.task.FastNavigator.navNoPartialBelow = 0;
         adris.altoclef.tasks.movement.PickupDroppedItemTask.pursuitRestarts = 0;
@@ -3321,7 +3358,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d noSup=%d/%d/%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdQueueShort=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d/%d pdLegacy=%d pdLegacyTung=%d/%d exArrived=%d exRanOut=%d exSprint=%d/%d execYieldMiner=%d oreSeen=%d/%d/%d sleepDeclined=%d oreNear=%.1f/%.1f nearLockDropped=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d dbBlocked=%d/%d/%d dbNoRetreat=%d dbStepOver=%d dbApproachStall=%d dbBestDist=%d dbTargets=%d/%d dbReachGoal=%d iw=%d/%d/%d/%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d vgFall=%d/%d/%d/%d rimBack=%d kbThrow=%d/%d/%d/%d kbImp=%d/%d/%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d shKept=%d shRefresh=%d/%d shWho=[%s] fixKept=%d thrown=[%s] throwers=[%s] dropPick=[%s] deepPicks=%d/%d dropBudget=%d dropBlock=%d/%d/%d pdFnBuild=%d pdNearBuild=%d snapSelfRefused=%d pdFnOrphan=%d/%d pdRouteStopped=%d dcIdleRearm=%d pdDig=%d/%d/%d walkerHeldAbove=%d navStartSupport=%d navCeiling=%d/%d navBudgetBoost=%d navStall=%d/%d navBreak=%d/%d/%d navPillarRuns=%d pillarCenterTimeout=%d pillarNoHeadroom=%d navPillarSteered=%d mdCreeperAvoid=%d planPartialCoef=%d startSnapRefused=%d entLongHaul=%d/%d kaClose=%d kaMob=%d/%d/%d/%d/%d scaffold=%d/%d pillarColRefused=%d navTowerBelow=%d banLifted=%d/%d/%d banExpired=%d dbLid=%d/%d swimAim=%d navWet=%d/%d intoHole=%d pillarVine=%d/%d placeRefused=%d navPhysics=%d/%d physicsBudgetOut=%d/%d navArrivalRefused=%d mdCreeperUnseen=%d fixToolSwaps=%d kaAura=%d/%d dropDeep=%d pdRouteRefused=%d planCreeper=%d/%d dbToolEquipped=%d dbAimWait=%d navPartial=%d/%d pursuit=%d/%ds entBudget=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
+                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdQueueShort=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d/%d pdLegacy=%d pdLegacyTung=%d/%d exArrived=%d exRanOut=%d exSprint=%d/%d execYieldMiner=%d oreSeen=%d/%d/%d sleepDeclined=%d oreNear=%.1f/%.1f nearLockDropped=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d dbBlocked=%d/%d/%d dbNoRetreat=%d dbStepOver=%d dbApproachStall=%d dbBestDist=%d dbTargets=%d/%d dbReachGoal=%d iw=%d/%d/%d/%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d vgFall=%d/%d/%d/%d rimBack=%d kbThrow=%d/%d/%d/%d kbImp=%d/%d/%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d shKept=%d shRefresh=%d/%d shWho=[%s] fixKept=%d thrown=[%s] throwers=[%s] dropPick=[%s] deepPicks=%d/%d dropBudget=%d dropBlock=%d/%d/%d pdFnBuild=%d pdNearBuild=%d snapSelfRefused=%d pdFnOrphan=%d/%d pdRouteStopped=%d dcIdleRearm=%d pdDig=%d/%d/%d walkerHeldAbove=%d navStartSupport=%d navCeiling=%d/%d navBudgetBoost=%d navStall=%d/%d navBreak=%d/%d/%d navPillarRuns=%d pillarCenterTimeout=%d pillarNoHeadroom=%d navPillarSteered=%d mdCreeperAvoid=%d planPartialCoef=%d startSnapRefused=%d entLongHaul=%d/%d kaClose=%d kaMob=%d/%d/%d/%d/%d scaffold=%d/%d pillarColRefused=%d navTowerBelow=%d banLifted=%d/%d/%d banExpired=%d dbLid=%d/%d swimAim=%d navWet=%d/%d intoHole=%d pillarVine=%d/%d placeRefused=%d navPhysics=%d/%d physicsBudgetOut=%d/%d navArrivalRefused=%d mdCreeperUnseen=%d fixToolSwaps=%d kaAura=%d/%d dropDeep=%d pdRouteRefused=%d planCreeper=%d/%d dbToolEquipped=%d dbAimWait=%d navFeet=%d/%d pillarThin=%d/%d planPillarIn=%d/%d iwStall=%d goalLeft=%d/%d navPartial=%d/%d pursuit=%d/%ds entBudget=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d shBan=%d/%d/%d/%d@%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqNullEdge=%d mqExpand=%d/%d/%d/%d mqExpandAt=%s qRebased=%d qOffRoute=%d qUnreachReplan=%d gridCorner=%d dbFarRetry=%d/%d plan=%d/%d/%dms/sz%d/zero%d(e0=%d,e1=%d,resc=%d,snap=%d,noSup=%d,supNoKids=%d,atGoal=%d(ex%d,ytol%d)@%s) cp=%d/%d/%d/%d/%d diag=%d/%d/%d navRes=%d/%d/%d/%d/%d navBridgeRescued=%d walkerHoleHeld=%d diagonalWalled=%d staleTail=%d ungagged=%d walkYield=%d walkYieldMiner=%d walkMode=%d/%d/%d mqParkour=%d mqAdmitMismatch=%d qPrep=%d/%d blindPrep=%d mqNull=%d gaveUp=%d/%d mineRe=%d@%dcm/back%d dc=%d/%d/%d/%d/%d/none%d/same%d/gave%d/rst%d@%dcm/mv%d-%d/idle%d/still%d-%d mc=%d/%d/%d/%d/%d mcFlight=%d mcSwitch=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d wanderDenied=%d/%d wanderTung=%d/%d/u%d wanderTargetUnstandable=%d wanderSpiralHeld=%d stallWhy=%d/%d/%d/%d/%d stallExec=%d/%d/%d/%d/%d stallExecWork=%d/%d stallMiner=%d/%d stallPlacingOnly=%d mine=%d/%d attackThief=[%s] fireReleaseSkipped=%d breakAim=%d/%d/%d/%d breakAbort=%d/%d breakReach=%d/%d/%d reachAt=%s breakMissWhy=%d/%d breakOccluder=%d/%d breakClearWay=%d/%d breakMiss=%s wanderTripBlocked=%d emptyPathRefused=%d guideVanished=%d/%d searchAborted=%d emit=%d/%d/%d/%d tryEmit=%d/%d/mv%d goal=%d/%d/%s snap=%d/%d/%d/self%d[%s] arrivedAtSnap=%d guide=%s/idx%d/relaxDrop%d gvp=%d/tiny%d/start%d/end%d/noGuide%d guideSrc=%d/%d/%d/%d trunc=%d/%d fastNowhere=%d/%d coarseNowhereBy[%s] gvpHop[%s]/fallChk%d-%d/smart%d-%d/resumeKept%d/stopBy[%s]/spared%d/bsEnd[c%d t%d s%d x%d]closest%dcm bsIn[f%d s%d i%d] bsStub=%d/%d@%dcm bsClosestUsed=%d salvage=%d/%d resetEmit=%d/%d resetRefused=%d resetNoGain=%d children=%d/%d/%d rej=%d/%d/%d/%d gen=%d/%d sweepKept=%d/%d salvageEmit=%d/%d dbDenied=%d airProg=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d fallRetry=%d/%d fallHarmless=%d/%d fallPriced=%d/%d gaveUpFallRetry=%d wallSkipRefused=%d wallAlreadyAir=%d gotoResumedFromSearch=%d drop=%d/%d/%d scan=%d/%d/%d/%d/%d/%d navStop=%d/%d/%d fleeSpot=%d/%d lock=%d/%d/%d@%s lockAnat=%d/%d/%d/%d/%d/%d/%d lockDroppedIdle=%d lockRetarget=%d/%d cb=%d/%d/%d/%d avoidSrc=%d/%d/%d/%d@%s/%s et=%d/%d"
                         + " sprint=%d/%d lowHp=%d/%d standOff=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d/near%d mdTung=%d/%d mdFleeStuck=%d mdFleeShooter=%d mdFar=%d/%d arrows=%d/%.2f/%.2f draws=%d/%d/%d/%.2f band=%d/%d dodgeYield=%d latch=%d/%d breakFail=%d/%d/%d/%d/%d chains=[%s] stranded=%d/dig%d/own%d/back%d/away%d/%s/%s/acro%d banned=%d/%d tp=%d/%d/%d/%d/byp%d minePick=%d/%d/max%d/calls%d/drop%d dcFar=%d gp=%d/%d/%d/%d/%d dodgeTask=%d/%.2f dealt=%.1f/%.1f/%d hitSize=%d/%d/%d/%d takeSize=%d/%d/%d/%d slotSync=%d/%d critReset=%d stray=%d/%d heldSwing=%d loseKite=%d holdBow=%d punkKept=%d swingHits=%d dodgeDrive=%d hop=%d/%d/%d/%d/%d/%d/%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d dwNoBlame=%d dmgWhy=%d/%d/%d/%d/%d@%.1f strafe=%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowNoSol=%d bowRestart=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d stuck=[%s] staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
@@ -3545,6 +3582,15 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.fast.FastPlanner.planCreeperPriced,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbToolEquipped,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbAimWait,
+                kaptainwutax.tungsten.task.FastNavigator.navFeetCleared,
+                kaptainwutax.tungsten.task.FastNavigator.navFeetRefused,
+                kaptainwutax.tungsten.task.PillarTask.pillarThinFeet,
+                kaptainwutax.tungsten.task.PillarTask.pillarNoRung,
+                kaptainwutax.tungsten.path.fast.FastPlanner.planPillarInsideRefused,
+                kaptainwutax.tungsten.path.fast.FastPlanner.planPillarFeetCleared,
+                adris.altoclef.tasks.InteractWithBlockTask.iwStallFailed,
+                adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdGoalLeft,
+                adris.altoclef.tasks.movement.GetToDropTask.dropMoved,
                 kaptainwutax.tungsten.task.FastNavigator.navPartialWalked,
                 kaptainwutax.tungsten.task.FastNavigator.navNoPartialBelow,
                 adris.altoclef.tasks.movement.PickupDroppedItemTask.pursuitRestarts,
@@ -3556,6 +3602,11 @@ public class Py4jEntryPoint {
                 adris.altoclef.chains.GameMenuTaskChain.gmConnectCalled,
                 adris.altoclef.control.SlotHandler.shLastBlacklistedSlot,
                 adris.altoclef.tasks.slot.EnsureFreeCursorSlotTask.cursorGaveUp,
+                adris.altoclef.control.SlotHandler.shBanDropped,
+                adris.altoclef.control.SlotHandler.shBanDecayed,
+                adris.altoclef.control.SlotHandler.shBanClearedOnRespawn,
+                adris.altoclef.control.SlotHandler.shBanUnattributed,
+                adris.altoclef.control.SlotHandler.shBanDropSlot,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qLost,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qRefused,

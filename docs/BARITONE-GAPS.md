@@ -909,6 +909,79 @@ times, the drive's state a mystery; that line now names the drive's last branch
 (`CustomBaritoneGoalTask.lastDriveNote`), the navigator's state and the chain's leaf, so a silent
 stand has its driver in the same line.
 
+**G82. A tower is built from the base of its cell; a carpet under the feet is cleared first.** The
+operator's screenshot (round 41, 22:39): the bot in a lush cave, "Getting within reach of
+96,105,-109", hopping in place for ever, no vine anywhere. The block under it was a **moss carpet**
+(feet at 91.06). `PlayerFit.supportTop` answers 91.06 for both the carpet's cell (91) and the cell
+above (92), so the planner had a node at 92 whose feet cell was air and planned "place a block at
+92 under yourself" — a click allowed only with the feet above 93.05, 0.7 beyond a jump from 91.06.
+The hand-off read "Wall too high to jump — pillaring to y=93" and PillarTask hopped: "air=488
+insideCell=324 placeAt=0 placed=0 apex=92.31", twenty-four seconds per tower (a hopping body is
+never "still", so the four-second stuck test never fired), three towers, the column's sixty-second
+refusal memory expiring between them. Baritone's `MovementPillar` refuses a tower off a bottom
+slab and breaks a non-air, non-replaceable source block before it jumps (`updateState`:
+`!(air || canBeReplaced) -> CLICK_LEFT`), and bounds every movement by `cost + 100` ticks. Ported
+as three rules: the planner refuses a tower from a node whose body stands more than a fifth of a
+block below the cell's base (carpet, slab, lily pad, snow layers) and prices the clear of a thin
+block in the feet cell; the navigator mines that feet cell through its own dig before it starts
+the tower (the ceiling's route, G56); PillarTask refuses to start inside such a block and stops a
+tower that has not RESTED a rung higher in a hundred ticks. Bench: `carpet_tower_test.py`.
+Two more cuts on the bench: a block the route itself placed under the feet is the next step's
+base (round 43 planned one-block towers only, `planPillarIn=19/19`); and the executor's break
+queue judged "still there?" by baritone's `canWalkThrough`, which says YES to a carpet — the dig
+that was to remove it reported "Mining done — passage open" twelve ticks later with the carpet
+untouched, a hundred and twenty times (round 44). A cell that still has a collision box has not
+been dug. Only a thin block (collision top under half a block) is cleared for a tower; a full one
+in a node's feet cell is a dig's destination, not a tower's (round 43: `planPillarIn=0/74009`).
+
+**G87. `Optional.orElseGet(null)` in the physics salvage.** Four sites in PathFinder hand the
+executor the guide with `blockPath.orElseGet(null)` — a Supplier that is null, called — and every
+hand-over without a guide (the guide vanished, the exhaustion branch, the give-up) threw
+"Cannot invoke Supplier.get() because <parameter1> is null" and killed the search thread after
+the route was accepted: two to eleven times per client session in every log since 09-12, each
+one read by the navigator as "physics found no way" (G68) and by the drive as a route give-up
+(G74). `orElse(null)`.
+
+**G88. A settled drop that settles again somewhere else is a new place, and a route whose end
+has left the goal is re-planned.** Round 44 stood seven minutes at (-341.5,77,-547): the cobblestone
+the bot had just mined fell three blocks into a one-wide shaft beside it. `GetToDropTask` kept the
+cell it was built with ("settled drops do not move"), so the drive stood in that cell —
+"atGoal=146 … @GetToDropTask@block(-342,77,-548) x61", zero-length plans — while the pickup timed
+out on the same drop eleven times ("Drop not getting closer for 25s" → "attempt 3/3" → 45 s → the
+same drop). Three blocks is under the drive's four-block "goal moved far" bar, so the armed route
+was not re-planned either. Baritone re-plans the moment the path's end is no longer in the goal
+(`PathingBehavior`: `!goal.isInGoal(path.getDest())`). Ported as two rules: the drop task's cell
+follows the drop the moment it rests again (the goal is rebuilt), and the drive stops a route whose
+armed cell no longer satisfies the goal's own arrival test (`goalLeft` counter). Bench:
+`drop_fall_test.py` (a cobblestone on the lid of a three-deep shaft; the lid is pulled a second
+after the task starts).
+
+**G83. One click gets one verdict; a muzzle dies with the body that earned it.** Round 42 stood
+from 22:48 to 22:57 with a log in hotbar slot 38 and the plank craft asking for it — "mv=4706/
+3754/952/0/0", 952 pick-ups asked, none delivered, no line in the log — and walked again at
+22:57:23, six hundred seconds after the only muzzle line of the run: "window slot 38 (flint x1) —
+blacklisting for 4s (cancel #1)". The pending click was never consumed by its verdict, so every
+further server packet for that slot inside 600 ms (a full inventory sync is one per slot) matched
+the same click again — cancel #2, #3, 4 s → 30 s → 600 s in one burst, printed once because the
+slot was "already blocked". Then a creeper, a new body, a log in the muzzled slot, ten minutes of
+silence with nothing counted. Now a pending action is removed when it is judged; the ladder climbs
+only on cancels within a minute of each other (the anti-cheat hub slot it was built for still
+reaches ten minutes in thirty-four seconds); the muzzles are cleared with a new
+`ClientPlayerEntity`; a dropped click is counted (`shBan=dropped/decayed/cleared/unattributed@slot`)
+and said once every five seconds. Bench: `slot_ban_test.py` (one click, three packets, the craft
+must go through). **G83b** (round 43, the first run with the above): "window slot 37 is muzzled for
+569s more (cancel #6)" — the stone pickaxe's slot, six "cancels" inside a minute, each the tool
+swap's three clicks in one tick; and three slots "cancelled" in the same second twice during a
+craft. The server answers a click whose revision does not match with a FULL sync of the state
+after that click, in which the slots of the clicks still queued behind it are untouched — equal to
+their "before" — and the detector read that as a revert of clicks the server had not seen yet. A
+packet now judges only a click that was alone in flight; the hub-menu slot the ladder was built
+for is clicked once and reverted once, and still counts. **G84.** "Failed, blacklisting and wandering" fired three times in the same second
+(`attempt 1/4, 2/4, 3/4` on the crafting table) because a failed progress checker keeps failing
+until the wander resets it; it is reset with the failure, one stall = one attempt. **G85.** The
+unstuck chain's cooldown shift wrapped negative at the 28th detection (`cooldown=-268435456s`)
+and the shimmy fired every ten seconds; capped.
+
 Bench note (round 38): two creeper_avoid "FAIL min_hp=8" were starvation — a bot fed nothing for
 ten minutes loses a heart every four seconds on the flat server, one per sample, the creeper never
 closer than five blocks. The creeper benches now give saturation with the healing.
@@ -948,6 +1021,10 @@ has it. "Open" rows are the next stalls waiting to happen.
 | Cells near hostile mobs are priced so a path bends round them (`mobAvoidanceRadius`, coefficient) | Avoidance | creepers refused within five blocks, priced within twelve (G75); other hostiles not yet | partial |
 | A goal the calculator cannot path to is dropped by the process ("Unable to find path") | PathingBehavior → the process | three route give-ups in a row → `requestBlockUnreachable` (G74); the physics hand-off's own two-failure give-up (G68) | done |
 | The heuristic's descent price (a fall) is affordable because the search is fast | GoalBlock / AStarPathFinder | below a free fall the vertical term is a dig's worth of walks (G73), because this search runs at a fortieth of baritone's rate | done (differently) |
+| A tower off a bottom slab is refused; a non-air, non-replaceable source block (carpet, snow) is broken before the jump | MovementPillar.cost / updateState | the planner refuses a tower from inside the cell below and prices the clear; the navigator digs the feet cell first; PillarTask refuses to start inside one (G82) | done |
+| A movement that has not progressed in `cost + 100` ticks is cancelled | PathExecutor.onTick | a tower with no rung in 100 ticks stops (G82) — the old height-still test could not see a hopping body | done |
+| (altoclef) a slot click is judged once; a server "cancel" muzzles the slot on a decaying ladder | — | one verdict per click, the ladder decays after a minute, muzzles cleared with a new body, drops counted and said (G83) | done |
+| A path whose end is no longer in the goal is cancelled and re-planned (`!goal.isInGoal(path.getDest())`) | PathingBehavior.tick | the drive stops a route whose armed cell no longer passes the goal's arrival test; a drop's cell follows the drop (G88) | done |
 
 ### Is baritone's move set fully ported into FastPlanner? No.
 
