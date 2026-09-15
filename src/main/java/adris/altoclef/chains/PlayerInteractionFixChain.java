@@ -80,9 +80,8 @@ public class PlayerInteractionFixChain extends TaskChain {
             // chain and the place hook alternate the hand at the break/place boundary. Placing wins
             // the hand while it is active; the tool re-equips the moment placing ends and breaking
             // resumes. (Found 2026-09-10 from a live @gamer run the operator was watching.)
-            kaptainwutax.tungsten.path.PathExecutor _exec =
-                    kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            boolean tungstenPlacing = _exec != null && _exec.isPlacingNow();
+            boolean tungstenPlacing =
+                    kaptainwutax.tungsten.TungstenModDataContainer.builderOwnsInputs();
             if (mod.getControllerExtras().isBreakingBlock() && !tungstenPlacing) {
                 BlockState state = mod.getWorld().getBlockState(mod.getControllerExtras().getBreakingBlockPos());
                 Optional<Slot> bestToolSlot = StorageHelper.getBestToolSlot(mod, state);

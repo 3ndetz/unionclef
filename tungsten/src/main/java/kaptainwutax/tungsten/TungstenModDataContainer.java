@@ -37,6 +37,13 @@ public class TungstenModDataContainer {
     public static boolean minerOwnsAim() {
         return System.currentTimeMillis() < minerAimUntilMs;
     }
+    /** Active placement primitives own the hand, aim and movement until their step finishes. */
+    public static boolean builderOwnsInputs() {
+        return (EXECUTOR != null && EXECUTOR.isPlacingNow())
+                || kaptainwutax.tungsten.task.PillarTask.isActive()
+                || kaptainwutax.tungsten.task.BridgeTask.isActive();
+    }
+
 	public static PathFinder PATHFINDER = new PathFinder();
 
     /** Safe check — EXECUTOR may be null before TungstenMod.onInitializeClient */

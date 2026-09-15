@@ -141,6 +141,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
     /** Times the approach was issued as a REACH goal instead of an occupy-the-cell goal. */
     public static volatile int dbReachGoal;
+    public static volatile int dbBuilderYield;
 
     /** Times a block was given up on for NO APPROACH while the body kept moving. */
     public static volatile int dbApproachStalled;
@@ -432,6 +433,17 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             } else {
                 dbResetDenied++;
             }
+        }
+
+        // The approach may be building its own footing. Do not mine a newly
+        // reachable occluder mid-pillar: that steals its downward aim and block.
+        // Keep the same approach child alive until the placement step releases it.
+        if (kaptainwutax.tungsten.TungstenModDataContainer.builderOwnsInputs()) {
+            dbBuilderYield++;
+            isMining = false;
+            mod.getInputControls().release(Input.CLICK_LEFT);
+            setDebugState("Waiting for the approach to finish placing");
+            return approachTask();
         }
 
         // Check if the player is in a Nether portal
@@ -827,21 +839,25 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             // finally happened was six random shimmy digs. GetAdjacentToBlockTask hands the BLOCK
             // to FastNavigator with baritone's GoalGetToBlock test, so the planner completes on a
             // neighbouring cell and breaks its way there when the block is underground.
-            if (kaptainwutax.tungsten.TungstenConfig.get().mineGoalIsAdjacent) {
-                dbReachGoal++;
-                return new adris.altoclef.tasks.movement.GetAdjacentToBlockTask(pos);
-            }
-            if (kaptainwutax.tungsten.TungstenConfig.get().breakGoalIsReach) {
-                dbReachGoal++;
-                // Arrival is decided by REACH, not by distance: standing three blocks away
-                // behind an obstruction satisfies a range goal and still cannot break
-                // anything, which is what widened the ladder's spread to 0-6 when the plain
-                // range task was tried. See GetWithinReachOfBlockTask.
-                return new adris.altoclef.tasks.movement.GetWithinReachOfBlockTask(pos, 3);
-            }
-            return new GetToBlockTask(pos, false);
+            return approachTask();
         }
         return null;
+    }
+
+    private Task approachTask() {
+        if (kaptainwutax.tungsten.TungstenConfig.get().mineGoalIsAdjacent) {
+            dbReachGoal++;
+            return new adris.altoclef.tasks.movement.GetAdjacentToBlockTask(pos);
+        }
+        if (kaptainwutax.tungsten.TungstenConfig.get().breakGoalIsReach) {
+            dbReachGoal++;
+            // Arrival is decided by REACH, not by distance: standing three blocks away
+            // behind an obstruction satisfies a range goal and still cannot break
+            // anything, which is what widened the ladder's spread to 0-6 when the plain
+            // range task was tried. See GetWithinReachOfBlockTask.
+            return new adris.altoclef.tasks.movement.GetWithinReachOfBlockTask(pos, 3);
+        }
+        return new GetToBlockTask(pos, false);
     }
 
     /**

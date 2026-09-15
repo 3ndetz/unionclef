@@ -370,3 +370,20 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Existing descent-clearance and one-high ascent regressions running, followed by navigation baselines and saved natural replay.
 - Clearance audit passed6/6: stone overhang descents1/2/3,depth2 landing slab preserved,depth3 bedrock/disabled-breaking routes refused. All20HP. Sampled meanFPS17–26.7 (brief lows10/12 on two short courses); these are functional clearance checks,not timing comparisons. One-high ascent repeat passed2/2 with three head blocks planned/removed. Seven videos decoded and ascent frame inspected.
 - Navigation baseline audit passed3/3(flat,staircase,descend),17.3/19.3/27.7FPS,no invalid attempts. No new upstream after fetch. Committing and returning to the saved natural world; game completion remains open.
+
+## 2026-09-15 — Mining parent must yield to placement approach
+
+### Investigate
+- Natural8f825ef9 replay descended from its former blocked lip, then repeatedly failed to pillar back toward elevated iron. Pillar aimed upward at nearby coal instead of down; PlayerInteractionFixChain swapped dirt->ironpick hundreds of times. Saved/disconnected at143s,(107.5,127.2,-10.7),20HP,49blocks (one tower block eventually placed). Two videos decoded; client-stall.log copied into outputs/survival-deep-fixed.
+- DestroyBlockTask's nearby-occluder clearing ran while its own approach was pillaring. PlayerInteractionFixChain's placement veto only covered PathExecutor,not PillarTask/BridgeTask.
+- mining_pillar_test reproduces actual DestroyBlockTask approaching ore from a sealed shaft: pillar active,221 tool swaps,upward pitch,target intact after35s. Reference Baritone MovementPillar owns centering,jump,place and the hand as one movement; mining cannot be a concurrent writer.
+
+### Implement
+- Shared builderOwnsInputs covers active executor placement,PillarTask and BridgeTask. DestroyBlockTask keeps its same approach child and releases mining input while it is building; foreground mining resumes afterward. Both background tool and weapon pre-equipping respect this ownership.
+- dbBuilderYield recorded/reset in Py4J stats; fixture records per-run handovers. Clean build passed,stats follow-up build/deploy running. No fixed result yet.
+
+### Validation in progress
+- First fixed run FAILED with pillar=false,yieldcounter0: pending placement confirmation from arena restoration immediately banned the pillar cell. It did not execute the changed branch. Fixture now clears old placement/break confirmations and temporary avoidance while the task runner is stopped, before scheduling the new task.
+- Corrected fixed run passed7.841s,target mined,pillar observed,28 yield ticks,0 tool swaps,20HP. MP4 decoded,frame inspected. placeStats returned dbBuilderYield correctly (format/reset wiring checked). Repetitions and normal/open hunt audit running.
+- Final normalized pillar/mining matrix passed5/5:target mined,20HP,zero tool swaps,26–34 builder-yield ticks. All videos decoded. Wall/open hunt controls passed2/2;wall returned6cobblestone with0pick-to-sword transitions during a continuous mining queue,both targets killed,20HP. Navigation bridge/pillar/baseline audit running.
+- Navigation audit passed5/5(bridge,wall2,flat,staircase,descend),22.6–29.7FPS,no invalid attempts;artifacts20260915-143742. Fetch found no newer upstream. Returning to saved natural pillar attempt after commit.

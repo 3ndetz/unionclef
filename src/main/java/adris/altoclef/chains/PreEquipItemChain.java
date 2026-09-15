@@ -38,7 +38,8 @@ public class PreEquipItemChain extends SingleTaskChain {
         // hands digs directly to the executor, so an empty movement queue does not mean
         // the hand is free. Switching to a sword here resets vanilla mining progress.
         PathExecutor executor = TungstenModDataContainer.EXECUTOR;
-        if ((executor != null && (executor.isBreakingNow() || executor.isPlacingNow()))
+        if (TungstenModDataContainer.builderOwnsInputs()
+                || (executor != null && executor.isBreakingNow())
                 || mod.getControllerExtras().isBreakingBlock()
                 || kaptainwutax.tungsten.path.movements.MovementQueue.remainingNeedsBlockWork(mod.getWorld())) {
             return;
