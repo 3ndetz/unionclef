@@ -3,7 +3,8 @@
 
 Defaults to observing the existing task on tester1. --start explicitly starts
 @gamer; --connect explicitly joins gamer-server. Inventory, health and time of
-day are never reset. Finishing a recording leaves the bot and its defence active.
+day are never reset. The dedicated test client keeps its configured FPS cap
+without physical input (botFpsNoIdleThrottle is pinned on). Finishing a recording leaves the bot and its defence active.
 Use --stop-on-exit only when intentionally ending the gameplay task as well.
 """
 import argparse
@@ -40,6 +41,7 @@ def main():
     else:
         raise RuntimeError('client is not in the world')
 
+    p.call('tungstenSetting', 'botFpsNoIdleThrottle', 'true')
     rows = []
     index = 1
     recording = False

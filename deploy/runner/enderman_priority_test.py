@@ -7,9 +7,11 @@ from gamer_smoke import rec_start,rec_stop
 ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--tag',required=True);ap.add_argument('--output-dir',type=Path,required=True);ap.add_argument('--expect-bug',action='store_true');ap.add_argument('--calm',action='store_true');ap.add_argument('--shield',choices=['true','false']);ap.add_argument('--battle',action='store_true',help='Release both mobs after selection setup and require surviving both');a=ap.parse_args()
 p=Py4jClient('uctest-mc-tester1');r=Rcon('uctest-server');root=a.output_dir.resolve();root.mkdir(parents=True,exist_ok=True);recording=False
 old_shield=p.call('tungstenSetting','combatShieldEnabled','').split('=',1)[1]
+old_idle=p.call('tungstenSetting','botFpsNoIdleThrottle','').split('=',1)[1]
 import re
 old_time=int(re.findall(r'\d+',r.cmd('time query daytime'))[-1])
 try:
+ p.call('tungstenSetting','botFpsNoIdleThrottle','true')
  if a.shield is not None:p.call('tungstenSetting','combatShieldEnabled',a.shield)
  if a.battle:r.cmd('time set midnight')
  p.call('stopPathing')
@@ -80,7 +82,7 @@ print(json.dumps({'initial':meta,'samples':rows}))
  expected='net.minecraft.class_1642' if a.expect_bug or a.calm else 'net.minecraft.class_1560';passed=(not server_alive and min(x['hp'] for x in d['samples'])>0 and not d['samples'][-1]['ender_alive'] and not d['samples'][-1]['zombie_alive']) if a.battle else d['samples'][-1]['target']==expected;d.update({'pass':passed,'expected_bug':a.expect_bug,'calm':a.calm,'battle':a.battle});(root/f'{a.tag}.json').write_text(json.dumps(d,indent=2));p.screenshot(str(root/f'{a.tag}.png'));print({k:v for k,v in d.items() if k!='samples'}|{'last':d['samples'][-1]},flush=True)
  if not passed:raise RuntimeError('threat selection failed')
 finally:
- p.call('stopPathing');p.call('tungstenSetting','combatShieldEnabled',old_shield)
+ p.call('stopPathing');p.call('tungstenSetting','combatShieldEnabled',old_shield);p.call('tungstenSetting','botFpsNoIdleThrottle',old_idle)
  if a.battle:r.cmd('time set '+str(old_time))
  if recording:rec_stop(str(root/f'{a.tag}.mp4'))
  r.cmd('kill @e[tag=enderman_priority]');r.cmd('forceload remove 2190 860 2220 870')
