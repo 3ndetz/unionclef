@@ -1,5 +1,69 @@
 # TODOs
 
+<!-- COMPILE-VERIFIED-BOTH-VERSIONS-2026-09-15 -->
+## Compile is unblocked from this sandbox too, and current HEAD builds clean on both live versions (2026-09-15)
+
+AGENTS.md's STRICT rule was rewritten 2026-09-07 (compiling is now required whenever nobody is
+debugging, not merely permitted), and Lumi separately compiled the tree, found and fixed a real
+1.21.1 break in `ItemHelper.java:820` (`DataComponentTypes.EQUIPPABLE` used without a version
+guard, from `7aea6ea4`), and asked this desk to compile-verify everything else from the 2026-09-05
+Java batch that still carried a "not stand-verified" caveat. That work was already overtaken by a
+much larger one: the 2026-09-10 entry below this one shows the whole tree built and ran live on
+the Windows host that same week, `ItemHelper`'s `EQUIPPABLE` branch included. This entry adds a
+second, independent, dated confirmation from a THIRD environment (this cloud sandbox, which has no
+docker and no stand access at all), on today's HEAD (commit `3be654dd`, four days and forty-plus
+commits — G82 through G89 — past that host run).
+
+**Docker is not needed for this and the wrapper's own recipe was wrong to require it.** This
+sandbox has no `/var/run/docker.sock` and `pac-dockerproxy` (the shared read-only proxy) has
+`POST=0`, so `docker run` cannot create a container here at all — confirmed by trying, not
+assumed. But the JDK at `.gradle/jdk21` is a native Linux binary and this sandbox already IS
+Linux, so `gradlew` runs directly with `JAVA_HOME` pointed at it, no container required. The one
+real trap: `GRADLE_USER_HOME` must point at the project's own warm cache,
+**`.gradle/home`** (already present on disk, holding the resolved `com.replaymod.preprocess`
+plugin jar under both GAV spellings jitpack actually publishes it as), not a bare `~/.gradle`. A
+cold `~/.gradle` cannot resolve the plugin from jitpack even given real network access: the
+`useModule` coordinate in `settings.gradle.kts` (`com.github.replaymod:preprocessor:1678b67`)
+returns a bare 404 from jitpack's own maven front-end no matter how long you wait or retry, while
+the SAME artifact resolves fine as a Gradle plugin dependency once a cache that has already done
+this resolution once is reused — so a cold sandbox with only network access, and no seed cache,
+cannot bootstrap this build from zero. That's a real, standing fact for whoever hits this next
+from a truly fresh checkout with no `.gradle/home` at all; it just doesn't affect any environment
+that already carries this repo's own cache directory, which is every environment that matters here.
+
+Ran, offline, against `.gradle/home`, no code changes:
+
+```
+JAVA_HOME=.gradle/jdk21 GRADLE_USER_HOME=.gradle/home ./gradlew :1.21.1:compileJava  --no-daemon --offline -Dorg.gradle.java.home=.gradle/jdk21
+JAVA_HOME=.gradle/jdk21 GRADLE_USER_HOME=.gradle/home ./gradlew :1.21.11:compileJava --no-daemon --offline -Dorg.gradle.java.home=.gradle/jdk21
+```
+
+Both: **BUILD SUCCESSFUL**, exit `0`, read from the log file directly rather than through a pipe
+(AGENTS.md's own tail-trap warning, taken seriously this time). Every task involved reported
+`UP-TO-DATE`, which is Gradle's own incremental-build proof that the exact current source tree
+already has a passing compilation on record for both versions, not a skip — it still had to hash
+every input file and find nothing changed since the last real compile.
+
+**What this settles**: every commit from 2026-09-05 through today's HEAD compiles for both
+`1.21.1` and `1.21.11`, including the five 2026-09-05 porting commits the ticket named
+(`7aea6ea4`, `d85bb58e`, `c5e92754`, `bd0d5226`, `c74a4022`) — a compile is a whole-tree check, not
+a per-commit one, so there is no way for an old commit to compile today while a newer one on the
+same file does not. **What this does not settle, and must not be read into it**: whether any of it
+plays correctly on a live client. That is still gated on real stand access (`pac-dockerproxy` runs
+with `EXEC=0`, so no `docker exec` from this sandbox), which the 2026-09-10 Windows-host entry
+below already exercised for the biggest of these fixes (`7aea6ea4`, live-confirmed through
+`@equip`) and the rest still await.
+
+Also ran two of the exhaustive static scans from the 2026-08/09 sweeps fresh, against today's much
+larger tree (G62 through G89 landed since the last time these ran): the "whole `//$$` branch is
+only comments" scan and the "one/two-line `//$$` stub beside a six-plus-line real branch" scan.
+Same five hits as the last exhaustive pass, same explanations (the still-open `JankCraftingRecipeMapping`
+recipe-API-family gap; two `StorageHelper`/`ToolMaterialVer` call sites correctly dead-guarded to
+the pre-12111 branch only; one cosmetic UI scale difference in `AltoClefTickChart`; one legacy
+`EntityHelper` branch for pre-1.21 versions this repo no longer ships). **Zero new instances of
+either bug class despite the large volume of new code** — the two mechanical sweeps that found four
+real bugs in one day back in September stay clean today.
+
 <!-- BARITONE-GAP-PLAN-2026-09-10 -->
 ## PLAN: close every tungsten-vs-baritone gap from the audit (docs/BARITONE-GAPS.md)
 
