@@ -1,5 +1,32 @@
 # TODOs
 
+<!-- G10-ALREADY-FIXED-AUDIT-WAS-STALE-2026-09-15 -->
+## G10 (adjacent-liquid break veto) was never actually missing — the audit checked the wrong function (2026-09-15)
+
+`docs/BARITONE-GAPS.md` G10 says: *"BreakRules only checks fluid at the block itself
+(BreakRules.java:29), not neighbours — the bot will open a wall with lava/water behind it and
+flood its own tunnel. Port baritone avoidAdjacentBreaking."* True of `BreakRules.canBreak` in
+isolation, and that is as far as the 2026-09-10 audit looked. It is NOT true of the function that
+actually prices a break for `FastPlanner`: `MovementHelperB.getMiningDurationTicks` calls BOTH
+`breakCostMultiplierAt` (which is what wraps `BreakRules.canBreak`) AND, separately,
+`avoidBreaking` — and `avoidBreaking` already calls `avoidAdjacentBreaking` on all four
+horizontal neighbours plus the cell above, a complete, faithful, line-for-line port of baritone's
+`MovementHelper.avoidAdjacentBreaking` (same gravel/falling-block guard, same fluid-level/source
+check, same "always fine to mine above a liquid" comment) — checked by reading both functions
+side by side, not by re-deriving the logic. `git log -L` on that exact line traces it to commit
+`62e11084`, **2026-07-30**, six weeks before the audit that called it missing.
+
+So this gap was already closed, by a different file than the one the audit checked, before the
+audit was ever written. No code change here — this is a verification, not a fix, and it stops
+`docs/BARITONE-GAPS.md`'s G10 line from sending the next reader looking for a bug that already
+does not exist. `docs/BARITONE-GAPS.md` itself is left as its own dated snapshot per the
+convention recorded in the entry below (G1/G2/G5's stale "ABSENT" wording is the same kind of
+drift, already accepted there); this entry and the TODOS PLAN checklist are where the live answer
+lives. Worth naming plainly: this is the SAME class of mistake the room's own `AGENTS.md`
+"no scripts where a rule belongs" section warns about, just between two DOCUMENTS instead of a
+script and a rule — a claim about a system checked against one component of it, stated as if it
+covered the whole system.
+
 <!-- COMPILE-VERIFIED-BOTH-VERSIONS-2026-09-15 -->
 ## Compile is unblocked from this sandbox too, and current HEAD builds clean on both live versions (2026-09-15)
 
@@ -185,7 +212,11 @@ test + full nav-suite regression before it counts done.
       SUCCESSFUL. Not stand-verified (no docker exec from this sandbox) — see the dated entry
       below for the exact bench this still needs.
 - [ ] **G9 break-and-descend** (price the ceiling over a step-down; caves/overhangs).
-- [ ] **G10 adjacent-liquid break veto** (don't open a wall with lava/water behind it — flood guard).
+- [x] **G10 adjacent-liquid break veto** — already there: `MovementHelperB.avoidBreaking` (called
+      from `getMiningDurationTicks`, which is what `FastPlanner` actually prices with) has ported
+      `avoidAdjacentBreaking` on all four neighbours + above since commit `62e11084` (2026-07-30),
+      six weeks before the audit. The audit checked `BreakRules.canBreak` only, a different,
+      newer function that never claimed to cover this. No code change, verification only.
 - [ ] **G11 no-collision blockers visible** (cobweb/fire/tripwire/berry counted as walls to break).
 - [ ] **G12 doors/gates passable to grid BFS** (open them instead of refusing/shimmying).
 - [ ] **G13 per-cell break budget** (replace the flat 300-tick abort so hard blocks can finish).
