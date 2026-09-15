@@ -1,5 +1,25 @@
 # TODOs
 
+<!-- G13-CAP-SELF-CORRECTED-2026-09-15 -->
+## Self-caught, same pass: G13's own cap was too tight for its own flagship example (2026-09-15)
+
+Re-read the G13 fix (entry immediately below) right after writing it, the same discipline this
+session has applied to everyone else's code all along, applied to my own this time. Found a real
+arithmetic problem: the formula `estimate * 2 + 100` is meant to give roughly double the raw
+estimate as margin, but the cap chosen alongside it (`min(6000, ...)`) is BELOW what the fix's own
+justifying example needs. Real vanilla obsidian with a tool that cannot harvest it (stone or iron
+-- only diamond/netherite qualify) takes 250 seconds, 5000 ticks, the exact figure the commit
+message cites. `5000 * 2 + 100 = 10100`, and a 6000 cap would have clipped that down to 6000 --
+barely 1.2x the raw estimate, not the roughly-2x the formula was written to give. The number I
+picked as "a comfortable safety margin" and the number I picked as "a hard ceiling" contradicted
+each other for the exact case I built the fix to handle, and I did not check that at the time.
+
+Raised the cap to 12000 ticks (10 minutes) so the flagship example actually gets its intended
+margin (10100 < 12000) rather than being clipped to the edge. Re-verified:
+`:1.21.1:compileJava`/`:1.21.11:compileJava` both BUILD SUCCESSFUL. Worth naming as its own entry
+rather than silently editing the fix above: the record should show the number was wrong once,
+not just that it is right now.
+
 <!-- G13-PER-CELL-BREAK-BUDGET-IMPLEMENTED-2026-09-15 -->
 ## G13 implemented: the mining watchdog is now per-cell and sized from the planner's own estimate, not a flat 15-second guess (2026-09-15)
 
@@ -23,8 +43,9 @@ it around 5000 ticks) never had a chance against a cap sized for an easy block.
 function the PLANNER already calls to decide a cell is breakable in finite time at all, refusing
 anything at `COST_INF` before it ever reaches a plan — is recomputed fresh in the executor against
 the live block state and whatever tool is actually equipped right now (which can differ from what
-planning assumed). The per-cell budget is `max(300, min(6000, estimate * 2 + 100))`: floored at
-the OLD flat value so nothing that used to pass gets stricter, capped at 6000 ticks (5 minutes) so
+planning assumed). The per-cell budget is `max(300, min(12000, estimate * 2 + 100))` (see the
+correction entry above this one for why 12000, not the first number tried): floored at the OLD
+flat value so nothing that used to pass gets stricter, capped at 12000 ticks (10 minutes) so
 a bad estimate can only ever make the watchdog MORE patient within a hard bound, never unbounded.
 Since a cell that reaches the executor's break queue was already proven finite-cost by the
 planner, "never gives up" genuinely cannot happen here — the cap exists for the case where the
@@ -761,7 +782,7 @@ test + full nav-suite regression before it counts done.
 - [x] **G13 per-cell break budget** — `PathExecutor.tickBreaking` now resets its watchdog when
       `target` changes (it used to count against the whole break queue, not the current cell) and
       sizes the budget from `MovementHelperB.getMiningDurationTicks`'s own live estimate
-      (`max(300, min(6000, estimate*2+100))`) instead of a flat 300. `:1.21.1:`/`:1.21.11:
+      (`max(300, min(12000, estimate*2+100))`) instead of a flat 300. `:1.21.1:`/`:1.21.11:
       compileJava` both BUILD SUCCESSFUL. Not stand-verified.
 - [ ] **G14 soft break-cost tier for block entities** (one chest in a wall shouldn't abort the tunnel).
 - [x] **G15 throwaway budget whitelist** — done inside G62: `BlockPlaceHelper.isScaffold` (a full

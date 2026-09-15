@@ -689,7 +689,16 @@ public class PathExecutor {
             // COST_INF (or anything absurd) never reaches this cell in a real plan -- BreakRules
             // already refused it above -- but floor and cap it anyway so a bad estimate can only
             // ever make the watchdog MORE patient within a bound, never unbounded.
-            breakBudgetTicks = (int) Math.max(300, Math.min(6000, estimate * 2 + 100));
+            //
+            // ⛔ SELF-CAUGHT 2026-09-15: the cap was first written as 6000, which is BELOW what
+            // this fix's own flagship example needs. Real vanilla obsidian with a tool that
+            // cannot harvest it (stone, iron -- only diamond/netherite qualify) takes 250 s =
+            // 5000 ticks by the documented formula, the exact number this fix's own commit
+            // message cites. 5000*2+100 = 10100 wants roughly double; a 6000 cap would have
+            // clipped that down to barely 1.2x the raw estimate, undermining the margin the
+            // formula was written to give. Raised to 12000 (10 minutes) so the case this fix
+            // exists for actually gets the intended margin, not just barely enough to scrape by.
+            breakBudgetTicks = (int) Math.max(300, Math.min(12000, estimate * 2 + 100));
             breakBudgetSized++;
         }
         Vec3d eye = player.getEyePos();
