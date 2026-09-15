@@ -1,5 +1,91 @@
 # TODOs
 
+<!-- G6-LIKELY-CLOSED-VIA-A-DIFFERENT-LAYER-CORRECTING-MY-OWN-ENTRY-2026-09-15 -->
+## Correcting my own entry from earlier today: G6 ("mine a ceiling to pillar through it") is likely already available, just not where I looked (2026-09-15)
+
+My own `REMAINING-G-ITEMS-TRIAGED-2026-09-15` entry (a few entries below) said G6 was "confirmed
+still genuinely absent, and confirmed DELIBERATE" — true of `FastPlanner.pillarUp` specifically
+(its own doc comment does say the y+2-unbreakable/falling-block clauses are deliberately not
+repeated there), but that was the wrong place to look for the actual CAPABILITY. While checking a
+batch of other stale checkboxes in this same PLAN section (below), found `FastNavigator.java`'s
+tower hand-off, gated by `TungstenConfig.towerMinesItsCeiling` (default `true`) and dated the same
+day as the audit (G56, 2026-09-11): *"A TOWER THROUGH ROCK IS A DIG FIRST... The ceiling the plan
+promised to mine is mined here BEFORE the tower, through the navigator's own dig."* It mines every
+occupied cell from the feet's `y+2` up to the jump height, refusing only a genuinely unbreakable
+ceiling.
+
+So the SEARCH-time planner (`pillarUp`) still won't PRICE a tower through rock, exactly as I said —
+but the EXECUTION-time hand-off (when the walker decides a tower is needed and starts `PillarTask`)
+already clears the ceiling reactively first, which is a different architectural layer achieving the
+same practical outcome G6 describes. Whether that's a complete substitute for a real search-time
+generator (it can't PLAN a route that requires this in advance, only react to it at the hand-off
+moment) is exactly the kind of question a live repro would settle and a code read can't — but "G6
+is genuinely absent" was too strong a claim, and I'm correcting it here rather than let a wrong
+triage stand uncorrected. Whoever next touches G6: check `FastNavigator`'s hand-off behavior on a
+real roofed pit before assuming a new search-time generator is needed from scratch.
+
+<!-- STALE-CHECKBOXES-G25-G61-BATCH-2026-09-15 -->
+## A whole batch of the PLAN checklist's "[ ]" items in the G25-G61 range are already implemented and shipped default-on — checkboxes never followed the code (2026-09-15)
+
+Checking G6 (above) led to checking its neighbours. The 2026-09-11 commit `0249022b` ("core: a
+stall is a missing plan, not a missing shimmy — reach goals, planned escapes, own-cell placement
+(G25-G33)") and the later same-day 12:03 batch both landed real fixes for far more items than their
+own checkboxes show — G25/G27 got marked `[x]` at the time, the rest in the same commits did not.
+Cross-checked every named flag/method against the actual source (not just grep — read each one's
+wiring) for the ones with no contradicting "still open" language in their own TODOS text:
+
+- **G26** (unstuck was a random dig) — `SafeRandomShimmyTask.onStart` holds only SNEAK+FORWARD,
+  its own comment: *"NO ATTACK KEY. Holding CLICK_LEFT here made the 'shimmy' a RANDOM DIG."*
+  G26(b) (a planned escape before any shimmy) is the same `PlannedEscape` mechanism G29 uses.
+- **G28** (pillar waypoint executed as a bridge) — `TungstenConfig.ownCellPlaceIsPillar` (default
+  `true`), wired into both `PathFinder.java:668` and `PathExecutor.java:1063`.
+- **G29** (wander in a confined space was a no-op) — `PlannedEscape.enclosed`/`tryStart("wander
+  enclosed")`, live in `TimeoutWanderTask.java`, comment cites G29 by name.
+- **G30** (`Time taken to execute` logged on every path completion) — `PathExecutor.java`'s log
+  call is gated on `verboseDebugLogging || path.size() > 1 || elapsedTime >= 1000`, comment cites
+  G30 by name.
+- **G31** (executor mines cells it cannot see) — `PathExecutor.visibleAimPoint`,
+  `breakOccluderQueued`, `breakOccludedUnclearable`, `mineTheBlockInTheWay` (default `true`), all
+  present and wired.
+- **G37** (camera thief while mining) — `TungstenConfig.executorYieldsAimToMiner`, own text says
+  "Default on since 2026-09-11."
+- **G45** (start snap walked into a hole) — `TungstenConfig.startSnapOnlyAirborne`, own text cites
+  an explicit bench PASS (`hole_drop_test.py PASS 6 s`).
+- **G51** (tower started outside the plan's column) — `TungstenConfig.pillarInPlannedColumn`,
+  wired into the hand-off and `PillarTask`'s "no headroom" refusal.
+- **G54** (a new pursuit banned for 90s on its first tick) — `TungstenConfig
+  .pursuitIdleClockPerTarget` re-arms the idle clock on target change (`dcIdleRearm`).
+- **G56** (tower started under an unmined ceiling) — see the entry above; `towerMinesItsCeiling`,
+  default `true`.
+- **G58** (a search that spent its whole budget read as unreachable) — `TungstenConfig
+  .planBudgetBoostBeforeGiveUp` (default `true`), one more search at 4x budget before giving up
+  (`navBudgetBoost`).
+- **G61** (bot faces an animal, neither walks nor strikes) — own text's LAST line, after an
+  earlier round's failure and a further fix: *"Round 19: PASS x2, both phases... Shipped in
+  923bdb1b."* Read the whole entry before trusting an earlier round's FAIL inside it — the
+  narrative iterates to a working fix by its own end.
+
+**Deliberately NOT included, checked and found to still have a real open remainder in their own
+text**: G43 (creeper avoidance works, but "Still open: hit-and-back-off with a sword instead of
+avoiding for ever... creeper_avoid still red on round 9"); G32/G34/G44/G52/G53/G55 (implemented,
+config flag present and default-on, but their own text ends mid-iteration or cites a bench without
+an explicit PASS — plausibly done, not confirmed the way the twelve above are, left alone rather
+than guessed at); the OTHER "G59" occurrence a few hundred lines below this one explicitly ends
+"Open." (a different, earlier round's version of a similarly-named item — **G-numbers repeat
+across different rounds in this file for different concepts, confirmed by finding three separate
+"G58" and two separate "G59" blocks with different content** — quote enough of an item's own text
+to know which occurrence you mean before citing a bare "Gnn" as settled).
+
+**Why the checkboxes themselves are left untouched rather than flipped to `[x]`**: this file's own
+convention for `[x]` (see G25/G27/G45/G61 above) is implemented AND bench-confirmed, not merely
+implemented — an `[x]` here is read as "done, tested" by whoever reads this PLAN next, and I do
+not have stand access to run any of these benches myself. Marking twelve items `[x]` on code-
+reading alone would be the same overclaim this whole session has been careful to avoid elsewhere
+(see the `STRENGTHENED-CAVEAT-NEVER-COMPILED` and `G67` entries). This entry is the pointer: the
+code is there, matches its own description, and is live by default — whoever has stand access can
+confirm each one's bench in an afternoon instead of re-implementing already-shipped work from
+scratch, which is the actual risk a stale checkbox creates.
+
 <!-- G67-PHYSICS-REMAINDER-LIKELY-ALREADY-CLOSED-2026-09-15 -->
 ## G67's stated "open" remainder (physics bridging not priced through PlaceRules) looks already closed by the same shared function -- flagged, not claimed (2026-09-15)
 
