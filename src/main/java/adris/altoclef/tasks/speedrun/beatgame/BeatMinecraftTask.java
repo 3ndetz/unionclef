@@ -596,7 +596,11 @@ public class BeatMinecraftTask extends Task {
 
 
             int count = itemStorage.getItemCount(Items.RAW_IRON);
-            int includedCount = count + itemStorage.getItemCount(Items.IRON_INGOT);
+            int ingots = itemStorage.getItemCount(Items.IRON_INGOT);
+            // Smelt targets count the total desired output, including existing ingots.
+            // Do not schedule an already-satisfied target just because raw iron remains.
+            if (ingots >= neededIron) return pair;
+            int includedCount = count + ingots;
 
             if ((!hasSufficientPickaxe && includedCount >= 3) || (!hasItem(mod, Items.SHIELD) && includedCount >= 1) || includedCount >= neededIron) {
                 int toSmelt = Math.min(includedCount, neededIron);

@@ -471,3 +471,18 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Final limiter matrix passed12/12:threeinterleaved LONG_AFK off/onpairs (offlimit10,observed8–10FPS;onlimit30,observed27–28FPS),SHORT_AFK off/on atconfigured60 (30/60),configured20 respected,recentinputdefault30,minimized/menu enabledcap30. Video decoded. Standalone selection integration running.
 - Earlier fixture attempts are notpasses:staticTYPE/reflectionlookup errors;insufficient2-secondFPSsettling;writingderivedlimiter.maxFps instead ofactualGameOptions;then expectingminimized10 despite theexistinghook'scap30. The last mismatch was not a windowcallbackrace. The corrected fixture setsactualSimpleOption,records boundedFPSsettling,queries injectedstate atomically,andtests the existingcontract.
 - Standalone selection integration passed3/3(angry,calm,angry),all20HP;threevideosdecoded. Existing limiter behavior verified and standalone pins ready forlocalcommit. Returning to natural observation withFPSoverride enabled andworldcheckpoint available.
+
+
+## 2026-09-15 — Do not schedule completed iron smelting
+
+### Investigate
+- Natural b8382e55 observation:893.9s,all recorded samples20HP,eight videos decoded. Regainedironpick/shield/twobuckets;temporary container-placement delays resolved. No observed recurrence of the original one-high clearance stall. After observer completion,client continued;explicitdisconnect later recorded124.4,67.2,-46.6,20HP. No whole-game success claim.
+- Natural preparation repeatedly returned to iron smelting with twoingots already carried and desiredoutputone. Isolated old-jar probes with2ingots and1ingot both offered priority350 despite SmeltInFurnaceTask.isFinished=true. Live gamer actually placed/used a furnace;baseline2ingots samples2–4 show the redundant work. These are two functional reproductions,not a timing comparison.
+
+### Implement
+- BeatMinecraftTask's iron priority provider now declines smelting when existingingots already satisfy the remaining equipment iron budget. Existing thresholds for earlypick/shield and genuine shortage are retained. No global Task lifecycle or navigation change.
+- New smelt_priority_test drives the actual gamer priority provider onclientthread,then the real gamer task;restoresbenchFPS/forceload settings and normalizes arena/input/inventory. Missing-output versus exact/surplus-output matrix pending. Build successful;deployment running.
+
+- Final smelting matrix passed 6/6: two missing-output runs produced one ingot, and four exact/surplus-output runs retained the raw iron without scheduling smelting. All samples20HP. All six videos decoded;actual furnace phase and subsequent movement visually inspected. StartupFPS checked;some later samples fell below14,so these are functional inventory/provider results,not timing comparisons. Adjacent navigation audit running.
+
+- Adjacent nav_flat/nav_staircase/nav_descend passed3/3 at24.3/29.0/27.7FPS,no invalid runs. One-high corridor passed2/2:three head cells planned and mined,groundedarrival,20HP. All four audit videos decoded;clearance mining frame inspected. New natural iron-kit checkpoint saved/verified with zero players:outputs/natural-checkpoints/20260915-173341-iron-kit.tar.gz. Fresh upstreamfe28b686 adds only door/gate documentation;merge after scoped localcommit.
