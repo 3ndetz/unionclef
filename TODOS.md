@@ -1,5 +1,28 @@
 # TODOs
 
+<!-- G12-SCOPE-NARROWED-NOT-ATTEMPTED-2026-09-15 -->
+## G12 (doors/gates), narrowed precisely so the next attempt doesn't start from scratch (2026-09-15)
+
+Re-checked whether G12 was as hard as the earlier triage said, the same way the re-check on G6
+found a real partial mechanism hiding in a different file. This time the answer is no partial
+mechanism, but a precise enough map of the gap to save real time for whoever implements it:
+
+- **The interaction primitive already exists and works**, in `MovementTraverse.update()`: aim at
+  the door/gate cell and hold `Input.CLICK_RIGHT` for one tick, checked via
+  `MovementHelperB.isDoorPassable`/`isGatePassable`. This is E2/E4's own physics-side machinery,
+  not something to design from scratch.
+- **What's actually missing is a place to plug it in.** E1 (`CombatPathfinder`'s grid BFS) has no
+  separate "walker" class at all — checked via `grep -rl "CombatPathfinder\."`, and the only
+  consumer outside the pathfinder itself is `CustomBaritoneGoalTask.java`, which drives E1's route
+  directly from its own tick loop. There is no existing per-tick "aim and hold a key until this
+  sub-goal completes" state machine in that file to receive a ported version of MovementTraverse's
+  door logic — building one is a real, multi-tick state addition to the file that already
+  makes every primary navigation decision (628 new lines this batch alone), not a quick patch.
+
+**Still not attempted**, for the same reason as before (new interaction state machinery on the
+PRIMARY navigation path, unverifiable without a live stand) — but the next person does not need to
+figure out that a working reference exists or where it lives; both are answered here.
+
 <!-- G13-CAP-SELF-CORRECTED-2026-09-15 -->
 ## Self-caught, same pass: G13's own cap was too tight for its own flagship example (2026-09-15)
 
