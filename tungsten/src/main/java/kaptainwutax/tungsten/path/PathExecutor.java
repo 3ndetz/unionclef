@@ -49,6 +49,11 @@ public class PathExecutor {
     public volatile List<net.minecraft.util.math.BlockPos> breakQueue = null;
     private int breakingTicks = 0;
     private int settleTicks = 0;
+    /** G13: the cell breakingTicks is currently counting against, and the budget sized for it.
+     *  See tickBreaking's target-change check for why this exists. */
+    private net.minecraft.util.math.BlockPos breakBudgetTarget = null;
+    private int breakBudgetTicks = 300;
+    public static volatile int breakBudgetSized = 0;
 
     /**
      * HAND THE EXECUTOR A NEW BREAK JOB. Use this instead of assigning {@link #breakQueue}.
@@ -82,6 +87,7 @@ public class PathExecutor {
     public void startBreaking(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
         breakQueue = blocks == null ? null : new java.util.ArrayList<>(blocks);
         breakingTicks = 0;
+        breakBudgetTarget = null;
         settleTicks = 0;
         stop = false;
         // AND PUT THE EXECUTOR WHERE IT WILL ACTUALLY RUN THE JOB. Mining only happens inside
@@ -350,7 +356,7 @@ public class PathExecutor {
     			Debug.logMessage("Mining cancelled by stop flag (" + breakQueue.size() + " block(s) left)");
     			MinecraftClient.getInstance().interactionManager.cancelBlockBreaking();
     			TungstenModRenderContainer.BREAK_PLAN.clear();
-    			breakQueue = null; breakingTicks = 0; settleTicks = 0;
+    			breakQueue = null; breakingTicks = 0; breakBudgetTarget = null; settleTicks = 0;
     		}
     		if (placeQueue != null) { placeQueue = null; placingTicks = 0; }
     		// A stop mid-mine must release the attack key and the aim immediately —
@@ -614,7 +620,7 @@ public class PathExecutor {
             Debug.logMessage("Mining done — passage open");
             options.attackKey.setPressed(false);
             TungstenModRenderContainer.BREAK_PLAN.clear();
-            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            breakQueue = null; breakingTicks = 0; breakBudgetTarget = null; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             resumeGotoAfterMining(player);
             return false;
         }
@@ -628,10 +634,36 @@ public class PathExecutor {
             options.attackKey.setPressed(false);
             mc.interactionManager.cancelBlockBreaking();
             TungstenModRenderContainer.BREAK_PLAN.clear();
-            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            breakQueue = null; breakingTicks = 0; breakBudgetTarget = null; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
         }
 
+        // ⛔ G13, 2026-09-15: `breakingTicks` used to count against the whole `breakQueue`'s
+        // lifetime, not the CURRENT cell -- `target` silently advances to the next cell in the
+        // queue the moment the previous one breaks (the scan above just finds the first
+        // non-passable cell every tick), but the counter never reset between them. A two-block
+        // break queue therefore split one 300-tick budget between both blocks instead of getting
+        // 300 each, and a single genuinely slow block (obsidian with a stone pick: real, finite,
+        // priced by the planner as breakable at ~5000 ticks, not COST_INF) never had a chance
+        // against a flat 15-second cap sized for an easy block. `getMiningDurationTicks` is the
+        // exact function the planner already used to decide this cell is breakable at all -- if
+        // it says a cell needs 5000 ticks, the executor should not give up at 300. Recomputed
+        // fresh here rather than threaded through the plan, since it is a pure function of the
+        // live block state and whatever tool is actually equipped right now, which can differ
+        // from what the planner assumed.
+        if (!target.equals(breakBudgetTarget)) {
+            breakBudgetTarget = target;
+            breakingTicks = 0;
+            net.minecraft.block.BlockState targetState = world.getBlockState(target);
+            double estimate = kaptainwutax.tungsten.path.movements.MovementHelperB
+                    .getMiningDurationTicks(world, player, target.getX(), target.getY(),
+                                            target.getZ(), targetState, false);
+            // COST_INF (or anything absurd) never reaches this cell in a real plan -- BreakRules
+            // already refused it above -- but floor and cap it anyway so a bad estimate can only
+            // ever make the watchdog MORE patient within a bound, never unbounded.
+            breakBudgetTicks = (int) Math.max(300, Math.min(6000, estimate * 2 + 100));
+            breakBudgetSized++;
+        }
         Vec3d eye = player.getEyePos();
         Vec3d center = Vec3d.ofCenter(target);
         // DECIDE WHICH HALF BEFORE THE INCREMENT, NOT AFTER. The guard used to read
@@ -639,7 +671,7 @@ public class PathExecutor {
         // is off by one: at exactly 300 the guard falls through to the reach test, the
         // post-increment leaves 301 behind, and an out-of-reach abort would be filed as a
         // timeout. Naming both halves up front costs one pure distance call and cannot drift.
-        boolean timedOut = breakingTicks++ > 300;
+        boolean timedOut = breakingTicks++ > breakBudgetTicks;
         boolean outOfReach = eye.squaredDistanceTo(center) > 4.5 * 4.5;
         if (timedOut || outOfReach) {
             // SAY WHICH HALF. "timeout or out of reach" is two different failures wearing one
@@ -676,7 +708,7 @@ public class PathExecutor {
             options.attackKey.setPressed(false);
             mc.interactionManager.cancelBlockBreaking();
             TungstenModRenderContainer.BREAK_PLAN.clear();
-            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            breakQueue = null; breakingTicks = 0; breakBudgetTarget = null; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
         }
 
@@ -740,7 +772,7 @@ public class PathExecutor {
                 options.attackKey.setPressed(false);
                 mc.interactionManager.cancelBlockBreaking();
                 TungstenModRenderContainer.BREAK_PLAN.clear();
-                breakQueue = null; breakingTicks = 0; settleTicks = 0;
+                breakQueue = null; breakingTicks = 0; breakBudgetTarget = null; settleTicks = 0;
                 kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
                 return false;
             }
