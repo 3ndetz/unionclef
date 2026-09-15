@@ -3,7 +3,6 @@ package adris.altoclef.tasks.entity;
 import adris.altoclef.AltoClef;
 import net.minecraft.entity.Entity;
 
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -30,7 +29,8 @@ public class KillEntityTask extends AbstractKillEntityTask {
     @Override
     protected boolean isSubEqual(AbstractDoToEntityTask other) {
         if (other instanceof KillEntityTask task) {
-            return Objects.equals(task.target, target);
+            // Re-tracking preserves the network ID, but this task holds a specific client instance.
+            return task.target == target;
         }
         return false;
     }

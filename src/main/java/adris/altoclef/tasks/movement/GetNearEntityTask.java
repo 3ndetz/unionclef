@@ -35,7 +35,8 @@ public class GetNearEntityTask extends CustomBaritoneGoalTask implements ITaskRe
     }
 
     public boolean isFor(Entity e) {
-        return entity.equals(e);
+        // A re-tracked entity can reuse the ID while replacing the bound client object.
+        return entity == e;
     }
 
     public int range() {
@@ -65,7 +66,7 @@ public class GetNearEntityTask extends CustomBaritoneGoalTask implements ITaskRe
 
     @Override
     protected boolean isEqual(Task other) {
-        return other instanceof GetNearEntityTask task && task.entity.equals(entity) && task.range == range;
+        return other instanceof GetNearEntityTask task && task.entity == entity && task.range == range;
     }
 
     @Override

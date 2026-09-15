@@ -387,3 +387,19 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Corrected fixed run passed7.841s,target mined,pillar observed,28 yield ticks,0 tool swaps,20HP. MP4 decoded,frame inspected. placeStats returned dbBuilderYield correctly (format/reset wiring checked). Repetitions and normal/open hunt audit running.
 - Final normalized pillar/mining matrix passed5/5:target mined,20HP,zero tool swaps,26–34 builder-yield ticks. All videos decoded. Wall/open hunt controls passed2/2;wall returned6cobblestone with0pick-to-sword transitions during a continuous mining queue,both targets killed,20HP. Navigation bridge/pillar/baseline audit running.
 - Navigation audit passed5/5(bridge,wall2,flat,staircase,descend),22.6–29.7FPS,no invalid attempts;artifacts20260915-143742. Fetch found no newer upstream. Returning to saved natural pillar attempt after commit.
+
+## 2026-09-15 — Replace tasks bound to re-tracked entity instances
+
+### Investigate
+- Natural176cdb43 replay passed the pillar, fled a creeper, smelted7iron and made2emptybuckets; descended to y26 with20HP and199blocks. Saved/disconnected after540.9s at(130.7,26,0.6) when the food hunt repeatedly approached a DISCARDED chicken. Five videos decoded; client-stall.log retained in outputs/survival-builder-fixed.
+- Live reload probe confirmed oldEntity.isAlive=false,isRemoved=true, but oldEntity.equals(freshEntity)=true because the network ID is reused. The closest-entity parent rejects the old target, yet Task.tick preserves its old child because KillEntityTask compares Entity.equals. Its final target remains removed, disabling the long-haul approach. Baritone FollowProcess instead scans current world entities each tick.
+- entity_reload_hunt_test pauses task evaluation across a real server re-track, retains the old child, moves the fresh target20blocks farther and opens the corridor. Baseline reproduced25s stationary at2122.5 with fresh target alive and task equality=true. Initial reflective pause helper failed caller-sensitive access; lookup corrected before baseline.
+
+### Implement
+- Bound KillEntityTask,GetToEntityTask,GetNearEntityTask and isFor use object identity, preserving equality for the same live instance and forcing replacement for a new one with the same ID. No tracker or timeout policy changes. Build and deploy passed,nested jars verified.
+- First two fixed runs killed the fresh target with20HP; all three task comparisons and isFor rejected the old instance while same-instance equality remained true. Third attempt failed in the fixture's concurrent world iterator (null entity), before result; guard added. Repetitions and ordinary hunt audit in progress.
+
+### Validation
+- Entity reload fixed matrix passed6/6 (runs1,2,4–7),target killed,20HP. Each confirmed removed/dead old entity,equal network-ID identity,different client instances,all old/new task bindings unequal,and same-instance KillEntityTask equality intact. Run3 remains a fixture failure,not a pass. Videos decoded; approach frame inspected.
+- Wall/open hunt controls passed2/2:6cobblestone through the wall,zero pick-to-sword interruptions while mining,both targets killed,20HP. One-high ascent replay passed2/2 with three head blocks explicitly planned and removed,20HP. All videos decoded; low-ceiling mining frame inspected. Final flat/staircase navigation audit running.
+- Final navigation audit passed2/2(flat,staircase),28.3/24.7FPS,zero invalid attempts;artifacts20260915-150643. Fetch found no newer upstream. Committing locally and resuming saved natural survival. Full game completion remains open.

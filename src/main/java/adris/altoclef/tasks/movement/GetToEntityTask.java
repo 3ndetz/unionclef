@@ -949,7 +949,8 @@ boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKey
     @Override
     protected boolean isEqual(Task other) {
         if (other instanceof GetToEntityTask task) {
-            return task._entity.equals(_entity) && Math.abs(task._closeEnoughDistance - _closeEnoughDistance) < 0.1;
+            // Entity.equals compares IDs; a reloaded instance needs a fresh approach.
+            return task._entity == _entity && Math.abs(task._closeEnoughDistance - _closeEnoughDistance) < 0.1;
         }
         return false;
     }
