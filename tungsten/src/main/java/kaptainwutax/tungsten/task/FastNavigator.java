@@ -1317,24 +1317,19 @@ public final class FastNavigator {
     /** Publish one current calculation on the client thread, including any walker handoff. */
     private static void applyPlan(net.minecraft.world.World world, BlockPos start,
                                   BlockPos goalCell, long budgetMs, FastPlanner.Result res) {
-        // A ONE-WAYPOINT PLAN IS AN ANSWER: THERE IS NOTHING TO WALK FROM HERE.
-        // FastPlanner returns exactly that when the start already satisfies the goal --
-        // "1 nodes, 1 wp, complete" (FastPlanner.java:445-457, expanded=1 and the goal node
-        // IS the start). This used to fall into the same `return` as a failed plan, so the
-        // tail that produced it stayed set, the tick loop asked again from that same tail,
-        // and got the same answer. Measured on a failing @gamer run: 218 of those in five
-        // minutes, about one every one and a half seconds, all identical.
-        // Forgetting the tail is what "there is no further leg from there" means; the
-        // arrival check owns finishing the navigation, and any genuinely new situation
-        // replans from the bot's real position anyway.
-        if (res.path.size() < 2) {
-            navShortRes++;
-            if (legTail != null && legTail.equals(start)) {
-                legTail = null;
-            }
-            return;
-        }
         if (res.isEmpty()) { navEmptyRes++; return; }
+        if (res.path.size() == 1) {
+            navShortRes++;
+            // A complete one-cell answer means the start already satisfies the goal.
+            // An incomplete one-cell answer is a dead end for walking, not arrival.
+            // On nav_steep the latter was discarded at the lip forever, so physics
+            // never received the jump. Let it follow the ordinary incomplete-plan
+            // handling below, including its separate policy for goals below us.
+            if (res.complete) {
+                if (legTail != null && legTail.equals(start)) legTail = null;
+                return;
+            }
+        }
 
         // PUBLISH THE WHOLE PLAN FOR THE VISUAL. res.path carries every waypoint's
         // toPlace/toBreak, so this shows the ENTIRE column/bridge/tunnel the route will
