@@ -29,9 +29,21 @@ from py4j.java_gateway import JavaGateway,GatewayParameters,get_field
 import json
 g=JavaGateway(gateway_parameters=GatewayParameters(port=25333,auto_convert=True));j=g.jvm;k=j.kaptainwutax.tungsten;a=j.adris.altoclef.AltoClef.getInstance()
 s=j.net.minecraft.class_2338(1104,-60,304);d=j.net.minecraft.class_2338(1107,-59,304)
-r=k.path.fast.FastPlanner.plan(a.getWorld(),s,d,1000,None,True)
+# Schedule world access and route mutation on the client, like the live driver.
+c=j.net.minecraft.class_310.method_1551();lookup=j.java.lang.invoke.MethodHandles.lookup()
+def on_client(handle):
+ f=j.java.util.concurrent.FutureTask(j.java.lang.invoke.MethodHandleProxies.asInterfaceInstance(j.java.lang.Class.forName('java.util.concurrent.Callable'),handle));c.execute(f);return f.get()
+def invoke_static(class_name,name,values):
+ cls=j.java.lang.Class.forName(class_name)
+ method=next(m for m in cls.getMethods() if m.getName()==name and m.getParameterCount()==len(values))
+ args=g.new_array(j.java.lang.Object,len(values))
+ for i,value in enumerate(values):args[i]=value
+ return on_client(j.java.lang.invoke.MethodHandles.insertArguments(lookup.unreflect(method),0,args))
+empty=g.new_array(j.java.lang.Class,0)
+world=on_client(lookup.unreflect(a.getClass().getMethod('getWorld',empty)).bindTo(a))
+r=invoke_static('kaptainwutax.tungsten.path.fast.FastPlanner','plan',[world,s,d,j.java.lang.Long('1000'),None,j.java.lang.Boolean(True)])
 print(json.dumps({'complete':get_field(r,'complete'),'path':[{'pos':str(get_field(n,'pos')),'break':[str(b) for b in get_field(n,'toBreak')] if get_field(n,'toBreak') else []} for n in get_field(r,'path')]}))
-k.task.FastNavigator.startExact(d)
+invoke_static('kaptainwutax.tungsten.task.FastNavigator','startExact',[d])
 g.close()
 '''
 rows=[]

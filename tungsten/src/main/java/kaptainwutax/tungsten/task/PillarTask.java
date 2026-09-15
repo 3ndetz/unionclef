@@ -55,7 +55,7 @@ public class PillarTask {
     public static volatile int pillarNoHeadroom;
     /** Per-tower anatomy for the "stuck" verdict: airborne-and-rising ticks, ticks with a cell to
      *  place into, ticks the live ray was not on the support's top face, clicks refused, placed. */
-    private static int dAir, dPlaceAt, dReadyNull, dTryFalse, dPlaced, dInsideCell;
+    private static int dAir, dPlaceAt, dReadyNull, dTryFalse, dPlaced, dInsideCell, dSneakWait;
     /** Ticks on which the jump this task pressed was found released again before the game
      *  sampled it -- another owner of the keys under the tower (G52 diagnostic). */
     private static int dJumpStolen;
@@ -121,7 +121,7 @@ public class PillarTask {
         placed = 0;
         sinceRung = 0;
         centerTicks = 0;
-        dAir = dPlaceAt = dReadyNull = dTryFalse = dPlaced = dInsideCell = dJumpStolen = 0;
+        dAir = dPlaceAt = dReadyNull = dTryFalse = dPlaced = dInsideCell = dJumpStolen = dSneakWait = 0;
         jumpAsked = false;
         dApex = -1e9;
         dLastPlaceAt = null;
@@ -353,6 +353,10 @@ public class PillarTask {
                     stop();
                     return;
                 }
+                // MovementPillar requests sneak near the apex and waits for the actual
+                // pose before clicking. Without it, a smoker or crafting table accepts
+                // the interaction by opening its GUI instead of supporting a new block.
+                opts.sneakKey.setPressed(true);
                 // THIS DID NOT EVEN AIM. It forged a hit on the top face of the block below
                 // and clicked, so a tower went up with the camera pointing anywhere at all —
                 // a placement through geometry, not a placement. Now: look DOWN at that face
@@ -368,7 +372,9 @@ public class PillarTask {
                 BlockHitResult hit =
                         kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, placeAt);
                 // Same shared rate gate as every other placement (helpers/BlockPlaceHelper).
-                if (hit == null) {
+                if (!player.isInSneakingPose()) {
+                    dSneakWait++;
+                } else if (hit == null) {
                     dReadyNull++;
                 } else if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(hit)) {
                     // remember this pillar block as scaffolding so a cleanup can mine it back out
@@ -409,13 +415,13 @@ public class PillarTask {
             Debug.logMessage(String.format(
                     "Pillar stuck at y=%.1f (no rung in %d ticks) air=%d insideCell=%d placeAt=%d readyNull=%d tryFalse=%d placed=%d"
                     + " pitch=%.0f onGround=%b hit=%s lastPlaceAt=%s hand=%s center=%d/%d at=(%.2f,%.2f)"
-                    + " apex=%.2f jumpStolen=%d",
+                    + " apex=%.2f jumpStolen=%d sneakWait=%d",
                     player.getY(), sinceRung, dAir, dInsideCell, dPlaceAt, dReadyNull, dTryFalse, dPlaced,
                     player.getPitch(), player.isOnGround(), hitS,
                     dLastPlaceAt == null ? "-" : dLastPlaceAt.toShortString(),
                     player.getMainHandStack().getItem().toString(),
                     centerTicks, CENTER_TICKS_MAX, player.getX(), player.getZ(), dApex,
-                    dJumpStolen));
+                    dJumpStolen, dSneakWait));
             pillarNoRung++;
             if (dPlaced == 0) {
                 noteRefusal(supportedColumnUnder(player, world));
