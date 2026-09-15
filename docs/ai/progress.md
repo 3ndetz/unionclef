@@ -353,3 +353,20 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 
 - Craft audit passed2/2(mine_stone,craft_at_distant_table),19.2/23.7FPS,no invalid attempts;artifacts20260915-140020. Natural replay next.
 - Fresh upstreamd9bbc3b0 raises only the watchdog cap6000->12000 plus documentation. Reviewed for integration; ordinary stone/diamond-obsidian budgets stay below either cap. Its long wrong-tool margin has not been timed end-to-end here.
+
+## 2026-09-15 — Deep descent must land before mining below its launch reach
+
+### Investigate
+- Natural replay on99d707e5 passed the buried-table blocker, made stone sword,shield,iron pickaxe. Saved/disconnected at283.4s,20HP,48blocks,(107.5,127,-11.7). Three videos decoded.
+- A descent queued four cells down to(107,124,-11); after upper cells cleared, its lowest dig was hidden behind the own support(107,126,-12). Replans repeated the same unavailable action.
+- Baritone MovementDescend.cost mines source y+1,y,y-1; dynamicFallCost requires deeper cells already open. Our breakStair mined the whole fall column, including blocks too low to reach around the launch support.
+- New deep_dig_step_test: first fixture used an unsupported four-level destination and failed to reproduce (no route). Corrected geometry passed at cell center, including a filled column; these are controls, not reproductions. Offset -0.2 within the same source cell reproduced60 occlusion aborts in25s,unchanged position,lower stone intact.
+
+### Implement
+- Reject a descending edge if it needs to mine below source y-1; retain lower open fall cells and landing shapes. Search can land on the blocking cell and use a subsequent dig. Clean build passed; deploying before fixed measurements.
+
+### Validation
+- Fixed deep-column matrix passed6/6: four offset-0.2 starts,one centered,one offset+0.2. All reached the bottom with20HP,zero occlusion aborts,and preserved launch support. All six videos decoded; descent frame inspected. Plan now includes the intermediate landing and separate downward digs. Final five fixtures also removed old arena item drops before kit setup.
+- Existing descent-clearance and one-high ascent regressions running, followed by navigation baselines and saved natural replay.
+- Clearance audit passed6/6: stone overhang descents1/2/3,depth2 landing slab preserved,depth3 bedrock/disabled-breaking routes refused. All20HP. Sampled meanFPS17–26.7 (brief lows10/12 on two short courses); these are functional clearance checks,not timing comparisons. One-high ascent repeat passed2/2 with three head blocks planned/removed. Seven videos decoded and ascent frame inspected.
+- Navigation baseline audit passed3/3(flat,staircase,descend),17.3/19.3/27.7FPS,no invalid attempts. No new upstream after fetch. Committing and returning to the saved natural world; game completion remains open.

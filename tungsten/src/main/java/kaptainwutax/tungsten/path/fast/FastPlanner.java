@@ -1459,6 +1459,11 @@ public final class FastPlanner {
                 if (!shape.isEmpty() && (y + shape.getMax(net.minecraft.util.math.Direction.Axis.Y) <= landing
                         || y + shape.getMin(net.minecraft.util.math.Direction.Axis.Y) >= departure + PlayerFit.HEIGHT))
                     continue;
+                // Baritone MovementDescend.dynamicFallCost requires the lower fall
+                // column to be open. Only the source head/feet/one-below cells
+                // can be mined before stepping off: deeper blocks can be hidden
+                // by the launch support. Land on them first, then plan a new dig.
+                if (y < from.y - 1 && !shape.isEmpty()) return;
                 cells.add(cell);
             }
         }
