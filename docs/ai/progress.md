@@ -177,3 +177,16 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - The next 240-second natural-save run crafted two buckets, collected nine coal, recovered the table and reached the surface. It did not verify retrieval of the old furnace output: other tasks took priority and the bot moved away. Nighttime damage reduced health from 19 to 7; the run ended while pursuing a chicken. This is progression evidence, not a completed playthrough or a proven fix for every original furnace interruption.
 - The bot died between recording windows (server LastDeathLocation: 179,146,23). The old workspace observer stopped all bot tasks when finishing a video, leaving an unsafe unobserved gap. Exact death cause was not captured. Its replacement must keep gameplay and defence running across recording boundaries.
 - No release or remote publication yet.
+
+## 2026-09-15 — Recording must not disable survival
+
+### Investigate and implement
+- The workspace observer stopped all tasks in its recording cleanup. In a live survival world this also disabled defence between clips. Replace it with `deploy/runner/watch_survival.py`: observe by default, explicitly opt into starting/connecting, and keep gameplay active both across clip rotation and on observer exit. Stopping the bot now requires `--stop-on-exit`.
+- Records bounded MP4 chunks, screenshots, task/inventory/health/FPS timelines, with atomic JSON updates. It never changes inventory, health or time of day.
+
+### Validate
+- Observed the same ongoing gamer task across three completed 120-second clip rotations. Gameplay continued without an observer-issued task restart. All finalized clips decode; interrupting the observer also finalized its last clip without stopping the task.
+- Another death occurred at 111–117 seconds, before the first clip rotation, while defence was active. Thus fixing observation does not establish a fix for combat survival. Health fell from 16.5 to 3, then the player respawned; exact damage source remains unconfirmed.
+- The resumed gamer retained its forced smoker task after losing every item. It spent subsequent minutes seeking three porkchops without rebuilding tools. BeatMinecraftTask keeps lastTask/lastGather across player replacement and onStart only resets timers/protection. This is the next focused investigation.
+- A long delay in a flowing-water cave was observed and self-recovered; do not label it an established permanent navigation failure.
+- Paused the natural save safely by disconnecting before stopping tasks on the flat stand. Last natural state: (83.3,97,-112.2), 20 HP, empty inventory. Current client is on test-server for the respawn regression.
