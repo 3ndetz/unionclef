@@ -1,5 +1,31 @@
 # TODOs
 
+<!-- G32-G44-CONFIDENCE-UPGRADE-2026-09-15 -->
+## Two of the "plausibly done, not confirmed" checkboxes get a real upgrade from the diff audit that came after them (2026-09-15)
+
+The `STALE-CHECKBOXES-G25-G61-BATCH` entry below deliberately left G32, G34, G44, G52, G53, G55
+unmarked, since their own TODOS text lacked an explicit bench PASS. The G25-G89 diff audit that
+happened afterward (`G25-G89-DIFF-AUDIT-COMPLETE`, also below) read `FastPlanner.java` and
+`DestroyBlockTask.java` in full for logic, independent of and without reference to those specific
+checkbox questions — so where its findings happen to confirm one, that's a genuine second data
+point, not the same check counted twice. Checked which of the six actually got named or
+mechanism-matched:
+
+- **G32** ("unreachable declared by a timer, not a search", `dbBuildHeld`) — the DestroyBlockTask
+  audit fork explicitly named it: *"DestroyBlockTask's build-held/lid-digging/tool-equip/
+  aim-gated-swing logic (G32/G47/G50/G59)"* checked and correct.
+- **G44** ("a goal 94 blocks below handed to the physics engine", `planPartialLikeBaritone`) — the
+  FastPlanner audit fork confirmed the exact mechanism by description, not by number: *"the
+  PartialTracker/PARTIAL_COEFS baritone-bestSoFar port -- coefficient ordering and pick-first-
+  conservative logic both correct."* `planPartialLikeBaritone`'s own TODOS text describes exactly
+  this port.
+
+G34, G52, G53, G55 are NOT upgraded here — their files were read by the same audit, but neither
+fork's report named them or described their specific mechanism closely enough to count as a real
+second confirmation rather than "the file it lives in had no bugs elsewhere." Leaving those three
+exactly where the earlier entry left them: implemented, default-on, still lacking either a bench
+PASS or a specific-enough code confirmation to call settled.
+
 <!-- G25-G89-DIFF-AUDIT-COMPLETE-2026-09-15 -->
 ## The G25-G89 Java diff audit is now complete: all 54 files read for logic, not just relied on by name (2026-09-15)
 
