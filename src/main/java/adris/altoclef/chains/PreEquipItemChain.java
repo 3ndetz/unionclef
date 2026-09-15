@@ -5,7 +5,8 @@ import adris.altoclef.tasks.entity.AbstractKillEntityTask;
 import adris.altoclef.tasksystem.TaskChain;
 import adris.altoclef.tasksystem.TaskRunner;
 
-import java.util.Optional;
+import kaptainwutax.tungsten.TungstenModDataContainer;
+import kaptainwutax.tungsten.path.PathExecutor;
 
 public class PreEquipItemChain extends SingleTaskChain {
 
@@ -33,14 +34,13 @@ public class PreEquipItemChain extends SingleTaskChain {
         TaskChain currentChain = mod.getTaskRunner().getCurrentTaskChain();
         if (currentChain == null) return;
 
-        // ASK THE ENGINE THAT IS ACTUALLY DRIVING.
-        // This read BARITONE's current path and returned on its first line when there wasn't one.
-        // Tungsten drives, so there never is one: the whole chain has been silently dead since the
-        // swap, and "equip the sword while walking to a fight" simply stopped happening.
-        // The question it asks is engine-independent -- does the route ahead need blocks broken or
-        // placed, because then the hand belongs to a tool rather than a weapon -- so the queue
-        // answers it now.
-        if (kaptainwutax.tungsten.path.movements.MovementQueue.remainingNeedsBlockWork(mod.getWorld())) {
+        // The movement queue and executor own separate block-work plans. FastNavigator
+        // hands digs directly to the executor, so an empty movement queue does not mean
+        // the hand is free. Switching to a sword here resets vanilla mining progress.
+        PathExecutor executor = TungstenModDataContainer.EXECUTOR;
+        if ((executor != null && (executor.isBreakingNow() || executor.isPlacingNow()))
+                || mod.getControllerExtras().isBreakingBlock()
+                || kaptainwutax.tungsten.path.movements.MovementQueue.remainingNeedsBlockWork(mod.getWorld())) {
             return;
         }
 

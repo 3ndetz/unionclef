@@ -263,3 +263,20 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - The first fixed direct-approach attempt failed its setup grounded/health assertion before starting a task; excluded, then rerun after explicit settle checks. It is not a navigation failure or a pass.
 - Water/lava initial FPS samples were12/1, then29/23; these prove inventory outcomes only, not speed/reliability. Checked-in water replay is running before commit. Natural approach through the forest remains to be retried on the new build.
 - Checked-in water replay passed and produced a water bucket; no further Java changes. Direct approach and replay videos decoded. Proceeding to the saved natural water approach.
+
+## 2026-09-15 — Hunting must not replace the mining tool
+
+### Investigate
+- Natural approach on060e1e44 made progress toward water, then switched to food pursuit. At825.4s it retained18HP,iron pickaxe,shield,two empty buckets at(164.7,115,41.5). All seven video chunks decoded. Water collection was not completed.
+- The hunt repeatedly timed out mining nearby stone. Live samples showed executor breaking=true, movement-queue block work=false, and alternating iron pickaxe/stone sword while KillEntityTask remained in the task chain.
+- PreEquipItemChain only consulted MovementQueue, missing FastNavigator's direct executor digs. Baritone's reference PathExecutor aggregates remaining break/place cells from its own movement list; tungsten has a separate executor queue that also owns the hand.
+- Corrected tunnel baseline reproduced21 sword samples during460 mining samples and failed to traverse the wall in40seconds. The first fixture is excluded: it accidentally mutated the class array retained by KillEntitiesTask and searched for Task.class instead of chicken.
+
+### Implement and validation in progress
+- Suppress background weapon pre-equipping while the executor mines/places or the direct controller breaks a block, retaining the movement-queue guard. Actual combat ownership is unchanged.
+- Added hunt_tunnel_test.py: a chicken behind a three-cell stone wall in a bedrock tunnel, raw hand/engine samples and recording; open variant checks ordinary hunting.
+- Build/deploy passed and nested module jars matched. Fixed functional hunt and navigation audit pending; no publication or Telegram retry.
+- First fixed fixture physically crossed and killed the chicken, but its original zero-sword-samples gate failed:7 samples belonged to a new executor queue's settling/start interval, all preceded by a non-breaking sword state. Preserve that as-run FAIL. Refined the mechanism metric to pickaxe-to-sword transitions within a continuous queue: baseline10, first fixed0; second fixed replay passed with0. These are functional observations, not speed comparisons (initialFPS1, later30).
+- Final fixture additionally clears prior item drops, asserts a pickaxe start, requires all6 cobblestone from the wall, full health, and the killed chicken. Open case requires observed sword selection. First final wall/open pair passed; repetitions and navigation audit in progress.
+- Final harness passed5/5 functional cases: three restored-wall hunts and two open hunts. Every wall returned exactly6 cobblestone; all runs retained20HP, killed the target, and recorded0 pickaxe-to-sword transitions during a continuous mining queue. All five MP4s decoded; mining frame and hunt video reviewed.
+- Standard navigation audit passed4/4(flat,staircase,descend,bridge),23.2–29.7 averageFPS,0 invalid attempts. Artifacts deploy/runner/artifacts/20260915-122346. Fresh fetch found no new upstream commits. Returning to the saved natural hunt; food priority logic was not changed.
