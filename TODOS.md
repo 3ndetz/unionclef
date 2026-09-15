@@ -1,5 +1,32 @@
 # TODOs
 
+<!-- STALE-CHECKBOXES-BATCH-2-2026-09-15 -->
+## Three more from the same stale-checkbox batch, same bar as before (explicit PASS/Shipped in their own text, no G-number collision) (2026-09-15)
+
+Continuing the sweep from the entry below (`STALE-CHECKBOXES-G25-G61-BATCH`), same methodology and
+same bar: only items whose OWN text ends with an explicit PASS/Shipped result and no contradicting
+"still open" language, checked for G-number reuse before trusting the "Gnn" label.
+
+- **G62** (tower out of azalea, "out of blocks" with planks in the pack) — *"Round 20: PASS all
+  three phases, pit_escape PASS with it. Shipped in 63c00303."* `isScaffold`, `pillarColRefused`,
+  `refusedRecently` all confirmed live.
+- **G63 + G63b** (no target condemned for good / the zero-attempts regression) — base fix:
+  *"Round 22: target_returns PASS x2; shipped in 5d977674."* The regression found one round
+  later (G63b) is not left open either — its own text states the actual decision made
+  (*"Zero attempts allowed is now a DECISION: no cool-off, no fallback, no price"*), not a
+  proposal; `excludedDeliberately` confirmed live and wired into both `BlockScanner` and
+  `EntityTracker`.
+- **G66** (a vine in the tower's column turns the jump into a climb) — *"Round 32: PASS x2 --
+  out of the vined shaft in six seconds... pit_escape PASS beside it."* `pillarVine` confirmed
+  live.
+
+**Checked and correctly still open, not touched**: the very next item after G63b in the file
+("target_returns phase A flakes 2 in 5") reads as a genuine open item on its own text — it ends
+with a proposed rework ("Rework phase A so..."), future tense, not a completed fix, which is
+exactly the shape that should stay `[ ]`. Worth naming as the negative control for this whole
+sweep: not every neighbouring item is stale, and the ones that are not stale say so themselves by
+never claiming a result.
+
 <!-- G6-LIKELY-CLOSED-VIA-A-DIFFERENT-LAYER-CORRECTING-MY-OWN-ENTRY-2026-09-15 -->
 ## Correcting my own entry from earlier today: G6 ("mine a ceiling to pillar through it") is likely already available, just not where I looked (2026-09-15)
 
