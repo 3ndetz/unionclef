@@ -497,6 +497,7 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
               if sm.get("bot") and len(sm["bot"]) > 1]
         if ys and min(ys) < STAND_Y - 20:
             invalid = True
+            invalid_why = "arena"
             print(f"  => {scn.id}: INVALID — the bot LEFT THE ARENA: min Y {min(ys):.1f} against a "
                   f"floor at {STAND_Y}. This run measured a fall, not the course, and every other "
                   f"number it produced is void. A fall cascades -- ensure_grounded does not always "
@@ -551,7 +552,7 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         bot.py.screenshot(art.path("fail.png"))
     art.write_text("chat.txt", "\n".join(bot.recent_chat(40)))
     verdict = {"id": scn.id, "tier": scn.tier, "passed": passed,
-               "invalid": invalid, "avg_fps": avg_fps,
+               "invalid": invalid, "invalid_reason": invalid_why, "avg_fps": avg_fps,
                "clip": ctx.geo.get("clip"),
                "criteria": [c.as_dict() for c in crits]}
     art.write_json("verdict.json", verdict)
@@ -559,7 +560,7 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     for c in crits:
         mark = "PASS" if c.ok else ("FAIL" if c.gate else "flag")
         print(f"  [{mark}] {c.name}  {c.detail}")
-    if invalid and invalid_why == "stand":
+    if invalid and invalid_why in ("stand", "arena"):
         pass  # the stand-sanity guard already printed its own, accurate reason above
     elif invalid:
         # THIS USED TO SAY "host starved ... Close whatever else is running", WHICH IT NEVER
@@ -899,14 +900,13 @@ def _main():
             # Retry an fps-invalidated run ONCE on fresh clients. If it comes back invalid again,
             # the load is not ours to fix and the INVALID stands honestly.
             if res.get("invalid") and not res.get("refreshed"):
-                if refresh_clients(f"{cls.id} ran at {res.get('avg_fps')} fps, "
-                                   f"below the {HEALTHY_FPS_MIN} floor"):
+                if refresh_clients(f"{cls.id} invalidated by {res.get('invalid_reason', 'unknown reason')} "
+                                   f"(recorded FPS: {res.get('avg_fps')})"):
                     res = run_scenario(cls, state["rcons"], state["bot"], state["victim"],
                                        art_root, args.record)
                     res["refreshed"] = True
                     if not res.get("invalid"):
-                        print(f"  => {cls.id}: measured on fresh clients — the INVALID was the "
-                              f"suite's wear, not the course")
+                        print(f"  => {cls.id}: fresh-client retry produced a valid measurement")
             # ⛔ A RUN THAT PASSES AT 10 FPS IS STILL A RUINED MEASUREMENT.
             # The retry above only fires on INVALID, and INVALID needs a load-sensitive criterion
             # to FAIL. So a course that happens to pass while starved sails through, the stand is
@@ -1039,11 +1039,10 @@ def _main():
     with open(os.path.join(art_root, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=1, default=str)
     print(f"\n{len(results) - gate_fail - invalid_n}/{len(results)} ok, "
-          f"gate failures: {gate_fail}, invalid (host starved): {invalid_n}")
+          f"gate failures: {gate_fail}, invalid runs: {invalid_n}")
     if invalid_n:
-        print("  INVALID runs measure the MACHINE, not the bot. Do not read them "
-              "as regressions — stop other heavy processes (`gradlew --stop`) "
-              "and re-run.")
+        print("  INVALID runs are inconclusive. Inspect each recorded reason and "
+              "the gameplay before restoring the stand and repeating the affected course.")
     # 2 = inconclusive: nothing regressed, but the run is not evidence.
     return 1 if gate_fail else (2 if invalid_n else 0)
 

@@ -413,10 +413,10 @@ class NavCliff(NavCourse):
     """
     id = "nav_cliff"
     duration = 120
-    start_y = STAND_Y + 8
+    start_y = STAND_Y + 12
 
     def build(self, arena, ctx):
-        arena._fill(self.PAD_X0, FLOOR_Y + 8, -3, self.PAD_X1, FLOOR_Y + 8, 3, "stone")
+        arena._fill(self.PAD_X0, self.start_y - 1, -3, self.PAD_X1, self.start_y - 1, 3, "stone")
         goal = self.course(arena, ctx)
         ctx.geo["goal"] = goal
         ctx.geo["bot_spawn"] = f"0.5 {self.start_y} 0.5 -90 0"
@@ -433,7 +433,9 @@ class NavCliff(NavCourse):
         # straight along the route, while the safe stairs are a detour twelve blocks to the side
         # and back. A planner that ignores fall damage takes the cliff because it is shorter; one
         # that respects it pays the detour.
-        top = FLOOR_Y + 12
+        # Keep the approach level with the cliff top. A pad four blocks lower
+        # made this descent test start with an impossible unprovisioned ascent.
+        top = self.start_y - 1
         low = top - 5
         arena._fill(7, top, -3, 12, top, 3, "stone")
         # The detour: out to +z, down in five 2-block steps, and back to the shelf.
