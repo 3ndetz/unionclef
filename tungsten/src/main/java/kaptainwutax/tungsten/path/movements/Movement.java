@@ -319,6 +319,14 @@ public abstract class Movement {
                 || getValidPositions().contains(pathStart());
     }
 
+    /** Land movements float toward their destination; a swim controls its own depth. */
+    protected void updateWaterInputs(MovementState state) {
+        if (MovementHelperB.isLiquid(ctx.world(), ctx.playerFeet())
+                && ctx.player().getEntityPos().y < dest.y + 0.6) {
+            state.setInput(Input.JUMP, true);
+        }
+    }
+
     /**
      * Handles the execution of the latest Movement
      * State, and offers a Status to the calling class.
@@ -335,9 +343,7 @@ public abstract class Movement {
         }
         player.getAbilities().flying = false;
         currentState = updateState(currentState);
-        if (MovementHelperB.isLiquid(ctx.world(), ctx.playerFeet()) && player.getEntityPos().y < dest.y + 0.6) {
-            currentState.setInput(Input.JUMP, true);
-        }
+        updateWaterInputs(currentState);
         if (player.isInsideWall()) {
             ctx.getSelectedBlock().ifPresent(pos -> switchToBestToolFor(pos, ctx.world().getBlockState(pos)));
             currentState.setInput(Input.CLICK_LEFT, true);

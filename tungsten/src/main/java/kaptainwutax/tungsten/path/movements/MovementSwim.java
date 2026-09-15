@@ -89,6 +89,22 @@ public class MovementSwim extends Movement {
     }
 
     @Override
+    protected void updateWaterInputs(MovementState state) {
+        PlayerEntity player = ctx.player();
+        if (!player.isTouchingWater()) return;
+        double targetY = dest.getY() + 0.6;
+        // Floating above the planned cell is safe in an open pool, but can
+        // wedge the head beneath a lower roof. Use the same body envelope as
+        // the planner before allowing that extra lift into the next column.
+        boolean constrained = dest.getY() < src.getY()
+                || !kaptainwutax.tungsten.helpers.PlayerFit.bodyFits(ctx.world(),
+                    dest.getX() + 0.5, targetY, dest.getZ() + 0.5);
+        if (constrained) targetY = dest.getY();
+        state.setInput(Input.JUMP, player.getEntityPos().y < targetY);
+        state.setInput(Input.SNEAK, constrained && player.getEntityPos().y > targetY + 0.1);
+    }
+
+    @Override
     public MovementState updateState(MovementState state) {
         super.updateState(state);
         if (state.getStatus() != MovementStatus.RUNNING) {
@@ -146,9 +162,8 @@ public class MovementSwim extends Movement {
         } else {
             MovementHelperB.moveTowards(player, state, dest);
         }
-        // Rising is holding JUMP; the base update() already does that while the feet are in liquid
-        // and the body is under dest.y + 0.6. Diving is simply NOT pressing it — vanilla sinks a
-        // player who stops swimming up — so there is deliberately no input here for dest below us.
+        // Vertical inputs are applied by updateWaterInputs after this state update,
+        // with clearance for the destination column and an explicit sinking stroke.
         return state;
     }
 }

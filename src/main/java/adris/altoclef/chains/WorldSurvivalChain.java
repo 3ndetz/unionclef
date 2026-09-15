@@ -10,6 +10,7 @@ import adris.altoclef.tasks.construction.PutOutFireTask;
 import adris.altoclef.tasks.movement.EnterNetherPortalTask;
 import adris.altoclef.tasks.movement.EscapeFromLavaTask;
 import adris.altoclef.tasks.movement.GetToBlockTask;
+import adris.altoclef.tasks.movement.GetToAirTask;
 import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
 import adris.altoclef.tasksystem.TaskRunner;
 import adris.altoclef.util.ItemTarget;
@@ -193,6 +194,17 @@ public class WorldSurvivalChain extends SingleTaskChain {
             setTask(new DoToClosestBlockTask(PutOutFireTask::new, Blocks.FIRE, Blocks.SOUL_FIRE));
             return 100;
         }
+
+        // A ceiling can make "hold jump" fatal. Reserve the remaining half of
+        // the oxygen supply for reaching air, and keep the escape until refilled.
+        if (mod.getModSettings().shouldAvoidDrowning()
+                && ((mod.getPlayer().isSubmergedInWater()
+                        && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir() / 2)
+                    || (mainTask instanceof GetToAirTask && !mainTask.isFinished()))) {
+            setTask(new GetToAirTask());
+            return 100;
+        }
+        if (mainTask instanceof GetToAirTask) setTask(null);
 
         // Extinguish with water
         if (mod.getModSettings().shouldExtinguishSelfWithWater()) {

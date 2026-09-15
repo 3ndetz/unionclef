@@ -515,6 +515,22 @@ public final class FastPlanner {
      */
     public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
                               BlockPos reachBlock, boolean exactGoal) {
+        return planInternal(world, start, goal, budgetMs, reachBlock, exactGoal, null);
+    }
+
+    /** Find the cheapest reachable cell satisfying a condition, using the ordinary move graph.
+     * No point heuristic is valid for an arbitrary condition, so this is a bounded Dijkstra search.
+     * Callers must require complete=true; a partial result does not establish a satisfying cell.
+     */
+    public static Result planToCondition(WorldView world, BlockPos start,
+                                         java.util.function.Predicate<BlockPos> condition, long budgetMs) {
+        java.util.Objects.requireNonNull(condition, "condition");
+        return planInternal(world, start, null, budgetMs, null, false, condition);
+    }
+
+    private static Result planInternal(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
+                                       BlockPos reachBlock, boolean exactGoal,
+                                       java.util.function.Predicate<BlockPos> condition) {
         long t0 = System.currentTimeMillis();
         // ASK HOW MANY BLOCKS WE HAVE, EVERY PLAN. DO NOT TRUST A STATIC SOMEONE ELSE SET.
         // placeBudget starts at MAX_VALUE and had exactly ONE writer, FastNavigator:443. Any plan
@@ -594,7 +610,9 @@ public final class FastPlanner {
             expanded++;
 
             // A REACH GOAL COMPLETES ON A NEIGHBOUR OF THE BLOCK, never on the block (G25).
-            boolean atGoal = reachBlock != null
+            boolean atGoal = condition != null
+                    ? condition.test(new BlockPos(current.x, current.y, current.z))
+                    : reachBlock != null
                     ? reachGoalSatisfied(world, current.x, current.y, current.z, reachBlock)
                     : (current.x == goal.getX() && current.z == goal.getZ()
                         && (current.y == goal.getY()
@@ -613,7 +631,7 @@ public final class FastPlanner {
                     // disagree about arrival: the planner says 'already there' and hands back
                     // a one-cell path, the task never sees arrival and asks again -- forever.
                     // Measure which it is before acting on that story.
-                    if (current.y == goal.getY()) planAtGoalExact++; else planAtGoalYTol++;
+                    if (goal == null || current.y == goal.getY()) planAtGoalExact++; else planAtGoalYTol++;
                     // NAME THE ORDERER. The altoclef drive already traces the goal it hands
                     // down, so record it here rather than guessing which task asks for a
                     // route to the cell the bot occupies.
@@ -1976,6 +1994,7 @@ public final class FastPlanner {
      * own moves.
      */
     private static double octile(int x, int y, int z, BlockPos goal) {
+        if (goal == null) return 0.0;
         int dx = Math.abs(x - goal.getX());
         int dz = Math.abs(z - goal.getZ());
         int dy = Math.abs(y - goal.getY());

@@ -378,10 +378,26 @@ public final class FastNavigator {
         startWithGoal(target, null, null, null, false);
     }
 
+    /** Navigate to a reachable cell satisfying a condition, without guessing a point behind a wall. */
+    public static void startNearest(java.util.function.Predicate<BlockPos> reached) {
+        if (TungstenMod.mc.player == null) return;
+        java.util.Objects.requireNonNull(reached, "reached");
+        startWithGoal(TungstenMod.mc.player.getEntityPos(), null, null, reached, false, true);
+    }
+
+    private static volatile boolean searchForArrival;
+
     private static void startWithGoal(Vec3d target, BlockPos reach, BlockPos exactGoal,
                                       java.util.function.Predicate<BlockPos> reached,
                                       boolean fromDrive) {
+        startWithGoal(target, reach, exactGoal, reached, fromDrive, false);
+    }
+
+    private static void startWithGoal(Vec3d target, BlockPos reach, BlockPos exactGoal,
+                                      java.util.function.Predicate<BlockPos> reached,
+                                      boolean fromDrive, boolean nearest) {
         stop();
+        searchForArrival = nearest;
         // planAhead captures these values immediately. Initialize the complete goal
         // before launching its first search, not after the default start returns.
         reachBlock = reach;
@@ -431,6 +447,7 @@ public final class FastNavigator {
         exactCell = null;
         exactFromDrive = false;
         arrivalTest = null;
+        searchForArrival = false;
         pendingGiveUp = false;
         budgetBoostNext = false;
         budgetBoostedThisRoute = false;
@@ -1282,6 +1299,7 @@ public final class FastNavigator {
         // G55: an exact-cell route completes IN the cell, never one above it (the planner's
         // one-block height tolerance is for "go over there" goals only).
         final boolean exact = exactCell != null;
+        final var condition = searchForArrival ? arrivalTest : null;
         // G58: one search per route may run with four times the budget (see the dead-end branch).
         final boolean boost = budgetBoostNext;
         if (boost) { budgetBoostNext = false; budgetBoostedThisRoute = true; }
@@ -1292,7 +1310,9 @@ public final class FastNavigator {
         final BlockPos goalCell = BlockPos.ofFloored(target);
         Thread t = new Thread(() -> {
             try {
-                FastPlanner.Result result = FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact);
+                FastPlanner.Result result = condition != null
+                        ? FastPlanner.planToCondition(world, start, condition, budgetMs)
+                        : FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact);
                 // Applying a result can stop the walker and change its input ownership.
                 // Serialize that transition with game ticks; the worker must only calculate.
                 TungstenMod.mc.execute(() -> {
@@ -1303,7 +1323,19 @@ public final class FastNavigator {
                     }
                     try {
                         navPlansApplied++;
-                        applyPlan(world, start, goalCell, budgetMs, result);
+                        BlockPos resolvedGoal = goalCell;
+                        if (condition != null) {
+                            // A partial path has not found a satisfying destination. Do not
+                            // hand it to physics as if the placeholder start were the goal.
+                            if (!result.complete || result.isEmpty()) {
+                                stop();
+                                return;
+                            }
+                            resolvedGoal = result.path.get(result.path.size() - 1).pos;
+                            goal = new Vec3d(resolvedGoal.getX() + 0.5,
+                                    resolvedGoal.getY(), resolvedGoal.getZ() + 0.5);
+                        }
+                        applyPlan(world, start, resolvedGoal, budgetMs, result);
                     } catch (Exception e) {
                         Debug.logWarning("FastNavigator plan failed: " + e.getMessage());
                     } finally {

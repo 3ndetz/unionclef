@@ -5,14 +5,13 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 
 ## Current playthrough status
 
-- Goal remains a complete natural `@gamer` playthrough, with visual observation and regression tests.
-- Original one-high opening/low-ceiling ascent defect was fixed in the planner and final walker arrival. Latest audit: one_high 2/2, three head blocks planned and mined, grounded arrival, 20 HP. Flat/staircase/descend 3/3, no invalid runs.
-- HEAD before this pass: 828f5a81, including iron-smelting fix 82d5d50e and documentation-only upstream fe28b686. Smelting matrix 6/6: missing output is produced; already-satisfied output leaves raw iron untouched. All videos decoded. No whole-game success claim.
-- Natural survival-smelt-fixed reached a water bucket and descended to y28 for gold, but food collection preempted gold mining. No gold appeared in sampled inventory; an earlier commentary saying it had been mined was corrected. Both picks wore out; replacement iron pick was crafted after a temporary placement delay. Then the bot dug a staircase toward surface pigs, reaching y96 with 20 HP in all recorded samples.
-- This run ended in a client crash at 17:55:13 UTC. Observer session44767 exited1; last sample707s at120.3,96,-148.3. Container automatically restarted, and the natural world is now disconnected. Do not report later progress from this stale JSON.
-- Verified natural world backup before that run: workspace outputs/natural-checkpoints/20260915-173341-iron-kit.tar.gz, 56,062,872 bytes, SHA256 metadata adjacent. No inventory injection or world restoration.
-- Open risks: general multi-mob/Enderman/skeleton survival, long surface food hunts from caves, waterfall partial-route termination, coasting/slab arrival, azalea pillar placement. Shield combat experiments failed and were reverted; their complete patch remains in workspace work/shield-combat-experiment.patch. Nether/End/full completion remain unvalidated.
-- Push and Telegram publication remain blocked pending previously requested target-specific confirmation. No retry or alternate route.
+- Goal remains a complete natural `@gamer` playthrough, with visual observation and regression tests. Nether/End and full completion are not validated.
+- Original one-high opening/low-ceiling ascent remains fixed: latest audit 2/2, all three head obstructions planned and mined, grounded arrival, 20 HP. Adjacent navigation 7/7 passed.
+- Local HEAD before the submerged pass: 8d30f01a. Bridge arrival, worker publication and emergency partial-support water rescue fixes are already committed and live-tested.
+- The preserved natural run recovered tools, shield, water bucket, gold helmet and a diamond pick, then drowned beneath a cave ceiling at 21:32:57 UTC. Natural client is disconnected. No world restoration, inventory injection or time change.
+- Submerged execution and reachable-air recovery now pass the controlled matrix below. Newest verified backup: workspace outputs/natural-checkpoints/20260915-220532-post-drowning.tar.gz, 56,068,096 bytes, SHA256 af41997afc2bffdf41ac947911152ce7aafb8eaa6098d0e7aca8530ad97c10e4.
+- Open risks include intermittent bridge/physics jump falls, multi-mob combat, long food hunts from caves, planned deep descents, partial-water/slab transitions and full-game completion. One bridge failure in the intermediate audit remains recorded; the water patch does not claim to repair it.
+- Push and Telegram publication remain pending the existing target-specific confirmations. No retry or alternate route.
 
 ## 2026-09-15 — Publish navigator results on the client thread
 
@@ -164,3 +163,39 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - Window-retention build/deploy succeeded10s (mlg-window logs). Final matrix passed6/6 slab rescues with refill, plus west-bank/east-bank/pack controls:9/9,26–29FPS,one server bucket use,zero deaths,20HP,one filled bucket afterward. An additional diagnostic trial passed at27FPS and confirms attempted source3202,-61,1100 plus recovery_released=true; the final collector and release gate are live-tested. All10final videos decoded; final slab frame inspected. Earlier refill-slab4 failure remains recorded.
 - Adjacent audit passed5/5:flat/staircase/descend/bridge/water,22.3–29.3FPS,no invalid runs. Original one_high passed2/2 with all3head blocks planned/mined,grounded20HP arrival. Reach-bridge control placed its support and arrived safely. Hungry mining defence passed with6cobblestone and zero mining-to-sword interruptions; final health17HP after combat, not20. All8audit videos decoded. Artifacts: workspace outputs/mlg-fall,outputs/mlg-audit and deploy/runner/artifacts/20260915-205835.
 - Assessment: the original partial-support clutch refusal now gives way to actual bottom-slab rescue or steering to a nearby safe bank; high waterloggable supports are not mistaken for protection. Water returns to the bucket, and the existing recovery window survives late confirmation. These controlled results do not prove a replay of the natural death or arbitrary falls. Planned deep descents (G3), combat reliability and full-game completion remain open. Save locally, back up the current natural world without restoration, then resume observation.
+
+
+## 2026-09-16 — Natural playthrough after bridge and MLG repairs
+
+### Observe
+- HEAD8d30f01a resumed the preserved natural world after a verified backup (20260915-210833-post-diamond-death.tar.gz, SHA25646091ee8043adf9d7eb5912509a919c3ccc2f18973ff1f8d50cfb55227dc454c). No world restoration, inventory injection, teleport or time change.
+- survival-mlg-fixed completed900seconds, ending88.3,33,-11.5. It recovered stone tools, an iron pick, shield and a filled water bucket. A table/furnace placement delay resolved without intervention. Eight clips decoded; tunnel, crafting, water and final mining frames inspected.
+- Health fell20 to17 during the skeleton encounter around639seconds; clip6 at12seconds visibly shows close combat. It remained17 through the final896.9second sample. This establishes temporal association, not the exact damaging hit. No death observed.
+- Continued the existing task without restarting it as survival-gold-continued. By132seconds it had mined/smelted gold and held a golden helmet in inventory, then descended toward diamond ore49,11,-56. The filled water bucket remains present. This continuation is still live; no diamond or whole-game success claim yet.
+- Latest fetch has no incoming origin/main changes. Publication remains pending the existing target-specific confirmations; no push or Telegram retry.
+
+
+## 2026-09-16 — Submerged roof traversal
+
+### Investigate
+- The continuation acquired a diamond pick and one remaining diamond by420seconds, then drowned at21:32:57UTC. Server log confirms drowning. At458–471seconds the body remained33.0,6.2,-59.5 under a stone ceiling while FastNavigator repeatedly refused the water leg. At471seconds health was7; next sample was the respawn. The natural client was explicitly disconnected, then the observer interrupted. All5continuation clips decoded, underwater frame inspected. World not restored.
+- MovementQueue admission lacks a cardinal downward stroke, though dispatch already constructs MovementSwim for liquid edges. Baseline dive1/2 both produce a complete three-cell downward plan, then109short-prefix refusals, zero off-route refusals, no arrival and drowning damage at29FPS.
+- Baseline roof1 produced a complete route with a dive, horizontal crossing under a lower ceiling and surfacing. Initial sinking bypassed the first dive, so qShort stayed0. The first horizontal MovementSwim repeatedly failed: actual feet hovered around-55.4 while the destination's modeled feet were-56 beneath ceiling-54. Movement.update applied JUMP after the swim update whenever y<dest.y+0.6. That extra lift makes the body too high for the route.
+
+### Implement and pending validation
+- Admit all six cardinal liquid strokes; retain existing land edge admission. Extract base water inputs into an overridable method preserving land behavior. MovementSwim allows the extra0.6lift only when the destination body envelope fits, otherwise controls depth at the planned feet height and actively sinks when above it.
+- Clean build succeeded8seconds; nested deployment verified. First fixed-dive1 entered the target cell at-56.4 but the fixture required an unnecessary-56.6; after navigation completed it waited underwater and damaged the bot. Retained as a failed measurement, not product acceptance. Fixture now scores target-cell entry; the full exit uses actual submersion and300air instead of requiring the entire body to float above water. Raw player reads run on the client thread.
+- First corrected short measurement reached the goal healthy but sampled9.5FPS, so it is invalid. Recording now warms up in spectator mode before a fresh survival start. Warm dive1 passes27FPS, no refusal,20HP. Full exit and repeated/adjacent audits remain pending. Baseline videos all decoded.
+- Separate open survival-policy problem: WorldSurvivalChain only presses jump; it does not choose reachable breathable air when a roof blocks surfacing. Do not claim the movement fix alone solves arbitrary underwater resource pursuit.
+
+
+### Reachable-air recovery and acceptance
+- The swim-only binary passed six warm dives and six roof traversals at 26.5–29 FPS, all healthy. However, an automatic survival-policy baseline still drowned at 29 FPS despite an available route: holding jump cannot choose an exit behind a roof.
+- FastPlanner now supports a bounded condition-goal search over its existing movement graph. FastNavigator initializes that goal before dispatch, publishes on the client thread with existing generation/world guards, and rejects incomplete condition searches rather than sending a placeholder start to physics.
+- GetToAirTask requests a reachable standing-body cell with breathable eye height. WorldSurvivalChain preempts resource/combat activity below half air and retains recovery until oxygen is full, then releases the original task. Failed searches are rate-limited; the task uses ordinary navigation rather than a scripted escape trajectory.
+- Clean build succeeded in 9 seconds; nested deployment verified. Final automatic matrix passed 6/6 (three ordinary exits, three with a nearer unreachable decoy pocket), 25–29 FPS, 20 HP throughout, 300 air. Separate release-gated trial passed at 29 FPS. Two open-water controls passed; a final explicit dive passed at 14 FPS. The latter is a validity-floor sample, not a performance comparison.
+- Working-task interruption passed 3/3 at 29 FPS: a resource task was active before escape, GetToAirTask took priority, air reached 300, health stayed 20, and recovery released. The resource task targeted old fixture stone at 3105,-29,1040, so these trials establish task/navigation interruption and resumption, NOT physical mining of the newly installed underwater floor.
+- Adjacent final audit passed 7/7 (bridge, water, flat, staircase, descend, wall2, gaps), 22.7–29.3 FPS, no invalid runs. Original one_high passed 2/2, all three head blocks mined, grounded 20 HP arrival. Reach-bridge placed its support; retarget discarded the stale plan; slab MLG used one bucket, zero deaths, recovered the bucket and released recovery. Hungry mining produced six cobblestone with zero continuous mining-to-sword interruptions; final health 14 HP, not 20.
+- All final matrix/audit clips decoded. Decoy exit, air recovery and working-task frames inspected. Artifacts: workspace outputs/submerged-route and outputs/air-audit; navigation deploy/runner/artifacts/20260915-220448.
+- Failed/invalid evidence retained: first dive fixture demanded unnecessary depth after successful goal-cell entry; corrected short trial ran at 9.5 FPS; intermediate bridge audit fell at 27.4 FPS and respawned. A later bridge pass at lower FPS cannot establish a repair. Neither arbitrary sealed caves nor the original natural death have been proven survivable by these controlled tests.
+- Incoming origin/main de9c6adc exposes pillar clearance with unchanged 0.05 default; 2f027a41 names/documents the unchanged entity haul cap. Both reviewed for local integration; post-merge build and focused live controls pending.

@@ -570,6 +570,16 @@ public final class MovementQueue {
         // contiguous-prefix rule is what capped coverage at 4%, and the tail it gave back went to
         // a walker that measurably cannot cross terrain. See C5.18.
         if (cfg.queueWholeRoute) return true;
+        // The planner offers all six cardinal strokes in water. In particular a
+        // dive has no land movement class, but MovementSwim already executes it.
+        // Admission must agree with dispatch or a roof escape replans forever.
+        var world = net.minecraft.client.MinecraftClient.getInstance().world;
+        int strokeLength = Math.abs(b.getX() - a.getX())
+                + Math.abs(b.getY() - a.getY()) + Math.abs(b.getZ() - a.getZ());
+        if (world != null && strokeLength == 1
+                && (MovementHelperB.isLiquid(world, a) || MovementHelperB.isLiquid(world, b))) {
+            return true;
+        }
         if (isTraverseEdge(a, b)) return true;
         // A PILLAR IS AN ACCEPTED EDGE, NOT JUST A DISPATCHABLE ONE. The dispatch switch below
         // has known isPillarEdge since the pillar fix, but admission is what decides how much of
