@@ -507,8 +507,16 @@ public class BlockPathWalker {
         boolean standingAbove = TungstenConfig.get().walkerDescentNeedsDescent
                 && player.isOnGround() && !onLadderNow && (playerPos.y - wpPos.y) > 0.6;
         if (standingAbove) walkerHeldAboveWp++;
+        // An ascent must enter its destination cell before handing off the next action.
+        // A two-cell walk before a dig was consumed at horizontal distance 0.8 while
+        // still one block below the stand. The centering phase cannot perform that jump.
+        // Keep the ascent identity after take-off, when comparing only live Y would
+        // again accept the waypoint before the body has crossed onto the step.
+        boolean ascentNotReached = TungstenConfig.get().walkerAscentNeedsAscent
+                && waypointIdx > 0 && wp.getY() > path.get(waypointIdx - 1).getY()
+                && !kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).equals(wp);
         if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)
-                && !fallingToward && !standingAbove) {
+                && !fallingToward && !standingAbove && !ascentNotReached) {
             waypointIdx++;
             if (waypointIdx >= path.size()) {
                 stop();

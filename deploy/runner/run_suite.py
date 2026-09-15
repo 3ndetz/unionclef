@@ -186,6 +186,9 @@ VIZ_SETTINGS = {
 VIZ_OFF = {k: "false" for k in VIZ_SETTINGS}
 
 
+from uctest.recording import finish_recording
+
+
 def _rec_start(scn_id, dur, persp=0, bot=None):
     """Record tester1's own screen for the scenario window (x11grab on the
     container's :0). First-person + the tungsten combat overlay (Walker/Punk
@@ -200,13 +203,11 @@ def _rec_start(scn_id, dur, persp=0, bot=None):
         ok, res = bot.py.try_call("setPerspective", persp)
         if not ok:
             print(f"  WARN setPerspective({persp}) failed: {res}", flush=True)
-    subprocess.run(["docker", "exec", BOT_CONTAINER, "sh", "-c",
-                    "pkill -INT ffmpeg 2>/dev/null; sleep 0.3; true"],
-                   capture_output=True)
+    finish_recording(BOT_CONTAINER)
     # fragmented mp4: stays valid even when ffmpeg is stopped mid-write (a plain
     # mp4 writes its moov index only on clean exit -> a killed capture is
     # unplayable "moov atom not found").
-    subprocess.Popen(["docker", "exec", "-d", BOT_CONTAINER, "ffmpeg", "-y",
+    subprocess.run(["docker", "exec", "-d", BOT_CONTAINER, "ffmpeg", "-y",
                       "-f", "x11grab", "-framerate", "15", "-i", ":0",
                       "-t", str(dur + 8),
                       # x264 + bitrate cap: a raw yuv420p grab of a 90-120s
@@ -223,16 +224,14 @@ def _rec_start(scn_id, dur, persp=0, bot=None):
                       "-b:v", "1100k", "-maxrate", "1400k", "-bufsize", "2M",
                       "-pix_fmt", "yuv420p",
                       "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
-                      mp4])
+                      mp4], check=True, timeout=30, capture_output=True)
     time.sleep(1.0)
     return mp4
 
 
 def _rec_stop(scn_id, art):
     """Stop ffmpeg, copy the mp4 into the artifact dir. Returns host path."""
-    subprocess.run(["docker", "exec", BOT_CONTAINER, "pkill", "-INT", "ffmpeg"],
-                   capture_output=True)
-    time.sleep(3.5)
+    finish_recording(BOT_CONTAINER)
     dst = art.path(f"{scn_id}.mp4")
     subprocess.run(["docker", "cp", f"{BOT_CONTAINER}:/mc-data/rec_{scn_id}.mp4",
                     dst], capture_output=True)

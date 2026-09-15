@@ -11,6 +11,7 @@ Exit 0 = the bot started @gamer and made early progress (items gained), stayed
 responsive and not permanently stuck.
 """
 import functools, json, os, pathlib, re, subprocess, sys, time
+from uctest.recording import finish_recording
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
 RUN_INDEX_FILE=pathlib.Path(__file__).with_name("gamer_run_index.txt")
@@ -327,22 +328,20 @@ def rec_start(secs):
     second, because the capture is stopped by a signal and a plain mp4 only writes its index on a
     clean exit -- a killed capture is an unplayable "moov atom not found".
     """
-    subprocess.run(["docker", "exec", CLIENT, "sh", "-c",
-                    "pkill -INT ffmpeg 2>/dev/null; sleep 0.3; true"], capture_output=True)
-    subprocess.Popen(["docker", "exec", "-d", CLIENT, "ffmpeg", "-y",
+    finish_recording(CLIENT)
+    subprocess.run(["docker", "exec", "-d", CLIENT, "ffmpeg", "-y",
                       "-f", "x11grab", "-framerate", "15", "-i", ":0",
                       "-t", str(int(secs) + 8),
                       "-c:v", "libx264", "-preset", "ultrafast", "-g", "15",
                       "-b:v", "1100k", "-maxrate", "1400k", "-bufsize", "2M",
                       "-pix_fmt", "yuv420p",
                       "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
-                      "/mc-data/rec_gamer.mp4"])
+                      "/mc-data/rec_gamer.mp4"], check=True, timeout=30, capture_output=True)
     time.sleep(1.0)
 
 
 def rec_stop(dst):
-    subprocess.run(["docker", "exec", CLIENT, "pkill", "-INT", "ffmpeg"], capture_output=True)
-    time.sleep(3.5)
+    finish_recording(CLIENT)
     subprocess.run(["docker", "cp", f"{CLIENT}:/mc-data/rec_gamer.mp4", dst], capture_output=True)
     import os as _os
     if _os.path.exists(dst) and _os.path.getsize(dst) > 1000:

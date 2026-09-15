@@ -2645,6 +2645,9 @@ public class TungstenConfig {
      */
     public boolean walkerDescentNeedsDescent = true;
 
+    /** Require destination-cell occupancy for ascending walker edges; runtime A/B switch. */
+    public boolean walkerAscentNeedsAscent = true;
+
     /**
      * G53 (2026-09-11), second half: a route begins from the cell that SUPPORTS the body, not
      * from the cell under its centre. A body resting on a block's edge has its centre over the
