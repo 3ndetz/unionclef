@@ -1,5 +1,35 @@
 # TODOs
 
+<!-- STALE-CHECKBOXES-BATCH-3-2026-09-15 -->
+## Two more (G80, G81), and where this sweep actually stops (2026-09-15)
+
+Read every remaining unchecked item from G64 through G81 in full before adding anything else, not
+just their endings — most of them correctly stay `[ ]` by their OWN admission: G71 ends "No bench
+yet", G72b ends "No bench of its own yet", G76/G73-G74/G75/G70 all end on a bare bench filename
+with no result claimed, and one unnamed item after G78 ends "Open: the free-fall boundary (two?)
+and why the avoidance fired...". None of those are stale — they are honestly marked, and this is
+the negative control the last entry already named, now with a much larger sample.
+
+Two read clean, same bar as the G25-G61 batch (a definitive "Fix:"-shaped final sentence, no
+caveat, confirmed live in code, even without an explicit bench PASS quoted):
+
+- **G80** (crafting table detours) — `BeatMinecraftTask.java`'s own comment cites it by number:
+  *"A CRAFTING TABLE IS WORTH FOUR PLANKS, NOT A CLIMB OR A DIG (G80, 2026-09-13)... only a table
+  on the way -- twelve blocks across at most and within two of the feet in height -- is picked
+  up."* The `onTheWay(mod, blockPos)` predicate is live in the actual pickup condition.
+- **G81** (a silent stand names its driver) — `UnstuckChain`'s "generally stuck" line reads
+  `CustomBaritoneGoalTask.lastDriveNote`, set at every drive branch (`reach:held`, `reach:armed`,
+  `dig:held`, `dig:armed`, ...) — confirmed by grep, multiple live write sites.
+
+**This is where the sweep stops, deliberately.** Everything else remaining in the PLAN checklist
+past this point is either the G3/G4/G6-G14/G67-physics-remainder set already triaged in earlier
+entries (needs a stand or a policy call), or one of the honestly-still-open items just named above
+(no bench, or an explicit "Open:"). Combined with the two entries below this one, seventeen stale checkboxes are now on the record
+with their evidence (G26, G28, G29, G30, G31, G37, G45, G51, G54, G56, G58, G61, G62, G63/G63b,
+G66, G80, G81) without a single one of them needing new code. Whoever has stand access next should
+flip these to `[x]` for real once each one's own named bench actually runs green, not take this
+entry's word for it.
+
 <!-- STALE-CHECKBOXES-BATCH-2-2026-09-15 -->
 ## Three more from the same stale-checkbox batch, same bar as before (explicit PASS/Shipped in their own text, no G-number collision) (2026-09-15)
 
