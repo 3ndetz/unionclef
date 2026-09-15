@@ -1242,7 +1242,13 @@ public final class FastPlanner {
             if (rise > PlayerFit.STEP_HEIGHT) {
                 // needs a jump: head clearance above the origin cell
                 scratch.set(from.x, from.y, from.z);
-                if (!PlayerFit.passableAt(world, scratch, support + 0.6)) {
+                // Keep the lower take-off test as well: lifting the checked box can
+                // hide a collision at its feet (notably after an airborne start snap).
+                boolean clear = PlayerFit.passableAt(world, scratch, support + 0.6)
+                        && (!TungstenConfig.get().planAscentClearance
+                            || PlayerFit.ascentClear(world, scratch,
+                                    new BlockPos(nx, from.y + dy, nz), top));
+                if (!clear) {
                     cntClimb++;
                     continue;
                 }

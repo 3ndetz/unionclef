@@ -515,8 +515,15 @@ public class BlockPathWalker {
         boolean ascentNotReached = TungstenConfig.get().walkerAscentNeedsAscent
                 && waypointIdx > 0 && wp.getY() > path.get(waypointIdx - 1).getY()
                 && !kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).equals(wp);
+        // The last walkable stand is an arrival, not an intermediate steering hint.
+        // After digging a low tunnel, the 1.5-block radius consumed the remaining
+        // two-cell walk 1.2 blocks short; the navigator then reported no progress.
+        // Centre on a real stand. Floorless endpoints retain their separate build handoff.
+        boolean finalStandNotReached = TungstenConfig.get().walkerFinalStandArrival
+                && waypointIdx == path.size() - 1 && dist > 0.35
+                && kaptainwutax.tungsten.helpers.PlayerFit.standable(player.getEntityWorld(), wp);
         if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)
-                && !fallingToward && !standingAbove && !ascentNotReached) {
+                && !fallingToward && !standingAbove && !ascentNotReached && !finalStandNotReached) {
             waypointIdx++;
             if (waypointIdx >= path.size()) {
                 stop();

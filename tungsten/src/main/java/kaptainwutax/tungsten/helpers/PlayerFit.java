@@ -144,8 +144,12 @@ public final class PlayerFit {
      * and snow layers count for exactly as much as they physically are.
      */
     public static boolean bodyFits(WorldView world, double x, double feetY, double z) {
-        Box box = new Box(x - HALF, feetY, z - HALF, x + HALF, feetY + HEIGHT, z + HALF)
-                .contract(EPS);
+        return boxFits(world, new Box(x - HALF, feetY, z - HALF,
+                x + HALF, feetY + HEIGHT, z + HALF));
+    }
+
+    private static boolean boxFits(WorldView world, Box volume) {
+        Box box = volume.contract(EPS);
         VoxelShape boxShape = VoxelShapes.cuboid(box);
         int minX = MathHelper.floor(box.minX), maxX = MathHelper.floor(box.maxX);
         int minY = MathHelper.floor(box.minY), maxY = MathHelper.floor(box.maxY);
@@ -167,6 +171,21 @@ public final class PlayerFit {
             }
         }
         return true;
+    }
+
+    /**
+     * Clearance for an ascent at the landing height, including the take-off column.
+     * The swept envelope is exact for cardinal moves. For diagonals it conservatively
+     * includes both corner columns, matching the planner's no-corner-cutting policy.
+     * Testing only the landing or raising the origin by STEP_HEIGHT misses ceilings
+     * which admit a step but prevent the body from rising onto a full block.
+     */
+    public static boolean ascentClear(WorldView world, BlockPos from, BlockPos to, double landingY) {
+        return boxFits(world, new Box(
+                Math.min(from.getX(), to.getX()) + 0.5 - HALF, landingY,
+                Math.min(from.getZ(), to.getZ()) + 0.5 - HALF,
+                Math.max(from.getX(), to.getX()) + 0.5 + HALF, landingY + HEIGHT,
+                Math.max(from.getZ(), to.getZ()) + 0.5 + HALF));
     }
 
     /**

@@ -2648,6 +2648,12 @@ public class TungstenConfig {
     /** Require destination-cell occupancy for ascending walker edges; runtime A/B switch. */
     public boolean walkerAscentNeedsAscent = true;
 
+    /** Validate the whole ascending body envelope, not only landing-cell headroom. */
+    public boolean planAscentClearance = true;
+
+    /** Finish a walking leg at the centre of its final supported stand. */
+    public boolean walkerFinalStandArrival = true;
+
     /**
      * G53 (2026-09-11), second half: a route begins from the cell that SUPPORTS the body, not
      * from the cell under its centre. A body resting on a block's edge has its centre over the

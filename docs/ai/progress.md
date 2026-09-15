@@ -78,3 +78,51 @@ python3 deploy/runner/walker_step_probe.py --server uctest-gamer-server --start 
 ```
 
 The probe accepts arbitrary start/destination coordinates for another existing fixture. Run `--ascent false` as the control; the runtime switch is restored on exit.
+
+
+## 2026-09-15 — Reserved crafting material consumed as scaffold
+
+### Investigate
+- Ascent fix f307e5ad is committed locally. Automatic approval review rejected pushing to 3ndetz/unionclef:main; an explicit target-specific approval question is pending. No alternate publication mechanism was used.
+- The second recorded continuation reached a stone pickaxe at 109.8s, then repeatedly needed more cobblestone while returning to the original table. This is a changed-world continuation, not a paired survival success-rate comparison. It ended with 19 HP, stone pickaxe retained; full video is in workspace outputs/unionclef-survival-after-ascent-2.mp4.
+- CraftInTableTask already protects recipe materials through BotBehaviour. BlockPlaceHelper.isScaffold only tested block shape/type, so the planner budget, equipped-stack fast path and restock ignored that reservation. A live protected log still returned scaffold=true.
+- Isolated physical test on six separate columns: 2 protected cobblestone in the selected slot, 8 dirt, pillar from -60 to -57. Old build climbed in 2.4–2.5s and consumed BOTH reserved cobblestone in all six trials. This isolates the permission defect from the survival chooser and inventory throwaway issues.
+
+### Plan
+- Share the brain's reservation policy with the existing common scaffold predicate. Check reserved and unreserved controls, navigation/build regressions, crafting, then continue survival.
+
+### Implement
+- Added canUseScaffoldHook; AltoClef registers !Behaviour.isProtected(item); BlockPlaceHelper gates eligibility before shape classification. All existing planner/selector/restock users already share this predicate.
+- Added scaffold_reservation_test.py with a reserved arm and --unprotected control. Clean tungsten + 1.21.11 build passed in 18s. Deployment and post-change tests are in progress; not yet committed.
+- Open separate observation: the first continuation stuck at (121.7,142.2,-52.5), even after stopPathing. Server ticks, gravity, abilities and client pose were normal. A backward diagnostic pulse moved the body away and it fell normally; the isolated next slope edge passed 6/6 after teleport. No cause or fix claimed for that contact state.
+
+
+## 2026-09-15 — Ascent ceiling clearance
+
+### Investigate
+- User identified repeated attempts to enter a one-block opening as the primary failure.
+- The destination body check exists, but step() only raises the take-off body by 0.6 for any ascent; diagonal corner clearance is checked at the old height only.
+- Isolated top-slab take-off ceiling: planner emits the direct two-node ascent with no break plan; the walker repeatedly jumps against the ledge, never entering the landing over six seconds. Destination is standable; the raised transition body intersects the ceiling. A full-block tunnel ending one clear cell before a ledge passed; this negative result prevents attributing every stall to early waypoint advancement.
+- This fixture proves a clearance defect, not yet the exact cause of the original natural-world contact stall.
+
+### Plan
+- Validate the ascending body envelope at the landing height, including origin and diagonal corners, using the existing shape-aware collision query. Existing breakStair offers priced ceiling removal instead of the invalid walking edge.
+- Compare the runtime flag off/on on restored geometry, verify full-block one-high rejection/digging and open ascent controls, then adjacent navigation and natural survival video.
+
+### Implement
+- Added planAscentClearance and PlayerFit.ascentClear. Build and live A/B pending.
+
+- Same-build slab control: 0/3 completed in 22s each. New arm initially 2/3 (one airborne-at-floor start kept mining slowly); preserving that failure separately. Requiring a grounded start after a 0.1-block setup drop: new arm 3/3 in ~13s. This is a setup correction, not proof that the natural contact-state issue is fixed.
+- Full-block one-high tunnel: all three obstructing head blocks were correctly mined, but the final two-cell walking leg was consumed 1.2 blocks short. Bot remained at (1106.3,-59,304.5), goal (1107,-59,304); no-progress watchdog aborted. This is independent of the ceiling planner predicate.
+- Added walkerFinalStandArrival: the final standable endpoint requires horizontal centring within 0.35, while unsupported build endpoints retain existing handling. Pending build and A/B plus bridge regression due the historical arrival/edge interaction.
+
+- Final-stand A/B on the same rebuilt clients: walkerFinalStandArrival=false reproduced the full-block tunnel stall at x=1106.3 (0/1); true completed 3/3 in 7–8s, all at 20 HP. Recorded output: workspace outputs/ceiling-tests/ceiling-one_high-true-arrival-true.mp4. The camera points toward the next, deliberately unmined block beyond the goal; completion is measured by entering the requested goal cell, not the final image alone.
+- Checked-in reusable test: deploy/runner/ascent_clearance_test.py, with independently selectable clearance/arrival switches, restored geometry, grounded precondition, settings restoration and configurable artifact directory. Nav flat/staircase/descend/bridge/wall2/gaps/notch regression is running.
+- Telegram upload was rejected by automatic approval review despite previous deliveries: destination-specific consent is now pending for the configured operator chat via @mineswarmbot. No workaround used; videos remain local and test work continues.
+
+- Adjacent regression on the first clearance implementation: 6/7 courses passed; nav_wall2 failed twice at healthy FPS. Same-build control disabling ONLY planAscentClearance passed in 9.1s, proving a regression in that predicate (arrival fix remained enabled).
+- Cause in the predicate: replacing the lower source-body test with a higher box can hide a collision at the feet. Airborne start snapping can produce such an obstructed source near the ledge. Keep the original lower take-off test AND the new raised envelope; the new gate must only remove invalid edges, never admit an edge the old source test refused. Rebuild/retest pending.
+
+- Corrected lower+raised predicate: seven-course nav recheck passed 7/7, no invalids (wall2 20.0, flat 28.7, staircase 23.3, descend 27.7, bridge 17.8, gaps 25.8, notch 24.3 FPS). Log: /tmp/unionclef-swept-nav.log.
+- Final-build ceiling matrix: old slab flag-off control failed as expected; slab, full source ceiling, one-high full-block passage and open ascent all passed with both fixes enabled. Fixtures were restored per run and starts verified grounded. Workspace outputs/ceiling-final contains videos and JSON; no claim of whole-game completion or of the exact natural stall being resolved.
+- A fresh fetch found upstream 6388f55d and 11c72a46 (bench fixes, deliberate-blacklist preservation, four stats). Integration is next; the measurements above used the pre-integration binary.
