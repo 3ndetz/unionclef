@@ -140,7 +140,7 @@ public class KillAura {
                     break;
                 }
 
-                if (!mod.getFoodChain().needsToEat() && !mod.getMLGBucketChain().isFalling(mod) &&
+                if (!mod.getFoodChain().isTryingToEat() && !mod.getMLGBucketChain().isFalling(mod) &&
                         mod.getMLGBucketChain().doneMLG() && !mod.getMLGBucketChain().isChorusFruiting()) {
                     performDelayedAttack(mod);
                 }
@@ -154,7 +154,9 @@ public class KillAura {
     }
 
     private void performDelayedAttack(AltoClef mod) {
-        if (!mod.getFoodChain().needsToEat() && !mod.getMLGBucketChain().isFalling(mod) &&
+        // FoodChain declines eating near enemies. A hunger request alone must not
+        // silence defence; only an active eating attempt owns the hand.
+        if (!mod.getFoodChain().isTryingToEat() && !mod.getMLGBucketChain().isFalling(mod) &&
                 mod.getMLGBucketChain().doneMLG() && !mod.getMLGBucketChain().isChorusFruiting()) {
             if (forceHit != null) {
                 attack(mod, forceHit, true);
@@ -175,7 +177,7 @@ public class KillAura {
     }
 
     private void performFastestAttack(AltoClef mod) {
-        if (!mod.getFoodChain().needsToEat() && !mod.getMLGBucketChain().isFalling(mod) &&
+        if (!mod.getFoodChain().isTryingToEat() && !mod.getMLGBucketChain().isFalling(mod) &&
                 mod.getMLGBucketChain().doneMLG() && !mod.getMLGBucketChain().isChorusFruiting()) {
             // Just attack whenever you can
             for (Entity entity : targets) {

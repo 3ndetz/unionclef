@@ -362,6 +362,8 @@ public class MobDefenseChain extends SingleTaskChain {
     }
     /** Ticks the committed fight ran on tungsten. Read over py4j as mdTung. */
     public static volatile int mdTungstenTicks;
+    /** Queued block-work jobs explicitly relinquished to a committed fight. */
+    public static volatile int mdBlockWorkCancelled;
     /** Ticks the force field's nearest target was struck by tungsten's trigger bot. */
     public static volatile int mdAuraTungstenTicks;
     /** Times height was taken against a crowd. Read as mdPillarD. */
@@ -742,7 +744,7 @@ public class MobDefenseChain extends SingleTaskChain {
         // Run away from creepers
         CreeperEntity blowingUp = getClosestFusingCreeper(mod);
         if (blowingUp != null) {
-            if ((!mod.getFoodChain().needsToEat() || mod.getPlayer().getHealth() < 9)
+            if ((!mod.getFoodChain().isTryingToEat() || mod.getPlayer().getHealth() < 9)
                     && hasShield(mod)
                     && !mod.getEntityTracker().entityFound(PotionEntity.class)
                     //#if MC >= 12111
@@ -766,7 +768,10 @@ public class MobDefenseChain extends SingleTaskChain {
                 mdRet1++; return 50 + blowingUp.getClientFuseTime(1) * 50;
             }
         }
-        if (mod.getFoodChain().needsToEat() || mod.getFoodChain().isTryingToEat()
+        // Hunger is a request, not ownership of the hand. FoodChain refuses to eat
+        // near enemies, so yielding merely because food is needed disables both
+        // eating and defence. Yield only while eating is actually being attempted.
+        if (mod.getFoodChain().isTryingToEat()
                 || mod.getMLGBucketChain().isFalling(mod)
                 || !mod.getMLGBucketChain().doneMLG() || mod.getMLGBucketChain().isChorusFruiting()) {
             killAura.stopShielding(mod);
@@ -1124,6 +1129,17 @@ public class MobDefenseChain extends SingleTaskChain {
                             || (kaptainwutax.tungsten.TungstenConfig.get().combatEngageBand
                                 && gapToKill <= 7.0);
                     if (engage) {
+                        // A committed fight owns aim and the hand. The replay stop flag
+                        // deliberately preserves empty-path digs, so cancel their work
+                        // explicitly before combat writes its inputs, and stop the route
+                        // that could otherwise queue the same dig again.
+                        var executor = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+                        if (executor.isBreakingNow() || executor.isPlacingNow()) {
+                            kaptainwutax.tungsten.task.FastNavigator.stop();
+                            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+                            adris.altoclef.util.helpers.TungstenHelper.stop();
+                            if (executor.cancelBlockWork()) mdBlockWorkCancelled++;
+                        }
                         kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(mod.getPlayer());
                         tungstenCombat.tick(mod.getPlayer(), toKill, mod.getWorld());
                         tungstenDrivingMs = System.currentTimeMillis();

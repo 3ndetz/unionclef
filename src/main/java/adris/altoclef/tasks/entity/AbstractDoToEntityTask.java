@@ -177,7 +177,7 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             // than guess which one is false.
             dteGate++;
             if (inRange) dteInRange++;
-            if (mod.getFoodChain().needsToEat()) dteHungry++;
+            if (mod.getFoodChain().isTryingToEat()) dteHungry++;
             if (mod.getMLGBucketChain().isFalling(mod)) dteFalling++;
             if (!mod.getMLGBucketChain().doneMLG()) dteMlg++;
             if (!Nav.isSafeToCancel()) dteUnsafe++;
@@ -202,7 +202,9 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             // This also finishes off combatEngageBand (+0.88 arrows, 1.90 sigma, off): it started
             // the fight earlier across the band, but closing still stopped at 4.5, so the bot simply
             // waited inside a different counter.
-            if (inRange && !mod.getFoodChain().needsToEat() &&
+            // FoodChain refuses eating near enemies. Only an active eating attempt
+            // owns the hand; hunger alone must not disable interaction or combat.
+            if (inRange && !mod.getFoodChain().isTryingToEat() &&
                     !mod.getMLGBucketChain().isFalling(mod) && mod.getMLGBucketChain().doneMLG() &&
                     !mod.getMLGBucketChain().isChorusFruiting() &&
                     Nav.isSafeToCancel()) {

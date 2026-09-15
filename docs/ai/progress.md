@@ -280,3 +280,35 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Final fixture additionally clears prior item drops, asserts a pickaxe start, requires all6 cobblestone from the wall, full health, and the killed chicken. Open case requires observed sword selection. First final wall/open pair passed; repetitions and navigation audit in progress.
 - Final harness passed5/5 functional cases: three restored-wall hunts and two open hunts. Every wall returned exactly6 cobblestone; all runs retained20HP, killed the target, and recorded0 pickaxe-to-sword transitions during a continuous mining queue. All five MP4s decoded; mining frame and hunt video reviewed.
 - Standard navigation audit passed4/4(flat,staircase,descend,bridge),23.2–29.7 averageFPS,0 invalid attempts. Artifacts deploy/runner/artifacts/20260915-122346. Fresh fetch found no new upstream commits. Returning to the saved natural hunt; food priority logic was not changed.
+
+## 2026-09-15 — Hunger request must not suppress defence
+
+### Investigate
+- Natural hunt rose115->129, then died at12:29:40UTC to Zombie. At171.4s the bot had8HP and held its pickaxe while still chasing a distant chicken; the death video shows a zombie touching it. Respawn lost the kit. Observer stopped after326.7s with a new wooden pickaxe; world disconnected before fixtures. Three videos decoded.
+- FoodChain refuses eating near enemies. MobDefenseChain, KillAura and AbstractDoToEntityTask instead used needsToEat as a veto on defence/interaction, even when no eating was attempted.
+- Hungry wall baseline: initialhunger3,137 pre-death samples needing food but not eating,death at11.47s. Fed wall ALSO died, so there is an additional combat/mining issue; do not attribute all deaths to hunger.
+- Open rear-zombie controls escaped and survived, including the hungry arm which found room to eat. That hungry expected-bug gate correctly FAILED; it does not reproduce the circular wait. Initial two-second hunger setup also failed its precondition(hunger20): it consumed saturation only.
+- Direct hungry zombie duel isolates the gate:106 samples needing food without eating,0 defence wins,0 committed-combat ticks,death at9.02s. No mining in this case. Video recorded.
+
+### Implement and validation pending
+- Defence and interaction now yield to isTryingToEat, not the hunger request. The dteHungry counter follows the active-eating veto it diagnoses. Creeper shielding uses the same ownership distinction.
+- Extended hunt_tunnel_test.py with threat,full-hunger control and direct-duel variants; raw hunger/eating/combat counters and a stop at death. Actual post-combat meal is required when hungry; full hunger is not required if FoodChain considers the meal sufficient.
+- Build/deploy in progress. No fixed result or natural survival success claimed yet.
+
+### Hunger validation and separate ownership failure
+- Build/deploy completed; nested jars verified. Hungry direct duel passed with the zombie active before task startup; fed direct control passed. Both retained20HP. Repeated hungry duel started at19HP/hunger0, finished17HP/hunger20 and killed the zombie. This demonstrates defence and eating, not health recovery or a reliability rate.
+- Normal wall control passed after the hunger change:6 cobblestone,20HP,zero pickaxe-to-sword interruptions. Five fixed/control videos fully decoded.
+- The first wall threat used a preplaced NoAI zombie and passed, but it does not isolate an attack beginning during mining. Subsequent fixture iterations failed setup (Java Iterable conversion, client-side tags not synchronized, preplaced victim already gone). They are not game passes/failures.
+- A spawn-after-mining fixture finally reproduced a separate failure:13:10:58UTC server-confirmed Zombie death. During the attack mdTungsten advanced361->528 but the executor kept its break queue, pickaxe and wall-facing aim;HP20->0 at12.929s. Video inspected. The preceding no-mining timeout remains an unexplained failed setup, not attributed to hunger.
+- Source confirms PathExecutor consumes stop=true without cancelling an empty-path mining job, so TungstenHelper.stop on task interruption cannot terminate it. A committed combat takeover needs explicit cancellation of block work, separately from replay drift. Combat audit running before committing the hunger-only fix.
+
+- Hunger-only standard combat audit: meleePASS28.5FPS, weapon-swapPASS29FPS; triofirstFAIL23.4FPS thenINVALID13.1FPS; skeletonFAIL twice16.5/20.7FPS despite killing it (damage gate). These are retained open combat problems, not a green audit. Artifacts20260915-131356.
+- Added explicit PathExecutor.cancelBlockWork for committed combat ownership. It drops block queues, replay/callback, attack/use/movement inputs and stale aim synchronously on the client thread. MobDefense stops the old navigator/walker/search before invoking it, only when block work exists and the fight is in engagement range. Drift's empty-path exception remains unchanged. mdBlockWorkCancelled records actual handovers.
+- Clean tungsten build succeeded; deploying. Exact ambush now requires a recorded handover, surviving both targets, eating if hungry, and all6 wall blocks collected after resuming. No fixed result claimed yet.
+
+- First exact hungry ambush on cancellation build PASS:handover1,HP20->14,hunger5->20,all6 cobblestone and both targets dead. Video decoded; combat and meal frames inspected. Fed ambush PASS:handover1,minHP20,all6 cobblestone,both dead,video decoded. Further repetitions and navigation audit pending.
+- Fresh upstream70a0a127 changes mining watchdog to per-cell planner-sized budgets; fetched and reviewed, not integrated into these measurements. It is compile-verified upstream but has no stand result yet.
+
+- Final ownership fixture matrix passed5/5: two hungry mining ambushes, one fed ambush, normal wall hunt and open hunt. Each ambush recorded one explicit handover and returned6 cobblestone; hungry minHP14/20, fed20. All five videos decoded. One sword transition in the second hungry case occurred after x1848 (wall ended1846), during a retained queue's settling; it is not a cancelled dig.
+- Navigation audit ended6/6PASS(flat,stairs,descend,bridge,gaps,notch),23.6–29FPS,no invalid attempts. Bridge first attempt FAILED at healthy28.2FPS: crossed, declared arrival then coasted to25.62 for goal23, outside2.5 tolerance; retry passed. First attempt copied to workspace outputs/hunt-tunnel/bridge-first-failure before overwrite, screenshot inspected. Combat cancellation count stayed3, unchanged from the three ambushes. Do not claim an unqualified first-attempt6/6 or that retry explains the cause.
+- This closes the reproduced hunger/queued-mining defence mechanism, not all combat, current-water safety, exact stopping, or game completion. Integrating upstream next; no publication or Telegram retry.

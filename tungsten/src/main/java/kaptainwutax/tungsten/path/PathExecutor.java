@@ -100,6 +100,39 @@ public class PathExecutor {
         }
     }
 
+    /**
+     * Abandon queued block work when another controller takes the body. Call on the
+     * client thread before the new owner writes inputs. Unlike the replay drift flag,
+     * this also cancels empty-path mining/placing jobs and their completion callback.
+     * Returns false without touching inputs when there is no block work to cancel.
+     */
+    public boolean cancelBlockWork() {
+        if (!isBreakingNow() && !isPlacingNow()) return false;
+        breakQueue = null;
+        placeQueue = null;
+        breakingTicks = 0;
+        settleTicks = 0;
+        placingTicks = 0;
+        placingNow = false;
+        path = null;
+        tick = 0;
+        armed = false;
+        stop = false;
+        cb = null;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.interactionManager != null) mc.interactionManager.cancelBlockBreaking();
+        if (mc.options != null) {
+            mc.options.attackKey.setPressed(false);
+            mc.options.useKey.setPressed(false);
+            releaseMovementKeys(mc.options);
+        }
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+        TungstenModRenderContainer.BREAK_PLAN.clear();
+        TungstenModRenderContainer.PLACE_PLAN.clear();
+        TungstenModRenderContainer.RUNNING_PATH_RENDERER.clear();
+        return true;
+    }
+
     /** Support cells to PLACE (bridge floor) once the replay reaches the segment end
      *  (set by PathFinder from the block path's place plan) — the mirror of breakQueue. */
     public volatile List<net.minecraft.util.math.BlockPos> placeQueue = null;
