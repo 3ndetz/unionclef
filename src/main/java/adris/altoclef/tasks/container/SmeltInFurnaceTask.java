@@ -4,6 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.BotBehaviour;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
+import adris.altoclef.tasks.InteractWithBlockTask;
 import adris.altoclef.tasks.ResourceTask;
 import adris.altoclef.tasks.resources.CollectFuelTask;
 import adris.altoclef.tasks.slot.MoveInaccessibleItemToInventoryTask;
@@ -12,8 +13,10 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.MiningRequirement;
 import adris.altoclef.util.SmeltTarget;
+import adris.altoclef.util.helpers.BaritoneHelper;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
+import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.slots.FurnaceSlot;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.block.Blocks;
@@ -134,6 +137,8 @@ public class SmeltInFurnaceTask extends ResourceTask {
         private final FurnaceCache furnaceCache = new FurnaceCache();
         private final ItemTarget allMaterials;
         private boolean ignoreMaterials;
+        private boolean inspectedFurnace;
+        private BlockPos inspectedPosition;
 
         public DoSmeltInFurnaceTask(SmeltTarget target) {
             super(Blocks.FURNACE, new ItemTarget(Items.FURNACE));
@@ -174,6 +179,20 @@ public class SmeltInFurnaceTask extends ResourceTask {
             AltoClef mod = AltoClef.getInstance();
 
             tryUpdateOpenFurnace(mod);
+            // A closed, uninspected furnace is unknown, not empty. Inspect a nearby
+            // station before acquiring ingredients that may already be cooking or ready.
+            // Use the existing walk-versus-rebuild cost, rather than chasing a distant station.
+            if (!inspectedFurnace) {
+                Optional<BlockPos> nearby = mod.getBlockScanner().getNearestBlock(
+                        pos -> WorldHelper.canReach(pos)
+                                && BaritoneHelper.calculateGenericHeuristic(mod.getPlayer().getPos(), WorldHelper.toVec3d(pos))
+                                <= getCostToMakeNew(mod), Blocks.FURNACE);
+                if (nearby.isPresent()) {
+                    inspectedPosition = nearby.get();
+                    setDebugState("Inspecting furnace contents");
+                    return new InteractWithBlockTask(inspectedPosition);
+                }
+            }
             // Include both regular + optional items
             ItemTarget materialTarget = allMaterials;
             ItemTarget outputTarget = target.getItem();
@@ -195,13 +214,16 @@ public class SmeltInFurnaceTask extends ResourceTask {
                     - totalFuelInFurnace;
 
             // We don't have enough materials...
-            if (mod.getItemStorage().getItemCount(materialTarget.getMatches()) < materialsNeeded) {
+            if (mod.getItemStorage().getItemCountInventoryOnly(materialTarget.getMatches()) < materialsNeeded) {
+                // Acquisition runs in the world, not inside the furnace screen.
+                if (isContainerOpen(mod)) StorageHelper.closeScreen();
                 setDebugState("Getting Materials");
-                return getMaterialTask(target.getMaterial());
+                return getMaterialTask(new ItemTarget(target.getMaterial(), materialsNeeded));
             }
 
             // We don't have enough fuel...
             if (furnaceCache.burningFuelCount <= 0 && StorageHelper.calculateInventoryFuelCount(mod) < fuelNeeded) {
+                if (isContainerOpen(mod)) StorageHelper.closeScreen();
                 setDebugState("Getting Fuel");
                 return new CollectFuelTask(fuelNeeded + 1);
             }
@@ -355,11 +377,12 @@ public class SmeltInFurnaceTask extends ResourceTask {
         @Override
         protected BlockPos overrideContainerPosition(AltoClef mod) {
             // If we have a valid container position, KEEP it.
-            return getTargetContainerPosition();
+            return getTargetContainerPosition() != null ? getTargetContainerPosition() : inspectedPosition;
         }
 
         private void tryUpdateOpenFurnace(AltoClef mod) {
             if (isContainerOpen(mod)) {
+                inspectedFurnace = true;
                 // Update current furnace cache
                 furnaceCache.burnPercentage = StorageHelper.getFurnaceCookPercent();
                 furnaceCache.burningFuelCount = StorageHelper.getFurnaceFuel();

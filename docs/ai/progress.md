@@ -154,3 +154,26 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Final live pillar test: protected 6/6 preserved both cobblestone, used dirt and reached Y=-57 from Y=-60 with 20 HP. Unprotected control 6/6 consumed both cobblestone and reached the same height. Behaviour stack restored after each trial.
 - Checked-in regression: deploy/runner/scaffold_reservation_test.py. The deployed build also passed the seven-course navigation audit above.
 - Recorded both series in workspace outputs/scaffold-reservation-final.mp4; complete decode and a pillar/inventory frame reviewed. This checks spending policy, not the entire survival crafting chain.
+
+## 2026-09-15 — Inspect existing furnaces before resupplying
+
+### Investigate
+- The observed survival continuation reached stone sword/axe, shield and iron pickaxe. At the end of its ten-minute window, inventory held six iron ingots and the furnace at (99,132,-40) held the seventh in its output slot. The active smelting task was instead requesting raw iron. The exact interruption that lost the original furnace state is not yet isolated.
+- A new smelting task treated an uninspected closed furnace as empty. Six ingots plus one ready furnace output reproduced the refusal to collect it in 4/4 baseline trials.
+- Material accounting subtracted furnace input from the requirement, then compared against a count including furnace input again. Its acquisition target also requested the entire batch rather than the inventory remainder.
+
+### Implement
+- Inspect a nearby existing furnace before resupplying. Use the existing walk-versus-rebuild cost to bound the inspection trip, and retain its position for subsequent visits.
+- Compare the remaining material requirement with inventory-only materials, request that remaining target, and close the furnace screen before acquiring materials or fuel in the world.
+- Add `deploy/runner/smelt_recovery_test.py` with ready-output, full-batch, dropped-material and preloaded-input fixtures. Task startup runs on the Minecraft thread; observations read raw inventory stacks instead of invoking mutating lazy trackers from Py4J. Completion requires the requested items in actual inventory, an empty cursor and a stopped task.
+
+### Validate
+- Build and tester1 deployment succeeded; nested module jars matched the build.
+- Final binary: ready-output 3/3; full seven-ore batch with four coal 1/1 (71.31 seconds); five ingots plus one furnace input and one dropped raw iron 1/1 (18.97 seconds). The server independently confirmed seven ingots after the latter. These are functional gates, not performance estimates; FPS varied during fixture initialization.
+- All three final MP4s decode completely: workspace outputs/smelting/smelt-ready-final.mp4, smelt-batch-seven.mp4 and smelt-loaded-final.mp4. The full-batch furnace/inventory screenshot was inspected during execution.
+- The initial preloaded fixture was invalid: injecting items through NBT left cooking_total_time=0. Server inspection confirmed that state; setting the normal 200-tick duration corrected the fixture.
+- Separate mine-ore acquisition remained 2/3 on the preceding close-screen build. One trial stalled during mining, before obtaining any raw iron. Closing the furnace screen did not establish a fix for that failure. Retain it as an open mining investigation; do not report the smelting change as resolving mining reliability.
+- Final navigation audit passed 3/3 (flat, staircase, descend), 28.7/26.7/25.7 FPS, no invalid runs, falls or freezes. Artifacts: deploy/runner/artifacts/20260915-095158.
+- The next 240-second natural-save run crafted two buckets, collected nine coal, recovered the table and reached the surface. It did not verify retrieval of the old furnace output: other tasks took priority and the bot moved away. Nighttime damage reduced health from 19 to 7; the run ended while pursuing a chicken. This is progression evidence, not a completed playthrough or a proven fix for every original furnace interruption.
+- The bot died between recording windows (server LastDeathLocation: 179,146,23). The old workspace observer stopped all bot tasks when finishing a video, leaving an unsafe unobserved gap. Exact death cause was not captured. Its replacement must keep gameplay and defence running across recording boundaries.
+- No release or remote publication yet.
