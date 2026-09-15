@@ -153,6 +153,7 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
     }
 
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        if (!WorldHelper.intersectsPlayerCollision(mod, pos)) return false;
         // ⛔ FIXED 2026-09-05: same copy-paste bug found and fixed in the sibling
         // GetToEntityTask.isAnnoying() in this same package -- the loop returned
         // unconditionally on its FIRST iteration regardless of match, so only

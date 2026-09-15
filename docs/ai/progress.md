@@ -403,3 +403,19 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Entity reload fixed matrix passed6/6 (runs1,2,4–7),target killed,20HP. Each confirmed removed/dead old entity,equal network-ID identity,different client instances,all old/new task bindings unequal,and same-instance KillEntityTask equality intact. Run3 remains a fixture failure,not a pass. Videos decoded; approach frame inspected.
 - Wall/open hunt controls passed2/2:6cobblestone through the wall,zero pick-to-sword interruptions while mining,both targets killed,20HP. One-high ascent replay passed2/2 with three head blocks explicitly planned and removed,20HP. All videos decoded; low-ceiling mining frame inspected. Final flat/staircase navigation audit running.
 - Final navigation audit passed2/2(flat,staircase),28.3/24.7FPS,zero invalid attempts;artifacts20260915-150643. Fetch found no newer upstream. Committing locally and resuming saved natural survival. Full game completion remains open.
+
+## 2026-09-15 — Passable plants must not latch collision recovery
+
+### Investigate
+- Natural59b396b5 resumed old food hunt and progressed from y26 to54,then crossed a lush cave. Iron pick remained at damage221; stone pick handled ordinary digging. Water bucket present. Old removed-entity lock did not recur during346.7s. Three videos decoded and frames inspected.
+- Creeper defence entered SafeRandomShimmyTask at(203.5,60,40.1),remained nearly stationary for over30s in tall grass beside a step and ledge. World capture: feet/head tall_grass,solid moss below,step/clay to south,air/ledge north. Later moved before disconnect;last sampled(198,56,37.5),17.5HP,285blocks. No attribution of damage to a particular source yet.
+- Six task isAnnoying/stuckInBlock copies include tall/short grass,flowers,vines and neighbouring blocks without collision tests. Active shimmy stays latched while any such block remains; sneak-forward cannot jump the step.
+- grass_unstuck_test reproduced on an isolated temporary-door course: after door opened at15s,the bot stayed in grass at2162.3,-60,820.3 through39.26s,shimmy active,20HP. It uses the real RunAwayFromPositionTask and naturally reaches the failed-progress branch;no task-state injection.
+
+### Implement
+- Shared WorldHelper.intersectsPlayerCollision checks live entity-context collision boxes against the slightly contracted player body. Six legacy annoying-block predicates now require real penetration before activating/latching recovery. Route planning retains ordinary contact and passable plants. Build succeeded,deploy running. Fixed fixture matrix and actual fence overlap controls pending.
+
+### Validation in progress
+- Fixed temporary-door matrix passed6/6: four tall-grass,one dandelion,one air control. All resumed across the step after the door opened,20HP,no SafeRandomShimmyTask. Baseline remained trapped after40s. All seven videos decoded;final escape screenshot inspected.
+- Live collision probe passed6/6:air,short_grass,dandelion and open gate do not overlap;embedded fence and closed gate do. Adjacent fence rejected in all six;player coordinates verified so displacement cannot fake a negative. No claim about every fence escape outcome. Mining/pillar,buried-table and wall-hunt audit running.
+- Adjacent audit passed3/3:mining/pillar target mined with26 builder-yield ticks,zero tool swaps;buried crafting table opened and preserved;wall hunt killed target after6cobblestone withzero mining tool interruptions. All20HP,three videos decoded. No Tungsten movement code changed in this pass. Committing locally and returning to natural survival.

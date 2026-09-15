@@ -215,6 +215,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
      * @return true if the block is annoying, false otherwise.
      */
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        if (!WorldHelper.intersectsPlayerCollision(mod, pos)) return false;
         for (Block annoyingBlock : annoyingBlocks) {
             boolean isAnnoying = mod.getWorld().getBlockState(pos).getBlock() == annoyingBlock
                     || mod.getWorld().getBlockState(pos).getBlock() instanceof DoorBlock

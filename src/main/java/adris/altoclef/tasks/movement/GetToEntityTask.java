@@ -265,6 +265,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     }
 
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        if (!WorldHelper.intersectsPlayerCollision(mod, pos)) return false;
         // ⛔ FIXED 2026-09-05: this returned unconditionally on the LOOP'S FIRST ITERATION,
         // regardless of whether the block matched -- so only annoyingBlocks[0] (VINE) was ever
         // actually compared, and the other 13 entries (nether sprouts, cave/twisting/weeping

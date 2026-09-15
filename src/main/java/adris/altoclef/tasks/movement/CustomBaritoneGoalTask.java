@@ -183,6 +183,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     }
 
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        if (!WorldHelper.intersectsPlayerCollision(mod, pos)) return false;
         Block block = mod.getWorld().getBlockState(pos).getBlock();
         for (Block annoyingBlock : annoyingBlocks) {
             if (block == annoyingBlock) return true;

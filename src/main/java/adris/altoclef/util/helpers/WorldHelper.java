@@ -38,6 +38,23 @@ import java.util.*;
 public interface WorldHelper {
 
     /**
+     * Whether this block's collision geometry penetrates the player's body.
+     * Recovery must not take over just because grass, a flower, or a nearby fence exists.
+     * Ordinary boundary contact belongs to route planning; only overlap needs unembedding.
+     */
+    static boolean intersectsPlayerCollision(AltoClef mod, BlockPos pos) {
+        if (mod.getWorld() == null || mod.getPlayer() == null) return false;
+        Box body = mod.getPlayer().getBoundingBox().contract(1.0E-7);
+        var shape = mod.getWorld().getBlockState(pos).getCollisionShape(
+                mod.getWorld(), pos, ShapeContext.of(mod.getPlayer()));
+        for (Box box : shape.getBoundingBoxes()) {
+            if (body.intersects(box.offset(pos))) return true;
+        }
+        return false;
+    }
+
+
+    /**
      * Is this block lava? Asked of the STATE, with no pathfinder attached.
      *
      * <p>Part of G-0, cutting altoclef's baritone imports: this was

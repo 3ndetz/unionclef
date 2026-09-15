@@ -168,6 +168,7 @@ public class InteractWithBlockTask extends Task {
     }
 
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        if (!WorldHelper.intersectsPlayerCollision(mod, pos)) return false;
         // ⛔ FIXED 2026-09-05: `return` sat inside the `for` loop and fired unconditionally on the
         // first iteration, so only `annoyingBlocks[0]` was ever actually compared against -- every
         // other entry in `annoyingBlocks` was silently never checked. Same copy-paste bug just
