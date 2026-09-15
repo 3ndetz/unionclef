@@ -33,7 +33,7 @@ public class GetCloseToBlockTask extends Task {
         // We have a strictly decreasing range, which means we will eventualy get
         // as close as we can.
         if (inRange()) {
-            _currentRange = getCurrentDistance() - 1;
+            _currentRange = Math.max(0, getCurrentDistance() - 1);
         }
         return new GetWithinRangeOfBlockTask(_toApproach, _currentRange);
     }
@@ -48,7 +48,10 @@ public class GetCloseToBlockTask extends Task {
     }
 
     private boolean inRange() {
-        return AltoClef.getInstance().getPlayer().getBlockPos().getSquaredDistance(_toApproach) <= _currentRange * _currentRange;
+        // The initial MAX_VALUE radius must cover every target. Integer
+        // multiplication wraps its square to 1 and prevents the first approach.
+        return AltoClef.getInstance().getPlayer().getBlockPos().getSquaredDistance(_toApproach)
+                <= (double) _currentRange * _currentRange;
     }
 
     @Override

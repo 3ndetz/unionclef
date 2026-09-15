@@ -245,3 +245,21 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Standard navigation regression is running before commit. No Telegram send or publication; prior automatic approval blocks remain pending.
 - Standard navigation final-build audit passed6/6(flat/staircase/descend/water/gaps/ladder),24.0–29.0FPS, no invalid attempts. Artifacts deploy/runner/artifacts/20260915-113258. Water course reached the far bank in11.2s; viewed the finish frame. This does not close the separate waterfall-gap failure.
 - Checked-in water harness replayed low-roof exit successfully at20–30FPS, minHP20 with water breathing; video fully decoded. Fresh fetch found bf2b9c5a(TODOS-only headless registry investigation), reviewed for integration; no Java delta from upstream.
+
+## 2026-09-15 — Natural progression and approach-radius overflow
+
+### Investigate
+- Ten-minute natural run after water-clearance fixes retained20HP throughout. Acquired stone tools, coal, iron pickaxe, equipped shield, and two empty buckets. Two cramped station-placement delays recovered without intervention; five120-second video chunks decoded and representative frames reviewed.
+- Final natural state(103.3,121,-56.5),20HP,iron pickaxe/shield/two buckets; world disconnected before flat tests. Water approach toward(119,109,-15) then stalled for roughly the final140seconds, with14 samples naming GetWithinRange2147483647.
+- GetCloseToBlockTask initializes Integer.MAX_VALUE and squares it as an int in inRange, producing1. The child AltoGoal.Near uses double arithmetic and is already satisfied at any normal distance. Parent never reduces the radius, child never moves.
+- Disposable flat baseline reproduced MAX_VALUE and unchanged position20blocks from the target for9seconds. The expected-bug gate passed and video decoded.
+
+### Implement
+- Promote the radius before squaring; clamp the decreasing radius to zero when occupying the target. No navigation tolerances changed.
+- Added deploy/runner/approach_range_test.py with direct approach, radius-zero, water-bucket and lava-bucket cases. It waits for the fixture teleport/grounding before task startup.
+
+### Validate so far
+- Build/deploy succeeded and deployed nested jars verified. Direct approach and radius-zero passed; actual water and lava collection both produced filled buckets with20HP. Videos decoded and both filled-bucket frames viewed.
+- The first fixed direct-approach attempt failed its setup grounded/health assertion before starting a task; excluded, then rerun after explicit settle checks. It is not a navigation failure or a pass.
+- Water/lava initial FPS samples were12/1, then29/23; these prove inventory outcomes only, not speed/reliability. Checked-in water replay is running before commit. Natural approach through the forest remains to be retried on the new build.
+- Checked-in water replay passed and produced a water bucket; no further Java changes. Direct approach and replay videos decoded. Proceeding to the saved natural water approach.
