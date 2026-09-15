@@ -104,8 +104,8 @@ public interface AltoGoal {
      * blacklisted as unreachable while it sat five blocks under the bot's feet.
      *
      * <p>Reached means the FEET cell is next to the block: on top of it, beside it at foot, head
-     * or floor level, or directly under it. Every one of those puts the block inside arm's reach,
-     * and every one is a cell the planner can DIG to -- which is the point: the goal has to be
+     * level, or directly under it. Diagonally elevated neighbours are excluded because
+     * their floor can obstruct interaction. These are cells the planner can DIG to: the goal has to be
      * something a search can complete on a neighbour, or no dig move ever helps. The predicate
      * itself lives in tungsten ({@code FastPlanner.adjacentToBlock}) so the planner's goal test and
      * this arrival test cannot drift apart.

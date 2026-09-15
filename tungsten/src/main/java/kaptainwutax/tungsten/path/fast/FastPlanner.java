@@ -431,8 +431,9 @@ public final class FastPlanner {
      */
     /**
      * Baritone's {@code GoalGetToBlock} predicate: is a body whose FEET are in {@code (fx,fy,fz)}
-     * next to {@code block} -- on top of it, beside it at foot/head/floor level, or right under it?
-     * Every one of those cells puts the block inside arm's reach.
+     * next to {@code block} -- on top, beside it at foot/head level, or right under it?
+     * The overlapping cells also support non-colliding interaction targets. A cell
+     * diagonally above the block is not adjacent: its floor can hide the target.
      *
      * <p>This is the goal test a MINING approach needs (docs/BARITONE-GAPS.md G25): the block is
      * solid, so no route can end IN it, and a search that can only complete on the exact cell
@@ -444,8 +445,10 @@ public final class FastPlanner {
      */
     public static boolean adjacentToBlock(int fx, int fy, int fz, BlockPos block) {
         int dx = fx - block.getX(), dy = fy - block.getY(), dz = fz - block.getZ();
-        if (dx == 0 && dz == 0) return dy == 1 || dy == -2;     // standing on it / it is right above the head
-        return Math.abs(dx) + Math.abs(dz) == 1 && dy >= -1 && dy <= 1;   // beside it: foot, head or floor level
+        // Match Baritone GoalGetToBlock: the player's feet and head occupy two
+        // vertical cells. Do not extend horizontal neighbours to dy=1; that made
+        // a player above a buried container "arrive" behind its own solid floor.
+        return Math.abs(dx) + Math.abs(dy < 0 ? dy + 1 : dy) + Math.abs(dz) <= 1;
     }
 
     public static boolean adjacentToBlock(BlockPos feet, BlockPos block) {

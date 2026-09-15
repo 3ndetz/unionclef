@@ -333,3 +333,23 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 
 - Final joint-build hungry ambush passed:one explicit handover,minHP17,hunger8->20,6cobblestone,both targets dead;video decoded.
 - Final navigation audit passed3/3(nav_break,nav_gaps,nav_wall2),24.8/26.6/28.8FPS,no invalid attempts. Artifacts20260915-134546. Proceeding to natural survival; complex partial approaches remain unverified.
+
+## 2026-09-15 — Buried container false adjacency
+
+### Investigate
+- Natural run on245214b1 reached stone tools, then stalled crafting a stone sword at a capped table(103,131,-19). Saved after182.9s at(102.5,132,-18.6),20HP,18blocks; disconnected before fixtures. Two videos decoded.
+- Live target reach=false; the cell above the table and the block below the player's feet were dirt. The approach task nevertheless repeatedly reported completion.
+- FastPlanner.adjacentToBlock accepted horizontal neighbours at dy=1, unlike reference baritone/api/pathing/goals/GoalGetToBlock.java. The original uses Manhattan distance after folding the player's head cell into the feet cell; horizontal adjacency is only dy=0/-1. Our widened predicate accepted a diagonally elevated cell behind solid ground.
+- Buried-table fixture baseline reproduced25s with adjacent=true,reach=false,unchangedposition,and the default player inventory handler throughout. Table remained intact. Video decoded and frame inspected. Initial fixture failed public-field access from Py4J; corrected to get_field before the measured baseline.
+
+### Implement
+- Match the Baritone predicate exactly, restoring overlapping cells for non-colliding targets and excluding diagonally elevated neighbours. AltoGoal shares the predicate; distant visible reach still uses its ray check. Clean build running.
+- Added buried_container_test.py: capped/open table variants, real InteractWithBlockTask, physical crafting-handler gate,table preservation and20HP; restored settings/geometry. No fixed result yet.
+
+### Validation so far
+- Clean build/deploy succeeded,nested jars matched. Capped table opened in2.40s;repeat1.57s;open-cap control0.47s. All retained20HP and the table. Videos decoded; the fixed frame shows the planned cap removal. Functional outcomes only, not speed comparison: repeat inherited the shovel in hand.
+- All125 offsets in[-2,2]^3 matched the12 explicitly enumerated Baritone goal positions, with no missing/extra cells.
+- Adjacent craft audit(mine_stone,craft_at_distant_table) running before natural replay.
+
+- Craft audit passed2/2(mine_stone,craft_at_distant_table),19.2/23.7FPS,no invalid attempts;artifacts20260915-140020. Natural replay next.
+- Fresh upstreamd9bbc3b0 raises only the watchdog cap6000->12000 plus documentation. Reviewed for integration; ordinary stone/diamond-obsidian budgets stay below either cap. Its long wrong-tool margin has not been timed end-to-end here.
