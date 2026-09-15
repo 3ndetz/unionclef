@@ -2762,6 +2762,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.path.PathExecutor.breakOccludedUnclearable = 0;
         kaptainwutax.tungsten.path.PathExecutor.ownCellPlaceAsPillar = 0;
         kaptainwutax.tungsten.path.PathExecutor.navResumeSkipped = 0;
+        kaptainwutax.tungsten.path.PathExecutor.breakBudgetSized = 0;
         kaptainwutax.tungsten.path.PathExecutor.lastBreakMiss = "-";
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderTripBlocked = 0;
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderKeysKept = 0;
@@ -3375,7 +3376,8 @@ public class Py4jEntryPoint {
                         // PathExecutor but were never wired into stats -- accumulating forever with no
                         // way to read or reset them via this py4j mechanism, unlike every sibling counter
                         // from the same batch. Appended at the tail so no existing %d position shifts.
-                        + " breakOccluderQueued=%d breakOccludedUnclearable=%d ownCellPlaceAsPillar=%d navResumeSkipped=%d",
+                        + " breakOccluderQueued=%d breakOccludedUnclearable=%d ownCellPlaceAsPillar=%d navResumeSkipped=%d"
+                        + " breakBudgetSized=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
@@ -4172,7 +4174,8 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.PathExecutor.breakOccluderQueued,
                 kaptainwutax.tungsten.path.PathExecutor.breakOccludedUnclearable,
                 kaptainwutax.tungsten.path.PathExecutor.ownCellPlaceAsPillar,
-                kaptainwutax.tungsten.path.PathExecutor.navResumeSkipped);
+                kaptainwutax.tungsten.path.PathExecutor.navResumeSkipped,
+                kaptainwutax.tungsten.path.PathExecutor.breakBudgetSized);
     }
 
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }

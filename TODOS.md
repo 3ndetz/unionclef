@@ -1,5 +1,49 @@
 # TODOs
 
+<!-- G13-PER-CELL-BREAK-BUDGET-IMPLEMENTED-2026-09-15 -->
+## G13 implemented: the mining watchdog is now per-cell and sized from the planner's own estimate, not a flat 15-second guess (2026-09-15)
+
+Earlier today's `REMAINING-G-ITEMS-TRIAGED` entry (below) deferred this one specifically because
+of an asymmetric risk: "getting this wrong in either direction is asymmetric — too generous
+silently turns 'give up on an unreachable block' into 'never give up.'" Revisited it because that
+risk turned out to be fully boundable once the actual mechanism was read closely, not just
+described from the gap list's one-line summary.
+
+**What was actually wrong, found by reading `PathExecutor.tickBreaking` line by line, not assumed
+from the gap description**: `breakingTicks` was NOT sized to the wrong duration, it was scoped to
+the wrong THING. `target` (the block currently being aimed at) silently advances to the next cell
+in `breakQueue` the moment the previous one breaks — the scan just picks the first non-passable
+cell every tick — but `breakingTicks` was never reset when this happened, only when the WHOLE
+queue finished or aborted. So a two-block break queue split one 300-tick (15 s) budget between
+both blocks instead of getting 300 each, and a single genuinely slow-but-real block (obsidian with
+a stone pick: not COST_INF, the planner already knows it is breakable, just slow — vanilla prices
+it around 5000 ticks) never had a chance against a cap sized for an easy block.
+
+**The fix, and why the asymmetric risk is actually bounded**: `getMiningDurationTicks` — the exact
+function the PLANNER already calls to decide a cell is breakable in finite time at all, refusing
+anything at `COST_INF` before it ever reaches a plan — is recomputed fresh in the executor against
+the live block state and whatever tool is actually equipped right now (which can differ from what
+planning assumed). The per-cell budget is `max(300, min(6000, estimate * 2 + 100))`: floored at
+the OLD flat value so nothing that used to pass gets stricter, capped at 6000 ticks (5 minutes) so
+a bad estimate can only ever make the watchdog MORE patient within a hard bound, never unbounded.
+Since a cell that reaches the executor's break queue was already proven finite-cost by the
+planner, "never gives up" genuinely cannot happen here — the cap exists for the case where the
+live estimate disagrees with the plan's (a changed tool, a changed block), not for a plan that was
+wrong about breakability in the first place.
+
+`breakBudgetTarget`/`breakBudgetTicks` reset alongside every existing `breakingTicks = 0` site
+(six of them, all found by grep and updated together, including `startBreaking()` itself) so a
+fresh job never inherits a stale budget from a previous one's last cell. Added
+`PathExecutor.breakBudgetSized` (how many times the budget was actually resized) and wired it into
+`Py4jEntryPoint`'s stats immediately, at the same time the code was written — not as an
+afterthought the way the G28/G31 counters were found orphaned earlier this session.
+
+**Verified**: `:1.21.1:compileJava` and `:1.21.11:compileJava` both BUILD SUCCESSFUL, exit 0, fresh
+recompiles (not up-to-date). Not stand-verified — no docker exec from this sandbox to confirm a
+real obsidian-with-wrong-tool dig now completes instead of aborting, or that a genuinely stuck
+block (aim never landing, wrong position) still correctly gives up within its now-larger but still
+bounded window.
+
 <!-- HEADLESS-MC-REGISTRY-NOT-FEASIBLE-2026-09-15 -->
 ## Settled, negative: real Block/Item registry access does NOT work in a bare JVM here, even with Bootstrap.initialize() (2026-09-15)
 
@@ -714,7 +758,11 @@ test + full nav-suite regression before it counts done.
       `block instanceof TripwireBlock` to `isHazardOrSlow`. `:1.21.1:`/`:1.21.11:compileJava`
       both BUILD SUCCESSFUL. Not stand-verified.
 - [ ] **G12 doors/gates passable to grid BFS** (open them instead of refusing/shimmying).
-- [ ] **G13 per-cell break budget** (replace the flat 300-tick abort so hard blocks can finish).
+- [x] **G13 per-cell break budget** — `PathExecutor.tickBreaking` now resets its watchdog when
+      `target` changes (it used to count against the whole break queue, not the current cell) and
+      sizes the budget from `MovementHelperB.getMiningDurationTicks`'s own live estimate
+      (`max(300, min(6000, estimate*2+100))`) instead of a flat 300. `:1.21.1:`/`:1.21.11:
+      compileJava` both BUILD SUCCESSFUL. Not stand-verified.
 - [ ] **G14 soft break-cost tier for block entities** (one chest in a wall shouldn't abort the tunnel).
 - [x] **G15 throwaway budget whitelist** — done inside G62: `BlockPlaceHelper.isScaffold` (a full
       solid cube, no container/workstation/falling block) is the one predicate the plan's count,
