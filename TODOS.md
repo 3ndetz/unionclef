@@ -1,5 +1,30 @@
 # TODOs
 
+<!-- G25-G89-DIFF-AUDIT-COMPLETE-2026-09-15 -->
+## The G25-G89 Java diff audit is now complete: all 54 files read for logic, not just relied on by name (2026-09-15)
+
+The five-way split in the entry below missed 16 smaller files (~820 lines) that fell through the
+cracks of that file-grouping — `TungstenConfig.java` (+418, the biggest miss, and a file with a
+real history of this exact bug shape: commit `dce80e75` earlier this project fixed a javadoc's
+stated conclusion contradicting its field's actual default), `AltoGoal.java`, `EquipCommand.java`,
+`BlockPlaceHelper.java`, and eleven smaller ones. A sixth pass read all of them against the diff.
+
+**Clean.** Checked every one of TungstenConfig's ~40 new/changed fields specifically for the
+`dce80e75` shape (a javadoc's "default ON"/"stays off" conclusion vs. the literal value assigned)
+— no mismatches, including the two flags flipped `false→true` this batch and one pair of
+deliberately-still-different sibling flags that reads like a mismatch at a glance but isn't
+(`startOnGroundTrustsThePlayer=true` vs. `startCellTrustsThePlayer` staying `false`, distinct on
+purpose). `EquipCommand`, `AltoGoal`, `BlockPlaceHelper`, `StorageHelper`, `BaritoneHelper`,
+`WorldHelper`, `KillAura`, `AbstractDoToClosestObjectTask`, `InteractWithBlockTask`, and
+`CommandStatusOverlay` all traced correctly against their own cited G-numbers.
+
+**This closes the whole diff.** Combined with the five passes in the entry below, every one of the
+54 files in `git diff 6185bee0..3be654dd` (5300+ lines, the entire G25-G89 batch) has now been read
+for logic, not merely cited by name in a TODOS entry. Two real bugs found and fixed this pass (the
+G63b regression and the four orphaned counters); two items flagged for a live stand rather than
+guessed at (`PLACE_CLEARANCE`, `haulRange`); everything else confirmed clean by genuine tracing,
+not a skipped check.
+
 <!-- G25-G89-JAVA-DIFF-AUDIT-2026-09-15 -->
 ## Audited the actual G25-G89 Java diff itself (5300+ lines, 54 files, never read for logic before) -- 2 real bugs fixed, 2 flagged for a live stand (2026-09-15)
 
