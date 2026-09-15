@@ -1,5 +1,26 @@
 # TODOs
 
+<!-- PLACE-CLEARANCE-MADE-LIVE-TUNABLE-2026-09-15 -->
+## The PLACE_CLEARANCE question is now A/B-testable without a rebuild, zero behavior change (2026-09-15)
+
+The `G25-G89-DIFF-AUDIT` pass (below) flagged `PillarTask.PLACE_CLEARANCE = 0.05` against its own
+cited baritone reference of 0.1 as needing a live client to settle, not a guess. Rather than leave
+that as a note someone has to remember to test, moved the constant into
+`TungstenConfig.placeClearance` (same default, 0.05 — this change alone alters nothing about how
+the bot plays) so whoever eventually has stand access can flip it with `;settings placeClearance
+0.1` and compare `tryFalse`/`dInsideCell` counts against the shipping default, entirely from chat,
+no code edit or rebuild required. `PillarTask.java` now reads `TungstenConfig.get().placeClearance`
+at the one call site instead of its own private constant.
+
+This is the same category of move as `breakCostMultiplier`/`placeCostMultiplier`, already
+live-tunable config fields for analogous open tuning questions — matching an established pattern,
+not inventing a new one.
+
+Verified: `:1.21.1:compileJava` and `:1.21.11:compileJava` both BUILD SUCCESSFUL, exit 0, fresh
+recompile. Not stand-verified in the sense that matters here — the actual A/B test this unlocks
+still needs a live client, which is the whole point of doing this now rather than waiting for
+someone to remember the question exists.
+
 <!-- G12-SCOPE-NARROWED-NOT-ATTEMPTED-2026-09-15 -->
 ## G12 (doors/gates), narrowed precisely so the next attempt doesn't start from scratch (2026-09-15)
 

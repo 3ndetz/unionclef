@@ -62,8 +62,9 @@ public class PillarTask {
     private static boolean jumpAsked;
     private static double dApex = -1e9;
     private static BlockPos dLastPlaceAt;
-    /** How far above the cell's top the feet must be before a click is attempted (baritone: 0.1). */
-    private static final double PLACE_CLEARANCE = 0.05;
+    // How far above the cell's top the feet must be before a click is attempted. Moved to
+    // TungstenConfig.placeClearance 2026-09-15 so it can be A/B tested live -- see its javadoc
+    // for why the current 0.05 vs baritone's cited 0.1 is still an open question.
 
     // ── G62: a column that will not take a tower is remembered, so it is not asked twice ──
     //
@@ -342,7 +343,8 @@ public class PillarTask {
             // tryFalse=81 placed=0" -- the ray on the right face every time, every click refused.
             // Baritone's MovementPillar clicks only at player.y > dest.y + 0.1 (feet above the
             // cell's top); this is that test, so the first click is the one inside the window.
-            if (placeAt != null && player.getY() < placeAt.getY() + 1.0 + PLACE_CLEARANCE) {
+            if (placeAt != null && player.getY() < placeAt.getY() + 1.0
+                    + kaptainwutax.tungsten.TungstenConfig.get().placeClearance) {
                 dInsideCell++;
                 placeAt = null;
             }
