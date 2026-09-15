@@ -51,7 +51,10 @@ public class RunAwayFromHostilesTask extends CustomBaritoneGoalTask {
 
     /** The hostiles this task runs from — skeletons only when asked, as before. */
     private List<Entity> hostiles(AltoClef mod) {
-        Stream<LivingEntity> stream = mod.getEntityTracker().getHostiles().stream();
+        // Retain threats through the requested separation and the flee goal's two-block
+        // destination margin. A fixed detection radius can otherwise end a longer retreat early.
+        Stream<LivingEntity> stream = mod.getEntityTracker().getTrackedHostiles().stream()
+                .filter(hostile -> hostile.isInRange(mod.getPlayer(), distanceToRun + 2));
         synchronized (BaritoneHelper.MINECRAFT_LOCK) {
             if (!includeSkeletons) {
                 stream = stream.filter(hostile -> !(hostile instanceof SkeletonEntity));

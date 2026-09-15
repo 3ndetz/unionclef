@@ -45,6 +45,7 @@ public class EntityTracker extends Tracker {
 
     private final List<Entity> closeEntities = new ArrayList<>();
     private final List<LivingEntity> hostiles = new ArrayList<>();
+    private final List<LivingEntity> trackedHostiles = new ArrayList<>();
 
     private final List<CachedProjectile> projectiles = new ArrayList<>();
 
@@ -381,6 +382,16 @@ public class EntityTracker extends Tracker {
         }
     }
 
+    /** Loaded living hostiles, including those occluded by terrain. Escape callers apply
+     * their requested distance rather than the visible list's fixed detection range.
+     * Calm neutral mobs remain excluded by the same hostility predicate. */
+    public List<LivingEntity> getTrackedHostiles() {
+        ensureUpdated();
+        synchronized (BaritoneHelper.MINECRAFT_LOCK) {
+            return trackedHostiles;
+        }
+    }
+
     /**
      * Is a player loaded/within render distance?
      *
@@ -446,6 +457,7 @@ public class EntityTracker extends Tracker {
             closeEntities.clear();
             projectiles.clear();
             hostiles.clear();
+            trackedHostiles.clear();
             playerMap.clear();
             if (MinecraftClient.getInstance().world == null) return;
 
@@ -526,15 +538,11 @@ public class EntityTracker extends Tracker {
                         itemDropLocations.get(droppedItem).add(ientity);
                     }
                 }
-                if (entity instanceof MobEntity) {
-                    if (EntityHelper.isAngryAtPlayer(mod, entity)) {
-
-                        // Check if the mob is facing us or is close enough
-                        boolean closeEnough = entity.isInRange(mod.getPlayer(), 26);
-
-                        //Debug.logInternal("TARGET: " + hostile.is);
-                        if (closeEnough) {
-                            hostiles.add((LivingEntity) entity);
+                if (entity instanceof MobEntity mob) {
+                    if (EntityHelper.isProbablyHostileToPlayer(mod, entity)) {
+                        trackedHostiles.add(mob);
+                        if (entity.isInRange(mod.getPlayer(), 26) && mob.canSee(mod.getPlayer())) {
+                            hostiles.add(mob);
                         }
                     }
                 } else if (entity instanceof ProjectileEntity projEntity) {
