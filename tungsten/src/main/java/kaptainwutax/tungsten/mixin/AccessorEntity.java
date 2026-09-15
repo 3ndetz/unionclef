@@ -13,6 +13,9 @@ import net.minecraft.util.math.Vec3d;
 @Mixin(Entity.class)
 public interface AccessorEntity {
 
+    @org.spongepowered.asm.mixin.gen.Invoker("getVelocityAffectingPos")
+    net.minecraft.util.math.BlockPos tungsten$getVelocityAffectingPos();
+
 	@Accessor
 	Vec3d getMovementMultiplier();
 

@@ -35,7 +35,6 @@ public class PathExecutor {
     //      individual write visible; it does not make increment-vs-reset atomic across threads.
     protected volatile List<Node> path;
     protected volatile int tick = 0;
-    protected boolean allowedFlying = false;
     public volatile boolean stop = false;
     public Runnable cb = null;
     public long startTime;
@@ -127,15 +126,9 @@ public class PathExecutor {
     private int placingTicks = 0;
 
     public PathExecutor(boolean isClient) {
-    	this.isClient = isClient;
-    	try {
-    		this.startTime = System.currentTimeMillis();
-			if (isClient)
-	        	this.allowedFlying = TungstenMod.mc.player.getAbilities().allowFlying;
-		} catch (Exception e) {
-			this.allowedFlying = true;
-		}
-	}
+        this.isClient = isClient;
+        this.startTime = System.currentTimeMillis();
+    }
 
 	/**
 	 * A path may be rooted AHEAD of the player (the search is seeded at a future
@@ -169,8 +162,6 @@ public class PathExecutor {
 		// fired, and a goto that needed more than one physics leg simply stopped forever.
 		// addPath() has always preserved cb; this was a one-line asymmetry between them.
 		this.startTime = System.currentTimeMillis();
-		if (isClient)
-			this.allowedFlying = TungstenMod.mc.player.getAbilities().allowFlying;
 	    stop = false;
     	this.path = path;
     	this.tick = 0;
@@ -326,7 +317,6 @@ public class PathExecutor {
     // public void tick(ServerPlayerEntity player) { ... }
     
     public void tick(ClientPlayerEntity player, GameOptions options) {
-    	player.getAbilities().allowFlying = false;
     	if(TungstenMod.pauseKeyBinding.isPressed() || stop) {
     		// A MINING/BRIDGING segment runs with an EMPTY path (the "At the wall" and
     		// "At the gap" shortcuts): there is no recorded replay, so a drift abort —
@@ -367,7 +357,6 @@ public class PathExecutor {
 		    options.jumpKey.setPressed(false);
 		    options.sneakKey.setPressed(false);
 		    options.sprintKey.setPressed(false);
-		    player.getAbilities().allowFlying = allowedFlying;
 		    this.path = null;
 		    stop = false;
 		    TungstenModRenderContainer.RUNNING_PATH_RENDERER.clear();
@@ -461,7 +450,6 @@ public class PathExecutor {
 		    options.jumpKey.setPressed(false);
 		    options.sneakKey.setPressed(false);
 		    options.sprintKey.setPressed(false);
-		    player.getAbilities().allowFlying = allowedFlying;
 		    this.path = null;
 		    stop = false;
 		    TungstenModRenderContainer.RUNNING_PATH_RENDERER.clear();

@@ -103,6 +103,24 @@ public final class FastNavigator {
 
     private FastNavigator() {}
 
+    /** Releasing input does not remove momentum. Do not finish an exact goal if
+     * vanilla ground drag will carry the body into the next cell after release.
+     * Summing v + v*drag + ... also covers slippery supporting blocks.
+     */
+    private static boolean coastStaysInCell(ClientPlayerEntity player, BlockPos cell) {
+        if (!player.isOnGround()) return true;
+        BlockPos support = ((kaptainwutax.tungsten.mixin.AccessorEntity) player).tungsten$getVelocityAffectingPos();
+        //#if MC < 12111
+        //$$ double drag = player.getWorld().getBlockState(support).getBlock().getSlipperiness() * 0.91F;
+        //#else
+        double drag = player.getEntityWorld().getBlockState(support).getBlock().getSlipperiness() * 0.91F;
+        //#endif
+        if (drag >= 1.0) return player.getVelocity().horizontalLengthSquared() == 0.0;
+        double x = player.getX() + player.getVelocity().x / (1.0 - drag);
+        double z = player.getZ() + player.getVelocity().z / (1.0 - drag);
+        return Math.floor(x) == cell.getX() && Math.floor(z) == cell.getZ();
+    }
+
     public static boolean isActive() { return active; }
 
     /** Walk until standing IN {@code cell} — baritone's GoalBlock. For callers that need a
@@ -472,8 +490,11 @@ public final class FastNavigator {
         // chest under a buried goal was missed for it (buried_goal, round 13).
         boolean sphereArrived = dist <= ARRIVE_DIST && goalRise < 1.0 && settledBody;
         java.util.function.Predicate<BlockPos> goalTest = arrivalTest;
+        // Exact goals need the same landing check as radius and predicate goals.
+        // Passing through the cell during a jump must not stop the walker mid-air.
         boolean arrived = exactCell != null
-                ? kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).equals(exactCell)
+                ? (settledBody && kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).equals(exactCell)
+                    && (!TungstenConfig.get().arrivalNeedsSettledBody || coastStaysInCell(player, exactCell)))
                 : reach != null
                     ? reachArrived(player, reach)
                     : goalTest != null

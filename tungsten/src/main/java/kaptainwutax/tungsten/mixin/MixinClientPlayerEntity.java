@@ -40,6 +40,18 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 	@org.spongepowered.asm.mixin.Unique
 	private static boolean tungsten$wasDriving = false;
 
+    /** Suppress flight double-taps without changing the server-owned abilities.
+     * The executor used to restore a cached allowFlying value after mining,
+     * including jobs that never captured it. Its pre-login default was true,
+     * enabling creative flight in survival after the first empty replay.
+     */
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "tickMovement", at = @At(
+            value = "FIELD", target = "Lnet/minecraft/entity/player/PlayerAbilities;allowFlying:Z",
+            opcode = org.objectweb.asm.Opcodes.GETFIELD))
+    private boolean tungsten$allowManualFlight(net.minecraft.entity.player.PlayerAbilities abilities) {
+        return abilities.allowFlying && !tungsten$wasDriving;
+    }
+
 	@Inject(method = "tick", at = @At("HEAD"))
 	public void start(CallbackInfo ci) {
 		if (TungstenMod.runKeyBinding == null) return; // tungsten not initialized yet

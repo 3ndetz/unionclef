@@ -126,3 +126,20 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Corrected lower+raised predicate: seven-course nav recheck passed 7/7, no invalids (wall2 20.0, flat 28.7, staircase 23.3, descend 27.7, bridge 17.8, gaps 25.8, notch 24.3 FPS). Log: /tmp/unionclef-swept-nav.log.
 - Final-build ceiling matrix: old slab flag-off control failed as expected; slab, full source ceiling, one-high full-block passage and open ascent all passed with both fixes enabled. Fixtures were restored per run and starts verified grounded. Workspace outputs/ceiling-final contains videos and JSON; no claim of whole-game completion or of the exact natural stall being resolved.
 - A fresh fetch found upstream 6388f55d and 11c72a46 (bench fixes, deliberate-blacklist preservation, four stats). Integration is next; the measurements above used the pre-integration binary.
+
+## 2026-09-15 — Flight permission leak and stable exact arrival
+
+### Investigate
+- The repaired clearance planner mined the mushroom ceiling at (120,144,-52) and crossed the forest step, but the player then hovered above the goal. Server and client positions agreed; gravity remained normal.
+- PathExecutor initialized `allowedFlying=true` when constructed before login. `startBreaking` bypassed `setPath`'s snapshot; finishing an empty mining job restored that stale permission in survival. Live isolated probe: allowFlying false before, true after. Server game mode remained survival.
+- After removing the permission leak, the player landed normally, but exact arrival could still finish during a jump. The exactCell branch omitted the settled-body check used by the radius/predicate branches. Adding it yielded 5/6 stable forest arrivals; the last trial coasted into a neighboring cell after input release.
+
+### Implement
+- The executor no longer writes or caches server-owned flight permissions. A client input hook suppresses the flight double-tap only while tungsten drives; manual flight permissions remain intact.
+- Exact arrival requires a settled body and a release endpoint inside the goal cell. The endpoint sums the current horizontal velocity under vanilla ground drag, using the actual velocity-affecting block's slipperiness. Disabling arrivalNeedsSettledBody restores the previous arrival behavior.
+
+### Validate
+- Clean tungsten build and client deployment succeeded. `flight_ability_test.py`: 12/12 checks across six creative/survival pairs; empty mining jobs preserved permissions and completed.
+- Restored natural approach (120.5,142.05,-51.5) -> (123,143,-53), mushroom ceiling restored before each run: final 6/6 exact grounded arrivals, 20 HP, no hovering. Times 14.67, 4.70, 4.84, 6.53, 6.82, 6.83 seconds. First run is slow and remains in the evidence.
+- Earlier settled-body-only build: 5/6. Same-build settled=false control: 1/1, so the arrival defect is not deterministic on this geometry.
+- Final video: workspace outputs/forest-coast-fixed.mp4, full decode passed; screenshots reviewed. Navigation regression audit passed 7/7 (flat, staircase, descend, bridge, gaps, wall2, notch), no falls, freezes, or invalid runs; 23.3–29.3 FPS. Artifacts: deploy/runner/artifacts/20260915-084426. Publication remains pending.
