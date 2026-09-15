@@ -234,6 +234,17 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      *  blocks are the same disease as the first forty. Three is inside every interaction reach. */
     private static final int LONG_HAUL_ARRIVE = 3;
     private static final double LONG_HAUL_HANDOVER = 3.5;
+    // ⛔ FLAGGED 2026-09-15, NOT CHANGED: TungstenConfig.entityHaulToCallerDistance's own javadoc
+    // says the haul "runs until the target is inside the CALLER's own distance (a block for a
+    // kill, never tighter), not to a fixed 3.5" -- no ceiling is documented, only the 1.0 floor.
+    // haulRange below still caps at HAUL_RANGE_CEILING regardless, so a caller asking to stop at
+    // more than this (a bow/ranged approach, or any _closeEnoughDistance > 2) gets driven to the
+    // ceiling instead of its own requested distance, silently reintroducing a version of the exact
+    // dead zone G61 was written to close, just moved to a different threshold. Not fixed here: this
+    // is the primary entity-approach path for combat, pickup and more, and removing the ceiling is
+    // a real behavior change with no way to verify it from this sandbox (no live stand). Named as
+    // its own constant so the question is precise and easy to test, not left as a bare "2.0".
+    private static final double HAUL_RANGE_CEILING = 2.0;
     /** Times the approach was handed to the drive because the target was beyond walking range. */
     public static volatile int entityLongHaul;
     /** G61: ticks the straight walk ran at once inside the hand-over distance, without waiting
@@ -460,7 +471,7 @@ boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKey
         // motionless, on the 19:57 recording. The haul now runs until the target is inside the
         // caller's own distance (never tighter than one block: the body cannot share a cell with
         // a pig), and inside that the straight walk runs at once.
-        double haulRange = Math.max(1.0, Math.min(2.0, Math.ceil(_closeEnoughDistance)));
+        double haulRange = Math.max(1.0, Math.min(HAUL_RANGE_CEILING, Math.ceil(_closeEnoughDistance)));
         boolean haulByCaller = kaptainwutax.tungsten.TungstenConfig.get().entityHaulToCallerDistance;
         double handover = haulByCaller ? haulRange + 0.5 : LONG_HAUL_HANDOVER;
         if (kaptainwutax.tungsten.TungstenConfig.get().entityLongHaulViaDrive

@@ -1,5 +1,30 @@
 # TODOs
 
+<!-- HAUL-RANGE-CEILING-STRONGER-EVIDENCE-2026-09-15 -->
+## GetToEntityTask's haulRange cap: stronger evidence found, still not fixed blind (2026-09-15)
+
+The earlier diff-audit entry flagged this as "may be intentional, may be an oversight." Checked
+`TungstenConfig.entityHaulToCallerDistance`'s own javadoc (the flag that gates this exact
+calculation) for a documented reason and found none — its stated design is explicit: *"the haul...
+runs until the target is inside the CALLER's own distance (a block for a kill, never tighter), not
+to a fixed 3.5."* Only a 1.0 floor is documented ("never tighter"); no ceiling is mentioned at all.
+The code's `Math.min(2.0, ...)` contradicts that doc comment directly — a caller asking to stop at
+more than 2 blocks (real examples exist: `CollectEggsTask` passes 5, `BedWarsTask`'s teammate
+approach passes 4) gets driven to 2.0 instead of its own requested distance, which is a version of
+the exact "dead zone" G61 was written to close, just relocated to a different threshold (2.0 to
+whatever the caller actually wanted) instead of removed.
+
+**Still not fixed**, deliberately: this sits on the primary entity-approach path used by combat,
+pickup, and several other tasks broadly, and removing the ceiling is a real behavior change with
+no way to verify it here (no live stand). Stronger textual evidence than before, but "the doc
+comment and the code disagree" is not the same certainty as "I traced the actual gameplay
+consequence," and this codebase has already paid once for exactly that kind of guess (see the
+`MEASURED AND REVERTED, 2026-08-02` comment in `FastPlanner.java`, cited in an earlier entry).
+Named the bare `2.0` as `HAUL_RANGE_CEILING` with a comment stating the contradiction precisely, so
+whoever has stand access can decide with one grep instead of re-deriving this. `:1.21.1:`/
+`:1.21.11:compileJava` both BUILD SUCCESSFUL — this is a comment/naming change only, no behavior
+difference from before.
+
 <!-- PLACE-CLEARANCE-MADE-LIVE-TUNABLE-2026-09-15 -->
 ## The PLACE_CLEARANCE question is now A/B-testable without a rebuild, zero behavior change (2026-09-15)
 
