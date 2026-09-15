@@ -623,6 +623,26 @@ public class AltoClef implements ModInitializer {
             }
         };
 
+        // Best-owned-tool pricing hook (docs/BARITONE-GAPS.md G8): the planner can only ever see
+        // the item in the main hand at search time, which is only correct at execution. Answer
+        // with the same "best tool anywhere in the pack" lookup the equip step itself already
+        // uses (StorageHelper.getBestToolSlot), so a route to reachable ore is never refused just
+        // because a sword happens to be in hand, and a stone axe in the pack prices in instead of
+        // whatever is held. Called from the planner's own background search thread; StorageHelper
+        // reads live inventory the same way every other per-node lookup in that planner already
+        // reads live world state, and tungsten caches the answer per search (MovementHelperB).
+        kaptainwutax.tungsten.TungstenModDataContainer.bestToolSpeedHook = state -> {
+            try {
+                var bestSlot = adris.altoclef.util.helpers.StorageHelper.getBestToolSlot(this, state);
+                if (bestSlot.isEmpty()) return -1;
+                net.minecraft.item.ItemStack stack =
+                        adris.altoclef.util.helpers.StorageHelper.getItemStackInSlot(bestSlot.get());
+                return adris.altoclef.util.helpers.ItemHelper.miningSpeedVsBlock(stack, state);
+            } catch (Throwable t) {
+                return -1; // a broken hook must never freeze pathing -- fall back to the held item
+            }
+        };
+
         // External mod initialization
         runEnqueuedPostInits();
     }

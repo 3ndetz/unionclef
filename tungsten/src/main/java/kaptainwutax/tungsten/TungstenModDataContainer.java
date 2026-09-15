@@ -116,4 +116,19 @@ public class TungstenModDataContainer {
      * at altoclef init (symmetric to canBreakHook).
      */
     public static java.util.function.Predicate<net.minecraft.util.math.BlockPos> canPlaceHook = null;
+
+    /**
+     * Best-owned-tool pricing hook (docs/BARITONE-GAPS.md G8): returns the mining-speed
+     * multiplier of the best tool the bot OWNS against this block state, or a negative number
+     * when no hook is registered or no owned tool can harvest it — tungsten has no {@code
+     * ToolSet} and never touches the inventory itself, so it asks altoclef the same way
+     * {@code equipToolHook}/{@code equipBlockHook} already do. Without this the planner can only
+     * price whatever happens to be in the main hand at search time, which is only correct at
+     * execution: it refuses reachable ore held with a sword and over-costs a route a stone axe
+     * in the pack would cut in a third of the time. Called from the planner's own background
+     * search thread, at most once per distinct {@link net.minecraft.block.BlockState} per search
+     * (see {@code MovementHelperB.bestOwnedToolSpeed}'s cache) — the same background-thread
+     * live-inventory read every other per-node lookup this planner makes of the world already is.
+     */
+    public static java.util.function.ToDoubleFunction<net.minecraft.block.BlockState> bestToolSpeedHook = null;
 }

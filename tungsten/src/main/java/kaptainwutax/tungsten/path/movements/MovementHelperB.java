@@ -88,10 +88,13 @@ import net.minecraft.world.WorldView;
  *       {@code context.get(x,y,z)} is {@link #get} (a thread-local scratch {@code BlockPos.Mutable},
  *       because tungsten searches off the client thread). Positions that ESCAPE to a policy hook are
  *       freshly allocated, immutable {@code BlockPos} — an external predicate may retain them.</li>
- *   <li>{@code context.toolSet.getStrVsBlock(state)} -> {@link #strVsBlock}, i.e. the vanilla break
- *       progress of the CURRENTLY HELD item, exactly as {@code BlockNode.breakTicks}
- *       (BlockNode.java:725-731) already does. Knowingly wrong by up to ~25x when the right tool is
- *       in another slot; that is the ToolSet finding in docs/BARITONE-PORT.md, not this port.</li>
+ *   <li>{@code context.toolSet.getStrVsBlock(state)} -> {@link #strVsBlock}, the better of the
+ *       vanilla break progress of the CURRENTLY HELD item (exactly as {@code BlockNode.breakTicks},
+ *       BlockNode.java:725-731, already does) and the best OWNED tool's speed via {@code
+ *       TungstenModDataContainer.bestToolSpeedHook} (docs/BARITONE-GAPS.md G8, fixed 2026-09-15).
+ *       Through 2026-09-14 this was knowingly wrong by up to ~25x whenever the right tool was in
+ *       another slot; that gap is closed now, using the same ask-not-touch hook shape as
+ *       {@code equipToolHook} below.</li>
  *   <li>{@code context.breakCostMultiplierAt} -> {@link #breakCostMultiplierAt}: COST_INF when
  *       {@code BreakRules} refuses, otherwise {@code TungstenConfig.breakCostMultiplier}.</li>
  *   <li>{@code AltoClefSettings.shouldAvoidBreaking} / {@code shouldAvoidPlacingAt} -> {@code
@@ -1061,14 +1064,65 @@ public final class MovementHelperB {
 
     /**
      * {@code context.toolSet.getStrVsBlock(state)} — per-tick break progress, so {@code 1 /
-     * strVsBlock} is the duration in ticks. Uses the CURRENTLY HELD item (there is no ToolSet in
-     * tungsten), same as {@code BlockNode.breakTicks} (BlockNode.java:725-731).
+     * strVsBlock} is the duration in ticks. Uses the CURRENTLY HELD item, same as {@code
+     * BlockNode.breakTicks} (BlockNode.java:725-731) — but takes the BETTER of that and the best
+     * OWNED tool's speed (docs/BARITONE-GAPS.md G8, {@link #bestOwnedToolSpeed}), since the right
+     * tool is only equipped at execution and pricing on the held item alone refuses reachable ore
+     * held with a sword and over-costs a route a stone axe in the pack would cut in a third of
+     * the time.
      */
     private static double strVsBlock(WorldView world, PlayerEntity player, int x, int y, int z, BlockState state) {
         if (player == null) {
             return 0; // no player, no tool, no dig -> COST_INF at the call site
         }
-        return state.calcBlockBreakingDelta(player, world, new BlockPos(x, y, z));
+        double held = state.calcBlockBreakingDelta(player, world, new BlockPos(x, y, z));
+        return Math.max(held, bestOwnedToolSpeed(state));
+    }
+
+    // Per-search cache for bestOwnedToolSpeed (G8) — a search revisits the same handful of block
+    // types (stone/dirt/ore/wood) at thousands of cells, and each cache miss is a live inventory
+    // read off the planner's background thread, exactly the cost STATE_CACHE already exists to
+    // avoid for world reads. Cleared alongside STATE_CACHE at the top of FastPlanner.plan(): the
+    // inventory can change between searches (a tool picked up, broken, or thrown away) and a
+    // reused search thread must never answer with a previous search's tools.
+    private static final ThreadLocal<java.util.HashMap<BlockState, Double>> BEST_TOOL_CACHE =
+            ThreadLocal.withInitial(java.util.HashMap::new);
+
+    /** Called by FastPlanner.plan() at the start of every search — see {@link #BEST_TOOL_CACHE}. */
+    public static void clearBestToolCache() {
+        BEST_TOOL_CACHE.get().clear();
+    }
+
+    /**
+     * G8 (docs/BARITONE-GAPS.md): the held item is only what happens to be in the main hand right
+     * now, not the best tool the bot actually owns. Tungsten has no {@code ToolSet} and never
+     * touches the inventory itself, so this asks altoclef through {@code
+     * TungstenModDataContainer.bestToolSpeedHook} — the same shape as {@code equipToolHook}/{@code
+     * equipBlockHook}: tungsten poses a question, altoclef answers it, neither module reaches into
+     * the other's data. Returns a negative number (never plans a better price) when no hook is
+     * registered, the hook throws, or no owned tool can harvest the block — {@code strVsBlock}'s
+     * {@code Math.max} then falls back to the held-item speed exactly as before this fix existed.
+     */
+    private static double bestOwnedToolSpeed(BlockState state) {
+        java.util.function.ToDoubleFunction<BlockState> hook =
+                kaptainwutax.tungsten.TungstenModDataContainer.bestToolSpeedHook;
+        if (hook == null) {
+            return -1;
+        }
+        java.util.HashMap<BlockState, Double> cache = BEST_TOOL_CACHE.get();
+        Double cached = cache.get(state);
+        if (cached != null) {
+            return cached;
+        }
+        double speed;
+        try {
+            speed = hook.applyAsDouble(state);
+        } catch (Throwable t) {
+            // a broken hook must never freeze pathing -- fall back to the held item
+            speed = -1;
+        }
+        cache.put(state, speed);
+        return speed;
     }
 
     /**

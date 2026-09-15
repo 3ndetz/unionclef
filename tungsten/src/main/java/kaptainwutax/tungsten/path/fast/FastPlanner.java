@@ -578,6 +578,7 @@ public final class FastPlanner {
         cntBridge = cntPillar = cntSlimeDrop = cntClimb = cntSpecial = cntBreak = cntHazard = 0;
         SEARCH_WORLD.set(world);
         STATE_CACHE.get().clear();   // the world changes between plans — never reuse
+        kaptainwutax.tungsten.path.movements.MovementHelperB.clearBestToolCache();   // G8: inventory changes between plans too
         // Memoise the geometry reads for the duration of this search (see PlayerFit).
         kaptainwutax.tungsten.helpers.PlayerFit.beginCachedRead();
         try {
@@ -1330,19 +1331,16 @@ public final class FastPlanner {
             if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
             net.minecraft.block.BlockState st = world.getBlockState(cell);
             if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
-            // ⛔ CORRECTED 2026-09-02 — this comment used to claim strVsBlock prices with the
-            // BEST tool. It does not, and C5.2's "fixed" claim below was wrong on that specific
-            // point: strVsBlock (MovementHelperB.java:1061-1066) calls
-            // state.calcBlockBreakingDelta(player, ...), which reads whatever is CURRENTLY
-            // EQUIPPED — there is no lookup table to simulate a hypothetical better tool without
-            // one (tungsten has no ToolSet, by strVsBlock's own doc comment), so this is the
-            // EXACT SAME limitation as the legacy BlockNode.breakTicks it was meant to replace.
-            // What this call DOES still get right, and is real: avoidBreaking's neighbour-hazard
-            // veto and breakCostMultiplierAt's COST_INF-for-protected/unbreakable — both genuine
-            // fixes bundled into the same function, verified separately this session (see
-            // docs/BARITONE-PORT.md, block-breaking section). C5.2's nav_break PASS 3/3 almost
-            // certainly measured one of THOSE, not best-tool pricing — TODOS.md's C5.2 entry has
-            // been corrected to say so.
+            // ⛔ SUPERSEDED 2026-09-15 (docs/BARITONE-GAPS.md G8) — this comment used to say
+            // strVsBlock prices only the currently EQUIPPED item, with no way to simulate a
+            // hypothetical better tool because tungsten has no ToolSet. That was true through
+            // 2026-09-14. strVsBlock (MovementHelperB.java) now takes the better of the held
+            // item and TungstenModDataContainer.bestToolSpeedHook, a question asked of altoclef's
+            // own inventory rather than a lookup table tungsten keeps itself — tungsten still
+            // never touches the inventory directly, it only asks. What this call has ALWAYS got
+            // right, and still does: avoidBreaking's neighbour-hazard veto and
+            // breakCostMultiplierAt's COST_INF-for-protected/unbreakable, both bundled into the
+            // same function (docs/BARITONE-PORT.md, block-breaking section).
             double cellTicks = kaptainwutax.tungsten.path.movements.MovementHelperB
                     .getMiningDurationTicks(world, player, cell.getX(), cell.getY(), cell.getZ(),
                                             st, dy == 1);

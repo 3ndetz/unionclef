@@ -64,6 +64,89 @@ the pre-12111 branch only; one cosmetic UI scale difference in `AltoClefTickChar
 either bug class despite the large volume of new code** — the two mechanical sweeps that found four
 real bugs in one day back in September stay clean today.
 
+<!-- G8-BEST-TOOL-MINING-COST-2026-09-15 -->
+## G8 fixed: mining cost now prices the best OWNED tool, not just whatever is in hand (2026-09-15)
+
+`docs/BARITONE-GAPS.md` ranked this as one of the two most common real-terrain stalls left after
+G1-G5 landed: `FastPlanner`'s break-cost pricing (`MovementHelperB.strVsBlock`, which calls vanilla
+`BlockState.calcBlockBreakingDelta(player, ...)`) can only ever see the item in the main hand at
+SEARCH time, because the right tool is only actually equipped at EXECUTION time. A bot standing
+next to reachable ore with a sword in hand and a pickaxe in the pack got `COST_INF` and the route
+was refused outright; a bot holding a sword near stone got the sword's slow speed priced in and
+took a 40-block detour around a wall a stone axe in the pack would have cut through in a third of
+the time.
+
+**Fix, matching the architecture already established for this exact class of problem.** Tungsten
+never touches the inventory itself (`Movement.java`'s own doc comment: "the executor owns the
+hotbar"), so `equipToolHook`/`equipBlockHook`/`canBreakHook`/`canPlaceHook` already exist as the
+pattern: tungsten asks a question through a hook, altoclef answers it from its own inventory code,
+neither module reaches into the other's data. Added a fifth hook of the same shape:
+
+```java
+// TungstenModDataContainer.java
+public static java.util.function.ToDoubleFunction<BlockState> bestToolSpeedHook = null;
+```
+
+Registered in `AltoClef.java` (`onInitializeLoad`, beside the other four) using the SAME lookup the
+equip step at execution time already trusts, so planning-time and execution-time pricing can never
+disagree about which tool is "best":
+
+```java
+bestToolSpeedHook = state -> {
+    var bestSlot = StorageHelper.getBestToolSlot(this, state);
+    if (bestSlot.isEmpty()) return -1;
+    return ItemHelper.miningSpeedVsBlock(StorageHelper.getItemStackInSlot(bestSlot.get()), state);
+};
+```
+
+`MovementHelperB.strVsBlock` now prices `Math.max(held, bestOwnedToolSpeed(state))` instead of the
+held item alone; a null hook or a hook that returns a negative number (no owned tool can harvest
+it, or the hook throws) falls back to exactly the pre-fix behavior, so this is additive rather than
+a replacement path.
+
+**The one real design question was threading, not the pricing logic.** `strVsBlock` is called once
+per candidate cell, and a real search visits thousands of cells per plan — calling into
+`StorageHelper.getBestToolSlot` (which iterates live inventory slots) that often, from the
+planner's own background search thread, would be both slow and a much larger live-inventory
+read-volume than anything this codebase does today. Fixed the same way `FastPlanner`'s own
+`STATE_CACHE` already fixes the identical problem for live WORLD reads (its own comment: "2.2-2.4
+ms PER NODE... a plain memo for the duration of one search is the cheap half of the off-thread
+snapshot this planner really wants"): a `ThreadLocal<HashMap<BlockState, Double>>` in
+`MovementHelperB`, cleared at the top of `FastPlanner.plan()` in the same line that clears
+`STATE_CACHE` (`MovementHelperB.clearBestToolCache()`), so a search that walks past the same
+stone/dirt/ore a thousand times asks the inventory once per distinct block type, not once per
+node, and a reused search thread never answers with a previous search's now-stale tools (the
+inventory can change between searches: a tool picked up, broken, or thrown away).
+
+This does NOT introduce a new class of risk to the codebase — background-thread reads of live
+client/world state are already how this entire planner works (the state cache's own comment says
+so explicitly), so a background-thread read of live inventory state is the same risk class already
+accepted here, not a new one.
+
+Updated two stale comments this fix falsifies rather than leaving them to mislead the next
+reader: `FastPlanner.java`'s `breakThrough` comment (dated 2026-09-02) used to say strVsBlock
+"reads whatever is CURRENTLY EQUIPPED — there is no lookup table to simulate a hypothetical better
+tool"; `MovementHelperB.java`'s own class-level substitution table used to say this was "knowingly
+wrong by up to ~25x when the right tool is in another slot." Both now point at this fix instead of
+restating the limitation it closes. `docs/BARITONE-GAPS.md` itself is left untouched, per its own
+established convention as a frozen 2026-09-10 audit snapshot (G1/G2/G5's entries there still say
+"ABSENT" despite being long since fixed and checked off in the PLAN above) — this entry, and the
+PLAN checkbox above, are the live record.
+
+**Verified**: `:1.21.1:compileJava` and `:1.21.11:compileJava` both BUILD SUCCESSFUL, exit 0, from
+a clean (non-up-to-date) recompile, same sandbox and same warm-cache method as the entry above this
+one. `:1.21:compileJava` was not reachable from this sandbox (needs one online Maven resolve for
+`com.mojang:brigadier` that repeatedly stalled here rather than failing cleanly) — `:1.21` is not
+this branch's release target (`docs/RELEASE.md` scopes releases to `:1.21.11:`) and this change
+touches no `//#if` version-gated branch, so there is no reason to expect it behaves differently
+there, but it has not been independently confirmed.
+
+**Not stand-verified — no docker exec from this sandbox (`pac-dockerproxy` still `EXEC=0`).** The
+bench for whoever next has real stand access: stand next to reachable ore/obsidian while holding a
+sword (or nothing suitable) with the right tool sitting in the pack, confirm the route is now offered
+instead of refused with `COST_INF`, and confirm the break-duration actually used once the executor
+equips the tool matches the speed this fix priced in, not the held item's.
+
 <!-- BARITONE-GAP-PLAN-2026-09-10 -->
 ## PLAN: close every tungsten-vs-baritone gap from the audit (docs/BARITONE-GAPS.md)
 
@@ -95,8 +178,12 @@ test + full nav-suite regression before it counts done.
 ### MED — bite specific situations
 - [ ] **G6 mine a ceiling to pillar through it** (pillarUp must mine an occupied y+2, not refuse).
 - [ ] **G7 ascend-with-place-step + parkour-place** (build up to an offset ledge; place mid-jump).
-- [ ] **G8 best-tool mining cost** (port ToolSet: price/refuse by the best OWNED tool, not the held
-      item — stop refusing reachable obsidian/ore with a pick in the pack).
+- [x] **G8 best-tool mining cost** — `TungstenModDataContainer.bestToolSpeedHook` (new hook,
+      registered in `AltoClef.java` off `StorageHelper.getBestToolSlot`/`ItemHelper.miningSpeedVsBlock`)
+      lets `MovementHelperB.strVsBlock` price `Math.max(held, bestOwned)` instead of the held item
+      alone, cached per `BlockState` per search. `:1.21.1:`/`:1.21.11:compileJava` both BUILD
+      SUCCESSFUL. Not stand-verified (no docker exec from this sandbox) — see the dated entry
+      below for the exact bench this still needs.
 - [ ] **G9 break-and-descend** (price the ceiling over a step-down; caves/overhangs).
 - [ ] **G10 adjacent-liquid break veto** (don't open a wall with lava/water behind it — flood guard).
 - [ ] **G11 no-collision blockers visible** (cobweb/fire/tripwire/berry counted as walls to break).
