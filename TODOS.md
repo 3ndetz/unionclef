@@ -1,5 +1,54 @@
 # TODOs
 
+<!-- REMAINING-G-ITEMS-TRIAGED-2026-09-15 -->
+## What's left of docs/BARITONE-GAPS.md's G6-G14, triaged so nobody re-derives this blind (2026-09-15)
+
+After G8, G10 (already fixed, verification only) and G11 landed this pass, checked each remaining
+open MED item against the actual current code before touching anything further, since two of the
+last three "gaps" checked turned out to be stale audit findings rather than real bugs. Result:
+none of what's left is a same-shape fix — each one is either a genuinely new move/interaction
+generator with no way to verify correctness from this sandbox, or an actual product-policy
+decision, not a bug.
+
+- **G6 (mine a ceiling to pillar through)** — confirmed still genuinely absent, and confirmed
+  DELIBERATE, not an oversight: `pillarUp`'s own doc comment says outright that two of upstream's
+  COST_INF clauses (unbreakable block at y+2, a falling block above it) are "deliberately NOT
+  repeated, because... this planner only ever pillars into a cell the body already fits in." Real
+  fix needs a new move variant that mines y+2 (and possibly y+1) before placing, with its own
+  hazard/falling-block checks — a new generator, not a tweak to an existing one.
+- **G7 (ascend-with-place-step + parkour-place)** — same shape as G6, a genuinely new move type
+  (place the step you're about to stand on, or place mid-jump), not present anywhere to extend.
+- **G9 (break-and-descend / overhang over a drop)** — checked `breakStair` (G2, also landed
+  2026-09-10) closely since it already prices a single-step break-and-descend
+  (destination head + destination feet cells). It is NOT the same gap: the audit's author wrote
+  both `breakStair` and this entry the same day and still listed G9 as open, so whatever "2-high
+  stepped tunnel" geometry breaks `breakStair`'s coverage is a case this session could not
+  reproduce or precisely characterize by reading code alone. Needs a live repro before sizing a
+  fix, not a guess.
+- **G12 (doors/gates in the chase)** — checked `CombatPathfinder` directly: zero door/gate
+  handling at all (confirmed by grep, not assumed), and `BlockPathWalker` (whatever walks its
+  route) has no interaction-with-a-cell concept the way `needsPhysics`/break cells do. A real fix
+  needs BFS occupancy AND a new interaction trigger in the walker — end-to-end new machinery
+  touching the PRIMARY `@gamer` path, not a predicate or pricing change. Too large and too load-
+  bearing to ship unverified from a sandbox with no stand access.
+- **G13 (flat 300-tick break abort)** — the fix the gap names ("derive the budget from the planned
+  tick estimate") means threading the planner's already-computed `getMiningDurationTicks` estimate
+  through to `PathExecutor`'s live watchdog (`PathExecutor.java`'s `breakingTicks > 300` check).
+  Getting this wrong in either direction is asymmetric: too generous silently turns "give up on an
+  unreachable block" into "never give up," which is worse than the bug it fixes. Not attempted
+  without a way to verify the watchdog still fires on a genuinely impossible block.
+- **G14 (block-entity = hard break deny)** — checked `BreakRules.java`'s own header comment before
+  touching anything: "block entity (chests/spawners/furnaces — always valuable)" reads as a
+  DELIBERATE protection policy, not an oversight or a performance shortcut. Softening a hard deny
+  to "merely expensive" is a real behavioral change that could let sufficient path pressure make
+  the bot destroy a valuable container or spawner — a worse regression than the tunnel-abort
+  annoyance the gap describes. This is a product-policy tradeoff for whoever owns that call, not
+  a bug fix; left untouched pending an explicit decision one way or the other.
+
+Nothing here blocks the next session from picking any of these up — the point of writing it down
+is so the next look starts from "here is exactly why each one is harder than it looks," not from
+the gap list's one-line summary again.
+
 <!-- G11-TRIPWIRE-GAP-CLOSED-2026-09-15 -->
 ## G11 (no-collision blockers invisible to E1): three of four already handled, tripwire was the real gap (2026-09-15)
 
