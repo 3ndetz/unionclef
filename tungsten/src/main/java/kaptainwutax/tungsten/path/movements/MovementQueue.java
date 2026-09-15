@@ -353,6 +353,14 @@ public final class MovementQueue {
         return running;
     }
 
+    /** Whether releasing this leg's inputs preserves the current movement's footing.
+     * A backplace over air must finish its support before the navigator ends the route.
+     * Mirrors PathExecutor's use of Movement.safeToCancel in the upstream driver.
+     */
+    public static boolean safeToCancel() {
+        return !running || index >= movements.size() || movements.get(index).safeToCancel();
+    }
+
     /** Which step of the chain is being executed, and how long it is. Diagnostics only. */
     public static int getIndex() {
         return index;

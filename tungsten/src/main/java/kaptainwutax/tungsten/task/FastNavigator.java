@@ -131,16 +131,16 @@ public final class FastNavigator {
     /** Walk until standing IN {@code cell} — baritone's GoalBlock. For callers that need a
      *  position rather than a neighbourhood, such as the builder standing where it will pillar. */
     public static void startExact(BlockPos cell) {
-        start(new Vec3d(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5));
-        exactCell = cell;
+        startWithGoal(new Vec3d(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5),
+                null, cell, null, false);
     }
 
     /** G55: the drive's version of {@link #startExact} -- a block goal whose cell is solid is
      *  DUG INTO (baritone's GoalBlock), so the planner completes only on the exact cell and the
      *  arrival test is the exact cell too. */
     public static void startExactForDrive(BlockPos cell) {
-        startExact(cell);
-        exactFromDrive = true;
+        startWithGoal(new Vec3d(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5),
+                null, cell, null, true);
     }
 
     /** The exact cell the DRIVE armed this run for, or null (builder cells are not reported). */
@@ -346,8 +346,7 @@ public final class FastNavigator {
     /** Route to a NEIGHBOUR of {@code block} (baritone's GoalGetToBlock), digging if needed.
      *  {@code target} is the block's centre, which the heuristic and the stall watchdog steer by. */
     public static void start(Vec3d target, BlockPos block) {
-        start(target);
-        reachBlock = block;
+        startWithGoal(target, block, null, null, false);
     }
 
     /**
@@ -366,8 +365,7 @@ public final class FastNavigator {
      *                the default for callers without one (the goto command, chases).
      */
     public static void start(Vec3d target, java.util.function.Predicate<BlockPos> reached) {
-        start(target);
-        arrivalTest = reached;
+        startWithGoal(target, null, null, reached, false);
     }
 
     /** G69: the caller's arrival test on the feet cell (baritone's Goal.isInGoal); null = the
@@ -377,7 +375,19 @@ public final class FastNavigator {
     public static volatile int navArrivalRefusedByGoal;
 
     public static void start(Vec3d target) {
+        startWithGoal(target, null, null, null, false);
+    }
+
+    private static void startWithGoal(Vec3d target, BlockPos reach, BlockPos exactGoal,
+                                      java.util.function.Predicate<BlockPos> reached,
+                                      boolean fromDrive) {
         stop();
+        // planAhead captures these values immediately. Initialize the complete goal
+        // before launching its first search, not after the default start returns.
+        reachBlock = reach;
+        exactCell = exactGoal;
+        arrivalTest = reached;
+        exactFromDrive = fromDrive;
         // WHOSE goal is this route serving? The drive publishes the altoclef goal every tick, but
         // a route outlives the tick that started it -- so the CURRENT goal and the goal a running
         // route was armed for can differ, and on mine_stone they do: the drive reads flee(...)
@@ -491,7 +501,8 @@ public final class FastNavigator {
         // carry it off again.
         boolean settledBody = !TungstenConfig.get().arrivalNeedsSettledBody
                 || ((player.isOnGround() || player.isTouchingWater() || player.isClimbing())
-                    && player.getVelocity().horizontalLengthSquared() < 0.05);
+                    && player.getVelocity().horizontalLengthSquared() < 0.05
+                    && kaptainwutax.tungsten.path.movements.MovementQueue.safeToCancel());
         // G55: the feet cell with baritone's +0.1251 -- on a chest or a slab the naive block
         // position reads the cell BELOW the one the body stands in, and an exact arrival on the
         // chest under a buried goal was missed for it (buried_goal, round 13).
@@ -503,7 +514,8 @@ public final class FastNavigator {
                 ? (settledBody && kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).equals(exactCell)
                     && (!TungstenConfig.get().arrivalNeedsSettledBody || coastStaysInCell(player, exactCell)))
                 : reach != null
-                    ? reachArrived(player, reach)
+                    // Being in reach says nothing about landing or a bridge's missing floor.
+                    ? (settledBody && reachArrived(player, reach))
                     : goalTest != null
                         // G69: the goal's own test on the feet cell, the body settled as before
                         ? (settledBody && goalTest.test(

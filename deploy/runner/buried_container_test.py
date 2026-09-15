@@ -30,11 +30,19 @@ try:
 from py4j.java_gateway import JavaGateway,GatewayParameters,get_field
 import time,json
 g=JavaGateway(gateway_parameters=GatewayParameters(port=25333,auto_convert=True));j=g.jvm;a=j.adris.altoclef.AltoClef.getInstance();target=j.net.minecraft.class_2338(1983,-60,600);t=j.adris.altoclef.tasks.InteractWithBlockTask(target)
-initial={'adjacent':j.kaptainwutax.tungsten.path.fast.FastPlanner.adjacentToBlock(a.getPlayer().method_24515(),target),'reach':j.adris.altoclef.util.helpers.LookHelper.getReach(target).isPresent()}
-cs=g.new_array(j.java.lang.Class,1);cs[0]=j.java.lang.Class.forName('adris.altoclef.tasksystem.Task');m=a.getClass().getMethod('runUserTask',cs);h=j.java.lang.invoke.MethodHandles.publicLookup().unreflect(m).bindTo(a).bindTo(t);run=j.java.lang.invoke.MethodHandleProxies.asInterfaceInstance(j.java.lang.Class.forName('java.lang.Runnable'),h);j.net.minecraft.class_310.method_1551().execute(run)
+c=j.net.minecraft.class_310.method_1551();lookup=j.java.lang.invoke.MethodHandles.lookup()
+def on_client(h):
+ f=j.java.util.concurrent.FutureTask(j.java.lang.invoke.MethodHandleProxies.asInterfaceInstance(j.java.lang.Class.forName('java.util.concurrent.Callable'),h));c.execute(f);return f.get()
+empty=g.new_array(j.java.lang.Class,0)
+player=on_client(lookup.unreflect(a.getClass().getMethod('getPlayer',empty)).bindTo(a))
+handler=lookup.unreflectGetter(player.getClass().getField('field_7512')).bindTo(player)
+cs=g.new_array(j.java.lang.Class,1);cs[0]=j.java.lang.Class.forName('net.minecraft.class_2338')
+reach=lookup.unreflect(j.java.lang.Class.forName('adris.altoclef.util.helpers.LookHelper').getMethod('getReach',cs)).bindTo(target)
+initial={'adjacent':j.kaptainwutax.tungsten.path.fast.FastPlanner.adjacentToBlock(j.net.minecraft.class_2338(1982,-59,600),target),'reach':on_client(reach).isPresent()}
+cs[0]=j.java.lang.Class.forName('adris.altoclef.tasksystem.Task');on_client(lookup.unreflect(a.getClass().getMethod('runUserTask',cs)).bindTo(a).bindTo(t))
 rows=[];start=time.monotonic()
 while time.monotonic()-start<25:
- p=a.getPlayer();screen=str(get_field(p,'field_7512').getClass().getName());rows.append({'t':round(time.monotonic()-start,3),'x':p.method_23317(),'y':p.method_23318(),'hp':p.method_6032(),'handler':screen,'reach':j.adris.altoclef.util.helpers.LookHelper.getReach(target).isPresent()})
+ state=dict(g.entry_point.getGameState()['self']);x,y,z=map(float,state['pos'].split(','));screen=str(on_client(handler).getClass().getName());rows.append({'t':round(time.monotonic()-start,3),'x':x,'y':y,'hp':state['hp'],'handler':screen,'reach':on_client(reach).isPresent()})
  if screen=='net.minecraft.class_1714':break
  time.sleep(.15)
 print(json.dumps({'initial':initial,'samples':rows}))
