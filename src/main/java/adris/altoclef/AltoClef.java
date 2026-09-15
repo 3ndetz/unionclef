@@ -577,6 +577,9 @@ public class AltoClef implements ModInitializer {
         // when the tungsten executor paves a planned bridge, equip a cheap build block
         // into the main hand (mirror of equipToolHook for placing). Runs on the client
         // thread from tickPlacing. Tungsten never touches the inventory itself.
+        kaptainwutax.tungsten.TungstenModDataContainer.canUseScaffoldHook =
+                stack -> !getBehaviour().isProtected(stack.getItem());
+
         kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook = () -> {
             try {
                 if (getPlayer() == null) return;

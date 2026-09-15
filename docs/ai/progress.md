@@ -143,3 +143,14 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Restored natural approach (120.5,142.05,-51.5) -> (123,143,-53), mushroom ceiling restored before each run: final 6/6 exact grounded arrivals, 20 HP, no hovering. Times 14.67, 4.70, 4.84, 6.53, 6.82, 6.83 seconds. First run is slow and remains in the evidence.
 - Earlier settled-body-only build: 5/6. Same-build settled=false control: 1/1, so the arrival defect is not deterministic on this geometry.
 - Final video: workspace outputs/forest-coast-fixed.mp4, full decode passed; screenshots reviewed. Navigation regression audit passed 7/7 (flat, staircase, descend, bridge, gaps, wall2, notch), no falls, freezes, or invalid runs; 23.3–29.3 FPS. Artifacts: deploy/runner/artifacts/20260915-084426. Publication remains pending.
+
+## 2026-09-15 — Preserve recipe materials during scaffolding
+
+### Investigate and implement
+- A pillar with two reserved cobblestone and eight dirt consumed both cobblestone in the original 6/6 trials. Scaffold suitability ignored the brain's protected-item reservations.
+- AltoClef now supplies a scaffold-spending predicate. BlockPlaceHelper applies it in the shared scaffold gate used by planning budgets, selection and restocking. Standalone tungsten keeps the previous behavior when no predicate is installed.
+
+### Validate
+- Final live pillar test: protected 6/6 preserved both cobblestone, used dirt and reached Y=-57 from Y=-60 with 20 HP. Unprotected control 6/6 consumed both cobblestone and reached the same height. Behaviour stack restored after each trial.
+- Checked-in regression: deploy/runner/scaffold_reservation_test.py. The deployed build also passed the seven-course navigation audit above.
+- Recorded both series in workspace outputs/scaffold-reservation-final.mp4; complete decode and a pillar/inventory frame reviewed. This checks spending policy, not the entire survival crafting chain.

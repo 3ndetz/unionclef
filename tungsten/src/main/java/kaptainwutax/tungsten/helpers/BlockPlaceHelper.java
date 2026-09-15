@@ -824,6 +824,11 @@ public final class BlockPlaceHelper {
      */
     public static boolean isScaffold(ItemStack st) {
         if (st == null || st.isEmpty() || !(st.getItem() instanceof BlockItem bi)) return false;
+        // Material suitability and permission to spend it are separate questions. A recipe
+        // can reserve cobblestone or planks even while another stack remains usable for a bridge.
+        // Sharing this gate keeps the planner budget, hotbar selection and restock consistent.
+        var policy = kaptainwutax.tungsten.TungstenModDataContainer.canUseScaffoldHook;
+        if (policy != null && !policy.test(st)) return false;
         net.minecraft.block.Block b = bi.getBlock();
         if (b instanceof net.minecraft.block.BlockEntityProvider
                 || b instanceof net.minecraft.block.FallingBlock

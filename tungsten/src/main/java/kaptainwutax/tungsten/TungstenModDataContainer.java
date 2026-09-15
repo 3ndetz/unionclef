@@ -103,6 +103,9 @@ public class TungstenModDataContainer {
      */
     public static Runnable equipBlockHook = null;
 
+    /** Inventory policy for disposable scaffold stacks; recipe reservations are owned by the brain. */
+    public static java.util.function.Predicate<net.minecraft.item.ItemStack> canUseScaffoldHook = null;
+
     /**
      * Protection hook: returns false when the inventory/brain side (altoclef)
      * forbids mining a position — bridges its break-avoiders/protected zones
