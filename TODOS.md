@@ -1,5 +1,31 @@
 # TODOs
 
+<!-- CHATPARSER-RUNTIME-TEST-PASSES-2026-09-15 -->
+## First actual RUNTIME execution this session, not just a compile: testChatParser, 22/22 (2026-09-15)
+
+Every verification this session and the last several has been "compiles" — real, and worth having,
+but still a claim about syntax and types, never about behavior. Looked for anything in this repo
+that actually RUNS logic without needing a live Minecraft client (which this sandbox has never had
+access to): `grep -rl "public static void main"` across `src/main/java` and
+`tungsten/src/main/java` returns exactly one hit,
+`adris.altoclef.butler.ChatParserTest` — a pure-Java harness against `WhisperChecker.chatParse`,
+already wired to its own gradle task (`build.gradle`'s `testChatParser`, comment: "no MC runtime
+needed").
+
+`gradlew :1.21.11:testChatParser` needed one thing `:1.21.11:compileJava` did not: the FULL
+`runtimeClasspath` (dev-launch-injector, fabric-log4j-util — real Fabric dev-launch dependencies,
+not needed to compile against but needed to actually RUN a class in this source set), which was
+not in the warm offline cache and needed one real network resolve. Ran without `--offline` for
+this one call only. Result: **22 passed, 0 failed** — every server-format branch the harness
+covers (vanilla, mlegacy skypvp/skywars/survival, musteryworld, vimemc, funnymc) plus its edge
+cases (leading whitespace, tabs, garbage that should not match, an empty message). `BUILD
+SUCCESSFUL`, exit 0.
+
+This does not touch or verify anything from this session's own G8/G10/G11 tungsten changes —
+`WhisperChecker` is unrelated code — but it is the first EXECUTED, not merely compiled, evidence
+this session has produced for anything in this codebase, and worth keeping distinct from every
+"BUILD SUCCESSFUL" entry above and below it for exactly that reason.
+
 <!-- ORIGIN-1211-BRANCH-FAST-FORWARDED-2026-09-15 -->
 ## Housekeeping closed: `origin/1.21.11` fast-forwarded to `main`, no longer 792 commits stale (2026-09-15)
 
