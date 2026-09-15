@@ -54,6 +54,11 @@ public final class FastNavigator {
     private static final double MIN_PARTIAL_PROGRESS = 4.0;
 
     private static volatile boolean active = false;
+    /** Identifies the calculation allowed to publish into the current route. */
+    private static final java.util.concurrent.atomic.AtomicLong planGeneration =
+            new java.util.concurrent.atomic.AtomicLong();
+    /** Completed calculations applied to the live route, or discarded after cancellation. */
+    public static volatile int navPlansApplied, navPlansDiscarded;
     private static Vec3d goal = null;
     /**
      * When set, arrival means STANDING IN THIS CELL, not "within {@link #ARRIVE_DIST} of it" —
@@ -409,6 +414,8 @@ public final class FastNavigator {
     public static boolean hasExactCell() { return active && exactCell != null && !exactFromDrive; }
 
     public static void stop() {
+        planGeneration.incrementAndGet();
+        planning = false;
         active = false;
         goal = null;
         exactCell = null;
@@ -1267,328 +1274,356 @@ public final class FastNavigator {
         final boolean boost = budgetBoostNext;
         if (boost) { budgetBoostNext = false; budgetBoostedThisRoute = true; }
         final long budgetMs = TungstenConfig.get().fastPlanBudgetMs * (boost ? 4 : 1);
+        final var world = TungstenMod.mc.world;
+        if (world == null) { planning = false; return; }
+        final long generation = planGeneration.incrementAndGet();
+        final BlockPos goalCell = BlockPos.ofFloored(target);
         Thread t = new Thread(() -> {
             try {
-                var world = TungstenMod.mc.world;
-                if (world == null) return;
-                BlockPos goalCell = BlockPos.ofFloored(target);
-                FastPlanner.Result res = FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact);
-                if (!active) return;
-                // A ONE-WAYPOINT PLAN IS AN ANSWER: THERE IS NOTHING TO WALK FROM HERE.
-                // FastPlanner returns exactly that when the start already satisfies the goal --
-                // "1 nodes, 1 wp, complete" (FastPlanner.java:445-457, expanded=1 and the goal node
-                // IS the start). This used to fall into the same `return` as a failed plan, so the
-                // tail that produced it stayed set, the tick loop asked again from that same tail,
-                // and got the same answer. Measured on a failing @gamer run: 218 of those in five
-                // minutes, about one every one and a half seconds, all identical.
-                // Forgetting the tail is what "there is no further leg from there" means; the
-                // arrival check owns finishing the navigation, and any genuinely new situation
-                // replans from the bot's real position anyway.
-                if (res.path.size() < 2) {
-                    navShortRes++;
-                    if (legTail != null && legTail.equals(start)) {
-                        legTail = null;
-                    }
-                    return;
-                }
-                if (res.isEmpty()) { navEmptyRes++; return; }
-
-                // PUBLISH THE WHOLE PLAN FOR THE VISUAL. res.path carries every waypoint's
-                // toPlace/toBreak, so this shows the ENTIRE column/bridge/tunnel the route will
-                // build at once (user 2026-09-10: "only the first placed block rendered"). The
-                // per-tick single-cell writers (PathExecutor/PillarTask) stand down while this
-                // navigator is active, so this is the authority. Persists until the next plan.
-                if (kaptainwutax.tungsten.TungstenConfig.get().renderPlacePlan
-                        || kaptainwutax.tungsten.TungstenConfig.get().renderBreakPlan) {
-                    kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
-                    kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.clear();
-                    for (FastPlanner.Waypoint w : res.path) {
-                        if (w.toPlace != null) for (BlockPos p : w.toPlace)
-                            kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(
-                                    new kaptainwutax.tungsten.render.Cuboid(
-                                            new Vec3d(p.getX() + 0.1, p.getY() + 0.1, p.getZ() + 0.1),
-                                            new Vec3d(0.8, 0.8, 0.8),
-                                            new kaptainwutax.tungsten.render.Color(60, 220, 120)));
-                        if (w.toBreak != null) for (BlockPos p : w.toBreak)
-                            kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.add(
-                                    new kaptainwutax.tungsten.render.Cuboid(
-                                            new Vec3d(p.getX() + 0.05, p.getY() + 0.05, p.getZ() + 0.05),
-                                            new Vec3d(0.9, 0.9, 0.9),
-                                            new kaptainwutax.tungsten.render.Color(255, 170, 40)));
-                    }
-                }
-
-                // Walking cannot solve this route — hand it to the physics engine
-                // (already searching in parallel) and get out of its way.
-                if (!res.complete) {
-                    navIncomplete++;
-                    BlockPos tail = res.path.get(res.path.size() - 1).pos;
-                    double before = Math.sqrt(start.getSquaredDistance(goalCell));
-                    double after = Math.sqrt(tail.getSquaredDistance(goalCell));
-                    // (Refusing to hand off a LONG incomplete route — "nineteen waypoints the
-                    // walker could have walked" — was tried here and did not move the number:
-                    // nav_water sat at 2-3 passes in 4 either way. Reverted rather than kept on
-                    // faith, because this branch is on the path of every course.)
-                    // ⛔ DO NOT "FIX" THIS BY REFUSING THE HAND-OFF. It looks like the cap on
-                    // bridging — the trace is a loop of walk a leg, "walking dead-ends
-                    // (8.9 -> 8.1)", hand the goal to a physics search that cannot solve it,
-                    // wait out its budget, place ONE block, repeat — but skipping the hand-off
-                    // when the plan contains a place/break took placements to ZERO and the
-                    // distance to 20.7 in three runs of three. The reason is structural: the
-                    // place plan only reaches the executor THROUGH the physics path, in
-                    // PathFinder.truncateAtBreaks. No hand-off, no bridging at all. Giving the
-                    // block planner its own route to the executor is the real fix, and it is a
-                    // bigger job than a condition here.
-                    // ⛔ A PARTIAL WORTH FIVE BLOCKS IS WALKED, PROGRESS OR NOT (G49, 2026-09-11).
-                    // The coefficient rule (FastPlanner, G44) hands back the node baritone would
-                    // walk to; baritone walks it and re-plans from there -- that is how it gets
-                    // past a corner the budget could not see round. Judging it here by "did the
-                    // straight-line distance shrink by four" threw those legs away: the 16:26
-                    // recording sat five minutes on "walking dead-ends (9.1 -> 8.1) -> physics owns
-                    // the rest" with the goal nine blocks BELOW, and physics cannot dig. So: a
-                    // partial at least MIN_DIST_PATH from the start is a leg; and a goal below
-                    // that yields no such partial is given up out loud, never handed to an engine
-                    // without a shovel.
-                    double partialLen = Math.sqrt(tail.getSquaredDistance(start));
-                    boolean walkThePartial = TungstenConfig.get().planPartialLikeBaritone
-                            && res.path.size() >= 2 && partialLen >= 5.0;
-                    if (walkThePartial) {
-                        navPartialWalked++;
-                    } else if (before - after < MIN_PARTIAL_PROGRESS
-                            && TungstenConfig.get().planPartialLikeBaritone
-                            && goalCell.getY() < start.getY() - 2) {
-                        // ⛔ A SEARCH THAT SPENT ITS WHOLE BUDGET HAS NOT SAID "UNREACHABLE" (G58,
-                        // 2026-09-11). The 19:34 recording stood ninety seconds on a cliff above a
-                        // drop: "no leg from here toward a goal 5 below (5.7 -> 3.0)" every two
-                        // seconds, each search 7000 nodes in 251 ms of a 250 ms budget, the best
-                        // partial inside five blocks because the dig moves round a cliff are dear
-                        // and the frontier never got past them. Baritone plans for half a second
-                        // and two on failure; give this search one more go at four times the
-                        // budget before the honest give-up, and count how often that was enough.
-                        if (TungstenConfig.get().planBudgetBoostBeforeGiveUp && !budgetBoostedThisRoute
-                                && res.millis >= budgetMs - 10) {
-                            navBudgetBoosted++;
-                            budgetBoostNext = true;
-                            Debug.logMessage(String.format(
-                                    "FastNavigator: the search toward a goal %d below spent its budget (%d nodes, %d ms) — one more try with 4x",
-                                    start.getY() - goalCell.getY(), res.expanded, res.millis));
-                            return;   // the tick loop asks again; the next search runs boosted
-                        }
-                        navDeadEnd++;
-                        navNoPartialBelow++;
-                        Debug.logWarning(String.format(
-                                "FastNavigator: no leg from here toward a goal %d below (%.1f -> %.1f) — giving the route up",
-                                start.getY() - goalCell.getY(), before, after));
-                        pendingGiveUp = true;
+                FastPlanner.Result result = FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact);
+                // Applying a result can stop the walker and change its input ownership.
+                // Serialize that transition with game ticks; the worker must only calculate.
+                TungstenMod.mc.execute(() -> {
+                    if (generation != planGeneration.get() || !active || TungstenMod.mc.world != world) {
+                        navPlansDiscarded++;
+                        if (generation == planGeneration.get()) planning = false;
                         return;
                     }
-                    if (!walkThePartial && before - after < MIN_PARTIAL_PROGRESS) {
-                        navDeadEnd++;
-                        // Walking cannot solve this — hand the TAIL to the physics engine
-                        // and wait for it. This branch used to print "physics owns this"
-                        // and then call stop(), which nulls pendingPhysicsTarget: physics
-                        // was never actually asked, nothing else was running, and the bot
-                        // stood at the lip of the obstacle until the run timed out. The
-                        // message described a hand-off that did not happen.
-                        // Hand physics the GOAL, not the tail. The tail is where WALKING
-                        // gave up, which is the cell the bot is already standing on — asking
-                        // the physics engine to travel to its own feet is a no-op, and the
-                        // navigator then re-planned the same dead end forever. Observed on
-                        // nav_steep: "physics owns the jump -> 6,-60,0" repeated while the
-                        // bot sat motionless at x=5.6.
-                        // Physics is precisely the engine that models jumps and parkour, so
-                        // when walking cannot solve the route, it owns the REST of the route.
-                        Debug.logMessage(String.format(
-                                "FastNavigator: walking dead-ends (%.1f -> %.1f) -> physics owns the rest",
-                                before, after));
-                        BlockPathWalker.stop();
-                        nextLeg = null;
-                        nextPhysicsTarget = null;
-                        pendingPhysicsTarget = goalCell;
-                        return;
+                    try {
+                        navPlansApplied++;
+                        applyPlan(world, start, goalCell, budgetMs, result);
+                    } catch (Exception e) {
+                        Debug.logWarning("FastNavigator plan failed: " + e.getMessage());
+                    } finally {
+                        if (generation == planGeneration.get()) planning = false;
                     }
-                }
-                navOkRes++;
-
-                if (TungstenConfig.get().verboseDebugLogging) {
-                    int flagged = 0;
-                    for (var w : res.path) if (w.needsPhysics) flagged++;
-                    Debug.logMessage(String.format(
-                            "PLAN n=%d complete=%b firstPhysics=%d flagged=%d",
-                            res.path.size(), res.complete, res.firstPhysicsIndex(), flagged));
-                }
-                List<BlockPos> cells = res.positions();
-                /** Set below only for a leg the ported MovementQueue is taking over. */
-                boolean movementLeg = false;
-                // cut at the first waypoint that needs a real jump: the physics
-                // engine owns those (parkour), the walker must not run into one
-                int physics = res.firstPhysicsIndex();
-                if (physics > 0 && physics < cells.size()) {
-                    // REMEMBER where the jump lands. The old code cut the leg here and set
-                    // to the edge of the gap and then no one performed the jump: the
-                    // navigator just replanned 2-cell legs until its stall watchdog fired.
-                    // That single dead flag is why every parkour course failed.
-                    // hand physics the FAR SIDE of the whole physics-only run, not just its
-                    // first cell (see FastPlanner.physicsRunEnd — a ladder's first flagged
-                    // cell is level with the bot, so that was a no-op that stalled forever)
-                    // A BREAK waypoint must NOT become a walking target for the physics
-                    // engine: that cell is SOLID, so the search spends its whole budget
-                    // trying to stand inside a wall and reports "goal unreachable". Mining
-                    // has its own path (pendingBreaks -> the "At the wall" shortcut), and
-                    // that shortcut only fires once the bot is within 4 blocks of the
-                    // block — which is exactly what the walker leg, cut here, delivers.
-                    // So: walk up to the wall, then aim physics at the GOAL and let the
-                    // mining machinery take over.
-                    boolean breakCell = res.path.get(physics).toBreak != null;
-                    // PLACE-AS-A-MOVE IS FLAGGED viaJump, SO THE BRIDGE WAS BEING HANDED TO THE
-                    // ENGINE THAT CANNOT BUILD. placeAcross emits its planks flagged, so the leg
-                    // is cut at the first plank and the rest goes to the physics search — which
-                    // has no place move at all (capability table in docs/NAVIGATION.md). It only
-                    // ever "worked" because the placement was forged and did not care where the
-                    // body was; with placement going through the real ray trace it stopped dead
-                    // at 11.6 blocks, 12 legs and 12 hand-offs a run with nobody walking.
-                    // Route it like a pillar instead: to the component that owns BOTH the step
-                    // and the placement.
-                    var flaggedWp = res.path.get(physics);
-                    // CUT BY MOVE KIND, AND FOR A BUILD CUT ONE CELL EARLIER. A waypoint that
-                    // PLACES is not "physics" — the physics engine has no place move at all —
-                    // so its run goes to BridgeTask, which owns the step and the placement
-                    // together the way PillarTask owns a tower. Handing it over AT the lip was
-                    // already tried and fell into the void, 22.5 three times: the walker's
-                    // advance radius plus momentum carry the bot past the lip before the
-                    // hand-off fires, so the owner inherits a body already in the air. Stopping
-                    // the walker one cell SHORT lets the owner walk that last cell itself, with
-                    // sneak, and arrive at the lip in control.
-                    // CUT BY MOVE KIND. A waypoint that PLACES is not "physics" — that engine
-                    // has no place move at all — so its run goes to BridgeTask, which owns the
-                    // step and the placement together as PillarTask owns a tower. Cut one cell
-                    // EARLIER for a build so the owner takes over BEFORE the lip: handing over
-                    // AT the lip inherits a body already carried past it by the walker.
-                    int runEnd = res.physicsRunEnd(physics);
-                    // A PLACE RUN IS NOT PHYSICS, AND IT IS NOT A SEPARATE LEG EITHER. placeAcross
-                    // emits its planks flagged viaJump (FastPlanner.java:958), which routed them to
-                    // the one engine with no place move — pitfall P2. It is also why the previous
-                    // three attempts handed the bridge over AT the lip and fell into the void 22.5
-                    // blocks in: whoever inherits a body already carried past the edge has lost
-                    // before it starts. So do not cut at all. The WALK edges and the PLACE edges go
-                    // to the SAME owner, as one contiguous chain of MovementTraverse: the movement
-                    // that steps onto the lip is the one that decides whether to sprint out of it
-                    // (wasTheBridgeBlockAlwaysThere), and the next one sneaks and places. There is no
-                    // hand-off left to fumble.
-                    boolean placeRun = flaggedWp.toPlace != null && !flaggedWp.toPlace.isEmpty();
-                    // ⛔ A TOWER GOES TO PillarTask, NOT TO A CHAIN OF MovementPillar STEPS (G42,
-                    // 2026-09-11). A place run that starts straight UP is a pillar, and the queue's
-                    // traverse prefix happily covers it -- "MovementQueue: 9 movement(s) -302,110,-213
-                    // -> -302,115,-214 CLIMB+5". Measured on the 14:00 recorded run, under open sky:
-                    // "step 2 has taken too long (126 ticks, expected 25) MovementPillar
-                    // (-302,111,-211)->(-302,112,-211)" eleven times in four minutes, two blocks
-                    // placed in all, the chain dropped and re-planned identically each time while a
-                    // log lay on the canopy four blocks up. PillarTask is the tower primitive that
-                    // clears pit_escape, nav_wall2 and drop_ledge (jump, place while airborne, stay
-                    // centred); the ported per-step pillar with its sneak-pose click window through
-                    // the mouse pipeline is not. So the leg is cut at the tower's foot and the top
-                    // of the vertical run goes through the same hand-off a wall does.
-                    int pillarTop = -1;
-                    if (placeRun && TungstenConfig.get().pillarRunsGoToPillarTask) {
-                        BlockPos foot = cells.get(physics - 1);
-                        BlockPos first = flaggedWp.pos;
-                        if (first.getX() == foot.getX() && first.getZ() == foot.getZ()
-                                && first.getY() == foot.getY() + 1) {
-                            int i = physics;
-                            while (i + 1 < cells.size()
-                                    && cells.get(i + 1).getX() == first.getX()
-                                    && cells.get(i + 1).getZ() == first.getZ()
-                                    && cells.get(i + 1).getY() == cells.get(i).getY() + 1) i++;
-                            pillarTop = i;
-                            navPillarRuns++;
-                        }
-                    }
-                    int covered = placeRun && pillarTop < 0
-                            ? kaptainwutax.tungsten.path.movements.MovementQueue.traversePrefix(
-                                    cells.subList(0, Math.min(cells.size(), runEnd + 1)))
-                            : 0;
-                    // The chain must actually REACH the first cell that needs a block placed,
-                    // otherwise routing it here achieves nothing and the queue would finish short of
-                    // the gap, replan the identical plan and loop. Below that bar, keep the old path.
-                    if (pillarTop >= 0) {
-                        // Walk to the foot; the hand-off below sees "rise above jump height,
-                        // nearly overhead" and starts PillarTask to the top of the run.
-                        nextPhysicsTarget = cells.get(pillarTop);
-                        cells = cells.subList(0, physics);
-                    } else if (covered >= physics + 1) {
-                        nextPhysicsTarget = null;
-                        movementLeg = true;
-                        cells = cells.subList(0, covered);
-                    } else if (breakCell && TungstenConfig.get().navOwnsBreakRuns) {
-                        // A DIG IS OURS: walk to the cell before it, then mine (see nextBreakCells).
-                        nextPhysicsTarget = null;
-                        nextBreakCells = new java.util.ArrayList<>(flaggedWp.toBreak);
-                        nextBreakStand = cells.get(physics - 1);   // the node the dig was planned from
-                        cells = cells.subList(0, physics);
-                    } else {
-                        nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
-                        cells = cells.subList(0, physics);
-                    }
-                } else {
-                    nextPhysicsTarget = null;
-                    // A SLIME PAD IS ONE MANOEUVRE. Walk to its LIP and let the crossing own
-                    // the pad itself, aimed at the first cell past it — which only the full
-                    // route knows, since a truncated leg ends on the slime.
-                    int padStart = -1, padExit = -1;
-                    for (int i = 0; i < cells.size(); i++) {
-                        BlockPos below = cells.get(i).down();
-                        var st = world.getBlockState(below);
-                        boolean slime = st.getBlock() instanceof net.minecraft.block.SlimeBlock;
-                        if (slime && padStart < 0) padStart = i;
-                        // "NOT SLIME" IS NOT THE SAME AS "SOMEWHERE TO STAND". The exit has to
-                        // be a cell with a real floor under it: the first version took the
-                        // first non-slime cell and aimed the crossing at x=14 — one step past
-                        // the pad, straight over the void between it and the ledge — so the
-                        // bot flew at it and fell (traced: horiz closing to 0.3 while dropping
-                        // to y=-88).
-                        boolean standable = !st.getCollisionShape(world, below).isEmpty();
-                        if (padStart >= 0 && !slime && standable) { padExit = i; break; }
-                    }
-                    if (TungstenConfig.get().slimeCrossing && padStart > 0 && padExit > padStart) {
-                        pendingCrossing = cells.get(padExit);
-                        cells = cells.subList(0, padStart);
-                    } else if (cells.size() > LEG_LENGTH) {
-                        cells = cells.subList(0, LEG_LENGTH);
-                    }
-                }
-                if (cells.size() >= 2) {
-                    boolean builds = false;
-                    for (int i = 1; i < Math.min(res.path.size(), cells.size()); i++) {
-                        var w = res.path.get(i);
-                        if (w.toPlace != null && !w.toPlace.isEmpty()) { builds = true; break; }
-                    }
-                    nextLegMovement = movementLeg;
-                    // BridgeTask only gets a look-in when the MovementQueue did not take the leg;
-                    // the two must never both be armed (two owners of the keys is pitfall P1).
-                    nextLegBridge = builds && !movementLeg;
-                    nextLeg = cells;
-                } else if (nextPhysicsTarget != null) {
-                    // The jump is the very FIRST move from here — there is nothing to walk.
-                    // Hand it straight to physics instead of dropping the plan (the old code
-                    // required size>=2 and silently discarded this case, which is exactly the
-                    // "standing at the lip of the gap" state).
-                    pendingPhysicsTarget = nextPhysicsTarget;
-                    nextPhysicsTarget = null;
-                } else if (nextBreakCells != null) {
-                    // The dig is the very FIRST move from here: nothing to walk, mine now.
-                    pendingBreakCells = nextBreakCells;
-                    pendingBreakStand = nextBreakStand;
-                    nextBreakCells = null;
-                    nextBreakStand = null;
-                }
+                });
             } catch (Exception e) {
-                Debug.logWarning("FastNavigator plan failed: " + e.getMessage());
-            } finally {
-                planning = false;
+                TungstenMod.mc.execute(() -> {
+                    if (generation != planGeneration.get()) {
+                        navPlansDiscarded++;
+                        return;
+                    }
+                    planning = false;
+                    Debug.logWarning("FastNavigator plan failed: " + e.getMessage());
+                });
             }
         });
         t.setName("FastNavigator-plan");
         t.setDaemon(true);
         t.start();
     }
+
+    /** Publish one current calculation on the client thread, including any walker handoff. */
+    private static void applyPlan(net.minecraft.world.World world, BlockPos start,
+                                  BlockPos goalCell, long budgetMs, FastPlanner.Result res) {
+        // A ONE-WAYPOINT PLAN IS AN ANSWER: THERE IS NOTHING TO WALK FROM HERE.
+        // FastPlanner returns exactly that when the start already satisfies the goal --
+        // "1 nodes, 1 wp, complete" (FastPlanner.java:445-457, expanded=1 and the goal node
+        // IS the start). This used to fall into the same `return` as a failed plan, so the
+        // tail that produced it stayed set, the tick loop asked again from that same tail,
+        // and got the same answer. Measured on a failing @gamer run: 218 of those in five
+        // minutes, about one every one and a half seconds, all identical.
+        // Forgetting the tail is what "there is no further leg from there" means; the
+        // arrival check owns finishing the navigation, and any genuinely new situation
+        // replans from the bot's real position anyway.
+        if (res.path.size() < 2) {
+            navShortRes++;
+            if (legTail != null && legTail.equals(start)) {
+                legTail = null;
+            }
+            return;
+        }
+        if (res.isEmpty()) { navEmptyRes++; return; }
+
+        // PUBLISH THE WHOLE PLAN FOR THE VISUAL. res.path carries every waypoint's
+        // toPlace/toBreak, so this shows the ENTIRE column/bridge/tunnel the route will
+        // build at once (user 2026-09-10: "only the first placed block rendered"). The
+        // per-tick single-cell writers (PathExecutor/PillarTask) stand down while this
+        // navigator is active, so this is the authority. Persists until the next plan.
+        if (kaptainwutax.tungsten.TungstenConfig.get().renderPlacePlan
+                || kaptainwutax.tungsten.TungstenConfig.get().renderBreakPlan) {
+            kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
+            kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.clear();
+            for (FastPlanner.Waypoint w : res.path) {
+                if (w.toPlace != null) for (BlockPos p : w.toPlace)
+                    kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(
+                            new kaptainwutax.tungsten.render.Cuboid(
+                                    new Vec3d(p.getX() + 0.1, p.getY() + 0.1, p.getZ() + 0.1),
+                                    new Vec3d(0.8, 0.8, 0.8),
+                                    new kaptainwutax.tungsten.render.Color(60, 220, 120)));
+                if (w.toBreak != null) for (BlockPos p : w.toBreak)
+                    kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.add(
+                            new kaptainwutax.tungsten.render.Cuboid(
+                                    new Vec3d(p.getX() + 0.05, p.getY() + 0.05, p.getZ() + 0.05),
+                                    new Vec3d(0.9, 0.9, 0.9),
+                                    new kaptainwutax.tungsten.render.Color(255, 170, 40)));
+            }
+        }
+
+        // Walking cannot solve this route — hand it to the physics engine
+        // (already searching in parallel) and get out of its way.
+        if (!res.complete) {
+            navIncomplete++;
+            BlockPos tail = res.path.get(res.path.size() - 1).pos;
+            double before = Math.sqrt(start.getSquaredDistance(goalCell));
+            double after = Math.sqrt(tail.getSquaredDistance(goalCell));
+            // (Refusing to hand off a LONG incomplete route — "nineteen waypoints the
+            // walker could have walked" — was tried here and did not move the number:
+            // nav_water sat at 2-3 passes in 4 either way. Reverted rather than kept on
+            // faith, because this branch is on the path of every course.)
+            // ⛔ DO NOT "FIX" THIS BY REFUSING THE HAND-OFF. It looks like the cap on
+            // bridging — the trace is a loop of walk a leg, "walking dead-ends
+            // (8.9 -> 8.1)", hand the goal to a physics search that cannot solve it,
+            // wait out its budget, place ONE block, repeat — but skipping the hand-off
+            // when the plan contains a place/break took placements to ZERO and the
+            // distance to 20.7 in three runs of three. The reason is structural: the
+            // place plan only reaches the executor THROUGH the physics path, in
+            // PathFinder.truncateAtBreaks. No hand-off, no bridging at all. Giving the
+            // block planner its own route to the executor is the real fix, and it is a
+            // bigger job than a condition here.
+            // ⛔ A PARTIAL WORTH FIVE BLOCKS IS WALKED, PROGRESS OR NOT (G49, 2026-09-11).
+            // The coefficient rule (FastPlanner, G44) hands back the node baritone would
+            // walk to; baritone walks it and re-plans from there -- that is how it gets
+            // past a corner the budget could not see round. Judging it here by "did the
+            // straight-line distance shrink by four" threw those legs away: the 16:26
+            // recording sat five minutes on "walking dead-ends (9.1 -> 8.1) -> physics owns
+            // the rest" with the goal nine blocks BELOW, and physics cannot dig. So: a
+            // partial at least MIN_DIST_PATH from the start is a leg; and a goal below
+            // that yields no such partial is given up out loud, never handed to an engine
+            // without a shovel.
+            double partialLen = Math.sqrt(tail.getSquaredDistance(start));
+            boolean walkThePartial = TungstenConfig.get().planPartialLikeBaritone
+                    && res.path.size() >= 2 && partialLen >= 5.0;
+            if (walkThePartial) {
+                navPartialWalked++;
+            } else if (before - after < MIN_PARTIAL_PROGRESS
+                    && TungstenConfig.get().planPartialLikeBaritone
+                    && goalCell.getY() < start.getY() - 2) {
+                // ⛔ A SEARCH THAT SPENT ITS WHOLE BUDGET HAS NOT SAID "UNREACHABLE" (G58,
+                // 2026-09-11). The 19:34 recording stood ninety seconds on a cliff above a
+                // drop: "no leg from here toward a goal 5 below (5.7 -> 3.0)" every two
+                // seconds, each search 7000 nodes in 251 ms of a 250 ms budget, the best
+                // partial inside five blocks because the dig moves round a cliff are dear
+                // and the frontier never got past them. Baritone plans for half a second
+                // and two on failure; give this search one more go at four times the
+                // budget before the honest give-up, and count how often that was enough.
+                if (TungstenConfig.get().planBudgetBoostBeforeGiveUp && !budgetBoostedThisRoute
+                        && res.millis >= budgetMs - 10) {
+                    navBudgetBoosted++;
+                    budgetBoostNext = true;
+                    Debug.logMessage(String.format(
+                            "FastNavigator: the search toward a goal %d below spent its budget (%d nodes, %d ms) — one more try with 4x",
+                            start.getY() - goalCell.getY(), res.expanded, res.millis));
+                    return;   // the tick loop asks again; the next search runs boosted
+                }
+                navDeadEnd++;
+                navNoPartialBelow++;
+                Debug.logWarning(String.format(
+                        "FastNavigator: no leg from here toward a goal %d below (%.1f -> %.1f) — giving the route up",
+                        start.getY() - goalCell.getY(), before, after));
+                pendingGiveUp = true;
+                return;
+            }
+            if (!walkThePartial && before - after < MIN_PARTIAL_PROGRESS) {
+                navDeadEnd++;
+                // Walking cannot solve this — hand the TAIL to the physics engine
+                // and wait for it. This branch used to print "physics owns this"
+                // and then call stop(), which nulls pendingPhysicsTarget: physics
+                // was never actually asked, nothing else was running, and the bot
+                // stood at the lip of the obstacle until the run timed out. The
+                // message described a hand-off that did not happen.
+                // Hand physics the GOAL, not the tail. The tail is where WALKING
+                // gave up, which is the cell the bot is already standing on — asking
+                // the physics engine to travel to its own feet is a no-op, and the
+                // navigator then re-planned the same dead end forever. Observed on
+                // nav_steep: "physics owns the jump -> 6,-60,0" repeated while the
+                // bot sat motionless at x=5.6.
+                // Physics is precisely the engine that models jumps and parkour, so
+                // when walking cannot solve the route, it owns the REST of the route.
+                Debug.logMessage(String.format(
+                        "FastNavigator: walking dead-ends (%.1f -> %.1f) -> physics owns the rest",
+                        before, after));
+                BlockPathWalker.stop();
+                nextLeg = null;
+                nextPhysicsTarget = null;
+                pendingPhysicsTarget = goalCell;
+                return;
+            }
+        }
+        navOkRes++;
+
+        if (TungstenConfig.get().verboseDebugLogging) {
+            int flagged = 0;
+            for (var w : res.path) if (w.needsPhysics) flagged++;
+            Debug.logMessage(String.format(
+                    "PLAN n=%d complete=%b firstPhysics=%d flagged=%d",
+                    res.path.size(), res.complete, res.firstPhysicsIndex(), flagged));
+        }
+        List<BlockPos> cells = res.positions();
+        /** Set below only for a leg the ported MovementQueue is taking over. */
+        boolean movementLeg = false;
+        // cut at the first waypoint that needs a real jump: the physics
+        // engine owns those (parkour), the walker must not run into one
+        int physics = res.firstPhysicsIndex();
+        if (physics > 0 && physics < cells.size()) {
+            // REMEMBER where the jump lands. The old code cut the leg here and set
+            // to the edge of the gap and then no one performed the jump: the
+            // navigator just replanned 2-cell legs until its stall watchdog fired.
+            // That single dead flag is why every parkour course failed.
+            // hand physics the FAR SIDE of the whole physics-only run, not just its
+            // first cell (see FastPlanner.physicsRunEnd — a ladder's first flagged
+            // cell is level with the bot, so that was a no-op that stalled forever)
+            // A BREAK waypoint must NOT become a walking target for the physics
+            // engine: that cell is SOLID, so the search spends its whole budget
+            // trying to stand inside a wall and reports "goal unreachable". Mining
+            // has its own path (pendingBreaks -> the "At the wall" shortcut), and
+            // that shortcut only fires once the bot is within 4 blocks of the
+            // block — which is exactly what the walker leg, cut here, delivers.
+            // So: walk up to the wall, then aim physics at the GOAL and let the
+            // mining machinery take over.
+            boolean breakCell = res.path.get(physics).toBreak != null;
+            // PLACE-AS-A-MOVE IS FLAGGED viaJump, SO THE BRIDGE WAS BEING HANDED TO THE
+            // ENGINE THAT CANNOT BUILD. placeAcross emits its planks flagged, so the leg
+            // is cut at the first plank and the rest goes to the physics search — which
+            // has no place move at all (capability table in docs/NAVIGATION.md). It only
+            // ever "worked" because the placement was forged and did not care where the
+            // body was; with placement going through the real ray trace it stopped dead
+            // at 11.6 blocks, 12 legs and 12 hand-offs a run with nobody walking.
+            // Route it like a pillar instead: to the component that owns BOTH the step
+            // and the placement.
+            var flaggedWp = res.path.get(physics);
+            // CUT BY MOVE KIND, AND FOR A BUILD CUT ONE CELL EARLIER. A waypoint that
+            // PLACES is not "physics" — the physics engine has no place move at all —
+            // so its run goes to BridgeTask, which owns the step and the placement
+            // together the way PillarTask owns a tower. Handing it over AT the lip was
+            // already tried and fell into the void, 22.5 three times: the walker's
+            // advance radius plus momentum carry the bot past the lip before the
+            // hand-off fires, so the owner inherits a body already in the air. Stopping
+            // the walker one cell SHORT lets the owner walk that last cell itself, with
+            // sneak, and arrive at the lip in control.
+            // CUT BY MOVE KIND. A waypoint that PLACES is not "physics" — that engine
+            // has no place move at all — so its run goes to BridgeTask, which owns the
+            // step and the placement together as PillarTask owns a tower. Cut one cell
+            // EARLIER for a build so the owner takes over BEFORE the lip: handing over
+            // AT the lip inherits a body already carried past it by the walker.
+            int runEnd = res.physicsRunEnd(physics);
+            // A PLACE RUN IS NOT PHYSICS, AND IT IS NOT A SEPARATE LEG EITHER. placeAcross
+            // emits its planks flagged viaJump (FastPlanner.java:958), which routed them to
+            // the one engine with no place move — pitfall P2. It is also why the previous
+            // three attempts handed the bridge over AT the lip and fell into the void 22.5
+            // blocks in: whoever inherits a body already carried past the edge has lost
+            // before it starts. So do not cut at all. The WALK edges and the PLACE edges go
+            // to the SAME owner, as one contiguous chain of MovementTraverse: the movement
+            // that steps onto the lip is the one that decides whether to sprint out of it
+            // (wasTheBridgeBlockAlwaysThere), and the next one sneaks and places. There is no
+            // hand-off left to fumble.
+            boolean placeRun = flaggedWp.toPlace != null && !flaggedWp.toPlace.isEmpty();
+            // ⛔ A TOWER GOES TO PillarTask, NOT TO A CHAIN OF MovementPillar STEPS (G42,
+            // 2026-09-11). A place run that starts straight UP is a pillar, and the queue's
+            // traverse prefix happily covers it -- "MovementQueue: 9 movement(s) -302,110,-213
+            // -> -302,115,-214 CLIMB+5". Measured on the 14:00 recorded run, under open sky:
+            // "step 2 has taken too long (126 ticks, expected 25) MovementPillar
+            // (-302,111,-211)->(-302,112,-211)" eleven times in four minutes, two blocks
+            // placed in all, the chain dropped and re-planned identically each time while a
+            // log lay on the canopy four blocks up. PillarTask is the tower primitive that
+            // clears pit_escape, nav_wall2 and drop_ledge (jump, place while airborne, stay
+            // centred); the ported per-step pillar with its sneak-pose click window through
+            // the mouse pipeline is not. So the leg is cut at the tower's foot and the top
+            // of the vertical run goes through the same hand-off a wall does.
+            int pillarTop = -1;
+            if (placeRun && TungstenConfig.get().pillarRunsGoToPillarTask) {
+                BlockPos foot = cells.get(physics - 1);
+                BlockPos first = flaggedWp.pos;
+                if (first.getX() == foot.getX() && first.getZ() == foot.getZ()
+                        && first.getY() == foot.getY() + 1) {
+                    int i = physics;
+                    while (i + 1 < cells.size()
+                            && cells.get(i + 1).getX() == first.getX()
+                            && cells.get(i + 1).getZ() == first.getZ()
+                            && cells.get(i + 1).getY() == cells.get(i).getY() + 1) i++;
+                    pillarTop = i;
+                    navPillarRuns++;
+                }
+            }
+            int covered = placeRun && pillarTop < 0
+                    ? kaptainwutax.tungsten.path.movements.MovementQueue.traversePrefix(
+                            cells.subList(0, Math.min(cells.size(), runEnd + 1)))
+                    : 0;
+            // The chain must actually REACH the first cell that needs a block placed,
+            // otherwise routing it here achieves nothing and the queue would finish short of
+            // the gap, replan the identical plan and loop. Below that bar, keep the old path.
+            if (pillarTop >= 0) {
+                // Walk to the foot; the hand-off below sees "rise above jump height,
+                // nearly overhead" and starts PillarTask to the top of the run.
+                nextPhysicsTarget = cells.get(pillarTop);
+                cells = cells.subList(0, physics);
+            } else if (covered >= physics + 1) {
+                nextPhysicsTarget = null;
+                movementLeg = true;
+                cells = cells.subList(0, covered);
+            } else if (breakCell && TungstenConfig.get().navOwnsBreakRuns) {
+                // A DIG IS OURS: walk to the cell before it, then mine (see nextBreakCells).
+                nextPhysicsTarget = null;
+                nextBreakCells = new java.util.ArrayList<>(flaggedWp.toBreak);
+                nextBreakStand = cells.get(physics - 1);   // the node the dig was planned from
+                cells = cells.subList(0, physics);
+            } else {
+                nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
+                cells = cells.subList(0, physics);
+            }
+        } else {
+            nextPhysicsTarget = null;
+            // A SLIME PAD IS ONE MANOEUVRE. Walk to its LIP and let the crossing own
+            // the pad itself, aimed at the first cell past it — which only the full
+            // route knows, since a truncated leg ends on the slime.
+            int padStart = -1, padExit = -1;
+            for (int i = 0; i < cells.size(); i++) {
+                BlockPos below = cells.get(i).down();
+                var st = world.getBlockState(below);
+                boolean slime = st.getBlock() instanceof net.minecraft.block.SlimeBlock;
+                if (slime && padStart < 0) padStart = i;
+                // "NOT SLIME" IS NOT THE SAME AS "SOMEWHERE TO STAND". The exit has to
+                // be a cell with a real floor under it: the first version took the
+                // first non-slime cell and aimed the crossing at x=14 — one step past
+                // the pad, straight over the void between it and the ledge — so the
+                // bot flew at it and fell (traced: horiz closing to 0.3 while dropping
+                // to y=-88).
+                boolean standable = !st.getCollisionShape(world, below).isEmpty();
+                if (padStart >= 0 && !slime && standable) { padExit = i; break; }
+            }
+            if (TungstenConfig.get().slimeCrossing && padStart > 0 && padExit > padStart) {
+                pendingCrossing = cells.get(padExit);
+                cells = cells.subList(0, padStart);
+            } else if (cells.size() > LEG_LENGTH) {
+                cells = cells.subList(0, LEG_LENGTH);
+            }
+        }
+        if (cells.size() >= 2) {
+            boolean builds = false;
+            for (int i = 1; i < Math.min(res.path.size(), cells.size()); i++) {
+                var w = res.path.get(i);
+                if (w.toPlace != null && !w.toPlace.isEmpty()) { builds = true; break; }
+            }
+            nextLegMovement = movementLeg;
+            // BridgeTask only gets a look-in when the MovementQueue did not take the leg;
+            // the two must never both be armed (two owners of the keys is pitfall P1).
+            nextLegBridge = builds && !movementLeg;
+            nextLeg = cells;
+        } else if (nextPhysicsTarget != null) {
+            // The jump is the very FIRST move from here — there is nothing to walk.
+            // Hand it straight to physics instead of dropping the plan (the old code
+            // required size>=2 and silently discarded this case, which is exactly the
+            // "standing at the lip of the gap" state).
+            pendingPhysicsTarget = nextPhysicsTarget;
+            nextPhysicsTarget = null;
+        } else if (nextBreakCells != null) {
+            // The dig is the very FIRST move from here: nothing to walk, mine now.
+            pendingBreakCells = nextBreakCells;
+            pendingBreakStand = nextBreakStand;
+            nextBreakCells = null;
+            nextBreakStand = null;
+        }
+    }
+
 }
