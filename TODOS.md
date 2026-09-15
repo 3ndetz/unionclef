@@ -1,5 +1,34 @@
 # TODOs
 
+<!-- G67-PHYSICS-REMAINDER-LIKELY-ALREADY-CLOSED-2026-09-15 -->
+## G67's stated "open" remainder (physics bridging not priced through PlaceRules) looks already closed by the same shared function -- flagged, not claimed (2026-09-15)
+
+G67's entry (above/below this one, search for "a bridge placement that times out") shipped the
+refusal memory (`PlaceRules.refuseForAWhile`/`refusedRecently`, wired into `canPlace()`) and named
+one explicit remainder: *"the PHYSICS planner's own 'Path needs bridging' does not price through
+PlaceRules... a loop that stays on the physics side needs the same veto there."* Traced the actual
+call path before either trusting or acting on that sentence: the "Path needs bridging" log line
+comes from `PathFinder.truncateAtBreaks`, which reads a `toPlace` list off a `BlockNode` produced
+by `BlockSpacePathFinder.search` (E3) — and `BlockNode.java`'s ONLY site that assigns `toPlace`
+(the bridge/support move generator, confirmed by grep — one assignment, one call site) is already
+gated by `if (!PlaceRules.canPlace(world, support)) return false;`. Since `canPlace()` is the same
+central function `refuseForAWhile`/`refusedRecently` was wired into, and E3's bridge-move generator
+already calls it unconditionally, a cell the executor just timed out on should already be refused
+the next time E3 tries to offer it as a bridge target — the same shared-function propagation that
+made G10 and G11's sibling engine already correct turned out to apply here too.
+
+**Why this is flagged rather than marked done, unlike G10/G11**: G10 and G11 were provable purely
+by reading (a predicate either checks a condition or it doesn't). This one depends on RUNTIME
+behavior a read cannot fully settle — specifically, whether E3's search degrades gracefully (finds
+a different route, or correctly reports no-path) when its only candidate bridge cell is refused, or
+whether something upstream caches a stale `toPlace` decision from before the refusal and retries it
+anyway without re-consulting `canPlace`. Did not find such a cache in `BlockNode`/`BlockSpacePathFinder`,
+but "did not find one" is weaker evidence than a live repro of the original 21:27-run scenario would
+be. Left G67's own checkbox and text untouched (same reason BARITONE-GAPS.md itself stays untouched
+per its own convention) — this entry is the pointer for whoever next has stand access: reproduce
+the original bridge-timeout loop, confirm it no longer repeats, and only then mark the physics half
+of G67 closed for real.
+
 <!-- CHATPARSER-RUNTIME-TEST-PASSES-2026-09-15 -->
 ## First actual RUNTIME execution this session, not just a compile: testChatParser, 22/22 (2026-09-15)
 
