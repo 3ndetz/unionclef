@@ -224,3 +224,24 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 
 ### Natural survival death evidence clarified
 - gamer-server /data/logs/latest.log identifies the two recent deaths:09:58:53UTC blown up by Creeper;10:06:53UTC slain by Enderman. This supersedes the earlier unknown-cause notes only. It does not establish whether the Enderman was provoked by gaze or an attack, or why defence failed.
+
+## 2026-09-15 — Water headroom and supported bank exits
+
+### Investigate
+- Natural run after the descent fix lost8HP falling out of a water channel around(80,98,-135); the client's last DamageSource was fall. This does not prove ordinary MovementDescend caused it. The later10:53:14UTC death was shot by Skeleton. Natural save disconnected after respawn and fresh wooden-pickaxe acquisition; no surviving kit is claimed.
+- Deep-trough fixture exposed a water-to-air waypoint at(1704,-49,340) with no floor or water below. First water-only patch removed that phantom exit, but the low-roof and waterfall executions still descended into a lower pool. These runs took no fall damage and are not reproductions of the natural8HP loss.
+- Pool-bottom nodes also expanded dry ground steps/parkour. Water destinations bypassed bodyFits entirely. The fallback BlockNode guide independently accepted water-to-air exits without headroom:11:23:12UTC guide included(1702,-49,340)->(1703,-48,340) under the roof FastPlanner rejected.
+
+### Implement
+- FastPlanner checks the standing body at water destinations and the departure-head sweep on water entry, requires supported horizontal exits, and explicitly offers one-block-up bank exits. Pool-bottom water nodes use strokes/exits instead of dry walking/parkour expansion; planned digging remains available.
+- PlayerFit.waterExitClear shares the supported landing and ascent envelope with the fallback BlockNode guide. Its water strokes and entries also check body clearance; the old fluid/air-only early acceptance is removed.
+- Added deploy/runner/water_clearance_test.py, with recorded physical gates and route geometry. Water breathing isolates collision testing from idle drowning and is cleared during teardown. This harness does not start gamer/survival chains and is not a survival-policy test.
+
+### Validate so far
+- Clean build/deploy succeeded; nested jars verified byte-identical. Full-block bank, slab bank, ordinary entry, low-roof entry and low-roof exit passed5/5 functional fixtures on the final Java. MP4s decoded and representative screenshots reviewed.
+- A prior roof run without water breathing correctly refused movement but drowned while idle; its respawn is a FAIL, not a safety pass. The final geometry fixture explicitly excludes this independent survival concern.
+- Slab goal uses the planner's upper surface cell(-49), while actual feet are-49.5. A preceding containing-cell goal(-50) physically arrived but returned an incomplete plan; exact-cell representation remains open.
+- Waterfall gap remains FAIL: phantom air exit removed, but a partial guide ends in flowing water and execution falls to the lower pool(minY-61). No claim of safe partial-route termination in currents. Do not weaken this gate.
+- Standard navigation regression is running before commit. No Telegram send or publication; prior automatic approval blocks remain pending.
+- Standard navigation final-build audit passed6/6(flat/staircase/descend/water/gaps/ladder),24.0–29.0FPS, no invalid attempts. Artifacts deploy/runner/artifacts/20260915-113258. Water course reached the far bank in11.2s; viewed the finish frame. This does not close the separate waterfall-gap failure.
+- Checked-in water harness replayed low-roof exit successfully at20–30FPS, minHP20 with water breathing; video fully decoded. Fresh fetch found bf2b9c5a(TODOS-only headless registry investigation), reviewed for integration; no Java delta from upstream.

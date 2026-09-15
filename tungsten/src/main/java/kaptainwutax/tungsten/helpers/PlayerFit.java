@@ -188,6 +188,15 @@ public final class PlayerFit {
                 Math.max(from.getZ(), to.getZ()) + 0.5 + HALF));
     }
 
+    /** A supported bank exit, including the head sweep above the water column. */
+    public static boolean waterExitClear(WorldView world, BlockPos from, BlockPos to) {
+        double landing = supportTop(world, to);
+        if (Double.isNaN(landing) || landing < from.getY() - STEP_HEIGHT
+                || landing - from.getY() > JUMP_HEIGHT
+                || !bodyFits(world, to.getX() + 0.5, landing, to.getZ() + 0.5)) return false;
+        return landing <= from.getY() || ascentClear(world, from, to, landing);
+    }
+
     /** The destination column swept while leaving a ledge and falling to its floor. */
     public static boolean descentClear(WorldView world, int x, int z,
                                        double departureY, double landingY) {

@@ -788,16 +788,25 @@ public final class FastPlanner {
 
     private static void expand(WorldView world, Node from, double support, BlockPos goal,
                                NodeMap map, Heap open, BlockPos.Mutable scratch) {
-        // straight + diagonal steps and one-block climbs
-        for (int[] d : CARDINALS) {
-            step(world, from, support, d[0], d[1], goal, map, open, scratch, ActionCosts.WALK_ONE_BLOCK_COST);
-        }
-        for (int[] d : DIAGONALS) {
-            // no corner cutting: both orthogonal cells must be passable too
-            if (!sideClear(world, from, d[0], 0, support, scratch)) continue;
-            if (!sideClear(world, from, 0, d[1], support, scratch)) continue;
-            step(world, from, support, d[0], d[1], goal, map, open, scratch,
-                    ActionCosts.WALK_ONE_BLOCK_COST * SQRT2);
+        // A solid pool bottom does not turn swimming into ground movement.
+        // Ground stepping also offers parkour, whose dry sprint range cannot be
+        // assumed while submerged. Water strokes and bank exits live in special().
+        if (!isWater(world, from.x, from.y, from.z, scratch)) {
+            // straight + diagonal steps and one-block climbs
+            for (int[] d : CARDINALS) {
+                step(world, from, support, d[0], d[1], goal, map, open, scratch, ActionCosts.WALK_ONE_BLOCK_COST);
+            }
+            for (int[] d : DIAGONALS) {
+                // no corner cutting: both orthogonal cells must be passable too
+                if (!sideClear(world, from, d[0], 0, support, scratch)) continue;
+                if (!sideClear(world, from, 0, d[1], support, scratch)) continue;
+                step(world, from, support, d[0], d[1], goal, map, open, scratch,
+                        ActionCosts.WALK_ONE_BLOCK_COST * SQRT2);
+            }
+        } else if (TungstenConfig.get().moveBreakThrough) {
+            // Keep planned digging available from a shallow pool.
+            for (int[] d : CARDINALS)
+                breakThrough(world, from, d[0], d[1], goal, map, open, scratch);
         }
         if (TungstenConfig.get().planPlaceMoves) {
             if (TungstenConfig.get().movePlaceBridge)
@@ -924,14 +933,15 @@ public final class FastPlanner {
                 // floating is the thing the walker is worst at. Only the dead-end half of that
                 // change is kept — see the surface-float note in plan() and above.
                 boolean water = isWater(world, nx, ny, nz, scratch);
-                // SHORT-CIRCUIT THE EXPENSIVE TEST. bodyFits walks the real 0.6x1.8 box
-                // against every block it touches, and it was being run for all six directions
-                // even when the cell is already known to be water — where the answer cannot
-                // change the outcome. Measured before this: 192 nodes in 414 ms, i.e. 2.2 ms
-                // PER NODE, so the search could not cross the pool inside its 250 ms budget
-                // and the course stalled roughly one run in three.
-                boolean exit = !water && ny >= from.y
-                        && PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5);
+                // Water at the feet does not guarantee headroom. A bank can cap
+                // the next water cell, leaving a one-block submerged slot. The
+                // swimmer does not plan a crawling pose, so validate its full body.
+                if (water && !PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5)) continue;
+                // Surfacing stays above the water column. A horizontal exit needs a
+                // real bank: empty air over a waterfall is not somewhere to walk.
+                boolean exit = !water && (d[1] > 0
+                        ? PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5)
+                        : d[1] == 0 && canExitWater(world, from, nx, ny, nz, scratch));
                 if (water || exit) {
                     // DIVING AND SURFACING COST MORE THAN CROSSING. Vertical movement in water
                     // is slower in vanilla, and pricing all six directions the same made the
@@ -949,6 +959,17 @@ public final class FastPlanner {
                     relax(map, open, from, nx, ny, nz, swim, goal, false);
                 }
             }
+            // A normal bank is one block above the water's feet cell. Give it a
+            // supported climb-out edge instead of routing through air above the pool.
+            for (int[] d : CARDINALS) {
+                int nx = from.x + d[0], ny = from.y + 1, nz = from.z + d[1];
+                if (!isWater(world, nx, ny, nz, scratch)
+                        && canExitWater(world, from, nx, ny, nz, scratch)) {
+                    relax(map, open, from, nx, ny, nz,
+                            ActionCosts.SWIM_ONE_BLOCK_COST + ActionCosts.JUMP_PENALTY,
+                            goal, false);
+                }
+            }
         } else {
             // Entering water from land. YOU STEP DOWN INTO A POOL — a pool's surface
             // normally sits one block BELOW the bank you are standing on, exactly like the
@@ -958,8 +979,16 @@ public final class FastPlanner {
             for (int[] d : CARDINALS) {
                 int nx = from.x + d[0], nz = from.z + d[1];
                 int entry = Integer.MIN_VALUE;
+                double departure = PlayerFit.supportTop(world, new BlockPos(from.x, from.y, from.z));
+                if (Double.isNaN(departure)) departure = from.y;
                 for (int ny : new int[]{from.y, from.y - 1}) {
-                    if (isWater(world, nx, ny, nz, scratch)) { entry = ny; break; }
+                    // Entering water still needs the body and take-off head column
+                    // to fit; fluid at the feet does not make a low roof passable.
+                    if (isWater(world, nx, ny, nz, scratch)
+                            && PlayerFit.descentClear(world, nx, nz, Math.max(departure, ny), ny)) {
+                        entry = ny;
+                        break;
+                    }
                 }
                 if (diagS && entry != Integer.MIN_VALUE) {
                     cntSpecial++;
@@ -1154,6 +1183,13 @@ public final class FastPlanner {
         var st = w.getBlockState(s);
         cache.put(key, st);
         return st;
+    }
+
+    private static boolean canExitWater(WorldView world, Node from, int x, int y, int z,
+                                        BlockPos.Mutable scratch) {
+        return !hazardAt(world, x, y - 1, z, scratch)
+                && PlayerFit.waterExitClear(world, new BlockPos(from.x, from.y, from.z),
+                        new BlockPos(x, y, z));
     }
 
     private static boolean isLadder(WorldView w, int x, int y, int z, BlockPos.Mutable s) {

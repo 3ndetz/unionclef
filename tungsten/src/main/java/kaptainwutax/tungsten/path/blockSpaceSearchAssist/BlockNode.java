@@ -561,6 +561,34 @@ public class BlockNode {
 		}
 		
 		
+        // A physics guide must not reintroduce a bank exit rejected by FastPlanner.
+        // These are standing-body strokes; no crawling pose is represented in BlockNode.
+        boolean fromWater = BlockStateChecker.isAnyWater(currentBlockState);
+        boolean toWater = BlockStateChecker.isAnyWater(childState);
+        if (fromWater || toWater) {
+            BlockPos from = getBlockPos(), to = child.getBlockPos();
+            int horizontal = Math.abs(to.getX() - from.getX()) + Math.abs(to.getZ() - from.getZ());
+            int rise = to.getY() - from.getY();
+            if (fromWater && toWater) {
+                return horizontal + Math.abs(rise) != 1
+                        || !kaptainwutax.tungsten.helpers.PlayerFit.bodyFits(world,
+                                to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
+            }
+            if (fromWater) {
+                if (horizontal == 0 && rise == 1) {
+                    return !kaptainwutax.tungsten.helpers.PlayerFit.bodyFits(world,
+                            to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
+                }
+                return horizontal != 1 || rise < 0 || rise > 1
+                        || !kaptainwutax.tungsten.helpers.PlayerFit.waterExitClear(world, from, to);
+            }
+            double departure = kaptainwutax.tungsten.helpers.PlayerFit.supportTop(world, from);
+            if (Double.isNaN(departure)) departure = from.getY();
+            return horizontal != 1 || rise > 0 || rise < -1
+                    || !kaptainwutax.tungsten.helpers.PlayerFit.descentClear(world,
+                            to.getX(), to.getZ(), Math.max(departure, to.getY()), to.getY());
+        }
+
 		// Check for air below
 		if (childBelowState.isAir() && !(childBlock instanceof LadderBlock) && !BlockStateChecker.isBottomSlab(childState)) {
 			if (BlockShapeChecker.getShapeVolume(child.getBlockPos(), world) == 0)
@@ -597,28 +625,7 @@ public class BlockNode {
 				if (heightDiff < -2) blockFallHarmless++;
 			}
 		}
-		if (BlockStateChecker.isAnyWater(childState)) {
-			if (distance > 1 || heightDiff > 1) return true;
-			// Swimming: when we're ALREADY in water, an adjacent water cell (up/
-			// down/around within 1) is traversable by swimming. The walk-based
-			// wasCleared (StreightMovementHelper) mishandles vertical/underwater
-			// moves (undefined horizontal direction) and rejected valid swim-up —
-			// leaving the bot stuck at the bottom to drown. In water, the cell
-			// being water is enough; the physics executor swims there.
-			if (BlockStateChecker.isAnyWater(currentBlockState)) return false;
-			// Entering water from land — keep the walk validity check.
-			if (!wasCleared(world, getBlockPos(), child.getBlockPos())) return true;
-			return false;
-		}
-		// Surfacing / climbing out: while submerged, an air cell within reach
-		// (the surface above the water or a land edge one up) is a valid swim
-		// target so the bot can reach the surface and step out.
-		if (BlockStateChecker.isAnyWater(currentBlockState) && childState.isAir()
-				&& distance <= 1 && heightDiff <= 1
-				&& BlockShapeChecker.getShapeVolume(child.getBlockPos(), world) == 0) {
-			return false;
-		}
-		
+
 		if (BlockStateChecker.isDoubleSlab(world, getBlockPos()) || childBelowBlock instanceof SnowBlock)
 			return true;
 
