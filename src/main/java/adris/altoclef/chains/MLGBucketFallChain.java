@@ -14,6 +14,7 @@ import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.Blocks;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
@@ -100,7 +101,9 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
                     BlockPos placed = lastMLG.getWaterPlacedPos();
                     boolean isPlacedWater;
                     try {
-                        isPlacedWater = mod.getWorld().getBlockState(placed).getBlock() == Blocks.WATER;
+                        // A poured source may be inside a waterlogged slab rather than a water block.
+                        var fluid = mod.getWorld().getBlockState(placed).getFluidState();
+                        isPlacedWater = fluid.isOf(Fluids.WATER) && fluid.isStill();
                     } catch (Exception e) {
                         isPlacedWater = false;
                     }
@@ -163,7 +166,13 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
             mod.getInputControls().release(Input.CLICK_RIGHT);
             mod.getExtraBaritoneSettings().setInteractionPaused(false);
         }
-        lastMLG = null;
+        // The use packet and the water/inventory updates need not arrive in the
+        // landing tick. Keep the attempted source through the existing pickup window;
+        // one temporarily missing source or empty bucket must not erase it forever.
+        if (tryCollectWaterTimer.elapsed()
+                || (lastMLG != null && lastMLG.getWaterPlacedPos() == null)) {
+            lastMLG = null;
+        }
         return Float.NEGATIVE_INFINITY;
     }
 

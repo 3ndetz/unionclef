@@ -773,8 +773,10 @@ test + full nav-suite regression before it counts done.
 - [x] **G2 dug staircase up/down** (FastPlanner.breakStair, ascend/descend with break). Added and
       nav 14/14. Note: for going UP the search rightly prefers pillaring (cheaper); breakStair is
       chosen when cutting through/down is cheaper than a detour.
-- [ ] **G3 deep descent >3 + MLG water-bucket** (raise MAX_FALL with a fall/water landing model;
+- [~] **G3 deep descent >3 + MLG water-bucket** (raise MAX_FALL with a fall/water landing model;
       wake the ported bucket path). Bench: drop into a ravine / water below.
+      Emergency rescue now handles partial supports and retrieves waterlogged sources (live-tested).
+      Planner support for intentional descents beyond three blocks remains open.
 - [ ] **G4 open-water crossing** (grid BFS swim-from-bank entry; a water route that can build).
       Bench: a pond/lake the bot must cross.
 - [x] **G5 build engine reached on any stall** (progress-based escalation after 4s no net progress),

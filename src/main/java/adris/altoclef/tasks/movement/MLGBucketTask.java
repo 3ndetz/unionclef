@@ -18,6 +18,10 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.FluidFillable;
+import net.minecraft.fluid.Fluids;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
@@ -170,14 +174,47 @@ public class MLGBucketTask extends Task {
         }
     }
 
+    /** The cell a bucket fills: inside a fluid-fillable block, above an ordinary support. */
+    private static BlockPos waterPlacementPosition(AltoClef mod, BlockPos support) {
+        BlockState state = mod.getWorld().getBlockState(support);
+        if (state.getBlock() instanceof FluidFillable fillable
+                && fillable.canFillWithFluid(mod.getPlayer(), mod.getWorld(), support, state, Fluids.WATER)) {
+            return support;
+        }
+        return support.up();
+    }
+
+    /** Conservatively require poured fluid above the support's highest collision surface. */
+    private static boolean waterCushionsLanding(AltoClef mod, BlockPos support) {
+        if (waterPlacementPosition(mod, support).equals(support)) {
+            // Bottom slabs leave room for immersion; stair tops and fences do not.
+            VoxelShape collision = mod.getWorld().getBlockState(support).getCollisionShape(mod.getWorld(), support);
+            return collision.isEmpty()
+                    || collision.getMax(Direction.Axis.Y) < Fluids.WATER.getDefaultState().getHeight();
+        }
+        return true;
+    }
+
+    private static boolean usingWaterClutch(AltoClef mod) {
+        return !DimensionVer.isUltrawarm(mod.getWorld().getDimension())
+                && mod.getItemStorage().hasItem(Items.WATER_BUCKET);
+    }
+
     private Task placeMLGBucketTask(AltoClef mod, BlockPos toPlaceOn) {
         if (!hasClutchItem(mod)) {
             setDebugState("No clutch item");
             return null;
         }
-        // If our raycast hit a non-solid block, go DOWN one.
-        if (!WorldHelper.isSolidBlock(toPlaceOn)) {
+        // A slab or stair is a landing surface too. Moving the target beneath its
+        // collision shape makes the reach ray hit that shape instead of our target,
+        // so the clutch waits until impact without ever equipping the bucket.
+        // Only a hit without collision (for example a fluid) needs the block below.
+        if (mod.getWorld().getBlockState(toPlaceOn).getCollisionShape(mod.getWorld(), toPlaceOn).isEmpty()) {
             toPlaceOn = toPlaceOn.down();
+        }
+        if (usingWaterClutch(mod) && !waterCushionsLanding(mod, toPlaceOn)) {
+            setDebugState("Steering toward a surface water can protect");
+            return null;
         }
         BlockPos willLandIn = toPlaceOn.up();
         // If we're water, we're ok. Do nothing.
@@ -214,7 +251,9 @@ public class MLGBucketTask extends Task {
             BlockPos[] toCheckLook = new BlockPos[]{toPlaceOn, toPlaceOn.up(), toPlaceOn.up(2)};
             if (hasClutch && Arrays.stream(toCheckLook).anyMatch(check -> LookHelper.isLookingAt(mod, check))) {
                 Debug.logMessage("HIT: " + willLandIn);
-                placedPos = willLandIn;
+                // Pickup must look in the filled support when the bucket waterlogs it.
+                placedPos = mod.getPlayer().getMainHandStack().isOf(Items.WATER_BUCKET)
+                        ? waterPlacementPosition(mod, toPlaceOn) : willLandIn;
                 mod.getInputControls().tryPress(Input.CLICK_RIGHT);
                 //mod.getInputControls().hold(Input.CLICK_RIGHT);
             } else {
@@ -485,6 +524,7 @@ public class MLGBucketTask extends Task {
 
     class ConeClutchContext {
         private final boolean hasClutchItem;
+        private final boolean waterClutch;
         public BlockPos bestBlock = null;
         private double highestY = Double.NEGATIVE_INFINITY;
         private double closestXZ = Double.POSITIVE_INFINITY;
@@ -494,6 +534,7 @@ public class MLGBucketTask extends Task {
 
         public ConeClutchContext(AltoClef mod) {
             hasClutchItem = hasClutchItem(mod);
+            waterClutch = usingWaterClutch(mod);
         }
 
         public void checkBlock(AltoClef mod, BlockPos check) {
@@ -504,6 +545,9 @@ public class MLGBucketTask extends Task {
                 Debug.logMessage("(MLG Air block checked for landing, the block broke. We'll try another): " + check);
                 return;
             }
+            // Do not steer toward a top surface that remains above its poured water.
+            // Apply the same placement model here and at the eventual click.
+            if (waterClutch && !waterCushionsLanding(mod, check)) return;
             boolean lava = isLava(check);
             boolean lavaWillProtect = lava && lavaWillProtect(check);
             boolean water = isWater(check);
