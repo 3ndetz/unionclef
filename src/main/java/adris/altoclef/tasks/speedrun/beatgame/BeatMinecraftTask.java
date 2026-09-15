@@ -116,6 +116,7 @@ public class BeatMinecraftTask extends Task {
     private final AltoClef mod;
     private PriorityTask lastGather = null;
     private Task lastTask = null;
+    private ClientPlayerEntity resourcePlayer = null;
     private boolean pickupFurnace = false;
     private boolean pickupSmoker = false;
     private boolean pickupCrafting = false;
@@ -1293,6 +1294,23 @@ public class BeatMinecraftTask extends Task {
 
     @Override
     protected Task onTick() {
+        // Respawn and reconnect replace the player while the user task survives.
+        // Resource commitments belong to that player's inventory and location;
+        // ordinary defence interruptions keep the same player and retain them.
+        if (resourcePlayer != mod.getPlayer()) {
+            if (resourcePlayer != null) {
+                lastTask = null;
+                lastGather = null;
+                prevLastGather = null;
+                taskChanges.clear();
+                rePickupTask = null;
+                pickupFurnace = false;
+                pickupSmoker = false;
+                pickupCrafting = false;
+                mod.log("Player replaced: re-evaluating resource tasks.");
+            }
+            resourcePlayer = mod.getPlayer();
+        }
         ItemStorageTracker itemStorage = mod.getItemStorage();
 
         double blockPlacementPenalty = 10;

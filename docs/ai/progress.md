@@ -190,3 +190,17 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - The resumed gamer retained its forced smoker task after losing every item. It spent subsequent minutes seeking three porkchops without rebuilding tools. BeatMinecraftTask keeps lastTask/lastGather across player replacement and onStart only resets timers/protection. This is the next focused investigation.
 - A long delay in a flowing-water cave was observed and self-recovered; do not label it an established permanent navigation failure.
 - Paused the natural save safely by disconnecting before stopping tasks on the flat stand. Last natural state: (83.3,97,-112.2), 20 HP, empty inventory. Current client is on test-server for the respawn regression.
+
+## 2026-09-15 — Re-evaluate resources after player replacement
+
+### Investigate
+- Disposable flat fixture reproduced the natural failure: gamer started smoker/fuel work with stone tools and eight raw porkchops; after death and loss of the kit it kept the same eight-porkchop acquisition task for every post-respawn sample. Ordinary `onStart` only reset unrelated timers, and the forced-resource branch retained the old task.
+
+### Implement
+- Tie cached resource decisions to the ClientPlayerEntity instance. Replacement on respawn/reconnect clears lastTask/lastGather, switching history and station pickup commitments before selecting work again. Ordinary task interruptions retain these decisions because the player instance is unchanged. World progression caches (portal/stronghold/dragon) are untouched.
+- `deploy/runner/respawn_resource_test.py` first checks that a client-thread interruption retains the identical resource task, then exercises a real inventory-losing respawn. Its gate is the new basic-tool resource tree, not completed crafting; the sealed fixture deliberately contains no resources.
+
+### Validate
+- Build/deploy succeeded; deployed nested jars verified by the deployment script.
+- Three trials retained the same task/player across ordinary interruption and selected wooden-pickaxe acquisition after respawn (3/3). Sampled FPS20/14/13: these are functional state-transition checks, not performance or reliability estimates.
+- Reviewed the resulting screenshot and fully decoded the recorded MP4 in workspace outputs/respawn-resources. Navigation flat/staircase/descend passed3/3 at23.7/25.3/22.3FPS, no invalid runs. No publication.
