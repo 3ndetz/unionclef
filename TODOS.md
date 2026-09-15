@@ -1,5 +1,60 @@
 # TODOs
 
+<!-- G25-G89-JAVA-DIFF-AUDIT-2026-09-15 -->
+## Audited the actual G25-G89 Java diff itself (5300+ lines, 54 files, never read for logic before) -- 2 real bugs fixed, 2 flagged for a live stand (2026-09-15)
+
+The whole-tree static scans this session (empty `//$$` stubs, `split("|")`, `nextInt(length-1)`)
+cover specific mechanical SHAPES, not general logic — they said nothing about whether the G25-G89
+batch itself (`git diff 6185bee0..3be654dd`, everything from the 2026-09-10 audit through the
+2026-09-14 stall work) introduced a NEW bug of a different shape. That diff had never been read
+end to end for logic. Split it five ways by file group and read each in full, cross-referencing
+comments, config flag defaults, and sibling code paths for internal consistency (the same
+technique that found the `deploy/runner/` bugs above). Two batches (`FastNavigator`/`MovementSwim`/
+`SwimOutTask`, and most of `FastPlanner`/`PillarTask`/`MovementPillar`/`BlockSpacePathFinder`) came
+back clean after genuinely careful tracing — a real negative result, not a skipped check.
+
+**Fixed:**
+
+- **`AbstractObjectBlacklist.blackListItem`** — `entry.deliberate = numberOfFailuresAllowed == 0`
+  was unconditional on every call, silently UNDOING a deliberate exclusion (G63b: "extra furnace",
+  "dangerous log" near a pillager — decisions that must never cool off or get handed back) the
+  moment any OTHER call site blacklists the same position for an ordinary failure. Confirmed
+  reachable, not theoretical: `DestroyBlockTask.java` calls `requestBlockUnreachable(pos, 0)` for
+  pillager-guarded white wool and the non-zero-default overload elsewhere in the same class (a
+  dead-end give-up, touching water) — the same position can hit both paths across one task's
+  lifecycle. `unreachable()`'s own comment says a deliberate verdict "stands until the brain clears
+  it"; fixed to `entry.deliberate || numberOfFailuresAllowed == 0` so a later ordinary failure can
+  never downgrade a decision already made, only `clear()` can.
+- **Four orphaned counters wired into stats** — `PathExecutor.breakOccluderQueued`,
+  `breakOccludedUnclearable` (G31) and `ownCellPlaceAsPillar`, `navResumeSkipped` (G28) existed and
+  incremented correctly but were never added to `Py4jEntryPoint`'s reset block or its stats format
+  string, unlike every sibling counter from the same batch (checked: dozens of others, e.g.
+  `walkerHeldAboveWp`, `navCeilingMined`, `pillarVineTicks`, all correctly wired). Not a false
+  PASS/FAIL, just telemetry silently accumulating forever with no way to read or reset it. Appended
+  to the tail of the format string and argument list (not inserted mid-list) specifically so no
+  existing `%d` position shifts and no other counter's binding could be silently corrupted — this
+  format string is one `String.format` call with several hundred positional arguments, and an
+  insertion in the middle would be exactly the kind of error this care is meant to prevent.
+
+**Flagged, not touched — both need a live stand or a design call, not a guess:**
+
+- **`PillarTask.PLACE_CLEARANCE = 0.05`**, whose own doc comment says *"baritone: 0.1"* and whose
+  surrounding comment block explicitly frames the whole mechanism as replicating baritone's exact
+  test ("this is that test"). Half of the cited reference value could be a deliberate tuning
+  (tighter clearance, less delay per tower step) or a transcription slip when this was ported —
+  cannot tell which without real jump-arc timing on a live client, and guessing wrong risks
+  reintroducing a milder version of the exact bug this constant exists to fix ("the tower never
+  rises"). Whoever has stand access: A/B this against `0.1` on a real tower and check `tryFalse`/
+  `dInsideCell` counts.
+- **`GetToEntityTask`'s long-haul `haulRange`** caps at `Math.min(2.0, ...)` regardless of the
+  caller's own `_closeEnoughDistance` — a sword-combat caller asking to stop at 3.5 gets driven to
+  2.0 instead, past where it asked to stop. G61's own stated goal was "the haul ends where the
+  caller's distance begins." May be intentional (handing anything past 2 blocks to cheaper
+  short-range machinery) or may be an oversight; no way to tell from the code alone.
+
+Compile-verified: `:1.21.1:compileJava` and `:1.21.11:compileJava` both BUILD SUCCESSFUL for both
+fixes, exit 0. Neither is stand-verified (no docker exec from this sandbox).
+
 <!-- NEW-DEPLOY-BENCHES-AUDIT-2026-09-15 -->
 ## Audited the 39 deploy/runner bench scripts added since the original 85-file audit -- 5 real bugs, all in the test scripts themselves (2026-09-15)
 
