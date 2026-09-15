@@ -188,6 +188,13 @@ public final class PlayerFit {
                 Math.max(from.getZ(), to.getZ()) + 0.5 + HALF));
     }
 
+    /** The destination column swept while leaving a ledge and falling to its floor. */
+    public static boolean descentClear(WorldView world, int x, int z,
+                                       double departureY, double landingY) {
+        return boxFits(world, new Box(x + 0.5 - HALF, landingY, z + 0.5 - HALF,
+                x + 0.5 + HALF, departureY + HEIGHT, z + 0.5 + HALF));
+    }
+
     /**
      * Surface height the player would stand on inside this cell, or NaN when
      * there is nothing to stand on. A bottom slab / snow layer / carpet INSIDE

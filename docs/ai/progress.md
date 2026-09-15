@@ -204,3 +204,23 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Build/deploy succeeded; deployed nested jars verified by the deployment script.
 - Three trials retained the same task/player across ordinary interruption and selected wooden-pickaxe acquisition after respawn (3/3). Sampled FPS20/14/13: these are functional state-transition checks, not performance or reliability estimates.
 - Reviewed the resulting screenshot and fully decoded the recorded MP4 in workspace outputs/respawn-resources. Navigation flat/staircase/descend passed3/3 at23.7/25.3/22.3FPS, no invalid runs. No publication.
+
+## 2026-09-15 — Descend under a low ceiling
+
+### Investigate
+- Reproduced the missing Baritone MovementDescend head block: source(1600,-59,320), landing(1601,-60,320), stone at(1601,-58,320). Old planner returned a complete walk-only route with no toBreak; the player stayed at x1600.7 against that roof for the full30-second sample. MP4 and screenshot reviewed.
+- FastPlanner.step's old-height clearance test was commented out after an earlier nav_gaps regression. breakStair(-1) omitted dest.up(2), and deeper descents had no priced clearance variant.
+
+### Implement
+- PlayerFit.descentClear checks the full destination body column from landing feet through departure head using real shapes. Invalid walk-only descents are rejected.
+- Extend cardinal breakStair descents through MAX_FALL, include the entire swept head column, price actual fall depth, and retain slab support/overhead shapes outside that vertical envelope. Existing break permissions and mining cost checks remain in force.
+
+### Validate so far
+- Current final clean build deployed to tester1. Stone descents1/2/3 each passed with the upper block present in toBreak, removed in game, and20HP. Top-slab descent passed after fixing test setup to heal AFTER teleport (the preceding attempt began at19HP during fixture reconstruction).
+- The passage gate now requires the entire body beyond the roof column and a grounded landing, not exact-cell arrival. A previous slab attempt stopped at1602.8 for a1603 target; exact stopping and unnecessary post-mining jumps/turns remain unverified problems, not fixed by this patch.
+- Final matrix: stone drops1/2/3, top slab, landing slab, open passage, bedrock roof and breaking-disabled roof passed8/8 functional cases. Negative cases rejected the complete route and retained20HP. Nineclips (including the invalid initial slab fixture) fully decoded; representative frames inspected.
+- Navigation flat/staircase/descend/bridge/gaps/wall2/notch ended7/7PASS at18.4–29.3FPS. The first bridge attempt fell outside the arena and was markedINVALID; its automatic retry on recreated clients passed. The invalid attempt is retained in /private/tmp/descent-nav.log; the runner overwrote its per-course timeline on retry, so its cause cannot be attributed. Do not report this as an unqualified first-attempt7/7.
+- Recorded the tail of the navigation audit separately; no publication. Exact-cell stopping and repeated jumps remain open.
+
+### Natural survival death evidence clarified
+- gamer-server /data/logs/latest.log identifies the two recent deaths:09:58:53UTC blown up by Creeper;10:06:53UTC slain by Enderman. This supersedes the earlier unknown-cause notes only. It does not establish whether the Enderman was provoked by gaze or an attack, or why defence failed.

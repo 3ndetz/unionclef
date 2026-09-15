@@ -812,7 +812,8 @@ public final class FastPlanner {
         if (TungstenConfig.get().moveStaircase) {
             for (int[] d : CARDINALS) {
                 breakStair(world, from, d[0], d[1], 1, goal, map, open, scratch);
-                breakStair(world, from, d[0], d[1], -1, goal, map, open, scratch);
+                for (int depth = 1; depth <= MAX_FALL; depth++)
+                    breakStair(world, from, d[0], d[1], -depth, goal, map, open, scratch);
             }
         }
         special(world, from, goal, map, open, scratch);
@@ -1207,37 +1208,13 @@ public final class FastPlanner {
                 cntClimb++;
                 continue;
             }
-            // WALKING OFF A LIP HAPPENS AT THE OLD HEIGHT. Only the landing was checked — the body
-            // at the destination SURFACE — but the horizontal half of a step down is taken while
-            // still standing on this side, and a 0.6-wide box overlaps the destination column
-            // before it is over the edge. So that column must accept the body at OUR feet height
-            // too, i.e. one cell higher than anything tested here: dest.above(2). A ceiling there
-            // stops the step outright (a sneaking body is 1.5 tall — it does not fit either), which
-            // is the stepped 2-high tunnel and the overhang.
-            //
-            // It is also exactly what the executor declares and gates on: MovementDescend's
-            // positionsToBreak are {dest.above(2), dest.above(), dest} (MovementDescend.java:49) and
-            // MovementFall's column starts at src.above() (MovementFall.java:119-121) — cells
-            // Movement.prepared() (Movement.java:434-473) MINES before the step may run, and reports
-            // UNREACHABLE when it cannot. The planner modelled none of that, so it emitted a walk
-            // and the executor answered by digging out a ceiling nobody had priced.
-            //
-            // Deeper drops need no further cells: this loop takes the NEAREST standable level, so
-            // every level it skipped was skipped BECAUSE the cell below it was not solid.
-            // ⛔ MEASURED AND REVERTED, 2026-08-02. Requiring the destination column to accept the
-            // body at OUR feet height as well took nav from 12/12 to 10/12 — nav_gaps went red —
-            // and that is the predicted failure: with no break-and-descend generator (breakThrough
-            // handles same-level cardinal steps only) the check does not make a bad step better,
-            // it makes the step unplannable and the course has no route at all. The reasoning
-            // behind it stands and the executor really does declare dest.above(2); the missing
-            // half is a descend variant of breakThrough that puts that cell in toBreak and PRICES
-            // it. Until that exists this stays off, because "no path" is worse than "a path that
-            // has to dig".
-            //
-            // if (top < support && !PlayerFit.bodyFits(world, nx + 0.5, support, nz + 0.5)) {
-            //     cntClimb++;
-            //     continue;
-            // }
+            // A descent starts at the old height, before the body clears the lip.
+            // Baritone's descend/fall moves clear from source head to landing feet.
+            // Blocked columns are offered separately by the priced digging move.
+            if (rise < 0 && !PlayerFit.descentClear(world, nx, nz, support, top)) {
+                cntClimb++;
+                continue;
+            }
             cntClimb++;
             if (rise > PlayerFit.STEP_HEIGHT) {
                 // needs a jump: head clearance above the origin cell
@@ -1407,7 +1384,7 @@ public final class FastPlanner {
      * MovementAscend/MovementDescend break variants — docs/BARITONE-GAPS.md G2). step()'s ascend
      * needs the destination body-space already clear; this cuts UP through a hill (break the cell
      * above your head + the destination feet/head) or DOWN through an overhang, so the search can
-     * carve a route rather than only tunnel flat. dyStep = +1 (up) or -1 (down).
+     * carve a route rather than only tunnel flat. dyStep = +1 or -1..-MAX_FALL.
      */
     private static void breakStair(WorldView world, Node from, int dx, int dz, int dyStep,
                                    BlockPos goal, NodeMap map, Heap open, BlockPos.Mutable scratch) {
@@ -1418,16 +1395,34 @@ public final class FastPlanner {
         int nx = from.x + dx, nz = from.z + dz, ny = from.y + dyStep;
         // Destination feet = (nx, ny, nz); must have a solid floor to stand on below it.
         scratch.set(nx, ny, nz);
-        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) return;
+        double landing = PlayerFit.supportTop(world, scratch);
+        if (Double.isNaN(landing)) return;
+        double departure = PlayerFit.supportTop(world, new BlockPos(from.x, from.y, from.z));
+        if (dyStep < 0 && (Double.isNaN(departure) || landing >= departure
+                || departure - landing > MAX_FALL
+                || hazardAt(world, nx, ny - 1, nz, scratch))) return;
 
         // Cells whose stone blocks the manoeuvre and must be mined:
         //  - going UP: the ceiling above the origin head (from.y+2) to rise, plus the dest feet
         //    (ny) and dest head (ny+1);
-        //  - going DOWN: the dest head (ny+1 == from.y) and dest feet (ny) to walk into and drop.
+        //  - going DOWN: the entire destination column from source head to landing feet,
+        //    including dest.up(2) for a full-block step (Baritone MovementDescend).
         java.util.List<BlockPos> cells = new java.util.ArrayList<>(3);
-        if (dyStep > 0) cells.add(new BlockPos(from.x, from.y + 2, from.z));  // mine the ceiling to jump up
-        cells.add(new BlockPos(nx, ny + 1, nz));   // destination head
-        cells.add(new BlockPos(nx, ny, nz));       // destination feet
+        if (dyStep > 0) {
+            cells.add(new BlockPos(from.x, from.y + 2, from.z));
+            cells.add(new BlockPos(nx, ny + 1, nz));
+            cells.add(new BlockPos(nx, ny, nz));
+        } else {
+            for (int y = (int) Math.ceil(departure + PlayerFit.HEIGHT) - 1; y >= ny; y--) {
+                BlockPos cell = new BlockPos(nx, y, nz);
+                var shape = world.getBlockState(cell).getCollisionShape(world, cell);
+                // Keep landing slabs and shapes entirely above the swept body.
+                if (!shape.isEmpty() && (y + shape.getMax(net.minecraft.util.math.Direction.Axis.Y) <= landing
+                        || y + shape.getMin(net.minecraft.util.math.Direction.Axis.Y) >= departure + PlayerFit.HEIGHT))
+                    continue;
+                cells.add(cell);
+            }
+        }
         List<BlockPos> plan = new ArrayList<>();
         double ticks = 0;
         for (BlockPos cell : cells) {
@@ -1443,7 +1438,8 @@ public final class FastPlanner {
         }
         if (plan.isEmpty()) return;   // nothing to cut -> it is a plain ascend/descend, step() owns it
         double cost = ActionCosts.WALK_ONE_BLOCK_COST
-                + (dyStep > 0 ? ActionCosts.JUMP_PENALTY : ActionCosts.FALL_ONE_BLOCK_COST)
+                + (dyStep > 0 ? ActionCosts.JUMP_PENALTY
+                        : ActionCosts.FALL_ONE_BLOCK_COST * (departure - landing))
                 + ticks * TungstenConfig.get().breakCostMultiplier;
         cntBreak++;
         relax(map, open, from, nx, ny, nz, cost, goal, true, plan);
