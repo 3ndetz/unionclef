@@ -1926,7 +1926,7 @@ public class PathFinder {
         	TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);   // G87: orElseGet(null) threw on an empty guide
         }
-        TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
+        TungstenModDataContainer.EXECUTOR.queueBreakingAfterPath(pendingBreaks);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
 		long endTime = System.currentTimeMillis();
 		long elapsedTime = endTime - startTime;
@@ -1977,7 +1977,7 @@ public class PathFinder {
             resetEmitNodes += path.size();
             TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);   // G87: orElseGet(null) threw on an empty guide
-            TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
+            TungstenModDataContainer.EXECUTOR.queueBreakingAfterPath(pendingBreaks);
             }
             TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
@@ -2099,7 +2099,7 @@ public class PathFinder {
         // was meant.
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);   // G87: orElseGet(null) threw on an empty guide
-        TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
+        TungstenModDataContainer.EXECUTOR.queueBreakingAfterPath(pendingBreaks);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
         // Continue A* from the last node of the emitted path — don't reset the
         // entire search. This allows pathfinder to keep computing while executor

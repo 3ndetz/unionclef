@@ -312,3 +312,24 @@ The probe accepts arbitrary start/destination coordinates for another existing f
 - Final ownership fixture matrix passed5/5: two hungry mining ambushes, one fed ambush, normal wall hunt and open hunt. Each ambush recorded one explicit handover and returned6 cobblestone; hungry minHP14/20, fed20. All five videos decoded. One sword transition in the second hungry case occurred after x1848 (wall ended1846), during a retained queue's settling; it is not a cancelled dig.
 - Navigation audit ended6/6PASS(flat,stairs,descend,bridge,gaps,notch),23.6–29FPS,no invalid attempts. Bridge first attempt FAILED at healthy28.2FPS: crossed, declared arrival then coasted to25.62 for goal23, outside2.5 tolerance; retry passed. First attempt copied to workspace outputs/hunt-tunnel/bridge-first-failure before overwrite, screenshot inspected. Combat cancellation count stayed3, unchanged from the three ambushes. Do not claim an unqualified first-attempt6/6 or that retry explains the cause.
 - This closes the reproduced hunger/queued-mining defence mechanism, not all combat, current-water safety, exact stopping, or game completion. Integrating upstream next; no publication or Telegram retry.
+
+## 2026-09-15 — Preserve the approach before a queued dig
+
+### Investigate
+- Natural hunt logs previously showed emitted approach paths immediately followed by out-of-reach mining. Three PathFinder delivery sites set/append a replay and then called startBreaking, which replaces it with an empty path.
+- Isolated executor probe:2 replay nodes before startBreaking,0 afterward,queue present. Live far-wall baseline:player remained1902.5,stone at1909 stayed closed,and breakAbortReach incremented within0.212s. Video decoded.
+
+### Implement
+- queueBreakingAfterPath initializes the mining job without touching replay/index/arming; the three replay-delivery sites use it. startBreaking remains the immediate at-wall API. Explicit combat cancellation also clears the newly merged per-cell watchdog target.
+- Upstream70a0a127 merged as2ceecc63 after ownership fix caac6a79. The joint build is compiling; no fixed physical result yet.
+- Added deferred_mining_test.py with far/immediate variants, raw approach/mining/abort samples, restored geometry/settings and recording.
+
+### Validation
+- Clean build/deploy succeeded with upstream watchdog included; nested jars matched. First fixed far-wall run approached1908.7 and mined both blocks without any reach abort, but FAILED its full-goal gate because raw physics resumeUsesSearchTarget was false. Preserve this as-run failure; it is not full arrival.
+- The fixture now explicitly enables/restores resumeUsesSearchTarget for its raw PathFinder entry. With it, full far-wall traversal passed, and the checked-in replay passed4.42s with2 separately sized mining cells,20HP,zero reach/timeout aborts. Immediate-wall control passed3.24s.
+- Two obsidian blocks with a diamond pickaxe passed21.29s,20HP,zero timeouts; budgetCells advanced1 at0.11s and2 at9.864s. This exercises a combined dig longer than the old queue-wide300-tick watchdog. All five fixed/control videos decoded.
+- Isolated executor probe confirmed deferred delivery preserves2 nodes and tick1, while immediate start resets to0 nodes/tick0. Initial probe used public-field reflection for a private tick and failed before assertion; corrected to declared-field access.
+- One-block-high ascent clearance replay passed2/2 on the joint build,20HP,three planned/removed head blocks. Video decoded and mining frame inspected. Merged hungry ambush and final navigation audit pending.
+
+- Final joint-build hungry ambush passed:one explicit handover,minHP17,hunger8->20,6cobblestone,both targets dead;video decoded.
+- Final navigation audit passed3/3(nav_break,nav_gaps,nav_wall2),24.8/26.6/28.8FPS,no invalid attempts. Artifacts20260915-134546. Proceeding to natural survival; complex partial approaches remain unverified.

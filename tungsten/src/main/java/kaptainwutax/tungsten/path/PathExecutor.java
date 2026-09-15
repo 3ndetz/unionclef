@@ -83,12 +83,18 @@ public class PathExecutor {
                 breakingTicks);
     }
 
-    public void startBreaking(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
+    /** Queue mining after the current replay, preserving its index and armed state. */
+    public void queueBreakingAfterPath(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
         breakQueue = blocks == null ? null : new java.util.ArrayList<>(blocks);
         breakingTicks = 0;
         breakBudgetTarget = null;
         settleTicks = 0;
         stop = false;
+    }
+
+    /** Start a dig at the current position without an approach replay. */
+    public void startBreaking(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
+        queueBreakingAfterPath(blocks);
         // AND PUT THE EXECUTOR WHERE IT WILL ACTUALLY RUN THE JOB. Mining only happens inside
         // the "segment finished" branch (tick == path.size()), and the caller only ticks this
         // class at all while it HAS a path. Finishing a segment nulls the path and leaves tick
@@ -117,6 +123,7 @@ public class PathExecutor {
         breakQueue = null;
         placeQueue = null;
         breakingTicks = 0;
+        breakBudgetTarget = null;
         settleTicks = 0;
         placingTicks = 0;
         placingNow = false;
