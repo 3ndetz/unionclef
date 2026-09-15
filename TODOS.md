@@ -1,5 +1,51 @@
 # TODOs
 
+<!-- HAUL-RANGE-CEILING-STRONGER-EVIDENCE-2026-09-15 -->
+## GetToEntityTask's haulRange cap: stronger evidence found, still not fixed blind (2026-09-15)
+
+The earlier diff-audit entry flagged this as "may be intentional, may be an oversight." Checked
+`TungstenConfig.entityHaulToCallerDistance`'s own javadoc (the flag that gates this exact
+calculation) for a documented reason and found none — its stated design is explicit: *"the haul...
+runs until the target is inside the CALLER's own distance (a block for a kill, never tighter), not
+to a fixed 3.5."* Only a 1.0 floor is documented ("never tighter"); no ceiling is mentioned at all.
+The code's `Math.min(2.0, ...)` contradicts that doc comment directly — a caller asking to stop at
+more than 2 blocks (real examples exist: `CollectEggsTask` passes 5, `BedWarsTask`'s teammate
+approach passes 4) gets driven to 2.0 instead of its own requested distance, which is a version of
+the exact "dead zone" G61 was written to close, just relocated to a different threshold (2.0 to
+whatever the caller actually wanted) instead of removed.
+
+**Still not fixed**, deliberately: this sits on the primary entity-approach path used by combat,
+pickup, and several other tasks broadly, and removing the ceiling is a real behavior change with
+no way to verify it here (no live stand). Stronger textual evidence than before, but "the doc
+comment and the code disagree" is not the same certainty as "I traced the actual gameplay
+consequence," and this codebase has already paid once for exactly that kind of guess (see the
+`MEASURED AND REVERTED, 2026-08-02` comment in `FastPlanner.java`, cited in an earlier entry).
+Named the bare `2.0` as `HAUL_RANGE_CEILING` with a comment stating the contradiction precisely, so
+whoever has stand access can decide with one grep instead of re-deriving this. `:1.21.1:`/
+`:1.21.11:compileJava` both BUILD SUCCESSFUL — this is a comment/naming change only, no behavior
+difference from before.
+
+<!-- PLACE-CLEARANCE-MADE-LIVE-TUNABLE-2026-09-15 -->
+## The PLACE_CLEARANCE question is now A/B-testable without a rebuild, zero behavior change (2026-09-15)
+
+The `G25-G89-DIFF-AUDIT` pass (below) flagged `PillarTask.PLACE_CLEARANCE = 0.05` against its own
+cited baritone reference of 0.1 as needing a live client to settle, not a guess. Rather than leave
+that as a note someone has to remember to test, moved the constant into
+`TungstenConfig.placeClearance` (same default, 0.05 — this change alone alters nothing about how
+the bot plays) so whoever eventually has stand access can flip it with `;settings placeClearance
+0.1` and compare `tryFalse`/`dInsideCell` counts against the shipping default, entirely from chat,
+no code edit or rebuild required. `PillarTask.java` now reads `TungstenConfig.get().placeClearance`
+at the one call site instead of its own private constant.
+
+This is the same category of move as `breakCostMultiplier`/`placeCostMultiplier`, already
+live-tunable config fields for analogous open tuning questions — matching an established pattern,
+not inventing a new one.
+
+Verified: `:1.21.1:compileJava` and `:1.21.11:compileJava` both BUILD SUCCESSFUL, exit 0, fresh
+recompile. Not stand-verified in the sense that matters here — the actual A/B test this unlocks
+still needs a live client, which is the whole point of doing this now rather than waiting for
+someone to remember the question exists.
+
 <!-- G12-SCOPE-NARROWED-NOT-ATTEMPTED-2026-09-15 -->
 ## G12 (doors/gates), narrowed precisely so the next attempt doesn't start from scratch (2026-09-15)
 

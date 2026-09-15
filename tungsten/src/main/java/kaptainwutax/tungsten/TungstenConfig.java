@@ -2684,6 +2684,19 @@ public class TungstenConfig {
     public boolean towerMinesItsCeiling = true;
 
     /**
+     * How far above a pillar cell's own top the feet must rise before a click is attempted
+     * (`PillarTask.PLACE_CLEARANCE`, moved here 2026-09-15 so it can be A/B tested live instead
+     * of needing a rebuild). Baritone's own value is 0.1 (`player.y > dest.y + 0.1`,
+     * MovementPillar.java) — this was ported at 0.05, half of that, and nobody has verified from
+     * a live client whether the tighter margin is a deliberate tuning (places sooner, less delay
+     * per tower step) or a transcription slip from the port. Left at the value already shipping
+     * (0.05) so moving this constant here changes NOTHING by itself; whoever has stand access can
+     * flip it to 0.1 via `;settings placeClearance 0.1` and compare `tryFalse`/`dInsideCell`
+     * counts against the current default without touching code.
+     */
+    public double placeClearance = 0.05;
+
+    /**
      * G58 (2026-09-11): before a goal below is given up for want of a partial (G49), a search that
      * spent its whole time budget is run once more with four times the budget. The 19:34
      * recording stood ninety seconds on a cliff above a drop: 7000 nodes in 251 ms of 250 every
