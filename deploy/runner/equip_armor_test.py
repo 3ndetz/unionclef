@@ -20,6 +20,7 @@ Needs the flat stand up (uctest-server + uctest-mc-tester1). Talks py4j through
 """
 import functools
 import json
+import re
 import subprocess
 import sys
 import time
@@ -99,7 +100,14 @@ def main():
     after = equipment()
     print(f"task active after {time.time() - t0:.0f}s: {active}")
     print("equipment after:", after)
-    missing = [s for s, p in zip(SLOTS, PIECES) if not (s in after and p in after)]
+    # ⛔ BUG FOUND 2026-09-15: `s in after and p in after` only checks that the slot name and the
+    # piece name each appear SOMEWHERE in the whole equipment blob, not that the piece is IN that
+    # slot -- so a cross-slot swap (helmet landed in the chest slot, chestplate in the head slot)
+    # would pass, because "head:" and "iron_helmet" are both present in the text, just not next to
+    # each other. That is exactly the original bug this test exists to catch (every piece forced
+    # into CHEST). Pair each slot with the item id actually inside ITS OWN braces instead.
+    missing = [s for s, p in zip(SLOTS, PIECES)
+               if not re.search(re.escape(s) + r'\s*\{[^{}]*"minecraft:' + re.escape(p) + r'"', after)]
     if missing:
         print("chat:", py4j("chat", n=12)["chat"][-8:])
         print("FAIL: not worn:", missing)

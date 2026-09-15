@@ -131,7 +131,11 @@ def main():
     a = phase("one deep", X + 40, 1)
     b = phase("two deep", X, 2)
     c = phase("three deep", X + 20, 3)
-    rcon(f"forceload remove {X-12} {Z-12} {X+40} {Z+12}")
+    # ⛔ BUG FOUND 2026-09-15: this used to say X+40, not matching the `forceload add` above
+    # (X+60) -- the "one deep" phase's own scene extends to (X+40)+8 = X+48, past even that wrong
+    # bound, so every run left a ~20-block-wide strip of chunks (including part of its own scene)
+    # permanently force-loaded on the server. Remove must bound the exact same region add did.
+    rcon(f"forceload remove {X-12} {Z-12} {X+60} {Z+12}")
     if a and b and c:
         print("PASS: walked into the one-wide shaft and took the drop, all three depths"); return 0
     print("FAIL"); return 1

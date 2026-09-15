@@ -114,7 +114,12 @@ def phase_a():
     x = X
     clear_area(x)
     time.sleep(1)
-    ready_bot(x)
+    # ⛔ BUG FOUND 2026-09-15: ready_bot's return value was discarded here -- its own docstring
+    # says a bot that would not stay on the arena makes "every verdict after that worthless", but
+    # nothing acted on that. Fail the phase outright rather than run a worthless verdict.
+    if not ready_bot(x):
+        print("[A] FAIL: bot never settled on the arena, not running the phase")
+        return False
     rcon(f"clear {BOT}"); rcon(f"give {BOT} minecraft:stone_sword")
     time.sleep(1)
     rcon(f"summon minecraft:pig {x+6.5} {GROUND+1} {Z+0.5} {{NoAI:1b}}")
@@ -148,7 +153,9 @@ def phase_b():
     x = X + 60
     clear_area(x)
     time.sleep(1)
-    ready_bot(x)
+    if not ready_bot(x):
+        print("[B] FAIL: bot never settled on the arena, not running the phase")
+        return False
     rcon(f"clear {BOT}")
     time.sleep(1)
     # the unreachable one, two blocks away, sealed; the reachable one twenty blocks off
