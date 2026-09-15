@@ -1,5 +1,26 @@
 # TODOs
 
+<!-- ORIGIN-1211-BRANCH-FAST-FORWARDED-2026-09-15 -->
+## Housekeeping closed: `origin/1.21.11` fast-forwarded to `main`, no longer 792 commits stale (2026-09-15)
+
+The 2026-09-10 stand-report entry below flagged this as unfinished: `origin/1.21.11` sat 792
+commits behind `main` (everything since v0.93.0), and `build.gradle`'s `githubRelease` task tags
+releases on `targetCommitish = "1.21.11"` — meaning the next release would have tagged 29-August
+source under a September jar, silently shipping a release whose git tag points at stale code even
+though the actual built artifact is current. Someone had already brought it partway forward by
+2026-09-10 itself (last commit on that branch, `98e90a42`, is the same day as the audit), but
+nothing had touched it since — it had drifted 52 commits behind `main` again by today.
+
+Checked it was a genuine fast-forward before touching it (`git merge-base --is-ancestor
+origin/1.21.11 origin/main`, confirmed yes — no divergent commits on that branch that a
+fast-forward would discard), then `git push origin main:1.21.11`. Both branches now point at the
+identical commit (`f3196f47` at push time); re-fetched and confirmed zero commits either
+direction. The `docs/releases/base.md` Shredder `#goto`/`#stop` item from the same housekeeping
+list is also already gone — checked, zero hits, already fixed by someone else since 09-10, no
+action needed. `gh` is confirmed absent from this sandbox (command not found, not a `PATH` issue),
+so issues #20/#21 remain not-closeable from here, same standing block as every prior session that
+checked.
+
 <!-- REMAINING-G-ITEMS-TRIAGED-2026-09-15 -->
 ## What's left of docs/BARITONE-GAPS.md's G6-G14, triaged so nobody re-derives this blind (2026-09-15)
 
