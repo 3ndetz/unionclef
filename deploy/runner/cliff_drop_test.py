@@ -151,9 +151,13 @@ def main():
     rcon(f"forceload remove {X-20} {Z-20} {X+24} {Z+20}")
     flaws = {k: v for k, v in bad.items() if v}
     print(f"result: iron={got} stillSamples={still} flaws={flaws or 'none'}")
-    if got:
-        print("PASS: went down the cliff and took the drop")
+    if got and not flaws:
+        print("PASS: went down the cliff and took the drop, no giving-up/blacklisting")
         return 0
+    if got:
+        print(f"FAIL: got the drop but with flaws {flaws} -- the docstring's own bar "
+              "(no 'giving the route up', no blacklisting) was not met")
+        return 1
     print(f"FAIL: the drop {DEPTH} blocks below was never collected")
     return 1
 

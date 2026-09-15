@@ -114,10 +114,14 @@ def main():
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
     print(f"result: cobblestone={got} lowestY={lowest:.0f} (start {y0:.0f}) physics-handoffs={deadends} "
           f"shimmies={shimmies} mining-aborts={aborts}")
-    if got and deadends == 0 and shimmies == 0:
+    # ⛔ BUG FOUND 2026-09-15: `aborts` (docstring's own named symptom, "Mining aborted: ticks=1
+    # dist=5.19" -- G34's whole signature: a break run wrongly handed to the physics engine) was
+    # counted and printed but never gated on, so a run showing the regression this bench exists
+    # to catch could still report PASS if it eventually limped through anyway.
+    if got and deadends == 0 and shimmies == 0 and aborts == 0:
         print("PASS: walked the terrace and dug to the stone, navigator-owned"); return 0
     if got:
-        print("FAIL (soft): got there, but via a physics hand-off or a shimmy"); return 1
+        print("FAIL (soft): got there, but via a physics hand-off, a shimmy, or a mining abort"); return 1
     print("FAIL: never reached the stone"); return 1
 
 

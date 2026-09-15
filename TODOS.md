@@ -1,5 +1,113 @@
 # TODOs
 
+<!-- G25-G89-JAVA-DIFF-AUDIT-2026-09-15 -->
+## Audited the actual G25-G89 Java diff itself (5300+ lines, 54 files, never read for logic before) -- 2 real bugs fixed, 2 flagged for a live stand (2026-09-15)
+
+The whole-tree static scans this session (empty `//$$` stubs, `split("|")`, `nextInt(length-1)`)
+cover specific mechanical SHAPES, not general logic — they said nothing about whether the G25-G89
+batch itself (`git diff 6185bee0..3be654dd`, everything from the 2026-09-10 audit through the
+2026-09-14 stall work) introduced a NEW bug of a different shape. That diff had never been read
+end to end for logic. Split it five ways by file group and read each in full, cross-referencing
+comments, config flag defaults, and sibling code paths for internal consistency (the same
+technique that found the `deploy/runner/` bugs above). Two batches (`FastNavigator`/`MovementSwim`/
+`SwimOutTask`, and most of `FastPlanner`/`PillarTask`/`MovementPillar`/`BlockSpacePathFinder`) came
+back clean after genuinely careful tracing — a real negative result, not a skipped check.
+
+**Fixed:**
+
+- **`AbstractObjectBlacklist.blackListItem`** — `entry.deliberate = numberOfFailuresAllowed == 0`
+  was unconditional on every call, silently UNDOING a deliberate exclusion (G63b: "extra furnace",
+  "dangerous log" near a pillager — decisions that must never cool off or get handed back) the
+  moment any OTHER call site blacklists the same position for an ordinary failure. Confirmed
+  reachable, not theoretical: `DestroyBlockTask.java` calls `requestBlockUnreachable(pos, 0)` for
+  pillager-guarded white wool and the non-zero-default overload elsewhere in the same class (a
+  dead-end give-up, touching water) — the same position can hit both paths across one task's
+  lifecycle. `unreachable()`'s own comment says a deliberate verdict "stands until the brain clears
+  it"; fixed to `entry.deliberate || numberOfFailuresAllowed == 0` so a later ordinary failure can
+  never downgrade a decision already made, only `clear()` can.
+- **Four orphaned counters wired into stats** — `PathExecutor.breakOccluderQueued`,
+  `breakOccludedUnclearable` (G31) and `ownCellPlaceAsPillar`, `navResumeSkipped` (G28) existed and
+  incremented correctly but were never added to `Py4jEntryPoint`'s reset block or its stats format
+  string, unlike every sibling counter from the same batch (checked: dozens of others, e.g.
+  `walkerHeldAboveWp`, `navCeilingMined`, `pillarVineTicks`, all correctly wired). Not a false
+  PASS/FAIL, just telemetry silently accumulating forever with no way to read or reset it. Appended
+  to the tail of the format string and argument list (not inserted mid-list) specifically so no
+  existing `%d` position shifts and no other counter's binding could be silently corrupted — this
+  format string is one `String.format` call with several hundred positional arguments, and an
+  insertion in the middle would be exactly the kind of error this care is meant to prevent.
+
+**Flagged, not touched — both need a live stand or a design call, not a guess:**
+
+- **`PillarTask.PLACE_CLEARANCE = 0.05`**, whose own doc comment says *"baritone: 0.1"* and whose
+  surrounding comment block explicitly frames the whole mechanism as replicating baritone's exact
+  test ("this is that test"). Half of the cited reference value could be a deliberate tuning
+  (tighter clearance, less delay per tower step) or a transcription slip when this was ported —
+  cannot tell which without real jump-arc timing on a live client, and guessing wrong risks
+  reintroducing a milder version of the exact bug this constant exists to fix ("the tower never
+  rises"). Whoever has stand access: A/B this against `0.1` on a real tower and check `tryFalse`/
+  `dInsideCell` counts.
+- **`GetToEntityTask`'s long-haul `haulRange`** caps at `Math.min(2.0, ...)` regardless of the
+  caller's own `_closeEnoughDistance` — a sword-combat caller asking to stop at 3.5 gets driven to
+  2.0 instead, past where it asked to stop. G61's own stated goal was "the haul ends where the
+  caller's distance begins." May be intentional (handing anything past 2 blocks to cheaper
+  short-range machinery) or may be an oversight; no way to tell from the code alone.
+
+Compile-verified: `:1.21.1:compileJava` and `:1.21.11:compileJava` both BUILD SUCCESSFUL for both
+fixes, exit 0. Neither is stand-verified (no docker exec from this sandbox).
+
+<!-- NEW-DEPLOY-BENCHES-AUDIT-2026-09-15 -->
+## Audited the 39 deploy/runner bench scripts added since the original 85-file audit -- 5 real bugs, all in the test scripts themselves (2026-09-15)
+
+The original `deploy/` audit (documented earlier in this file) covered 85 files as of early
+September. Since then the G25-G89 work added 39 more bench scripts (`carpet_tower_test.py`,
+`slot_ban_test.py`, `drop_fall_test.py`, `equip_armor_test.py`, and so on — `git log
+--diff-filter=A --since=2026-09-08 -- deploy/runner/*.py` lists all 39), none of which had ever
+been read for logic, only relied on by name in the TODOS entries above. `python3 -m py_compile`
+across all 39: clean, no syntax errors. Read every one in full for logic (not just syntax) using
+three parallel passes; found and fixed five real bugs, all of the same shape as the original
+audit's findings — a test that can report the WRONG verdict, not a bug in the bot itself, which
+matters exactly as much: a false PASS hides a real regression, a false FAIL wastes someone's time
+chasing a phantom.
+
+- **`cliff_drop_test.py`** — the PASS branch (`if got:`) ignored the `flaws` dict entirely, even
+  though the file's own docstring states the bar explicitly: *"PASS = the ingot in the inventory
+  within the window, with no 'giving the route up' and no blacklisting of the drop."* Every
+  sibling bench with the identical structure (`canopy_drop_test.py`, `buried_goal_test.py`) gates
+  on `got and not flaws`; this one didn't. Fixed to match, and a run that gets the item WITH flaws
+  now reports FAIL with the flaws named, not a silent PASS.
+- **`equip_armor_test.py`** — `missing = [... if not (s in after and p in after)]` checked only
+  that the slot name and the piece name each appear SOMEWHERE in the whole equipment text blob,
+  not that the piece is inside THAT slot specifically. A cross-slot swap (helmet in the chest
+  slot, chestplate in the head slot) would pass, because both substrings exist in the text, just
+  not adjacent — which is exactly the shape of the original bug this test exists to catch (every
+  armor piece forced into CHEST, fixed in `7aea6ea4`). Fixed with a regex anchored to each slot's
+  own braces (`re.search(slot + r'\s*\{[^{}]*"minecraft:' + piece + '"', after)`); verified against
+  both a correct sample and a synthetic swapped sample before committing (the fix correctly passes
+  one and flags the other).
+- **`narrow_shaft_test.py`** — `forceload add {X-12} {Z-12} {X+60} {Z+12}` at the top,
+  `forceload remove {X-12} {Z-12} {X+40} {Z+12}` at the bottom — the remove bound didn't match the
+  add bound, and the "one deep" phase's own scene (built at `X+40`, spanning to `X+48`) sits
+  partly inside the gap. Every run of this bench left roughly a 20-block-wide strip of chunks
+  (including part of its own built scene) permanently force-loaded on the server. Fixed by making
+  remove match add exactly.
+- **`target_returns_test.py`** — `ready_bot(x)`'s return value was discarded at both of its call
+  sites (`phase_a`, `phase_b`), even though the function's own docstring says outright that a bot
+  which "would not stay on the arena" makes "every verdict after that... worthless." Both phases
+  ran their full scenario and produced a real PASS/FAIL verdict regardless of whether setup
+  actually succeeded. Fixed: each phase now fails immediately, with a named reason, if
+  `ready_bot` returns false, instead of running a worthless verdict to completion.
+- **`dig_terrace_test.py`** — `aborts` (a counter of "Mining aborted" lines — the exact symptom
+  string this bench's own docstring names as the G34 regression's signature) was tracked and
+  printed in the result summary but never included in the PASS/FAIL gate
+  (`if got and deadends == 0 and shimmies == 0`). A run exhibiting the regression's own named
+  symptom, that eventually limped through anyway, could still report PASS. Added `aborts == 0` to
+  the gate.
+
+All five verified with `python3 -m py_compile` after the fix; none of these can be run from this
+sandbox (all need the live stand, `pac-dockerproxy` still `EXEC=0`), so none of the fixes are
+stand-verified — they are corrections to logic that visibly contradicted the file's own stated
+intent (docstring, comment, or unused counter), not guesses.
+
 <!-- STALE-CHECKBOXES-BATCH-3-2026-09-15 -->
 ## Two more (G80, G81), and where this sweep actually stops (2026-09-15)
 

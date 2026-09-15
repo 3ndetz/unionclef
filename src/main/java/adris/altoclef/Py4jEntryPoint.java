@@ -2757,6 +2757,11 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.path.PathExecutor.breakOccluderForeign = 0;
         kaptainwutax.tungsten.path.PathExecutor.breakClearedOccluder = 0;
         kaptainwutax.tungsten.path.PathExecutor.breakOccluderProtected = 0;
+        // ⛔ FOUND ORPHANED 2026-09-15: existed since the G28/G31 batch, never reset or read here.
+        kaptainwutax.tungsten.path.PathExecutor.breakOccluderQueued = 0;
+        kaptainwutax.tungsten.path.PathExecutor.breakOccludedUnclearable = 0;
+        kaptainwutax.tungsten.path.PathExecutor.ownCellPlaceAsPillar = 0;
+        kaptainwutax.tungsten.path.PathExecutor.navResumeSkipped = 0;
         kaptainwutax.tungsten.path.PathExecutor.lastBreakMiss = "-";
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderTripBlocked = 0;
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderKeysKept = 0;
@@ -3365,7 +3370,12 @@ public class Py4jEntryPoint {
                         + " sprint=%d/%d lowHp=%d/%d standOff=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d/near%d mdTung=%d/%d mdFleeStuck=%d mdFleeShooter=%d mdFar=%d/%d arrows=%d/%.2f/%.2f draws=%d/%d/%d/%.2f band=%d/%d dodgeYield=%d latch=%d/%d breakFail=%d/%d/%d/%d/%d chains=[%s] stranded=%d/dig%d/own%d/back%d/away%d/%s/%s/acro%d banned=%d/%d tp=%d/%d/%d/%d/byp%d minePick=%d/%d/max%d/calls%d/drop%d dcFar=%d gp=%d/%d/%d/%d/%d dodgeTask=%d/%.2f dealt=%.1f/%.1f/%d hitSize=%d/%d/%d/%d takeSize=%d/%d/%d/%d slotSync=%d/%d critReset=%d stray=%d/%d heldSwing=%d loseKite=%d holdBow=%d punkKept=%d swingHits=%d dodgeDrive=%d hop=%d/%d/%d/%d/%d/%d/%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d dwNoBlame=%d dmgWhy=%d/%d/%d/%d/%d@%.1f strafe=%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowNoSol=%d bowRestart=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d stuck=[%s] staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | mv=%d/%d/%d/%d/%d pnb=%d/%d/%d/%d pnbExit=%d/%d/%d/%d gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d"
-                        + " entityReleased=%d/%d idrop=%d/%d/%d/%d rt=%d/%d/%d entityCloseWalk=%d/%d/%d/%d/%d/%d/%d closeWalkGeom=%d/%d/%d/%d deep=%d/%d/%d cwJump=%d cwSneakRel=%d cwLease=%d cwDeep=%d closeWalkFwd=%d/%d/%d",
+                        + " entityReleased=%d/%d idrop=%d/%d/%d/%d rt=%d/%d/%d entityCloseWalk=%d/%d/%d/%d/%d/%d/%d closeWalkGeom=%d/%d/%d/%d deep=%d/%d/%d cwJump=%d cwSneakRel=%d cwLease=%d cwDeep=%d closeWalkFwd=%d/%d/%d"
+                        // ⛔ FOUND ORPHANED 2026-09-15: these four counters (G28/G31) already existed in
+                        // PathExecutor but were never wired into stats -- accumulating forever with no
+                        // way to read or reset them via this py4j mechanism, unlike every sibling counter
+                        // from the same batch. Appended at the tail so no existing %d position shifts.
+                        + " breakOccluderQueued=%d breakOccludedUnclearable=%d ownCellPlaceAsPillar=%d navResumeSkipped=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
@@ -4158,7 +4168,11 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDeepDeclined,
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkFwdKept,
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkFwdLost,
-                adris.altoclef.tasks.movement.GetToEntityTask.closeWalkKeysKept);
+                adris.altoclef.tasks.movement.GetToEntityTask.closeWalkKeysKept,
+                kaptainwutax.tungsten.path.PathExecutor.breakOccluderQueued,
+                kaptainwutax.tungsten.path.PathExecutor.breakOccludedUnclearable,
+                kaptainwutax.tungsten.path.PathExecutor.ownCellPlaceAsPillar,
+                kaptainwutax.tungsten.path.PathExecutor.navResumeSkipped);
     }
 
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }

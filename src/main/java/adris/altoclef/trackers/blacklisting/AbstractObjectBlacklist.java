@@ -60,7 +60,17 @@ public abstract class AbstractObjectBlacklist<T> {
         // banLifted=8918, "Blacklisting extra furnace" x80 re-issued every 45 s, and the container
         // task alternating "walk=INF" against a furnace eleven hundred blocks away. A decision does
         // not go stale and is not a price; it stands until the brain clears it.
-        entry.deliberate = numberOfFailuresAllowed == 0;
+        //
+        // ⛔ BUG FOUND 2026-09-15: this used to be `entry.deliberate = numberOfFailuresAllowed
+        // == 0`, unconditionally, which SILENTLY UNDOES the decision the moment any other call
+        // site blacklists the same position for an ordinary failure (numberOfFailuresAllowed >
+        // 0) -- confirmed reachable: DestroyBlockTask calls this with 0 for pillager-guarded wool
+        // (line ~395) and with the non-zero default elsewhere in the same class (dead-end give-up,
+        // touching water) for the SAME position, in the SAME task's lifecycle. `unreachable()`'s
+        // own comment says a deliberate verdict "stands until the brain clears it" -- only OR
+        // in a new deliberate decision, never let a later ordinary failure downgrade one already
+        // made.
+        entry.deliberate = entry.deliberate || numberOfFailuresAllowed == 0;
         if (entry.deliberate) {
             Debug.logMessage("Excluded on purpose: " + item.toString());
         } else {
