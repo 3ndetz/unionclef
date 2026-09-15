@@ -341,7 +341,8 @@ public class MobDefenseChain extends SingleTaskChain {
     // n=12-27 on this course, a single series moves the headline by more than the effects being
     // chased. Quote the POOLED figure, and treat any first series as provisional.
     private static final double SAFE_KEEP_DISTANCE = 8;
-    private static final List<Class<? extends Entity>> ignoredMobs = List.of(Entities.WARDEN, WitherEntity.class, EndermanEntity.class, BlazeEntity.class,
+    // EntityTracker already excludes calm Endermen. Angry ones must count as threats at any health.
+    private static final List<Class<? extends Entity>> ignoredMobs = List.of(Entities.WARDEN, WitherEntity.class, BlazeEntity.class,
             WitherSkeletonEntity.class, HoglinEntity.class, ZoglinEntity.class, PiglinBruteEntity.class, VindicatorEntity.class, MagmaCubeEntity.class);
 
     private static boolean shielding = false;
