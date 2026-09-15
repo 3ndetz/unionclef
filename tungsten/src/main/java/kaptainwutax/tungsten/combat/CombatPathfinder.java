@@ -20,7 +20,7 @@ import java.util.*;
  *   retreatPath — best escape route (far from target + high ground + safe)
  *
  * Hazard blocks (lava, fire, magma, campfire, cactus) are impassable.
- * Slowdown blocks (water, cobweb, soul sand, honey) get extra cost in BFS.
+ * Slowdown blocks (water, cobweb, tripwire, soul sand, honey) get extra cost in BFS.
  *
  * Jump trajectories are visualized as arcs between waypoints.
  */
@@ -542,12 +542,24 @@ public class CombatPathfinder {
                 || block instanceof SweetBerryBushBlock;
     }
 
-    /** Hazard OR slowdown — avoid in pathfinding. */
+    /**
+     * Hazard OR slowdown — avoid in pathfinding.
+     *
+     * <p>G11 (docs/BARITONE-GAPS.md, 2026-09-15): {@code Blocks.TRIPWIRE} has an empty collision
+     * shape (it does not block movement at all), so {@code isWalkable}'s collision-shape check
+     * alone never sees it — the bot would walk straight across a wire strung for a trap or a
+     * base's own alarm. `MovementHelperB.canWalkThroughBlockState` (the OTHER engines' occupancy
+     * check) already lists it as impassable, matching baritone; this grid BFS (E1, the PRIMARY
+     * `@gamer` guide) had never been given the same fact. Fire, cobweb and sweet berry bush were
+     * already here via {@link #isHazard}; tripwire was the one name on baritone's list this
+     * function never carried over.
+     */
     public static boolean isHazardOrSlow(BlockPos pos, WorldView world) {
         if (isHazard(pos, world)) return true;
         Block block = world.getBlockState(pos).getBlock();
         return block == Blocks.WATER
                 || block instanceof CobwebBlock
+                || block instanceof TripwireBlock
                 || block == Blocks.SOUL_SAND
                 || block == Blocks.HONEY_BLOCK
                 || block == Blocks.POWDER_SNOW;

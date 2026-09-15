@@ -1,5 +1,32 @@
 # TODOs
 
+<!-- G11-TRIPWIRE-GAP-CLOSED-2026-09-15 -->
+## G11 (no-collision blockers invisible to E1): three of four already handled, tripwire was the real gap (2026-09-15)
+
+`docs/BARITONE-GAPS.md` names four blocks that a naive collision-shape occupancy check would
+treat as open ground it is not safe or sensible to walk through: cobweb, fire, tripwire, sweet
+berry bush. Checked `CombatPathfinder` (E1, the walk-only grid BFS that is `@gamer`'s PRIMARY
+guide) directly rather than trust the gap list at face value, the same way G10 turned out to be
+stale: `isWalkable` already gates every cell through `isHazardOrSlow`, and `isHazard` (which
+`isHazardOrSlow` calls first) already lists `FireBlock` and `SweetBerryBushBlock`; `isHazardOrSlow`
+itself already lists `CobwebBlock`. Three of the four names on the gap list were already covered,
+not three separate coincidences — `isHazard`/`isHazardOrSlow` were clearly written with baritone's
+own `canWalkThroughBlockState` list in front of the author, just missing the one entry that
+`Blocks.TRIPWIRE` is: an empty-collision-shape block (unlike cobweb, which has a real thin box),
+so nothing about a bare collision-shape check would ever flag it, and nothing else in this
+function's own logic incidentally caught it the way lava/water are caught by other means.
+
+Added `block instanceof TripwireBlock` to `isHazardOrSlow`, matching the cobweb entry right next
+to it, and updated the class-level doc comment's slowdown-block list to name it. `MovementHelperB
+.canWalkThroughBlockState` (the OTHER engines' occupancy check, ported from baritone) already had
+tripwire correctly listed — this was purely E1 not carrying the same fact its sibling engine
+already had, not a system-wide absence.
+
+**Verified**: `:1.21.1:compileJava` and `:1.21.11:compileJava` (run together this time) both BUILD
+SUCCESSFUL, exit 0, `tungsten:compileJava` executed fresh (not up-to-date) confirming the edited
+file actually recompiled. Not stand-verified — no docker exec from this sandbox to confirm the
+bot now routes around a real tripwire instead of walking through one.
+
 <!-- G10-ALREADY-FIXED-AUDIT-WAS-STALE-2026-09-15 -->
 ## G10 (adjacent-liquid break veto) was never actually missing — the audit checked the wrong function (2026-09-15)
 
@@ -217,7 +244,12 @@ test + full nav-suite regression before it counts done.
       `avoidAdjacentBreaking` on all four neighbours + above since commit `62e11084` (2026-07-30),
       six weeks before the audit. The audit checked `BreakRules.canBreak` only, a different,
       newer function that never claimed to cover this. No code change, verification only.
-- [ ] **G11 no-collision blockers visible** (cobweb/fire/tripwire/berry counted as walls to break).
+- [x] **G11 no-collision blockers visible** — three of four were already handled
+      (`CombatPathfinder.isHazard`/`isHazardOrSlow` already listed fire, cobweb, sweet berry
+      bush); only tripwire was missing from E1's own occupancy check despite already being
+      correctly excluded in `MovementHelperB.canWalkThroughBlockState`. Added
+      `block instanceof TripwireBlock` to `isHazardOrSlow`. `:1.21.1:`/`:1.21.11:compileJava`
+      both BUILD SUCCESSFUL. Not stand-verified.
 - [ ] **G12 doors/gates passable to grid BFS** (open them instead of refusing/shimmying).
 - [ ] **G13 per-cell break budget** (replace the flat 300-tick abort so hard blocks can finish).
 - [ ] **G14 soft break-cost tier for block entities** (one chest in a wall shouldn't abort the tunnel).
