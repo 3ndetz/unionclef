@@ -59,7 +59,7 @@ public class DragonBreathTracker {
          * asked this task where to go, got NULL, and the bot stood in the dragon's breath — which
          * is one of the two things that kill it in the End.
          *
-         * <p>{@link AltoGoal.FleeLive} recomputes from the CURRENT breath blocks every tick, which
+         * <p>{@link AltoGoal.FleeLive} checks the CURRENT breath blocks for completion and snapshots them for each search, which
          * this needs more than the mob flees do: breath is laid down and expires continuously, so
          * a snapshot would run the bot out of a cloud that had already moved.
          */

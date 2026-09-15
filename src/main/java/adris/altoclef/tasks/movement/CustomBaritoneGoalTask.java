@@ -220,6 +220,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     @Override
     protected void onStart() {
         Nav.cancel();
+        if (goal(AltoClef.getInstance()) instanceof AltoGoal.FleeLive) Nav.cancelAll();
         TungstenHelper.reset();
         checker.reset();
         stuckCheck.reset();
@@ -470,6 +471,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     @Override
     protected void onStop(Task interruptTask) {
+        if (cachedAlto instanceof AltoGoal.FleeLive) Nav.cancelAll();
         Nav.cancel();
         TungstenHelper.stop();
         // ⛔ THE ROUTE DIES WITH ITS DRIVE (G52, 2026-09-11). TungstenHelper.stop() ends the
@@ -685,6 +687,20 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         AltoGoal goal = goal(mod);
         if (goal == null) { pdNoGoal++; return false; }
         if (isFinished()) { pdFinished++; return false; }
+        if (goal instanceof AltoGoal.FleeLive flee) {
+            // An emergency region must not inherit the previous resource's escape point.
+            lastGoalVec = null;
+            lastGoalReachBlock = null;
+            // Fleeing is an exclusion region. Find a reachable safe cell rather than
+            // snapping an averaged threat position to arbitrary nearby terrain.
+            // The snapshot is immutable and therefore safe for the planner worker.
+            if (!kaptainwutax.tungsten.task.FastNavigator.isActive()) {
+                kaptainwutax.tungsten.task.FastNavigator.startNearest(flee.snapshotSafety(2.0));
+            }
+            checker.reset();
+            setDebugState("Routing to reachable safety");
+            return true;
+        }
         net.minecraft.util.math.Vec3d gp = goal.target();
         if (gp != null) {
             // An XZ goal has no height and a Y-level goal has no column; both say so with NaN and

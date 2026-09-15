@@ -49,7 +49,7 @@ public class RunAwayFromCreepersTask extends CustomBaritoneGoalTask {
      * reached(). So fuse-aware creeper avoidance has not been happening on the live engine for as
      * long as tungsten has been primary. This port does not remove it; it removes the appearance
      * of it. Written down as a debt rather than quietly dropped: if fleeing creepers should weigh
-     * the fuse, that belongs in the flee POINT, not in a heuristic nothing calls.
+     * the fuse, that belongs in the flee route cost, not in a heuristic nothing calls.
      */
     @Override
     protected AltoGoal newAltoGoal(AltoClef mod) {
@@ -57,6 +57,9 @@ public class RunAwayFromCreepersTask extends CustomBaritoneGoalTask {
         Nav.cancel();
         return new AltoGoal.FleeLive(
                 () -> mod.getEntityTracker().getTrackedEntities(CreeperEntity.class).stream()
+                        // Same retention range as hostile retreats: keep occluded nearby
+                        // threats, but do not route around every distant loaded creeper.
+                        .filter(e -> e.isInRange(mod.getPlayer(), _distanceToRun + 2))
                         .map(e -> new Vec3d(e.getX(), e.getY(), e.getZ()))
                         .collect(java.util.stream.Collectors.toList()),
                 () -> mod.getPlayer() == null ? null : mod.getPlayer().getPos(),

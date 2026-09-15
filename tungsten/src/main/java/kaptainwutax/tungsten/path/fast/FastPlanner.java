@@ -1825,14 +1825,28 @@ public final class FastPlanner {
     }
 
     /** Negative = refused; otherwise the extra cost of standing in {@code (x,y,z)}. */
-    private static double creeperProximityPenalty(int x, int y, int z) {
+    private static double creeperProximityPenalty(Node from, int x, int y, int z) {
         double[] cs = creeperXyz;
         if (cs.length == 0) return 0;
         double px = x + 0.5, py = y, pz = z + 0.5, worst = 0;
         for (int i = 0; i + 2 < cs.length; i += 3) {
             double dx = px - cs[i], dy = py - cs[i + 1], dz = pz - cs[i + 2];
             double d2 = dx * dx + dy * dy + dz * dz;
-            if (d2 < CREEPER_REFUSE_SQ) return -1;
+            double fx = from.x + 0.5 - cs[i], fy = from.y - cs[i + 1],
+                    fz = from.z + 0.5 - cs[i + 2];
+            double startSq = fx * fx + fy * fy + fz * fz;
+            double vx = x - from.x, vy = y - from.y, vz = z - from.z;
+            double lengthSq = vx * vx + vy * vy + vz * vz;
+            double t = lengthSq == 0 ? 0 : Math.max(0, Math.min(1,
+                    -(fx * vx + fy * vy + fz * vz) / lengthSq));
+            double closestSq = (fx + t * vx) * (fx + t * vx)
+                    + (fy + t * vy) * (fy + t * vy) + (fz + t * vz) * (fz + t * vz);
+            // Never enter the exclusion ring from outside. If a creeper already
+            // reached us, allow an outward edge instead of sealing every exit.
+            // Check the segment too: a jump landing farther away may cross the mob.
+            if (closestSq + 1.0E-7 < Math.min(startSq, CREEPER_REFUSE_SQ)
+                    || (startSq < CREEPER_REFUSE_SQ && d2 <= startSq + 1.0E-7)) return -1;
+
             if (d2 < CREEPER_PRICE_SQ) worst = Math.max(worst, CREEPER_PRICE_TICKS);
         }
         return worst;
@@ -1910,7 +1924,7 @@ public final class FastPlanner {
         // destination once covers all of them and cannot be forgotten in a new generator.
         if (hazardousDestination(x, y, z)) { cntHazard++; return; }
         // G75: a cell within a creeper's fuse reach is not a cell; one within its notice is dear.
-        double creeper = creeperProximityPenalty(x, y, z);
+        double creeper = creeperProximityPenalty(from, x, y, z);
         if (creeper < 0) { planCreeperRefused++; return; }
         if (creeper > 0) planCreeperPriced++;
         Node next = map.get(x, y, z, goal);

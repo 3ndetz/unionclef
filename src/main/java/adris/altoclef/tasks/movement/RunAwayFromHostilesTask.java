@@ -33,9 +33,8 @@ public class RunAwayFromHostilesTask extends CustomBaritoneGoalTask {
      *
      * <p>{@code CustomBaritoneGoalTask} caches the goal object for the life of the task, so a
      * snapshot flee would send the bot to wherever the mobs stood when it started running and
-     * leave it there. {@link AltoGoal.FleeLive} recomputes from live positions instead, once per
-     * tick, which is the same freshness the old path got by re-interrogating the baritone goal
-     * every time the drive asked it for a point.
+     * leave it there. {@link AltoGoal.FleeLive} checks completion against live positions and supplies immutable threat snapshots
+     * to the condition-goal planner. New searches never reuse a stale centroid.
      */
     @Override
     protected AltoGoal newAltoGoal(AltoClef mod) {
