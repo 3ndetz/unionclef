@@ -1,5 +1,41 @@
 # TODOs
 
+<!-- HEADLESS-MC-REGISTRY-NOT-FEASIBLE-2026-09-15 -->
+## Settled, negative: real Block/Item registry access does NOT work in a bare JVM here, even with Bootstrap.initialize() (2026-09-15)
+
+`testChatParser` (the one genuine runtime test this session found, see the entry a few below)
+raised a real question: if pure-string logic can run without a live client, could real vanilla
+`Block`/`Item` objects also be usable off-client, for a stronger class of test than pure string
+logic — e.g. exercising `ItemHelper.miningSpeedVsBlock` against a real `BlockState` without a
+live server? Worth a bounded, timeboxed experiment rather than leaving it as speculation either
+way. Wrote a temporary probe class (`HeadlessBootstrapProbe`, a matching throwaway gradle
+`JavaExec` task mirroring `testChatParser`'s exact pattern) and ran it — both deleted afterward,
+this entry is the only trace, per the same "delete once answered" note the probe itself carried.
+
+**Two real, informative failures, not a guess:**
+
+1. Referencing `Blocks.STONE` cold: `IllegalArgumentException: Not bootstrapped (called from
+   registry minecraft:game_event)`, from `Bootstrap.ensureBootstrapped()`. Real vanilla registries
+   refuse to populate until `Bootstrap.initialize()` has actually run.
+2. Calling `Bootstrap.initialize()` explicitly first: got further (registry creation started) then
+   hit `IllegalAccessError: class net.minecraft.registry.SimpleRegistry tried to access method
+   ...RegistryEntry$Reference.setRegistryKey(...)`, a JPMS/module-access failure, not a missing
+   call. This is not one more line away — Minecraft's own classes are compiled expecting to be
+   loaded through Fabric Loom's actual dev-launch pipeline (access-widener transformation, mixin
+   application, the real classloader `DevLaunchInjector`/`KnotClient` sets up), and a plain
+   `sourceSets.main.runtimeClasspath` JavaExec does not provide that, no matter what additional
+   dependencies get resolved onto the classpath.
+
+**Conclusion, settled rather than left open**: this sandbox can run pure-logic tests with zero
+Minecraft-object dependencies (proven, `testChatParser`, 22/22), but cannot exercise any code
+touching real `Block`/`Item`/`BlockState` objects without the actual Fabric dev-launch machinery —
+which itself needs more than this sandbox has been shown to provide (likely real game assets and
+the full Loom launch, not just a resolved classpath). Worth knowing definitively rather than
+guessing at each future turn: **the ceiling on "runtime, not just compile-time" verification from
+this specific sandbox is pure-logic code only.** Anything touching real game objects needs the
+live stand, same conclusion as every G-gap already flagged that way, now with a settled reason
+instead of an assumed one.
+
 <!-- G32-G44-CONFIDENCE-UPGRADE-2026-09-15 -->
 ## Two of the "plausibly done, not confirmed" checkboxes get a real upgrade from the diff audit that came after them (2026-09-15)
 
