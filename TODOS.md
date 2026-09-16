@@ -1,5 +1,26 @@
 # TODOs
 
+<!-- TASK-DISPATCH-THREAD-2026-09-16 -->
+## External task lifecycle commands must serialize with the game tick (2026-09-16)
+
+- [x] ExecuteCommand and stopPathing dispatch task lifecycle work to the shared worker pool.
+  Six paused-client controls prove start/stop mutate the runner while its thread is paused.
+  Serialize command dispatch on the client thread; validate starts, stops and scope cleanup.
+
+<!-- FOOD-CONSUMPTION-RESERVATIONS-2026-09-16 -->
+## Gathering food must not forbid eating collected supplies (2026-09-16)
+
+- [x] CollectFoodTask protects bread from disposal, but FoodChain uses disposal permission
+  as its consumption gate. A starving gamer retained one bread while continuing to dig.
+  Separate discard protection from consumption reservations and validate scope restoration.
+
+<!-- STARVATION-PRIORITY-2026-09-16 -->
+## Unknown food sources must not demote urgent food discovery (2026-09-16)
+
+- [ ] Natural gamer continued ore/chest collection at foodLevel0 until20HP became10HP.
+  Unknown food distance receives priority0.1. Make urgent food selection outrank optional
+  resources, including before equipment is available, and validate the full task selector.
+
 <!-- FALSE-PLACEMENT-CLAIM-2026-09-16 -->
 ## World updates must not fabricate protected building regions (2026-09-16)
 

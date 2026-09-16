@@ -37,7 +37,19 @@ public class CollectFoodPriorityCalculator extends ItemPriorityCalculator {
         this.foodUnits = foodUnits;
     }
 
+    /** Hunger remains urgent even when discovery has no known food target yet. */
+    public static boolean needsEmergencyFood(AltoClef mod) {
+        return mod.getPlayer() != null
+                && (mod.getPlayer().getHungerManager().getFoodLevel() <= 10
+                    || mod.getPlayer().getHealth() <= 10.0f)
+                && CollectFoodTask.calculateFoodPotential(mod) < 10;
+    }
+
     public double calculatePriority(int count) {
+        // Do not let the unknown-distance fallback demote a starving, empty-handed
+        // food search below optional ore or chest collection. Movement and combat
+        // emergencies still belong to the higher-priority survival/defence chains.
+        if (needsEmergencyFood(mod)) return Double.POSITIVE_INFINITY;
         double distance = getDistance(mod);
 
         double multiplier = 1;

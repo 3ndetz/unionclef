@@ -59,6 +59,8 @@ try:
   if a.case=='one_high':r.cmd('fill 1105 -58 304 1108 -58 304 stone')
   r.cmd('gamemode survival tester1');r.cmd('clear tester1')
   if a.case=='one_high':r.cmd('give tester1 iron_pickaxe')
+  # Previous food tests can leave zero hunger; clearance must not measure starvation.
+  r.cmd('effect clear tester1 hunger');r.cmd('effect give tester1 saturation 1 20 true')
   r.cmd('effect give tester1 instant_health 1 5 true');r.cmd('tp tester1 1104.5 -59.9 304.5 -90 0');time.sleep(1)
   before=p.call('getGameState')['self']
   if not before['onGround']:raise RuntimeError('fixture start is not grounded: '+str(before))

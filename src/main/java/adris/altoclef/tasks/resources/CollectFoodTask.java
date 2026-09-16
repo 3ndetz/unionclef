@@ -138,17 +138,11 @@ public class CollectFoodTask extends Task {
         AltoClef mod = AltoClef.getInstance();
 
         mod.getBehaviour().push();
-        // Protect ALL food
-        mod.getBehaviour().addProtectedItems(ITEMS_TO_PICK_UP);
-
-        // Allow us to consume food.
-        /*
-        for (CookableFoodTarget food : COOKABLE_FOODS)
-            mod.getBehaviour().addProtectedItems(food.getRaw(), food.getCooked());
-            mod.getBehaviour().addProtectedItems(crop.cropItem);
-        }
-         */
-        mod.getBehaviour().addProtectedItems(Items.HAY_BLOCK, Items.SWEET_BERRIES);
+        // Collected food must survive inventory cleanup, but remain available to eat
+        // before the full collection target is reached. Inherited reservations remain.
+        mod.getBehaviour().addDiscardProtectedItems(ITEMS_TO_PICK_UP);
+        mod.getBehaviour().addDiscardProtectedItems(Items.SWEET_BERRIES);
+        mod.getBehaviour().addProtectedItems(Items.HAY_BLOCK);
     }
 
     @Override

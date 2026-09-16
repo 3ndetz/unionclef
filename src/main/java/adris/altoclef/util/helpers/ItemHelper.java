@@ -400,11 +400,16 @@ public class ItemHelper {
         return mod.getBehaviour().isProtected(stack.getItem()) || mod.getModSettings().isImportant(stack.getItem());
     }
 
+    /** Eating consumes a supply; it does not require permission to discard unused items. */
+    public static boolean canConsumeFood(AltoClef mod, ItemStack stack) {
+        return !stack.isEmpty() && ItemVer.isFood(stack) && !isStackProtected(mod, stack);
+    }
+
     public static boolean canThrowAwayStack(AltoClef mod, ItemStack stack) {
         // Can't throw away empty stacks!
         if (stack.isEmpty())
             return false;
-        if (isStackProtected(mod, stack))
+        if (isStackProtected(mod, stack) || mod.getBehaviour().isDiscardProtected(stack.getItem()))
             return false;
         return mod.getModSettings().isThrowaway(stack.getItem()) || mod.getModSettings().shouldThrowawayUnusedItems();
     }

@@ -285,8 +285,8 @@ public class FoodChain extends SingleTaskChain {
         // Get best food item + calculate food total
         for (ItemStack stack : mod.getItemStorage().getItemStacksPlayerInventory(true)) {
             if (ItemVer.isFood(stack)) {
-                // Ignore protected items
-                if (!ItemHelper.canThrowAwayStack(mod, stack)) continue;
+                // Respect consumption reservations, not inventory discard protection.
+                if (!ItemHelper.canConsumeFood(mod, stack)) continue;
 
                 // Ignore spider eyes
                 if (stack.getItem() == Items.SPIDER_EYE) {

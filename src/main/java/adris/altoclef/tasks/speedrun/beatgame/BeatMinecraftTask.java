@@ -681,8 +681,11 @@ public class BeatMinecraftTask extends Task {
                 //
                 // Below half a bar that trade inverts: food is survival, not convenience, and
                 // plenty of it — bread, wheat, hay, berries, apples — needs no sword whatsoever.
-                // So the tool gate is bypassed only while hurt; above the line it is unchanged.
-                a -> (a.getPlayer() != null && a.getPlayer().getHealth() <= LOW_HEALTH_FOOD_OVERRIDE
+                // Urgent hunger also bypasses the tool gate: waiting for damage before
+                // seeking unknown food wastes the remaining reserve. Ordinary collection
+                // keeps the existing equipment requirement.
+                a -> (CollectFoodPriorityCalculator.needsEmergencyFood(a)
+                        || a.getPlayer() != null && a.getPlayer().getHealth() <= LOW_HEALTH_FOOD_OVERRIDE
                         || StorageHelper.miningRequirementMet(MiningRequirement.STONE)
                         && mod.getItemStorage().hasItem(Items.STONE_SWORD, Items.IRON_SWORD, Items.DIAMOND_SWORD))
                         && CollectFoodTask.calculateFoodPotential(mod) < config.foodUnits,

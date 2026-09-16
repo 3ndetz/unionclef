@@ -313,6 +313,15 @@ public class BotBehaviour {
         current().applyState();
     }
 
+    /** Keep supplies in inventory without reserving them against consumption. */
+    public void addDiscardProtectedItems(Item... items) {
+        Collections.addAll(current().discardProtectedItems, items);
+    }
+
+    public boolean isDiscardProtected(Item item) {
+        return current().discardProtectedItems.contains(item);
+    }
+
     public void removeProtectedItems(Item... items) {
         current().protectedItems.removeAll(Arrays.asList(items));
         current().applyState();
@@ -460,6 +469,7 @@ public class BotBehaviour {
         /// Baritone Params
         public double followOffsetDistance;
         public HashSet<Item> protectedItems = new HashSet<>();
+        public HashSet<Item> discardProtectedItems = new HashSet<>();
         public boolean mineScanDroppedItems;
         public boolean swimThroughLava;
         public boolean allowDiagonalAscend;
@@ -508,6 +518,7 @@ public class BotBehaviour {
 
             if (toCopy != null) {
                 // Copy over stuff from old one
+                discardProtectedItems.addAll(toCopy.discardProtectedItems);
                 exclusivelyMineLogs = toCopy.exclusivelyMineLogs;
                 avoidDodgingProjectile.addAll(toCopy.avoidDodgingProjectile);
                 excludeFromForceField.addAll(toCopy.excludeFromForceField);
