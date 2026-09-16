@@ -9,10 +9,12 @@ import adris.altoclef.tasks.DoToClosestBlockTask;
 import adris.altoclef.tasks.construction.DestroyBlockTask;
 import adris.altoclef.tasks.container.CraftInTableTask;
 import adris.altoclef.tasks.container.SmeltInSmokerTask;
+import adris.altoclef.tasks.movement.GetToBlockTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.CraftingRecipe;
+import adris.altoclef.util.Dimension;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.RecipeTarget;
 import adris.altoclef.util.SmeltTarget;
@@ -34,6 +36,8 @@ import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.SmokerScreenHandler;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.Heightmap;
+import kaptainwutax.tungsten.helpers.PlayerFit;
 
 import java.util.List;
 import java.util.Objects;
@@ -73,6 +77,9 @@ public class CollectFoodTask extends Task {
     // identical pattern correctly with a mutable field. See the smelting-loop restoration below.
     private SmeltInSmokerTask smeltTask = null;
     private Task currentResourceTask = null;
+    private Task surfaceSearchTask;
+    private int surfaceSearchY;
+    private static final int SURFACE_SEARCH_RADIUS = 16;
 
     public CollectFoodTask(double unitsNeeded) {
         this.unitsNeeded = unitsNeeded;
@@ -127,6 +134,7 @@ public class CollectFoodTask extends Task {
 
     @Override
     protected void onStart() {
+        surfaceSearchTask = null;
         AltoClef mod = AltoClef.getInstance();
 
         mod.getBehaviour().push();
@@ -313,9 +321,62 @@ public class CollectFoodTask extends Task {
             }
         }
 
-        // Look for food.
+        // Known food remains preferable, including food in a cave. With no option,
+        // explore a habitat where new food can appear instead of orbiting underground.
+        if (WorldHelper.getCurrentDimension() == Dimension.OVERWORLD) {
+            BlockPos feet = mod.getPlayer().getBlockPos();
+            // Excavating an open shaft lowers its heightmap even while its floor is
+            // several blocks below the surrounding terrain. Keep the selected surface
+            // level until the body can step out, instead of treating open sky as arrival.
+            int top = surfaceSearchTask != null ? surfaceSearchY
+                    : mod.getWorld().getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, feet.getX(), feet.getZ());
+            if (feet.getY() + 1 < top) {
+                // Release within one upward step of the selected surface: the original
+                // endpoint can float one block above its footing after excavation.
+                if (surfaceSearchTask != null && surfaceSearchTask.isActive() && !surfaceSearchTask.isFinished()) {
+                    setDebugState("Searching for food on the surface");
+                    return surfaceSearchTask;
+                }
+                BlockPos surface = closestDrySurface(mod, feet);
+                if (surface != null) {
+                    surfaceSearchTask = new GetToBlockTask(surface);
+                    surfaceSearchY = surface.getY();
+                    setDebugState("Searching for food on the surface");
+                    return surfaceSearchTask;
+                }
+            }
+        }
+        surfaceSearchTask = null;
+        // Already exposed, outside the Overworld, or no loaded dry surface nearby.
         setDebugState("Searching...");
         return new TimeoutWanderTask();
+    }
+
+    /** Choose a loaded dry surface; ordinary navigation owns digging and construction. */
+    private static BlockPos closestDrySurface(AltoClef mod, BlockPos feet) {
+        var world = mod.getWorld();
+        BlockPos best = null;
+        double bestDistance = Double.POSITIVE_INFINITY;
+        for (int dx = -SURFACE_SEARCH_RADIUS; dx <= SURFACE_SEARCH_RADIUS; dx++) {
+            for (int dz = -SURFACE_SEARCH_RADIUS; dz <= SURFACE_SEARCH_RADIUS; dz++) {
+                int x = feet.getX() + dx, z = feet.getZ() + dz;
+                if (!mod.getChunkTracker().isChunkLoaded(new BlockPos(x, feet.getY(), z))) continue;
+                int top = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+                double support = PlayerFit.supportTop(world, new BlockPos(x, top, z));
+                if (Double.isNaN(support) || !PlayerFit.bodyFits(world, x + 0.5, support, z + 0.5)) continue;
+                BlockPos candidate = new BlockPos(x, (int) Math.floor(support), z);
+                if (!world.getFluidState(candidate).isEmpty()
+                        || !world.getFluidState(candidate.down()).isEmpty()
+                        || !WorldHelper.canReach(candidate)) continue;
+                double dy = support - mod.getPlayer().getY();
+                double distance = dx * dx + dz * dz + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+        }
+        return best;
     }
 
     static void blackListChickenJockeys(AltoClef mod) {
