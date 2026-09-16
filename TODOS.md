@@ -1465,13 +1465,17 @@ test + full nav-suite regression before it counts done.
       in `loop-bread` (the end-of-run world) but not at minute 15. Fix and reproduce from
       `loop-bread`. (That six-minute resume is also the checkpoint tooling proving itself: iron
       reached from a saved state in the time a fresh run spends on wood.)
-- [ ] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
+- [x] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
       (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
       of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
       justPlacedEl=true hasContainerItem=false): the walk branch is taken because
       `placeForceTimer` has elapsed, and `makeNew` is INF because no container item is carried.
       Gate it behind verboseDebugLogging or remove it. Same family: `RTGATE` every 400 gate
       calls is fine (rate-limited), keep.
+      ⛔ Checkbox was stale: already fixed in commit `69ddb20f` ("the DSIC trace goes verbose"),
+      landed before this entry was last touched. Confirmed by reading the live source: the print
+      is gated behind `TungstenConfig.get().verboseDebugLogging` (checked in-repo, 2026-09-17,
+      no code change needed).
 - [ ] **стенд: `docker cp`/`docker exec ... /tmp/x` из Git Bash на jayra** — MSYS переписывает
       `/tmp/...` в Windows-путь; ставить `MSYS_NO_PATHCONV=1` (ловушка, дважды поймана).
 - [ ] **rounds 40 and 41 both died to a zombie at t=65 at the same spawn (-331,105,-204)**, and
