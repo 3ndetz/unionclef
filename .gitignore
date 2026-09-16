@@ -66,3 +66,6 @@ docker.sock
 
 # iron-stall capture log (regenerated)
 deploy/runner/iron_stall_log.txt
+
+# world checkpoints of the survival stand (2 GB each, see deploy/runner/checkpoint.py)
+deploy/runner/checkpoints/

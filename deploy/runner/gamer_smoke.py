@@ -12,6 +12,7 @@ responsive and not permanently stuck.
 """
 import functools, json, os, pathlib, re, subprocess, sys, time
 from uctest.recording import finish_recording
+import checkpoint as _cp
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
 RUN_INDEX_FILE=pathlib.Path(__file__).with_name("gamer_run_index.txt")
@@ -25,6 +26,20 @@ FREEZE_DIR=str(pathlib.Path(__file__).with_name("freezes"))
 os.makedirs(FREEZE_DIR, exist_ok=True)
 CLIENT="uctest-mc-tester1"; GSERVER="uctest-gamer-server"; BOT="tester1"; PORT=25333
 MINUTES=float(sys.argv[1]) if len(sys.argv)>1 and not sys.argv[1].startswith("--") else 5.0
+# CHECKPOINTS (operator, 2026-09-16: "fix a checkpoint where the trouble starts"). --from NAME
+# swaps the restored world in right before @gamer, so a run can begin at minute thirty of an
+# earlier one instead of at an empty inventory; --checkpoint-every MIN freezes the world every
+# MIN minutes of the watch (cpMMDD-HHMM-tSECONDS); the end of every run is frozen as `last`
+# unless --no-save-end, or under --save-end NAME. See checkpoint.py.
+FROM_CP = sys.argv[sys.argv.index("--from") + 1] if "--from" in sys.argv else None
+CP_EVERY = float(sys.argv[sys.argv.index("--checkpoint-every") + 1]) if "--checkpoint-every" in sys.argv else 0.0
+SAVE_END = (sys.argv[sys.argv.index("--save-end") + 1] if "--save-end" in sys.argv
+            else ("" if "--no-save-end" in sys.argv else "last"))
+if FROM_CP:
+    # the reset and the fresh-start spiral below still run (their world is discarded with the
+    # swap); pin the spawn so the spiral's forest search does not spend minutes on ground the
+    # resumed run will never see
+    os.environ.setdefault("GAMER_SPAWN", "0 150 0")
 SNIP=r"""
 import json,sys
 from py4j.java_gateway import JavaGateway,GatewayParameters
@@ -699,7 +714,9 @@ def main():
     # This is what made a paired A/B worthless: the two arms are supposed to share ground, and
     # instead one of them quietly ran somewhere else. Retry the teleport, and stand the run down
     # rather than let it report a ladder for the wrong biome.
-    if spawn and pos:
+    # (a resumed run does not care where the reset left the body: the checkpoint's world replaces
+    # it a few lines below, position and all)
+    if spawn and pos and not FROM_CP:
         _wx, _, _wz = (float(v) for v in str(spawn).split())
         for _try in range(3):
             _px, _py, _pz = (float(v) for v in str(pos).split(","))
@@ -718,6 +735,30 @@ def main():
         SPAWN_FILE.write_text(got.replace(",", " "), encoding="utf-8")
         print("  recorded start point for later runs:", got)
     print("  start pos:", pos, "(pinned)" if spawn else "(first run — recording)")
+    if FROM_CP:
+        # ⛔ A RUN THAT RESUMES A CHECKPOINT DOES NOT START FROM ZERO. The reset and the fresh
+        # start above still ran -- their world goes with the swap -- so none of their lines had
+        # to move; what matters is that the swap happens right before @gamer and that the bot
+        # rejoins the restored world with the position, inventory and armour the checkpoint holds.
+        phase("resume"); print(f"[2c] resuming from checkpoint {FROM_CP} (the reset above is discarded with the world)...")
+        _cp.restore(FROM_CP)
+        joined = False
+        for attempt in range(4):
+            py4j("connect", ip="gamer-server")
+            try:
+                wait_for("bot back in the restored world", lambda: py4j("state")["inGame"], 60, 5)
+                joined = True
+                break
+            except TimeoutError:
+                print(f"  reconnect attempt {attempt + 1} did not land, retrying")
+        if not joined:
+            raise StandDown("client would not rejoin the restored world")
+        wait_for("world loaded (bot has a position)",
+                 lambda: bool((py4j("gs").get("self") or {}).get("pos")), 60, 5)
+        time.sleep(5)
+        _self = py4j("gs").get("self") or {}
+        pos = _self.get("pos"); spawn = None
+        print(f"  resumed at: {pos} hp={_self.get('hp')} food={_self.get('food')}")
     phase("start"); print("[3] tungsten-primary (SHIPPED DEFAULT) + @gamer...")
     # MEASURE WHAT SHIPS. This used to call setTungstenPathing(True), which turned on four flags
     # at once -- including smartMoves, which is NOT a shipped default (it costs the search its
@@ -982,8 +1023,17 @@ def main():
         rec_start(MINUTES * 60)
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     fps_samples = []
+    _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M")
     while time.time()-t0 < MINUTES*60:
         time.sleep(20)
+        if CP_EVERY and time.time() - _cp_last >= CP_EVERY * 60:
+            # a checkpoint must never end the run it is describing
+            try:
+                _cp.save(f"{_cp_prefix}-t{int(time.time() - t0)}",
+                         note=f"periodic, {int((time.time() - t0) / 60)} min into run {RUN_SEQ[0]}")
+            except Exception as _ce:                  # noqa: BLE001
+                print(f"  checkpoint failed: {str(_ce)[:120]}")
+            _cp_last = time.time()
         try:
             gs=py4j("gs"); inv=py4j("inv"); ht=py4j("hasTask")
             # WHAT IS IT DOING WHEN IT FAILS? Asking after the run is useless — the task
@@ -1172,6 +1222,14 @@ def main():
         # a failed playthrough is the one worth watching.
         rec_stop(str(pathlib.Path(__file__).parent / 'artifacts' /
                      f'gamer_run{RUN_SEQ[0]}.mp4'))
+    if SAVE_END:
+        # THE END OF A RUN IS WHERE THE NEXT TEST STARTS. Frozen after the recording stops so the
+        # clip ends with the run, not with a minute of the copy.
+        try:
+            _cp.save(SAVE_END, note=f"end of run {RUN_SEQ[0]} ({MINUTES:g} min), ladder: "
+                     + (", ".join(f"{k}@{v}s" for k, v in reached.items()) if reached else "nothing"))
+        except Exception as _ce:                      # noqa: BLE001
+            print(f"  end checkpoint failed: {str(_ce)[:120]}")
     print("\n=== RESULTS ===")
     print(f"  responsive polls: {responsive}, busy polls: {busy_cnt}, distinct positions: {distinct_pos}, items gained: {gained}")
     if reached:

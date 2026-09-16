@@ -1369,3 +1369,11 @@ The procedure, every recorded run, before sending anything:
    nothing about why a 33-node route to the smoker stopped at node 9. The operator's standing
    demand: find WHY it stopped, reproduce it, fix that. Workarounds are for after the root is
    known and shown to be out of scope, and they get named as workarounds.
+7. **Freeze the run where the trouble starts, and test from there** (operator, 2026-09-16:
+   "ты бы уж тогда фиксировал ЧЕКПОИНТ"). A sixty-minute run reaches diamonds at minute thirty
+   and its wall at minute forty; a fix for that wall tested from an empty inventory costs thirty
+   minutes per look. Every long `gamer_smoke.py` run freezes its end as the `last` checkpoint
+   (`deploy/runner/checkpoint.py`: the whole world -- position, inventory, armour, the shafts
+   dug, the time of day); `--checkpoint-every 10` freezes the middle too; `--from NAME` resumes
+   a run there. Two runs from zero in one day, each with the same first thirty minutes, is the
+   mistake this rule records.

@@ -264,6 +264,22 @@ Python + uv (как в `scripts/`). Цикл на каждый клиент:
    на маркеры ошибок, таймауты по `hasActiveTask()`.
 5. При фейле — `getScreenshot()` + хвост `latest.log` в артефакты. Итог — junit.xml.
 
+### World checkpoints of the survival stand (2026-09-16)
+
+`deploy/runner/checkpoint.py` freezes and restores the WHOLE world of the gamer server —
+position, inventory, armour, health, hunger (playerdata), time of day and seed (level.dat), every
+shaft dug and furnace placed (regions). Nothing is synthesised: the state is the one the run left.
+
+    python deploy/runner/checkpoint.py save NAME [--note "..."]   # save-off, flush, docker cp, save-on (~30 s for 2 GB)
+    python deploy/runner/checkpoint.py restore NAME               # kick the bot, stop, swap /data/world, chown, start, wait for rcon
+    python deploy/runner/checkpoint.py list
+    python deploy/runner/gamer_smoke.py 20 --from NAME            # resume a run there (the swap happens right before @gamer)
+    python deploy/runner/gamer_smoke.py 60 --checkpoint-every 10  # freeze the middle too; the end is always `last`
+
+Checkpoints live in `deploy/runner/checkpoints/` (git-ignored, ~2 GB each). The point: a
+sixty-minute run reaches its wall at minute forty; a fix for that wall is tested from the
+checkpoint in a few minutes, not from an empty inventory in forty.
+
 ### Сценарии (стартовый набор)
 
 | id | что делает | критерий | таймаут |
