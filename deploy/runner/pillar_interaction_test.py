@@ -2,11 +2,12 @@
 """Pillaring must place above a usable block without opening its interface.
 
 The terrain and inventory are rebuilt for each trial. Success requires actual
-server-side cobblestone at all three rungs, grounded arrival and no opened GUI.
+server-side cobblestone at every requested rung, grounded arrival and no opened GUI.
 """
 import argparse
 import json
 import subprocess
+import statistics
 import time
 from pathlib import Path
 from uctest.harness import Py4jClient, Rcon
@@ -21,6 +22,7 @@ ap.add_argument('--off-center', action='store_true')
 terrain = ap.add_mutually_exclusive_group()
 terrain.add_argument('--vine', action='store_true')
 terrain.add_argument('--ceiling', action='store_true')
+terrain.add_argument('--low-roof', action='store_true', help='One valid rung below a three-block-high roof')
 args = ap.parse_args()
 root = args.output_dir.resolve()
 root.mkdir(parents=True, exist_ok=True)
@@ -28,6 +30,8 @@ p = Py4jClient('uctest-mc-tester1')
 r = Rcon()
 old_idle = p.call('tungstenSetting', 'botFpsNoIdleThrottle', '').split('=', 1)[1]
 recording = False
+target_y = -59 if args.low_roof else -57
+rungs = (-60,) if args.low_roof else (-60, -59, -58)
 start_z = 980.8 if args.off_center else 980.5
 try:
     # Reconnecting to the same server can leave RCON seeing the old login
@@ -52,6 +56,8 @@ try:
         'gamemode survival tester1', 'effect give tester1 instant_health 1 5 true',
     ]:
         r.cmd(command)
+    if args.low_roof:
+        r.cmd('setblock 2700 -57 980 stone')
     if args.vine:
         r.cmd('fill 2701 -60 980 2701 -56 980 stone')
         r.cmd('fill 2700 -60 980 2700 -58 980 vine[east=true]')
@@ -67,6 +73,7 @@ try:
         raise RuntimeError('grounded fixture position not confirmed')
     rec_start(25)
     recording = True
+    time.sleep(3)  # Exclude recorder startup from the short movement sample.
     code = r'''
 import json,time
 from py4j.java_gateway import JavaGateway,GatewayParameters
@@ -80,32 +87,35 @@ cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.PillarTask');active=lo
 g.entry_point.selectHotbar(0)
 before=dict(g.entry_point.getGameState()['self'])
 assert before['onGround'] and before['held']=='minecraft:cobblestone',before
-assert g.entry_point.pillarTo(-57)
+assert g.entry_point.pillarTo(TARGET_Y)
 rows=[];started=time.monotonic()
 while time.monotonic()-started<15:
  # Read completion first so the final position cannot predate completion.
  running=bool(on_client(active));state=dict(g.entry_point.getGameState()['self']);gui=on_client(screen)
- rows.append({'t':round(time.monotonic()-started,2),'state':state,'screen':None if gui is None else str(gui.getClass().getName()),'active':running})
+ rows.append({'t':round(time.monotonic()-started,2),'state':state,'screen':None if gui is None else str(gui.getClass().getName()),'active':running,'fps':g.entry_point.getPerfStats().get('fps',0)})
  if not running and time.monotonic()-started>.7:break
  time.sleep(.1)
 print(json.dumps({'before':before,'samples':rows}))
 '''
+    code = code.replace('TARGET_Y', str(target_y))
     q = subprocess.run(['docker', 'exec', 'uctest-mc-tester1', 'python3', '-c', code],
                        capture_output=True, text=True, timeout=30)
     if q.returncode:
         raise RuntimeError(q.stderr)
     data = json.loads(q.stdout)
-    data.update({'support': args.support, 'vine': args.vine, 'ceiling': args.ceiling, 'off_center': args.off_center})
+    data.update({'support': args.support, 'vine': args.vine, 'ceiling': args.ceiling, 'off_center': args.off_center, 'low_roof': args.low_roof})
     data['placed'] = sum('passed' in r.cmd(f'execute if block 2700 {y} 980 cobblestone').lower()
-                         for y in (-60, -59, -58))
+                         for y in rungs)
     data['opened_gui'] = any(row['screen'] is not None for row in data['samples'])
     final = data['samples'][-1]['state']
-    data['arrived'] = final['onGround'] and float(final['pos'].split(',')[1]) >= -57.05
-    data['pass'] = (data['opened_gui'] and not data['arrived'] and data['placed'] == 0) if args.expect_bug else (
-        data['arrived'] and data['placed'] == 3 and not data['opened_gui']
+    data['arrived'] = final['onGround'] and float(final['pos'].split(',')[1]) >= target_y - .05
+    data['pass'] = ((not data['opened_gui'] if args.low_roof else data['opened_gui']) and not data['arrived'] and data['placed'] == 0) if args.expect_bug else (
+        data['arrived'] and data['placed'] == len(rungs) and not data['opened_gui']
         and all(row['state']['hp'] == 20 for row in data['samples']))
     if args.ceiling:
         data['pass'] = not data['arrived'] and data['placed'] == 0 and not data['opened_gui']
+    data['median_fps'] = statistics.median(row['fps'] for row in data['samples'])
+    data['pass'] = data['pass'] and data['median_fps'] >= 14
     data['expected_bug'] = args.expect_bug
     (root / f'{args.tag}.json').write_text(json.dumps(data, indent=2))
     p.screenshot(str(root / f'{args.tag}.png'))

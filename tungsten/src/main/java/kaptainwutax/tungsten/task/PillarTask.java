@@ -312,7 +312,10 @@ public class PillarTask {
         // Stay centred over the column (no horizontal drift) and aim straight down.
         opts.forwardKey.setPressed(false);
         opts.sprintKey.setPressed(false);
-        opts.sneakKey.setPressed(false);
+        // Arm sneak before the jump and retain it through the placement window.
+        // ClientPlayerEntity updates its cached sneak pose before sampling new input;
+        // requesting it only at the apex misses the short window below a low roof.
+        opts.sneakKey.setPressed(true);
         WindMouseRotation.INSTANCE.setTarget(player.getYaw(), 89f); // pitch +89 = down
 
         // Jump off the ground; release jump while airborne (single hop per block) -- unless the
@@ -355,10 +358,9 @@ public class PillarTask {
                     stop();
                     return;
                 }
-                // MovementPillar requests sneak near the apex and waits for the actual
-                // pose before clicking. Without it, a smoker or crafting table accepts
-                // the interaction by opening its GUI instead of supporting a new block.
-                opts.sneakKey.setPressed(true);
+                // Keep the actual-pose gate: a smoker or crafting table otherwise
+                // opens its GUI instead of supporting a new block. Sneak is already
+                // held through the jump so the pose is ready before this window.
                 // THIS DID NOT EVEN AIM. It forged a hit on the top face of the block below
                 // and clicked, so a tower went up with the camera pointing anywhere at all —
                 // a placement through geometry, not a placement. Now: look DOWN at that face
