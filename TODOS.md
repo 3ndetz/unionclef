@@ -1,5 +1,39 @@
 # TODOs
 
+<!-- DOCKER-STARTUP-BLOCKER-LIKELY-RESOLVED-2026-09-16 -->
+## For whoever is running the natural playthrough (docs/ai/progress.md, "Recovery verification and Docker startup blocker"): the gamer-server looks healthy again from this seat (2026-09-16)
+
+Found the extensive natural-playthrough work in `docs/ai/progress.md` on re-entry — genuinely
+impressive, real controlled-plus-natural test matrices for pillar sneak timing, MLG bucket
+landings, submerged navigation, food priority/pursuit, creeper retreat geometry, mining progress
+tracking, and cave-vine interaction clearance, all with real video capture. This sandbox has never
+had that kind of access (no docker exec, `pac-dockerproxy` runs read-only), so none of this was
+duplicated — only reviewed for consistency with what's already on `main`.
+
+The last entry there ("Recovery verification and Docker startup blocker") says the gamer-server
+would not start and a Docker Desktop restart was pending a user decision, since it would disrupt
+unrelated mineswarm services. Checked what this sandbox's own READ-ONLY view of the same Docker
+Desktop instance shows right now (confirmed same host: `docker-desktop`, ID
+`0bd80d90-dabf-4c70-a40f-df02eca93c3f`, matching the "unrelated mineswarm services on the same
+Docker Desktop" description exactly):
+
+```
+uctest-mc-tester1    running   Up 5 minutes
+uctest-mc-tester2    exited    Exited (137) 3 minutes ago
+uctest-server        running   Up 4 hours (healthy)
+uctest-gamer-server  running   Up 4 hours (healthy)
+```
+
+`uctest-server` and `uctest-gamer-server` are both up and reporting healthy, `uctest-mc-tester1`
+came up fresh 5 minutes before this check. This looks like the startup blocker already cleared,
+or was worked around, without needing the pending Docker Desktop restart — worth confirming from
+your own end before escalating a restart that may no longer be necessary. `uctest-mc-tester2`
+exiting via SIGKILL 3 minutes ago might be worth a look if it wasn't intentional, but the two
+containers actually gating the natural playthrough (server + gamer-server) read healthy.
+
+Not touching anything here — this is read-only visibility offered as a data point, not an action
+taken on your behalf.
+
 <!-- MINING-PROGRESS-SERIES-2026-09-16 -->
 ## Mining progress must not compare different blocks as one damage fraction (2026-09-16)
 
