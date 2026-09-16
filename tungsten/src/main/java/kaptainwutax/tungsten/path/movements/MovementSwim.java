@@ -118,7 +118,17 @@ public class MovementSwim extends Movement {
         double dy = player.getEntityPos().y - dest.getY();
         double dz = player.getEntityPos().z - (dest.getZ() + 0.5);
         double distSq = dx * dx + dy * dy + dz * dz;
-        if (ctx.playerFeet().equals(dest) || distSq < 0.36) {
+        // ⛔ ...UNLESS THE DESTINATION IS LAND (G99, 2026-09-16). The 0.6 tolerance is for a
+        // body bobbing between two WATER cells. For the stroke out of the water it declared
+        // arrival with the feet still in the water cell: the second 60-minute run stood fifteen
+        // minutes at the lip of a pool, (93,107,-113) -> (92,107,-113), "st=SUCCESS feet=(93,
+        // 107,-113) pos=93.08" then "keys=-", the water carried the body back to x=93.24, the
+        // navigator re-planned the same one-cell stroke from the same cell, 106 chains dropped
+        // for "body has not left ... for 121 ticks". A stroke onto land is done when the feet
+        // are ON the land cell, and not before.
+        boolean destIsLand = !MovementHelperB.isLiquid(ctx.world(), dest);
+        boolean arrived = ctx.playerFeet().equals(dest) || (!destIsLand && distSq < 0.36);
+        if (arrived) {
             return state.setStatus(MovementStatus.SUCCESS);
         }
 

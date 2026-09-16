@@ -2154,6 +2154,10 @@ public class BeatMinecraftTask extends Task {
     // position, and the portal's fill sits on the SAME Y layer as its frame ring, so a +1 on Y
     // alone can point the check one block ABOVE the actual portal and read "not open" on a
     // portal that genuinely is.
+    /** G102: the portal's average was logged every tick -- 13446 lines in one run, all the same
+     *  value, printed 1700 blocks away after a respawn. Once per change is the whole story. */
+    private static Vec3d lastLoggedPortalAverage = null;
+
     private BlockPos doSimpleSearchForEndPortal(AltoClef mod) {
         List<BlockPos> frames = mod.getBlockScanner().getKnownLocations(Blocks.END_PORTAL_FRAME);
 
@@ -2161,8 +2165,11 @@ public class BeatMinecraftTask extends Task {
             // Calculate the average position of the frames.
             Vec3d average = frames.stream().reduce(Vec3d.ZERO, (accum, bpos) -> accum.add(bpos.getX(), bpos.getY(), bpos.getZ()), Vec3d::add).multiply(1d / frames.size());
 
-            // Log the average position.
-            mod.log("Average Position: " + average);
+            // Log the average position -- once per value (G102).
+            if (lastLoggedPortalAverage == null || !lastLoggedPortalAverage.equals(average)) {
+                mod.log("Average Position: " + average);
+                lastLoggedPortalAverage = average;
+            }
 
             // Round to the nearest block rather than truncate: a symmetric ring averages to an
             // exact integer already, but rounding is the honest operation if it ever does not

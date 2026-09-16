@@ -547,8 +547,16 @@ public final class FastNavigator {
         // coordinates. A body that is airborne or still sprinting has not arrived anywhere; ask
         // again when it is on the ground and slow, and then also stop the replay so nothing can
         // carry it off again.
+        // ⛔ AND A BODY IN THE WATER HAS NOT ARRIVED AT A GOAL ON LAND (G99b, 2026-09-16). The
+        // pool bench: the goal the bank cell beside a two-deep pool, the body rising with JUMP
+        // at (901.1,-61.0) -- 1.6 from the goal, 0.95 below it for one tick -- and this test
+        // said "arrived", stopped the queue mid-stroke, and the body floated with no inputs
+        // until it drowned. Water counts as settled only when the goal itself is in water.
+        var worldA = TungstenMod.mc.world;
+        boolean goalWet = worldA != null
+                && !worldA.getFluidState(BlockPos.ofFloored(goal)).isEmpty();
         boolean settledBody = !TungstenConfig.get().arrivalNeedsSettledBody
-                || ((player.isOnGround() || player.isTouchingWater() || player.isClimbing())
+                || ((player.isOnGround() || (player.isTouchingWater() && goalWet) || player.isClimbing())
                     && player.getVelocity().horizontalLengthSquared() < 0.05
                     && kaptainwutax.tungsten.path.movements.MovementQueue.safeToCancel());
         // G55: the feet cell with baritone's +0.1251 -- on a chest or a slab the naive block

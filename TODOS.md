@@ -1393,6 +1393,39 @@ test + full nav-suite regression before it counts done.
       `shaft_exit_test.py`. Open alongside it: the planner expanded 28 pillar moves against
       100k climb nodes in those searches — a tower move priced or ordered so that a plan out
       of a ten-deep shaft never completes.
+- [ ] **G99 — a swim stroke onto LAND arrived by distance, with the feet still in the water**
+      (second 60-minute run, 2026-09-16 15:10 UTC, t=2673–3563, fifteen minutes at the lip of a
+      pool, (93,107,-113) → (92,107,-113)): MovementSwim's arrival is `distSq < 0.36`, meant
+      for a body bobbing between two water cells; here "st=SUCCESS feet=(93,107,-113)
+      pos=93.08", keys released, the water carried the body back to x=93.24, the navigator
+      re-planned the same one-cell stroke from the same cell, "body has not left … for 121
+      ticks while steering — dropping the chain" ×106. Fixed: a stroke whose destination is
+      not liquid arrives only with the feet on it. Bench `pool_bank_test.py` — whose first run
+      found the second half (G99b): the navigator's sphere arrival accepted a body IN THE WATER
+      as settled ("arrived (1.6)" with the body rising at y=-61.04 toward a bank at -60),
+      stopped the queue mid-stroke, and the body floated with no inputs until it drowned (no
+      survival chain runs under a bare gotoXYZ). Fixed: water counts as settled only when the
+      goal itself is in water.
+- [ ] **G100 — drowned in a flooded cave at y=0 while digging for diamonds** (same run,
+      t≈1250–1330, frame 21:30: "Misc World Survival Chain: Reaching breathable air — Finding
+      a reachable air pocket", the body under water at y=-0.4 among gold ore, hp 12, finished
+      by a zombie in the water; the first of three deaths, the respawn at world spawn 1700
+      blocks from the mine with nothing). The dig-down strategy walks into aquifers; the air
+      chain found no pocket in time. Not started: the dig should not enter a water column it
+      cannot leave, and GetToAirTask needs its own bench.
+- [ ] **G101 — after a death the bot starts over at world spawn, at night, unarmed** (same run,
+      deaths two and three at t≈2040 and t≈2320, frames 33:50 and 38:20: a zombie at melee
+      range, `NIGERUNDAYOO … Routing to reachable safety`, hp 8, no weapon in the hotbar;
+      then "Collecting building materials" from zero). Recorded as data for the night track
+      (G77, deferred by the operator); the part that is not the night: a death costs the whole
+      base because nothing is carried back and the respawn point is never set.
+- [ ] **G102 — `[Alto Clef] Average Position: (1826.0, -13.0, 370.0)` printed 13446 times** in
+      the second 60-minute run, the coordinates of the mine the bot died in, still printed
+      1700 blocks away after the respawn. Find the writer and gate or remove it.
+- [ ] **the nether stage was entered for the first time** (same run, t=1948: `Going to Nether →
+      Going to dimension: NETHER → Construct Nether Portal → Getting flint & steel → Craft
+      2x2`), on the rebuilt inventory after the first death, and lost to death two. Nothing of
+      the portal path has been exercised yet; the next run that survives will show it.
 - [ ] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
       (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
       of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
