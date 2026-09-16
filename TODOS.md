@@ -1435,6 +1435,29 @@ test + full nav-suite regression before it counts done.
       Going to dimension: NETHER → Construct Nether Portal → Getting flint & steel → Craft
       2x2`), on the rebuilt inventory after the first death, and lost to death two. Nothing of
       the portal path has been exercised yet; the next run that survives will show it.
+- [ ] **G103 — the bread/food target deadlocks the whole run: 46 minutes of craft-bread ⟷
+      pick-up-crafting-table, no iron** (third 60-minute run, 2026-09-16, fresh start #56 at
+      (1792,150,661); checkpoint `loop-bread` reproduces it, `cp0916-2241-t900` is 15 min in as it
+      starts). Ladder to food in four minutes (wood 22 s, stone tools 87 s, furnace/coal 197 s,
+      food 240 s) — then from t≈850 to t=3620 the bot never advanced. Two coupled roots:
+      1. **`foodUnits = 220` is a speedrun stockpile, not a survival need** (`BeatMinecraftConfig`).
+         The food priority stays high while `calculateFoodPotential < 220`, so with 11 bread + a
+         berry stack + a porkchop it still ranks food over iron. A survival start does not need
+         220 units before it mines; the ladder should proceed once food is *adequate* (the
+         `minFoodUnits`=180 / an emergency floor), and stockpiling to 220 belongs to the
+         nether-prep phase, not the opening.
+      2. **A food-craft target that cannot progress must yield.** The bot has 1 wheat and wants
+         `bread x 17`; the craft opens the table with an empty grid and waits on "Moving wheat
+         x 17 to slot" with no wheat to move, so `CraftInTableTask` neither finishes nor
+         advances. In parallel BeatMinecraftTask's "Picking up the crafting table while we are
+         at it" tries to break a table and fails — "Block … failed to break! Maybe private
+         area" — blacklisting one table after another ("Blacklisting extra crafting table" ×41).
+         The two alternate, zero progress, 46 minutes. Like the pursuit budget (G23/G54) and the
+         nav give-up (G74), a craft with no materials and no reachable source, or a pickup whose
+         block will not break, must stand down so the next-priority rung (iron) runs.
+      Fix from the `loop-bread` checkpoint, not from a fresh run (the point of the checkpoints).
+      Benches: a food-satisfied inventory + an iron ore in reach → the bot mines the iron, not
+      forages; a bread target with 1 wheat and no wheat in the world → the craft yields.
 - [ ] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
       (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
       of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
