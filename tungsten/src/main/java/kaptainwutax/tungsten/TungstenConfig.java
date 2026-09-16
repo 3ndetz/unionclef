@@ -2754,6 +2754,15 @@ public class TungstenConfig {
      * blocks up. Read navTowerRefusedBelow.
      */
     public boolean noTowerWhenGoalIsBelow = true;
+    /**
+     * G97 (2026-09-16): the refusal above applies only while the goal is within this many blocks
+     * HORIZONTALLY. G60's runaway had its coal straight under the feet; the 60-minute run's
+     * nine-minute stand had iron ore three below and twenty-five blocks away, the bot in a pit,
+     * the plan (complete) climbing 4.5 out of the pit first -- and the refusal fired 115 times
+     * ("the goal is 3 below, not towering up") until every ore in reach was marked unreachable.
+     * A goal that is below but far is reached by leaving the hole. Read navTowerAllowedFar.
+     */
+    public double noTowerWhenGoalIsBelowRadius = 6.0;
 
     /**
      * G64b (2026-09-12): a route leg that starts with the body in water goes to the MovementQueue

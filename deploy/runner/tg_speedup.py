@@ -69,6 +69,13 @@ def send(path, caption):
 
 if __name__ == "__main__":
     src = sys.argv[1] if len(sys.argv) > 1 else "/mc-data/full_run.mp4"
+    # GIT BASH REWRITES THE CONTAINER PATH. Without MSYS_NO_PATHCONV=1 a leading "/mc-data/..."
+    # arrives here as "C:/Program Files/Git/mc-data/..."; ffmpeg then reads "C:/Program" and
+    # answers "Protocol not found". The 2026-09-16 25-minute clip was lost to exactly that,
+    # and the failure hid behind a shell pipe that ate the exit code. Undo the rewrite here.
+    m = re.match(r"^[A-Za-z]:/Program Files/Git(/.*)$", src)
+    if m:
+        src = m.group(1)
     factor = int(sys.argv[2]) if len(sys.argv) > 2 else 12
     caption = sys.argv[3] if len(sys.argv) > 3 else ""
     print(f"speeding {src} up {factor}x inside {CLIENT}...")

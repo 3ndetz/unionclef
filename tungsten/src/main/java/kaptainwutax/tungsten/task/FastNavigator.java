@@ -302,6 +302,12 @@ public final class FastNavigator {
      *  timedOut (hand-offs that waited and reached rest / gave up waiting after the cap). */
     private static int handoffSettleTicks = 0;
     public static volatile int navHandoffSettled, navHandoffSettleTimeout;
+    /** G97: towers toward a goal that is below but beyond noTowerWhenGoalIsBelowRadius, which
+     *  the G60 refusal used to stop. Read navTowerAllowedFar=. */
+    public static volatile int navTowerAllowedFarGoal;
+    /** G98: short partial plans (under five blocks) walked because they carry a flagged tower,
+     *  bridge or dig, instead of handing the goal to the physics engine. Read navPartialBuild=. */
+    public static volatile int navPartialBuildWalked;
     /** Horizontal speed under which the body counts as at rest (ground friction takes a sprint
      *  from 0.28 to under this in six ticks). */
     private static final double HANDOFF_REST_SPEED = 0.02;
@@ -954,9 +960,28 @@ public final class FastNavigator {
                 // A climb on the way DOWN is a real move (over a lip, round a wall), so this
                 // refuses only the runaway shape: the goal below, and a tower that wants to go
                 // more than two blocks UP from where the body stands.
+                // ⛔ ...AND ONLY WHEN THE GOAL IS UNDER THE FEET, NOT ACROSS THE FIELD (G97,
+                // 2026-09-16). The 60-minute run sat nine minutes at (1431.7,70,-1491.5), in a
+                // pit, with iron ore three blocks lower and TWENTY-FIVE blocks away: the plan
+                // (n=35, complete) climbed 4.5 out of the pit first ("HANDOFF target=(1431,74,
+                // -1492) rise=4.50 horiz=0.20"), and this refusal fired 115 times -- "the goal
+                // is 3 below, not towering up" -- until every ore in reach was marked
+                // unreachable and the chain read "No tasks". G60's runaway tower had its goal
+                // straight under the feet (coal two below, horiz ~0); a goal that is below but
+                // far is reached by getting out of the hole, which is exactly what the tower is
+                // for. So the refusal keeps its shape and gains a radius.
+                double goalHoriz = goal == null ? 0.0
+                        : Math.hypot(goal.x - player.getX(), goal.z - player.getZ());
                 if (TungstenConfig.get().noTowerWhenGoalIsBelow && goal != null
                         && goal.y < player.getY() - 2.0
-                        && jump.getY() > player.getBlockPos().getY() + 2) {
+                        && jump.getY() > player.getBlockPos().getY() + 2
+                        && goalHoriz > TungstenConfig.get().noTowerWhenGoalIsBelowRadius) {
+                    navTowerAllowedFarGoal++;
+                }
+                if (TungstenConfig.get().noTowerWhenGoalIsBelow && goal != null
+                        && goal.y < player.getY() - 2.0
+                        && jump.getY() > player.getBlockPos().getY() + 2
+                        && goalHoriz <= TungstenConfig.get().noTowerWhenGoalIsBelowRadius) {
                     Debug.logWarning(String.format(
                             "Wall too high to jump, but the goal is %.0f below — not towering up",
                             player.getY() - goal.y));
@@ -1489,8 +1514,26 @@ public final class FastNavigator {
             // that yields no such partial is given up out loud, never handed to an engine
             // without a shovel.
             double partialLen = Math.sqrt(tail.getSquaredDistance(start));
+            // ⛔ A SHORT PARTIAL THAT BUILDS OR DIGS IS A LEG, NOT A DEAD END (G98, 2026-09-16).
+            // The 60-minute run ended with twenty minutes at the bottom of its own shaft,
+            // (1508,52,-1516), the goal nine blocks straight up: every plan was partial --
+            // two ledges and then flagged tower cells ("PLAN n=7 complete=false
+            // firstPhysics=4 flagged=3") -- and every plan was two blocks short of the five
+            // this rule wants, so it went to the dead-end branch below, which hands the GOAL
+            // to the physics engine. That engine has no place move: "Failed! No block path",
+            // "no progress ... giving the route up", sixty-four times, and the tower cells
+            // the planner had put in the plan were never handed to PillarTask. A flagged
+            // build or dig inside the partial is progress the physics engine cannot make and
+            // the walker can deliver: walk the leg to it and let the flagged hand-off below
+            // (a tower to PillarTask, a break run to the navigator's own dig) do its job.
+            int firstFlag = res.firstPhysicsIndex();
+            boolean flaggedBuildInPlan = firstFlag > 0 && firstFlag < res.path.size()
+                    && ((res.path.get(firstFlag).toPlace != null
+                            && !res.path.get(firstFlag).toPlace.isEmpty())
+                        || res.path.get(firstFlag).toBreak != null);
+            if (flaggedBuildInPlan && partialLen < 5.0) navPartialBuildWalked++;
             boolean walkThePartial = TungstenConfig.get().planPartialLikeBaritone
-                    && res.path.size() >= 2 && partialLen >= 5.0;
+                    && res.path.size() >= 2 && (partialLen >= 5.0 || flaggedBuildInPlan);
             if (walkThePartial) {
                 navPartialWalked++;
             } else if (before - after < MIN_PARTIAL_PROGRESS

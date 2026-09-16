@@ -1374,6 +1374,25 @@ test + full nav-suite regression before it counts done.
       for a block one cell away, the navigator not running, the unstuck chain shimmying every
       60 s. The armed-but-not-navigating state needs its counter and its dump; the frame shows
       the bot on a cliff edge above the target.
+- [ ] **G97 — "the goal is below — not towering up" refused the way out of a pit** (60-minute
+      run, 2026-09-16 13:40 UTC, t=596–1367): the bot in a pit at (1431.7,70,-1491.5), iron ore
+      three blocks lower and twenty-five blocks away, the plan complete (n=35) and climbing 4.5
+      out of the pit first (`HANDOFF target=(1431,74,-1492) rise=4.50 horiz=0.20`), G60's refusal
+      firing 115 times until every ore in reach was "given up 3 times in a row — marking it
+      unreachable" and the chain read "No tasks. Time to add new!"; nine minutes without a
+      step. Fixed: the refusal keeps its shape and gains a horizontal radius
+      (`noTowerWhenGoalIsBelowRadius` = 6, counter `navTowerAllowedFar`).
+- [ ] **G98 — a short partial plan that carries a tower is handed to the engine that cannot
+      build** (same run, t=2377–3567): twenty minutes at the bottom of its own diamond shaft,
+      (1508,52,-1516), the next goal nine blocks straight up. Every plan partial — two ledges
+      then flagged tower cells (`PLAN n=7 complete=false firstPhysics=4 flagged=3`) — and
+      under the five blocks the walk-the-partial rule wants, so the dead-end branch handed the
+      GOAL to the physics search: "Failed! No block path", "no progress … giving the route up"
+      ×64, `primDrive NO ROUTE … dy9.0` ×69. Fixed: a partial that carries a flagged build or
+      dig is walked to it (`navPartialBuild`), and the flagged hand-off does the rest. Bench
+      `shaft_exit_test.py`. Open alongside it: the planner expanded 28 pillar moves against
+      100k climb nodes in those searches — a tower move priced or ordered so that a plan out
+      of a ten-deep shaft never completes.
 - [ ] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
       (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
       of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
