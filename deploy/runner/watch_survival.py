@@ -5,15 +5,41 @@ Defaults to observing the existing task on tester1. --start explicitly starts
 @gamer; --connect explicitly joins gamer-server. Inventory, health and time of
 day are never reset. The dedicated test client keeps its configured FPS cap
 without physical input (botFpsNoIdleThrottle is pinned on). Finishing a recording leaves the bot and its defence active.
-Use --stop-on-exit only when intentionally ending the gameplay task as well.
+Use --stop-on-exit to disconnect before ending the gameplay task, so an idle
+player is never left exposed in the live world.
 """
 import argparse
 import json
+import signal
+import subprocess
 import time
 from pathlib import Path
 
 from gamer_smoke import rec_start, rec_stop
 from uctest.harness import Py4jClient
+
+
+def disconnect_and_stop():
+    # Keep survival active until the client has left the world.
+    code = """
+from py4j.java_gateway import JavaGateway, GatewayParameters, get_field
+import time
+g = JavaGateway(gateway_parameters=GatewayParameters(port=25333, auto_convert=True))
+j = g.jvm
+mod = j.adris.altoclef.AltoClef.getInstance()
+client = j.net.minecraft.class_310.method_1551()
+menu = get_field(mod.getTaskRunner(), 'gameMenuTaskChain')
+client.execute(menu._innerDisconnect(client))
+for _ in range(50):
+    if not g.entry_point.inGame():
+        break
+    time.sleep(0.1)
+else:
+    raise RuntimeError('Disconnect not confirmed; keeping survival active')
+g.entry_point.stopPathing()
+"""
+    subprocess.run(['docker', 'exec', 'uctest-mc-tester1', 'python3', '-c', code],
+                   check=True, timeout=20)
 
 
 def main():
@@ -26,6 +52,7 @@ def main():
     ap.add_argument('--connect', action='store_true')
     ap.add_argument('--stop-on-exit', action='store_true')
     args = ap.parse_args()
+    signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
     if args.seconds < 1 or args.chunk_seconds < 1:
         ap.error('recording durations must be positive')
     root = args.output_dir.resolve()
@@ -92,7 +119,7 @@ def main():
             finish_clip()
         finally:
             if args.stop_on_exit:
-                p.call('stopPathing')
+                disconnect_and_stop()
 
 
 if __name__ == '__main__':
