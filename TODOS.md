@@ -1552,7 +1552,34 @@ test + full nav-suite regression before it counts done.
 ### LOW — polish
 - [ ] **G16 execute diagonals in the queue** (queueDiagonals) — faster nav.
 - [ ] **G17 slime-bounce shortcut** (slimeCrossing default) — evaluate on-by-default.
-- [ ] **G18 price soul-sand/honey; let cobweb be a break candidate.**
+- [ ] **G18 let cobweb be a break candidate** (the soul-sand/honey half is already done: soul
+      sand is priced in `MovementTraverse` (`WALK_ONE_OVER_SOUL_SAND_COST`, both the destination
+      and the departure floor), honey is excluded from the normal-cube collision check
+      (`MovementHelperB:518`) and listed among the interaction-avoid blocks (`:274`) — confirmed
+      live in source, 2026-09-17, checkbox left open only for the cobweb half). Traced why cobweb
+      is currently a WALL, not an obstacle: `FastPlanner.hazardAt` (the doc comment on it explains
+      why it exists — lava, fire, cobweb, sweet berry, bubble column and powder snow all have an
+      empty or near-empty collision shape, so every move generator would otherwise mistake them
+      for open air) groups cobweb with genuinely dangerous blocks (lava, magma, fire, cactus,
+      powder snow). `hazardousDestination()` is the ONE gate every move generator passes through
+      in `relax()`, so any cell containing cobweb is refused outright before a plan is ever built
+      — the planner routes around it exactly like lava, never through it. Two coupled fixes are
+      needed, not one: (1) `hazardAt` must stop grouping cobweb with blocks that deal damage —
+      cobweb does not, it only slows; (2) even past that gate, `breakThrough()`'s own obstruction
+      test decides what to mine by `getCollisionShape().isEmpty()`, which is ALSO empty for
+      cobweb, so it would still read as "nothing in the way" and never get queued to break —
+      cobweb needs a specific case there (block == Blocks.COBWEB, gated by BreakRules.canBreak
+      the same as every other break candidate) alongside the shape check, not instead of it, since
+      every other block in that loop is correctly obstruction-vs-air by its real collision shape.
+      Not attempted here: `relax()` is the single hazard gate for every move type in this planner
+      (step, diagonal, climb, drop, parkour, bridge, pillar, swim, ladder, slime), so narrowing it
+      risks changing behaviour for every one of them, and there is no live stand from this seat to
+      bench the regression (nav_hazard and equivalent). A narrow, scoped fix for whoever has stand
+      access: carve `Blocks.COBWEB` out of `hazardAt`'s block list into its own check that
+      `hazardousDestination` still treats as "must not be entered as air" but `breakThrough`/
+      `breakDown`/`breakStair` treat as a normal breakable obstruction once `BreakRules.canBreak`
+      allows it — bench against a mineshaft cobweb tunnel (cheap, common terrain) and nav_hazard
+      for regressions on the untouched blocks (lava/magma/fire/cactus/powder snow stay refused).
 - [ ] **G19 elytra / boat / nether-portal travel** — only if the playthrough needs them.
 - [ ] **G20 cost-model retune** (JUMP_PENALTY/PLACE/FALL constants; split XZ/Y in octile heuristic).
 
