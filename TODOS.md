@@ -1182,9 +1182,14 @@ test + full nav-suite regression before it counts done.
       down dug to, then a smoker impossible to place in the shaft; a table two blocks up a bank
       reached for through forty-six shimmies, 00:38, eight minutes with NOTHING in the log but the
       shimmy). Round 40: only a table on the way is picked up -- twelve blocks across at most and
-      within two of the feet in height; otherwise four planks are cheaper. **G81**: the unstuck
-      chain's "generally stuck" line now names the drive's last branch (`lastDriveNote`), the
-      navigator's state and the chain's leaf, so a silent stand has its driver in the same line.
+      within two of the feet in height; otherwise four planks are cheaper.
+- [x] **G81**: the unstuck chain's "generally stuck" line now names the drive's last branch
+      (`lastDriveNote`), the navigator's state and the chain's leaf, so a silent stand has its
+      driver in the same line.
+      ⛔ Split out of the G80 bullet above (was a compound checkbox covering both an open item
+      and an already-shipped one). Confirmed live in source: `CustomBaritoneGoalTask.lastDriveNote`
+      is set at both reach and dig call sites and read by `UnstuckChain`'s stuck-detection log
+      (checked in-repo, 2026-09-17, no code change needed).
 - [ ] **the 00:55 run's 2.5-minute stand in a 1x1 hole at (1221,62,328)**: dug down for coal,
       then "Doing stuff in [smoker] container" with no smoker and no materials ("DSIC near=false
       walk=INF" x3600), "Failed, blacklisting and wandering", "Planned escape (wander enclosed)
