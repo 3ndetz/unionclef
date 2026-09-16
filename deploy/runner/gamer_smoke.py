@@ -318,6 +318,13 @@ def place_at(spawn):
         return
     grcon(f"spreadplayers {parts[0]} {parts[2]} 0 1 false {BOT}")
     time.sleep(3)
+    # THE START MUST NOT OFFER LAST RUN'S DROPS. The reset's `kill @e[type=item,distance=..40]`
+    # measures from the console's own position and runs before the start is chosen, so a wooden
+    # pickaxe dropped ten blocks underground by an earlier run at (1236,56,-1406) survived it and
+    # held the 2026-09-16 25-minute run for its first seven minutes ("Getting to drop
+    # item.minecraft.wooden_pickaxe ... (dig/build allowed)", first log at 461 s; G93). Kill
+    # around the body where it actually landed.
+    grcon(f"execute as {BOT} at @s run kill @e[type=item,distance=..48]")
 
 
 def rec_start(secs):

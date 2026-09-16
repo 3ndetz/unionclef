@@ -707,6 +707,11 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             // this task stops running, so an interrupted mine cannot freeze the walker.
             kaptainwutax.tungsten.TungstenModDataContainer.minerAimUntilMs =
                     System.currentTimeMillis() + 300;
+            // AND THE MINING CLAIM, which only this branch may make: the executor's own dig
+            // yields to a miner that is breaking a block, not to one that is backing off below
+            // (see TungstenModDataContainer.minerMineUntilMs for the 110-second stand).
+            kaptainwutax.tungsten.TungstenModDataContainer.minerMineUntilMs =
+                    System.currentTimeMillis() + 300;
             mod.getInputControls().release(Input.SNEAK);
             mod.getInputControls().release(Input.MOVE_BACK);
             mod.getInputControls().release(Input.MOVE_FORWARD);

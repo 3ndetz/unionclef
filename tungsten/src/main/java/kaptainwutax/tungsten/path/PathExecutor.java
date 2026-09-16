@@ -722,8 +722,14 @@ public class PathExecutor {
         // misses in 4 s. While the miner owns the aim this dig stands down for the tick -- attack
         // released, camera and watchdog untouched, the queue kept -- and resumes when the claim
         // lapses (300 ms after the miner stops stamping it).
+        // ⛔ TO A MINER THAT IS MINING, not to one that merely holds the keys. minerOwnsAim() is
+        // also stamped by DestroyBlockTask's back-off branch (a target below the feet, the own
+        // floor in the way, sneak held, no swing); yielding to that stood the bot 110 s over
+        // three cobblestone on the 2026-09-16 25-minute run (execDigYieldMiner=1392,
+        // dbBlocked=1430/0/0). minerOwnsMining() is refreshed by the "Block in range" branch
+        // alone.
         if (TungstenConfig.get().executorYieldsAimToMiner
-                && kaptainwutax.tungsten.TungstenModDataContainer.minerOwnsAim()) {
+                && kaptainwutax.tungsten.TungstenModDataContainer.minerOwnsMining()) {
             execDigYieldMiner++;
             options.attackKey.setPressed(false);
             return true;   // still breaking -- just not this tick

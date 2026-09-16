@@ -37,6 +37,23 @@ public class TungstenModDataContainer {
     public static boolean minerOwnsAim() {
         return System.currentTimeMillis() < minerAimUntilMs;
     }
+
+    /**
+     * The miner is MINING this tick, not merely holding the body. {@link #minerAimUntilMs} is
+     * also stamped by DestroyBlockTask's "back off / sneak" branch, which claims the KEYS so the
+     * walker does not push forward while it steps back -- it aims at nothing and swings at
+     * nothing. The executor's dig yielded to that claim too and nobody dug: the 2026-09-16
+     * 25-minute run stood 110 s at (1141.7,65,-1421) over a cobblestone target two below its
+     * feet, execDigYieldMiner=1392 against dbBlocked=1430/0/0 (self-floor, no swing). This
+     * stamp is refreshed only by the branch that is actually breaking a block ("Block in range,
+     * mining..."), and the dig path yields to it alone. Same timestamp shape as the aim claim,
+     * for the same reason: it lapses on its own.
+     */
+    public static volatile long minerMineUntilMs = 0L;
+
+    public static boolean minerOwnsMining() {
+        return System.currentTimeMillis() < minerMineUntilMs;
+    }
     /** Active placement primitives own the hand, aim and movement until their step finishes. */
     public static boolean builderOwnsInputs() {
         return (EXECUTOR != null && EXECUTOR.isPlacingNow())

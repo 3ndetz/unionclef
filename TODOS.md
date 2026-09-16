@@ -1342,6 +1342,38 @@ test + full nav-suite regression before it counts done.
       signature — `drift 2.327 (threshold 2.1) at tick 26, expected (7.52,-58.00,0.50) actual
       (7.62,-60.32,0.50)`: the simulation two blocks above the pad over the gap, the body in the
       gap. Not reproduced in four traced runs since; the next traced fall decides it.
+- [ ] **G93 — a pickaxe DROP ten blocks underground beats a forest thirty blocks away** (25-minute
+      run, 2026-09-16 12:39 UTC, fresh start #44 at (1233,65,-1405)): a wooden pickaxe from an
+      earlier run lay at (1236,56,-1406); `Get catalogued [[wooden_pickaxe]] → Pickup Dropped
+      Items → Getting to drop … (dig/build allowed)` held the bot for the first seven minutes
+      (routes partial, "Waiting for calculations (wandering)", `Search gave up: goal unreachable
+      after 20s`), with spruce across the lake in the frame at 03:30. First log at 461 s (the
+      morning run: 43 s). Two parts: the bench must not offer the drop (the reset's `kill
+      @e[type=item,distance=..40]` runs from the CONSOLE's position, not the start's, and before
+      the start is chosen — fixed to `execute positioned <spawn>` after the teleport), and the
+      catalogue's pickup-first rule needs a cost: a drop that costs a dig is not cheaper than a
+      craft from a tree in sight.
+- [ ] **G94 — a step down onto a snow layer is a hop the physics engine cannot cross** (same run,
+      t=264–308, sixty seconds at (1264.3,66,-1404)): `gaveUp n3 idx2 … hop[0,-1,1] from
+      (1264,66,-1405)[grass_block|snow|air] to (1264,65,-1404)[grass_block|snow|air]`, 32898
+      tests. The feet cell of both ends holds a snow LAYER (a thin block, G82's family for the
+      planner; here it is the physics agent's landing/step that refuses). Bench: a two-block
+      staircase down with `snow` layers on the treads.
+- [ ] **G95 — the night job was a block 86 below** (same run, t=638–1013): `Resetting sleep
+      through night task → Destroy block at (1240,-21,-1350) → reaching (dig allowed)` dug a
+      straight shaft from y=63 to y=-28 in six minutes, into a trial chamber; `NIGERUNDAYOO,
+      skeletons=true`, hp 17 → 3.5, slain by a Breeze, respawn at world spawn with nothing.
+      Before it, `Collect 220 food → Killing pig → Long haul to entity via the drive (walk / dig
+      / build)` had already started the shaft toward a pig below ground (frame at 10:40). The
+      night track itself is deferred by the operator; the JOB SELECTION is not: a target 86 blocks
+      down, or an entity under the ground, is not a job for the surface with stone tools and no
+      food. Recorded, not started.
+- [ ] **G96 — after the respawn, "reach:armed … nav=false" and a shimmy** (same run, t=1301–1411,
+      110 s at (66.5,106,-110)): `Unstuck: drive=reach:armed 62,97,-162 nav=false
+      leaf=<Getting to block (66,106,-111)> Tungsten (primary) pathfinding…` — a reach route armed
+      for a block one cell away, the navigator not running, the unstuck chain shimmying every
+      60 s. The armed-but-not-navigating state needs its counter and its dump; the frame shows
+      the bot on a cliff edge above the target.
 - [ ] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
       (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
       of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
