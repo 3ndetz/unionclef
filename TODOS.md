@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- CHECKPOINT-SAVE-UNVERIFIED-RCON-2026-09-17 -->
+## `checkpoint.py save` copies the world without checking that save-off/flush actually succeeded (2026-09-17)
+
+Read `deploy/runner/checkpoint.py` (new since the last full `deploy/` audit, commit `04792825`) for
+logic, not a live-stand question — a static read is enough here. `save()` calls
+`rcon("save-off")` then `rcon("save-all flush", 120)` and, two seconds later, runs `docker cp` to
+copy the world out. Neither `rcon()` call's return value is checked against anything (no look for
+"Turned off world auto-saving" / "Saved the game" in the response) — `rcon()` only ever returns
+whatever `rcon-cli` printed, blank on a failed connection included, and `save()` copies the world
+regardless of what came back. If RCON is briefly unreachable at the exact moment `save` runs (the
+server under load, a transient docker-exec hiccup), the copy proceeds against a world that may
+still be actively writing, and the script reports a normal-looking size and duration with nothing
+to say the flush never happened — a checkpoint that LOOKS clean but was never actually quiesced.
+Region-file corruption from an unflushed copy would not necessarily show up until a much later
+`restore`, which makes it a harder failure to trace back to this step than a loud error here would
+be. `restore()`'s own save-off/flush pair (line 110) has the identical gap.
+
+Not fixed here: this is the parallel session's own actively-used live tool (real checkpoints,
+real restores, in use this same day per `docs/ai/progress.md`), so it is left as a precisely-scoped
+note rather than an edit to a file someone else may have open right now. A narrow fix, if picked
+up: check the rcon reply for the expected confirmation text before proceeding (or at minimum log a
+warning when it is missing), the same way `wait_rcon()` already treats an rcon reply's *content*,
+not just its presence, as the signal to trust.
+
 <!-- DOCKER-STARTUP-BLOCKER-LIKELY-RESOLVED-2026-09-16 -->
 ## For whoever is running the natural playthrough (docs/ai/progress.md, "Recovery verification and Docker startup blocker"): the gamer-server looks healthy again from this seat (2026-09-16)
 
