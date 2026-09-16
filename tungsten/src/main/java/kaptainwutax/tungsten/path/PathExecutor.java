@@ -169,6 +169,8 @@ public class PathExecutor {
 
     /** Ticks the executor handed the camera to a block-breaking task. Proof this fired. */
     public static volatile int execYieldMiner=0;
+    /** Dig ticks yielded to an altoclef miner that owns the aim (one aimer per tick, dig path). */
+    public static volatile int execDigYieldMiner=0;
     private int placingTicks = 0;
 
     public PathExecutor(boolean isClient) {
@@ -709,6 +711,23 @@ public class PathExecutor {
         // is off by one: at exactly 300 the guard falls through to the reach test, the
         // post-increment leaves 301 behind, and an out-of-reach abort would be filed as a
         // timeout. Naming both halves up front costs one pure distance call and cannot drift.
+        // ONE AIMER PER TICK -- FOR THE DIG TOO (2026-09-16). The walk path already yields the
+        // camera to an altoclef miner that stamped minerAimUntilMs (execYieldMiner); this dig path
+        // never did. So when DestroyBlockTask went "Block in range, mining" on one block while the
+        // navigator's dig held another, the two aimed at different blocks on alternate ticks,
+        // vanilla reset the break progress on every crosshair switch, and NEITHER block broke:
+        // 8+ s of a bot staring at a stone with its crafting table a block away (2026-09-16
+        // recording, 00:12 at 12x), breakMissWhy transit=1035 for that run. Reproduced on the
+        // flat stand with the executor's queue and the miner on adjacent blocks: 77 transit
+        // misses in 4 s. While the miner owns the aim this dig stands down for the tick -- attack
+        // released, camera and watchdog untouched, the queue kept -- and resumes when the claim
+        // lapses (300 ms after the miner stops stamping it).
+        if (TungstenConfig.get().executorYieldsAimToMiner
+                && kaptainwutax.tungsten.TungstenModDataContainer.minerOwnsAim()) {
+            execDigYieldMiner++;
+            options.attackKey.setPressed(false);
+            return true;   // still breaking -- just not this tick
+        }
         boolean timedOut = breakingTicks++ > breakBudgetTicks;
         boolean outOfReach = eye.squaredDistanceTo(center) > 4.5 * 4.5;
         if (timedOut || outOfReach) {
