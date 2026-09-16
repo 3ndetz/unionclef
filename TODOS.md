@@ -1458,6 +1458,13 @@ test + full nav-suite regression before it counts done.
       Fix from the `loop-bread` checkpoint, not from a fresh run (the point of the checkpoints).
       Benches: a food-satisfied inventory + an iron ore in reach → the bot mines the iron, not
       forages; a bread target with 1 wheat and no wheat in the world → the craft yields.
+      ⛔ NOT reproduced from `cp0916-2241-t900` (15 min in): resuming there the bot went straight
+      on — crafting 86 s, iron ore 196 s, furnace 217 s, iron 347 s — and got iron in six
+      minutes, no loop. So the deadlock is a LATER, state-specific accretion (several placed
+      crafting tables it cannot break, the one wheat wedged in a grid, the blacklists), captured
+      in `loop-bread` (the end-of-run world) but not at minute 15. Fix and reproduce from
+      `loop-bread`. (That six-minute resume is also the checkpoint tooling proving itself: iron
+      reached from a saved state in the time a fresh run spends on wood.)
 - [ ] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
       (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
       of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
