@@ -1321,3 +1321,51 @@ The rule:
    rewritten history in front of parallel work is worse. Note it and move on.
 3. If a record can be silently damaged by the tool that writes it, that is the same class of
    defect as a counter that silently reads zero — and this repo has now paid for both.
+
+## 4y. ⛔ THE STALL DETECTOR IS NOT THE REVIEW — WATCH THE RECORDING FOR EVERY MULTI-SECOND HOLD (user 2026-09-16)
+
+The runner's detectors (position stalled, no new rung for 150 s) fire on thresholds. A run can
+PASS with 97 items and still contain an 8-second hold that no threshold sees. It did: on the
+2026-09-16 recording the operator found the bot at 00:12 (12x, ≈144 s real) standing still,
+crosshair on a stone, for eight seconds, while I had already sent the clip as "progressing
+well". The detector wrote nothing. `dbAimWait` read 0. The hold was invisible to every number
+this repo carried, which is exactly why the operator's rule is: **you must find these yourself,
+from the recording, before anyone else does.**
+
+The procedure, every recorded run, before sending anything:
+
+1. **Scan the frames, not the verdict.** Extract frames from the sped-up clip at a fixed cadence
+   (every 3–4 s of a 12x clip ≈ every 40 s real) AND at every window where position or item
+   count is flat for ≥3 s real (`t=…s pos=… items=…` lines of the runner). Read the PNGs
+   yourself. A frame of a bot standing with a tool raised and nothing breaking is a defect.
+2. **Read the overlay for TWO drivers.** If two task lines from different engines name
+   different blocks — `FastNavigator: at the dig — mining … at A` next to
+   `DestroyBlockTask: Block in range, mining` at B — that is two aimers on one camera. The
+   block under the crosshair (`getGameState().lookingAt`) says whose aim is winning that tick.
+   Vanilla resets break progress every time the crosshair leaves a block, so two aimers on
+   alternate ticks break NEITHER block, indefinitely, on anything harder than a table.
+3. **Read the counters that name a mechanism, and notice the ones that read zero.**
+   `breakMissWhy=occluded/transit` (transit = the executor's own aim never settled: something
+   else is steering the camera), `execYieldMiner` / `execDigYieldMiner` (did the executor stand
+   down for a miner that claimed the aim), `dbAimWait` (the miner waited for the camera),
+   `breakAim=hit/aimed/missed/…`, `dbBlocked=selfFloor/unclearable/noReach`, `dbLid`. A hold in
+   which every relevant counter is zero means the branch it sat in is UNCOUNTED. Add the counter
+   first; a fix you cannot see fire is not a fix (4u, 4m).
+4. **Reproduce the MECHANISM when the SCENE will not replay.** The live scene often cannot be
+   re-entered: chunks unloaded until the bot stands there, a cave too cramped to stand on the
+   target, a navigator dig that only exists on one approach. Do not burn hours steering the
+   crosshair. Isolate the mechanism on the flat stand with the agent primitives — `destroyBlockAt
+   (x,y,z)` (altoclef's DestroyBlockTask, the "Block in range" miner), `mineBlocks([[x,y,z]])`
+   (tungsten's executor break queue, what "at the dig" hands over), `;goto` — and measure the
+   SAME counters. The 00:12 fight reproduced as executor + miner on two adjacent blocks: 77
+   transit misses in 4 s, both aimers thrashing.
+5. **Fix the root, not the symptom, and prove it on the bench first.** "One owner per tick" was
+   the root: the dig path of `PathExecutor.tickBreaking` had no yield to `minerOwnsAim()`, while
+   the walk path did; and `stopOrphanRoute()` cannot stop a navigator dig during "in range"
+   because its 300 ms drive-tick gate never opens there. After the yield: transit 77 → 0,
+   `execDigYieldMiner` 82, the miner breaks its block, the executor resumes. Then the nav
+   suite. Then, and only then, the operator gets a clip — one whose frames you looked at.
+6. **A fallback is not a diagnosis.** "Carry the smoker so the bot need not walk back" answers
+   nothing about why a 33-node route to the smoker stopped at node 9. The operator's standing
+   demand: find WHY it stopped, reproduce it, fix that. Workarounds are for after the root is
+   known and shown to be out of scope, and they get named as workarounds.
