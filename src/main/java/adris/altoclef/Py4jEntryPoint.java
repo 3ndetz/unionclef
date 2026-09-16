@@ -660,10 +660,9 @@ public class Py4jEntryPoint {
         return false;
     }
 
+    /** Queue task commands with the game tick; task lifecycle and behaviour scopes are not thread-safe. */
     public void ExecuteCommand(String cmd) {
-        executeInNetworkThread(() -> {
-            _mod.getCommandExecutor().execute(cmd);
-        });
+        RunInnerCommand(cmd);
     }
 
     public void ConnectToServer(String ip) {
@@ -4620,8 +4619,10 @@ public class Py4jEntryPoint {
     public Map<String, Object> stopPathing() {
         String p = kaptainwutax.tungsten.TungstenMod.getCommandPrefix();
         ChatMessage(p + "stop");                                                            // tungsten
-        executeInNetworkThread(() -> _mod.getCommandExecutor().executeWithPrefix("stop"));  // altoclef
-        _gotoGoal = null;
+        MinecraftClient.getInstance().execute(() -> {
+            _mod.getCommandExecutor().executeWithPrefix("stop");
+            _gotoGoal = null;
+        });
         return Map.of("ok", true);
     }
 
