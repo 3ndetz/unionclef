@@ -353,6 +353,11 @@ public class PathFinder {
 	 */
 	public static final java.util.Map<String, Integer> stopBy =
 			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+	/** G91: searches whose root was taken from a body still moving (|v_h| > 0.02). The replay
+	 *  then starts from a body that is slower or elsewhere than the root; the navigator's
+	 *  hand-off waits for rest first (physicsHandoffFromRest), other callers do not yet.
+	 *  Read pfRootMoving=. */
+	public static volatile int pfRootMoving = 0;
 	public static void noteStop(String who) { synchronized (stopBy) { stopBy.merge(who, 1, Integer::sum); } }
 	public static String stopByDump() {
 		synchronized (stopBy) {
@@ -432,6 +437,8 @@ public class PathFinder {
         if(active.get() || thread != null) return false;
         active.set(true);
         stop.set(false);
+        if (player != null
+                && Math.hypot(player.getVelocity().x, player.getVelocity().z) > 0.02) pfRootMoving++;
         // A FRESH SEARCH HAS EMITTED NOTHING YET. The altoclef stall detector uses this to
         // tell 'a search that is still working' from 'a route that went bad', so that it
         // never destroys the former. See stallResetSparesAVirginSearch.

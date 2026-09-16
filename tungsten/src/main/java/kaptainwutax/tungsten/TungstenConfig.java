@@ -5029,6 +5029,21 @@ public class TungstenConfig {
      *  when the bot actually has a placeable block (placeBudget), so blockless parkour/walk
      *  routing is unaffected. The @gamer drive escalates to FastNavigator (which honours this)
      *  when the walker cannot reach a goal — see CustomBaritoneGoalTask (wired 2026-09-10). */
+    /**
+     * G91 (2026-09-16): the physics hand-off takes its root from a body at REST. find() copies the
+     * body's velocity into the root when it is called, and the replay starts when the search
+     * returns -- here 650 ms later. A body still sliding from the walker's last step starts the
+     * replay slower than the root (nav_steep, verboseDebugLogging trace: root vx 0.063, body
+     * 0.006 at replay tick 1), lands 0.11 behind by tick 22, one tick late at the first column's
+     * face and 20 cm below a lip the plan cleared by 2.4 cm: "drift 2.807 at tick 27, expected
+     * (8.76,-58.25) actual (7.70,-60.84)" five runs of five, while the same course from a body at
+     * rest passed every time. The same day's playthrough counted 53 replay aborts, 42 of them at
+     * ticks 8-10. With this on, the navigator releases every movement key and waits (up to 20
+     * ticks) for |v_h| < 0.02 on the ground before it calls find(). Water and ladders never
+     * settle and are not asked to. Off restores the old behaviour for A/B
+     * ({@code --pin physicsHandoffFromRest=false}).
+     */
+    public boolean physicsHandoffFromRest = true;
     public boolean planPlaceMoves = true;   // shipping placement on — see C5.5
 
     // ── Per-move toggles (in-game bisect switches) ────────────────────────────────────────────

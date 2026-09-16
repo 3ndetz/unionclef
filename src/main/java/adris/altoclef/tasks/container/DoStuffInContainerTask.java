@@ -112,7 +112,11 @@ public abstract class DoStuffInContainerTask extends Task {
         // on 100% of lookups (tbl=6059/6059) and nothing is blacklisted -- so BOTH conditions below
         // read false to me and yet this branch is the one that runs. One of the terms is not what it
         // looks like, and reasoning has already been wrong twice here. Log each term separately.
-        if (dsicTrace < 4000) {
+        // G92: this answered its question (near=true walk=182..659 makeNew=INF forceEl=true
+        // justPlacedEl=true hasContainerItem=false -- the walk branch runs because the force
+        // timer has elapsed, and makeNew is INF with no container item carried). Four thousand
+        // chat lines per run is not a trace anyone reads twice; verbose only from here on.
+        if (dsicTrace < 4000 && kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
             dsicTrace++;
             adris.altoclef.Debug.logMessage("DSIC near=" + nearest.isPresent()
                     + " walk=" + (costToWalk > 1e17 ? "INF" : String.format("%.1f", costToWalk))

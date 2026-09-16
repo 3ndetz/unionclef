@@ -297,6 +297,30 @@ public final class FastNavigator {
     private static volatile BlockPos stallReplanCell = null;
     public static volatile int navStallReplans, navStallGaveUp;
 
+    /** G91: the physics root is taken from a body at rest. Ticks spent waiting for the body to
+     *  stop before the current hand-off's find(); the two counters read navHandoffRest=settled/
+     *  timedOut (hand-offs that waited and reached rest / gave up waiting after the cap). */
+    private static int handoffSettleTicks = 0;
+    public static volatile int navHandoffSettled, navHandoffSettleTimeout;
+    /** Horizontal speed under which the body counts as at rest (ground friction takes a sprint
+     *  from 0.28 to under this in six ticks). */
+    private static final double HANDOFF_REST_SPEED = 0.02;
+    /** The most ticks a hand-off waits for rest before taking the root as it is. */
+    private static final int HANDOFF_SETTLE_MAX_TICKS = 20;
+
+    /** Every movement key up, so the body coasts to rest on friction alone (G91). */
+    private static void releaseMovementKeys() {
+        var o = TungstenMod.mc == null ? null : TungstenMod.mc.options;
+        if (o == null) return;
+        o.forwardKey.setPressed(false);
+        o.backKey.setPressed(false);
+        o.leftKey.setPressed(false);
+        o.rightKey.setPressed(false);
+        o.jumpKey.setPressed(false);
+        o.sneakKey.setPressed(false);
+        o.sprintKey.setPressed(false);
+    }
+
     /** True while this navigator is mining a planned break run (PathExecutor asks, so that its
      *  post-mining resume does not start a physics search underneath us). */
     public static boolean ownsBreakRun() { return active && awaitingBreak; }
@@ -453,6 +477,7 @@ public final class FastNavigator {
         budgetBoostedThisRoute = false;
         if (pillarSteerTicks > 0) releaseSteer();
         pillarSteerTicks = 0;
+        handoffSettleTicks = 0;
         reachBlock = null;
         nextBreakCells = null;
         pendingBreakCells = null;
@@ -1061,6 +1086,34 @@ public final class FastNavigator {
                     navPhysicsGaveUp++;
                     pendingGiveUp = true;
                     return;
+                }
+                // ⛔ THE ROOT IS THE BODY AT REPLAY TIME, SO THE BODY MUST BE AT REST WHEN THE
+                // ROOT IS TAKEN (G91, 2026-09-16). find() copies the player's velocity into the
+                // root the moment it is called; the replay begins when the search returns, here
+                // 650 ms later. The walker had just handed over and the body was still sliding:
+                // root vx=0.063, body vx=0.006 at replay tick 1 (nav_steep, verboseDebugLogging
+                // trace). That 0.057 deficit put the body 0.11 behind the simulation by tick 22,
+                // one tick late at the first column's face and 20 cm below a lip the plan cleared
+                // by 2.4 cm: "drift 2.807 at tick 27, expected (8.76,-58.25) actual (7.70,-60.84)"
+                // five runs of five, and the same course passed from a body at rest every time.
+                // The playthrough of the same day counted 53 replay aborts, 42 of them at ticks
+                // 8-10. So: keys released, and the search waits for the body to stop (|v_h| <
+                // 0.02 on the ground) before the root is taken. Water and ladders never settle
+                // and are not asked to.
+                if (TungstenConfig.get().physicsHandoffFromRest
+                        && !player.isTouchingWater() && !player.isClimbing()) {
+                    double vh = Math.hypot(player.getVelocity().x, player.getVelocity().z);
+                    boolean atRest = vh < HANDOFF_REST_SPEED && player.isOnGround();
+                    if (!atRest && handoffSettleTicks < HANDOFF_SETTLE_MAX_TICKS) {
+                        handoffSettleTicks++;
+                        BlockPathWalker.stop();
+                        releaseMovementKeys();
+                        pendingPhysicsTarget = jump;   // keep the hand-off; ask again next tick
+                        return;
+                    }
+                    if (handoffSettleTicks >= HANDOFF_SETTLE_MAX_TICKS) navHandoffSettleTimeout++;
+                    else if (handoffSettleTicks > 0) navHandoffSettled++;
+                    handoffSettleTicks = 0;
                 }
                 long budget = (physicsFailStreak > 0 && jump.equals(physicsHandoffTarget))
                         ? PHYSICS_FAILURE_MS : PHYSICS_PRIMARY_MS;

@@ -1292,6 +1292,63 @@ test + full nav-suite regression before it counts done.
       сбрасывается вместе с отказом — один стоп = одна попытка. **G85** — сдвиг кулдауна
       UnstuckChain переполнялся на 28-й детекции (`cooldown=-268435456s`), шимми каждые 10 с;
       ограничен.
+- [ ] **G90 — a tunnel is executed one cell per plan, and priced as if it were not** (2026-09-16
+      playthrough, 09:27:14–09:29:51 UTC): after iron tools the bot had to return to the smoker
+      at (-12,77,-1410) from (-70,91,-1470), 84 blocks away, 14 lower, "dig allowed". The
+      planner chose a shaft (7 down at (-70,-1470)) and a two-high tunnel at y=84 then y=77 —
+      and executed it ONE CELL AT A TIME: `at the dig — mining 2 block(s)` → `Mining done` →
+      `planAhead` → walker → `steerTo` (sneak for the last block) → WindMouse aim → two breaks,
+      about 3 s per cell, 84 cells, the last three minutes of the run underground. The
+      planner prices the cell at its break ticks (~16 with an iron pickaxe ≈ 0.8 s) plus one
+      walk, ≈ 1 s — three times under the executed cost — because `PathFinder.truncateAtBreaks`
+      cuts the route at the FIRST break cell (PathFinder:247), so every tunnel cell is a fresh
+      route with a fresh centring and aim. Two parts, both core: (a) the executor mines a RUN of
+      consecutive break cells as one break queue, stepping into each opened cell without a
+      re-plan; (b) until (a) lands, the planner's break move carries the per-cell overhead it
+      actually pays. Reproduce on the survival stand: tp the bot to the surface 80 blocks from a
+      placed smoker across a hill with an iron pickaxe, `@get cooked_chicken 1` with raw chicken
+      in the pack, time the return. The surface walk is ~20 s.
+- [ ] **the "stopped n33 idx9" halt at (-71.5,95,-1464.5) was not navigation** (same run,
+      09:27:02): the guide ran EAST to a truncated target (-38.5,91,-1462.5) while the bot was
+      chasing a raw-chicken DROP at (-78,94,-1471) to the WEST (frames at t=546–550 s:
+      `PickupDroppedItemTask [[chicken]]` → `GetToDropTask … at -78,94,-1471`). The search was
+      killed one second later by `TungstenHelper.stop()` (stopBy TungstenHelper@600:313 in the
+      run) when the drop pursuit re-issued its westward route; the drop was reached at 09:27:10.
+      A one-second target flip of the G38/G23 family, not a stand. The real cost of that minute
+      was the detour itself: food 2/20, the nearest cookable drop 60 blocks from the mine.
+- [ ] **G91 — nav_steep: the FIRST attempt after a respawn falls into the gap before the first
+      column, deterministically** (5 of 5 runs on 2026-09-16, suite and `--only`): `Path stopped:
+      drift 2.807 blocks (threshold 2.2) at tick 27. Expected (8.76,-58.25,0.29), actual
+      (7.70,-60.84,0.47)` — the same numbers to the centimetre every time. The simulation is
+      airborne over the first column at tick 27; the body is at x=7.70 falling in the one-wide
+      gap after the pad (x≤6), i.e. the body never made the first jump. The runner's
+      ensure_grounded puts it back and the SECOND attempt from the same start passes (goal at
+      ~15 s). Not fps (identical at 29.6 and after a client recreate), not the dig-yield change
+      (no dig, no miner on the course). Baseline 2026-09-10 PASS; codex saw it fail "at the
+      same lip" on 09-14 and pass 3/3 after a797b174 at 20–25 fps. Per-tick sim-vs-body trace
+      (`--pin verboseDebugLogging=true`, `Agent.compare` prints every mismatch) is the
+      reproduction; the candidate list is the 25 navigator/executor commits of 09-11..09-16.
+      **ROOT CAUSE (the trace):** `find()` copies the body's velocity into the root when it is
+      called; the walker had just handed over and the body was still sliding (root vx 0.063),
+      the search took 650 ms, and the replay started from a body that had coasted to rest (vx
+      0.006 at tick 1). Both sprint-jump at ticks 2 and 15; the simulation clears the first
+      column's lip by 2.4 cm at tick 23; the body, 0.11 behind, arrives a tick later 20 cm
+      lower, hits the face and falls. The second attempt started from rest (root at 0.5) and
+      matched the simulation to 1e-3. **FIX:** the hand-off releases every movement key and
+      waits (≤ 20 ticks) for |v_h| < 0.02 on the ground before `find()`
+      (`physicsHandoffFromRest`, counters `navHandoffRest=settled/timedOut`, and
+      `pfRootMoving` for the other `find()` callers). After: first attempts 5/6 clean, 9.0–9.2 s
+      (before: 0/5). **G91b, open:** the one remaining first-attempt fall has a different
+      signature — `drift 2.327 (threshold 2.1) at tick 26, expected (7.52,-58.00,0.50) actual
+      (7.62,-60.32,0.50)`: the simulation two blocks above the pad over the gap, the body in the
+      gap. Not reproduced in four traced runs since; the next traced fall decides it.
+- [ ] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
+      (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
+      of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
+      justPlacedEl=true hasContainerItem=false): the walk branch is taken because
+      `placeForceTimer` has elapsed, and `makeNew` is INF because no container item is carried.
+      Gate it behind verboseDebugLogging or remove it. Same family: `RTGATE` every 400 gate
+      calls is fine (rate-limited), keep.
 - [ ] **стенд: `docker cp`/`docker exec ... /tmp/x` из Git Bash на jayra** — MSYS переписывает
       `/tmp/...` в Windows-путь; ставить `MSYS_NO_PATHCONV=1` (ловушка, дважды поймана).
 - [ ] **rounds 40 and 41 both died to a zombie at t=65 at the same spawn (-331,105,-204)**, and
