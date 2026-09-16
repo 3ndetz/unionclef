@@ -10,7 +10,6 @@ import adris.altoclef.control.PlayerExtraController;
 import adris.altoclef.control.SlotHandler;
 import adris.altoclef.eventbus.EventBus;
 import adris.altoclef.eventbus.events.BlockBrokenEvent;
-import adris.altoclef.eventbus.events.BlockPlaceEvent;
 import adris.altoclef.eventbus.events.ClientRenderEvent;
 import adris.altoclef.eventbus.events.ClientTickEvent;
 import adris.altoclef.eventbus.events.SendChatEvent;
@@ -511,8 +510,8 @@ public class AltoClef implements ModInitializer {
         // Render
         EventBus.subscribe(ClientRenderEvent.class, evt -> onClientRenderOverlay(evt.context));
 
-        // Block place/break tracking for protected area avoidance
-        EventBus.subscribe(BlockPlaceEvent.class, evt -> worldSurvivalChain.onBlockPlaced(this, evt.blockPos, evt.blockState));
+        // Track attempted breaks. General world-change events cannot identify a
+        // failed player placement; placement executors own their refusal handling.
         EventBus.subscribe(BlockBrokenEvent.class, evt -> worldSurvivalChain.onBlockBroken(this, evt.blockPos, evt.blockState, evt.player));
 
         // Projectile detection — instant reaction to incoming arrows

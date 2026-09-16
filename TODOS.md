@@ -1,5 +1,21 @@
 # TODOs
 
+<!-- FALSE-PLACEMENT-CLAIM-2026-09-16 -->
+## World updates must not fabricate protected building regions (2026-09-16)
+
+- [x] A deep exit stalled when an unrelated world block change triggered a radius50
+  placement ban. Remove the false inference while retaining explicit protection and
+  actual movement failure handling; validate building and complete-exit regressions.
+
+<!-- FOOD-SURFACE-EXPLORATION-2026-09-16 -->
+## Underground food search must reach a suitable exploration area (2026-09-16)
+
+- [ ] Natural playthrough reached diamond tools and armor17, then searched for food for nearly
+  three minutes inside the same chamber around31,-6,-142. No known food selects ordinary
+  cave-height wandering; open neighbours suppress enclosed-body surface recovery. Reproduce
+  and repair surface-seeking exploration while preserving local-food priority and navigation
+  safety. Controlled baselines and acceptance belong in docs/ai/progress.md.
+
 <!-- HAUL-RANGE-CEILING-STRONGER-EVIDENCE-2026-09-15 -->
 ## GetToEntityTask's haulRange cap: stronger evidence found, still not fixed blind (2026-09-15)
 

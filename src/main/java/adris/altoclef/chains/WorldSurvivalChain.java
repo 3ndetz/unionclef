@@ -98,30 +98,12 @@ public class WorldSurvivalChain extends SingleTaskChain {
      * now describes.
      */
     private static final int BREAK_AVOID_RADIUS = 50;
-    /**
-     * The placing twin of {@link #BREAK_AVOID_RADIUS}, and it has the SAME shape of problem.
-     *
-     * <p>Left at 50 deliberately: the break radius was cut on direct evidence (a failing course,
-     * the client log naming the ban, and 1-of-3 against 3-of-3 for every other rung). There is no
-     * such evidence for placing yet, and changing two things at once would make the measurement
-     * unreadable. If a placing course ever shows "denied by place rules" with the bot idle, this
-     * is the first line to read.
-     */
-    private static final int PLACE_AVOID_RADIUS = 50;
     private static final double BREAK_AVOID_TIMEOUT = 60;
-    private static final double PLACE_AVOID_TIMEOUT = 60;
 
     // Movement stuck detection
     private final TimerGame _moveStuckTimer = new TimerGame(15);
     private Vec3d _lastPos;
     private int _numTryingUnstuck;
-
-    // Block placement tracking
-    private boolean _lastPlacedBlock = false;
-    private BlockPos _lastPlacedBlockPos = null;
-    private final TimerGame _blockPlaceCheckTimer = new TimerGame(0.5);
-    private final TimerGame _placeAvoidTimer = new TimerGame(PLACE_AVOID_TIMEOUT);
-    private boolean _isAvoidingBlockPlace = false;
 
     // Block break tracking
     private boolean _lastBrokenBlock = false;
@@ -161,8 +143,9 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
         AltoClef mod = AltoClef.getInstance();
 
-        // Check block placement and breaking
-        checkLastPlacedBlock(mod);
+        // Placement failures belong to the movement that attempted the placement.
+        // World block changes include server updates and blocks later mined again;
+        // they cannot establish a failed placement or a protected region.
         checkLastBrokenBlock(mod);
 
         // Drowning
@@ -370,25 +353,6 @@ public class WorldSurvivalChain extends SingleTaskChain {
                 && !AltoClef.getInstance().getUserTaskChain().getCurrentTask().thisOrChildSatisfies(task -> task instanceof EnterNetherPortalTask);
     }
 
-    private void checkLastPlacedBlock(AltoClef mod) {
-        if (_lastPlacedBlock && _lastPlacedBlockPos != null && _blockPlaceCheckTimer.elapsed()) {
-            if (WorldHelper.isAir(_lastPlacedBlockPos)) {
-                Debug.logWarning("Block at " + _lastPlacedBlockPos + " failed to place!");
-                if (!_isAvoidingBlockPlace || _placeAvoidTimer.elapsed()) {
-                    Debug.logMessage("Adding temporary block " + _lastPlacedBlockPos + " avoidance for block placement.");
-                    addTemporaryPlaceAvoidance(mod, _lastPlacedBlockPos);
-                }
-            }
-            _lastPlacedBlock = false;
-            _lastPlacedBlockPos = null;
-        }
-        if (_isAvoidingBlockPlace && _placeAvoidTimer.elapsed()) {
-            _isAvoidingBlockPlace = false;
-            Debug.logMessage("Removed temporary block avoidance for block placement.");
-            mod.getBehaviour().resetAvoidBlockPlacingExtra();
-        }
-    }
-
     private void checkLastBrokenBlock(AltoClef mod) {
         if (_lastBrokenBlock && _lastBrokenBlockPos != null && _blockBreakCheckTimer.elapsed()) {
             if (!WorldHelper.isAir(_lastBrokenBlockPos)) {
@@ -499,17 +463,6 @@ public class WorldSurvivalChain extends SingleTaskChain {
         }
     }
 
-    private void addTemporaryPlaceAvoidance(AltoClef mod, BlockPos center) {
-        BlockPos finalCenter = center;
-        mod.getBehaviour().avoidBlockPlacingExtra(blockPos ->
-            Math.abs(blockPos.getX() - finalCenter.getX()) <= PLACE_AVOID_RADIUS &&
-            Math.abs(blockPos.getY() - finalCenter.getY()) <= PLACE_AVOID_RADIUS &&
-            Math.abs(blockPos.getZ() - finalCenter.getZ()) <= PLACE_AVOID_RADIUS
-        );
-        _isAvoidingBlockPlace = true;
-        _placeAvoidTimer.reset();
-    }
-
     /** Positions whose break was refused inside the current window. Cleared when the window ends. */
     private final java.util.Set<BlockPos> _breakRefusals = new java.util.LinkedHashSet<>();
 
@@ -595,15 +548,6 @@ public class WorldSurvivalChain extends SingleTaskChain {
         );
         _isAvoidingBlockBreak = true;
         _breakAvoidTimer.reset();
-    }
-
-    public void onBlockPlaced(AltoClef mod, BlockPos pos, BlockState block) {
-        if (mod.getPlayer() != null && mod.getPlayer().getBlockPos() != null && pos != null
-                && pos.isWithinDistance(mod.getPlayer().getBlockPos(), 10)) {
-            _lastPlacedBlock = true;
-            _lastPlacedBlockPos = pos;
-            _blockPlaceCheckTimer.reset();
-        }
     }
 
     public void onBlockBroken(AltoClef mod, BlockPos pos, BlockState block, PlayerEntity player) {

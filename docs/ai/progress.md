@@ -10,7 +10,7 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - Submerged/air recovery is committed and validated after merging origin/main2f027a41. The current retreat-region change has completed its controlled and adjacent audits.
 - After the earlier creeper death, the latest natural run recovered diamond tools, sword and armor17, then stalled searching for food underground. The client is disconnected alive at20HP; no world restoration, inventory injection or time change.
 - Newest verified backup: workspace outputs/natural-checkpoints/20260916-000244-underground-food-stall.tar.gz,56,330,745bytes,SHA256030b13d0d0aa19782028a7df2cadfea24ef5d25113ec2b75af1909ba6e86c4f3.
-- Open risks include intermittent bridge/physics jump falls, multi-mob combat, long food hunts from caves, planned deep descents, partial-water/slab transitions and full-game completion. One bridge failure in the intermediate audit remains recorded; the water patch does not claim to repair it.
+- Cave food exploration and false world-change placement bans now pass controlled and adjacent audits; natural validation is next. Open risks include intermittent bridge/physics jump falls, multi-mob combat, planned deep descents, partial-water/slab transitions and full-game completion. One bridge failure in the intermediate audit remains recorded; the water patch does not claim to repair it.
 - Push and Telegram publication remain pending the existing target-specific confirmations. No retry or alternate route.
 
 ## 2026-09-15 — Publish navigator results on the client thread
@@ -270,3 +270,24 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - Early-sneak binary passed6/6 low-roof rungs with actual server blocks, grounded arrival and20HP (19.5–29FPS). Stone, smoker, furnace, crafting table and vine three-rung controls passed. Blocked-ceiling control behaved correctly but was excluded at13FPS during recorder startup; after a three-second recording warmup it passed at29FPS. Off-centre control passed at29FPS. All completed clips decoded; low-roof final image inspected. Original one-high and navigation audits are in progress.
 
 - Same early-sneak binary passed the original one-high regression2/2 (three overhead blocks planned/mined,20HP,grounded) and navigation7/7 (bridge,water,flat,stairs,descent,two-high-wall,gaps),14.4–29FPS,no falls/invalid runs. All seven navigation clips and the one-high clip decoded; wall frame inspected. Integrated shallow/deep food-exit repetition now running; food policy remains unaccepted.
+
+
+### Food exit height correction
+- Six full dry exits passed (three depth8,three depth20,25–29FPS,20HP). Local bread and surface-start controls passed. The wet-column control FAILED at29FPS/20HP: excavation opened a sky shaft at-54, four blocks below the surrounding-50 surface, and current-column heightmap incorrectly released the surface task. Ordinary wandering then stalled in the pit. Clip decoded and final image inspected; not accepted as food success.
+- Keep the selected surface elevation across excavation, releasing only within one upward step of that level. This still handles the previous one-block floating endpoint while preventing a deep exposed shaft from counting as arrival. New build and repeated wet/dry validation pending.
+
+
+### False placement protection found during repeated food exits
+- Surface-level binary passed wet1/deep1/wet2, then deep2 FAILED at28FPS/20HP. It climbed from-58 to-41 and spent the remainder repeatedly attempting a pillar rejected by place policy. Full trace identifies a WorldSurvivalChain predicate denying the position; configured deny zones were empty.
+- At01:14:13 the chain interpreted a world block change at3600,-44,1599 as a failed placement and banned the surrounding radius50. WorldBlockModifiedMixin emits BlockPlaceEvent for any air-to-solid change, including server updates; this is not evidence the bot attempted placement. The detector also mistakes a subsequently mined block for a placement failure.
+- Isolated baseline: IdleTask on clean terrain, server changes an adjacent cell stone then air without any player placement. Policy at the player changed allowed→denied and an unrelated pillar placed0 blocks at29FPS. Artifact outputs/place-events/baseline-world-change; no real claim exists there.
+- Remove this world-change-based placement claim detector/subscription. Keep explicit protection hooks/zones and actual executor failure handling: PathExecutor refuses its timed-out cell through PlaceRules, PillarTask bounds progress and remembers a failed column, BridgeTask bounds placement/movement. Baritone BuilderProcess likewise follows its actual movement/executor status. This does not claim all placement failure handling is complete. Build and repeated event/placement/protection controls pending.
+
+- False-event fix root build11s and nested deployment succeeded. Six world-change trials passed at19–28.5FPS: policy remained allowed, actual pillar block appeared, grounded arrival and20HP. Six explicit-zone negative controls remained denied while the adjacent unprotected cell remained allowed. All six clips decoded; final image inspected. Existing explicit protection is retained; no claim that real protected-column retry behavior is repaired. Full deep/wet exits are now being repeated on this binary.
+
+
+### Final combined food/protection exit matrix
+- Final binary passed all6 full exits: depth20×3 in85.0/82.38/87.15s at26.5–29FPS, wet-column depth8×3 in37.82/27.33/35.04s at27–29FPS. All20HP, grounded at the actual surface and released surface search. Local bread4 control passed27FPS without surface routing; surface-start control passed29FPS without unnecessary ascent. All8 videos decoded; final deep image inspected.
+- The earlier failed wet and deep runs remain preserved. The food change requires the selected surface-level correction and the independent false placement-protection fix; neither earlier intermediate binary is presented as accepted. Focused adjacent audit is running before commits/natural resumption.
+
+- Final focused adjacent audit62002 passed: low-roof smoker pillar29FPS; original one-high2/2 (6.4/6.7s,three overhead blocks,20HP,grounded); bridge28.2FPS and two-high wall23.3FPS without falls; hungry threat mined6cobblestone without switching to sword during continuous mining and finished20HP; working underwater recovery28FPS reached air and released recovery; AI creeper inside-radius retreat26FPS,20HP,0deaths and valid initial geometry. All clips decoded; air frames inspected. Acceptance is for these controlled cases, not a completed natural playthrough.
