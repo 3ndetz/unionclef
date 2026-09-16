@@ -92,6 +92,19 @@ public class MovementSwim extends Movement {
     protected void updateWaterInputs(MovementState state) {
         PlayerEntity player = ctx.player();
         if (!player.isTouchingWater()) return;
+        // ⛔ ONTO LAND YOU HOP (G99c, 2026-09-16, found by resuming the post-run2 checkpoint).
+        // At the lip of the pool the body stands on the bank's edge with half its box in a
+        // FLOWING water cell: vanilla then moves it at swim speed, the current pushes it back,
+        // and "forward" nets a centimetre a tick -- 93.16 to 92.99 in seventeen ticks, the
+        // feet cross into the land cell, the keys drop, the water returns the body, fifty
+        // chains in eight minutes. A player here jumps: from the ground JUMP is a hop that
+        // lands clear of the water; afloat it is the swim up that the rule below asks for
+        // anyway. So a stroke onto land holds JUMP for as long as the body touches water.
+        if (!MovementHelperB.isLiquid(ctx.world(), dest)) {
+            state.setInput(Input.JUMP, true);
+            state.setInput(Input.SNEAK, false);
+            return;
+        }
         double targetY = dest.getY() + 0.6;
         // Floating above the planned cell is safe in an open pool, but can
         // wedge the head beneath a lower roof. Use the same body envelope as
@@ -127,7 +140,14 @@ public class MovementSwim extends Movement {
         // for "body has not left ... for 121 ticks". A stroke onto land is done when the feet
         // are ON the land cell, and not before.
         boolean destIsLand = !MovementHelperB.isLiquid(ctx.world(), dest);
-        boolean arrived = ctx.playerFeet().equals(dest) || (!destIsLand && distSq < 0.36);
+        // On land the feet in the cell is not enough while the box still hangs in the water
+        // beside it (the current has the body again the tick the keys drop): the body must be
+        // clear of the water, or at least at the cell's centre where the box no longer reaches
+        // the water cell (G99c).
+        boolean landArrived = ctx.playerFeet().equals(dest)
+                && (!player.isTouchingWater() || dx * dx + dz * dz < 0.09);
+        boolean arrived = destIsLand ? landArrived
+                : (ctx.playerFeet().equals(dest) || distSq < 0.36);
         if (arrived) {
             return state.setStatus(MovementStatus.SUCCESS);
         }

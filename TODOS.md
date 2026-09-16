@@ -1405,7 +1405,16 @@ test + full nav-suite regression before it counts done.
       as settled ("arrived (1.6)" with the body rising at y=-61.04 toward a bank at -60),
       stopped the queue mid-stroke, and the body floated with no inputs until it drowned (no
       survival chain runs under a bare gotoXYZ). Fixed: water counts as settled only when the
-      goal itself is in water.
+      goal itself is in water. **G99c, found by resuming the `post-run2` checkpoint on v0.95.3
+      (two minutes to the scene instead of sixty):** the pool bench passes and the real lip does
+      not — the water at (93,107,-113) is FLOWING (level=2), the body stands on the bank's edge
+      with half its box in it, vanilla moves it at swim speed and the current pushes it back:
+      "forward" nets a centimetre a tick (93.16 → 92.99 in seventeen ticks), the feet cross into
+      cell 92, SUCCESS, the keys drop, the water returns the body, "afloat and the queue refused
+      the leg" ×54, fifty one-stroke chains in eight minutes. A player here jumps. Fixed: a stroke
+      onto land holds JUMP while the body touches water (a hop from the ground, the swim-up
+      afloat), and arrives only with the feet in the cell AND the body clear of the water (or at
+      the cell's centre). Verified from the checkpoint, not from the bench.
 - [ ] **G100 — drowned in a flooded cave at y=0 while digging for diamonds** (same run,
       t≈1250–1330, frame 21:30: "Misc World Survival Chain: Reaching breathable air — Finding
       a reachable air pocket", the body under water at y=-0.4 among gold ore, hp 12, finished
