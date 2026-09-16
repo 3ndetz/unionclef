@@ -35,6 +35,20 @@ public final class RealPlacement {
 
     private RealPlacement() {}
 
+    /** Non-colliding outlines inside the centered body column can intercept a pillar ray.
+     * Wall-mounted vines stay outside this column and remain available for climbing.
+     */
+    public static boolean obstructsPillarRay(WorldView world, BlockPos pos) {
+        BlockState state = world.getBlockState(pos);
+        if (state.isAir() || !state.getCollisionShape(world, pos).isEmpty()) return false;
+        double min = 0.5 - PlayerFit.WIDTH / 2;
+        double max = 0.5 + PlayerFit.WIDTH / 2;
+        for (var box : state.getOutlineShape(world, pos).getBoundingBoxes()) {
+            if (box.maxX > min && box.minX < max && box.maxZ > min && box.minZ < max) return true;
+        }
+        return false;
+    }
+
     /**
      * The player's actual crosshair hit, but only if using it would fill {@code target}.
      *

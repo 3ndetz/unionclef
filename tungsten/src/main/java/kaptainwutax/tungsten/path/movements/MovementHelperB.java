@@ -756,7 +756,14 @@ public final class MovementHelperB {
     }
 
     public static double getMiningDurationTicks(WorldView world, PlayerEntity player, int x, int y, int z, BlockState state, boolean includeFalling) {
-        if (!canWalkThrough(world, x, y, z, state)) {
+        if (canWalkThrough(world, x, y, z, state)) return 0;
+        return getRequiredMiningDurationTicks(world, player, x, y, z, state, includeFalling);
+    }
+
+    /** Prices an explicit removal, even when the block allows walking through it. */
+    public static double getRequiredMiningDurationTicks(WorldView world, PlayerEntity player,
+            int x, int y, int z, BlockState state, boolean includeFalling) {
+        if (!state.isAir()) {
             if (!state.getFluidState().isEmpty()) {
                 return COST_INF;
             }

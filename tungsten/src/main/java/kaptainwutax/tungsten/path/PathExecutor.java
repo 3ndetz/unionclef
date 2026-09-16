@@ -634,7 +634,8 @@ public class PathExecutor {
         for (net.minecraft.util.math.BlockPos pos : breakQueue) {
             if (!kaptainwutax.tungsten.path.movements.MovementHelperB.canWalkThrough(
                     world, pos.getX(), pos.getY(), pos.getZ())
-                    || !world.getBlockState(pos).getCollisionShape(world, pos).isEmpty()) {
+                    || !world.getBlockState(pos).getCollisionShape(world, pos).isEmpty()
+                    || kaptainwutax.tungsten.helpers.RealPlacement.obstructsPillarRay(world, pos)) {
                 target = pos;
                 break;
             }
@@ -782,7 +783,7 @@ public class PathExecutor {
         Vec3d aim = visibleAimPoint(player, world, target, eye, center);
         if (aim == null) {
             net.minecraft.util.hit.BlockHitResult blk = world.raycast(new net.minecraft.world.RaycastContext(
-                    eye, center, net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                    eye, center, net.minecraft.world.RaycastContext.ShapeType.OUTLINE,
                     net.minecraft.world.RaycastContext.FluidHandling.NONE, player));
             net.minecraft.util.math.BlockPos occ = blk != null
                     && blk.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
@@ -958,11 +959,13 @@ public class PathExecutor {
         return null;
     }
 
+    // Mining selects outlines just like the real crosshair. Collision rays cannot see
+    // hanging plants and can incorrectly see through them to a different block.
     private static boolean rayReaches(ClientPlayerEntity player, net.minecraft.world.World world,
                                       net.minecraft.util.math.BlockPos target, Vec3d from, Vec3d to) {
         try {
             net.minecraft.util.hit.BlockHitResult hit = world.raycast(new net.minecraft.world.RaycastContext(
-                    from, to, net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                    from, to, net.minecraft.world.RaycastContext.ShapeType.OUTLINE,
                     net.minecraft.world.RaycastContext.FluidHandling.NONE, player));
             return hit != null && hit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
                     && hit.getBlockPos().equals(target);

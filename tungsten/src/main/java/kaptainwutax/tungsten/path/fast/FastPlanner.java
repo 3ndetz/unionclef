@@ -1650,6 +1650,23 @@ public final class FastPlanner {
                 ? !kaptainwutax.tungsten.path.PlaceRules.canPlace(world, feet)
                 : !kaptainwutax.tungsten.path.PlaceRules.allowedByPolicy(feet)) return;
 
+        // The body can fit through a plant while its outline blocks the placement ray.
+        // Price and execute that clearance before handing the column to PillarTask.
+        for (int dy = 1; dy <= 2; dy++) {
+            BlockPos cell = feet.up(dy);
+            if (!kaptainwutax.tungsten.helpers.RealPlacement.obstructsPillarRay(world, cell)) continue;
+            var player = TungstenMod.mc.player;
+            var state = world.getBlockState(cell);
+            if (!TungstenConfig.get().allowBreak || player == null
+                    || !kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, state)) return;
+            double ticks = kaptainwutax.tungsten.path.movements.MovementHelperB
+                    .getRequiredMiningDurationTicks(world, player, cell.getX(), cell.getY(),
+                            cell.getZ(), state, false);
+            if (ticks >= 1_000_000) return;
+            if (clear == null) clear = new ArrayList<>();
+            clear.add(cell);
+            clearTicks += ticks;
+        }
         double cost = ActionCosts.JUMP_ONE_BLOCK_COST
                 + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier
                 + clearTicks * TungstenConfig.get().breakCostMultiplier;

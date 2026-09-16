@@ -1005,10 +1005,14 @@ public final class FastNavigator {
                     BlockPos feetC = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player);
                     java.util.List<BlockPos> ceiling = new java.util.ArrayList<>();
                     boolean unbreakable = false;
-                    for (int y = feetC.getY() + 2; y <= jump.getY() + 1; y++) {
+                    for (int y = feetC.getY() + 1; y <= jump.getY() + 1; y++) {
                         BlockPos c = new BlockPos(feetC.getX(), y, feetC.getZ());
                         var st = world.getBlockState(c);
-                        if (st.getCollisionShape(world, c).isEmpty()) continue;
+                        boolean rayObstacle = kaptainwutax.tungsten.helpers.RealPlacement
+                                .obstructsPillarRay(world, c);
+                        boolean bodyObstacle = y >= feetC.getY() + 2
+                                && !st.getCollisionShape(world, c).isEmpty();
+                        if (!bodyObstacle && !rayObstacle) continue;
                         if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, c, st)) { unbreakable = true; break; }
                         ceiling.add(c);
                     }

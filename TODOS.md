@@ -1,5 +1,12 @@
 # TODOs
 
+<!-- PILLAR-INTERACTION-CLEARANCE-2026-09-16 -->
+## Pillar placement must account for non-colliding interaction obstructions (2026-09-16)
+
+- [x] Natural food pursuit climbed17 blocks then repeatedly failed to place beneath the body:
+  cave vines at feet+2 intercept the placement ray despite having no body collision.
+  Model the required interaction clearance, respecting break policy and climbable vines.
+
 <!-- TASK-DISPATCH-THREAD-2026-09-16 -->
 ## External task lifecycle commands must serialize with the game tick (2026-09-16)
 
