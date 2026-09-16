@@ -10,7 +10,7 @@
 <!-- FOOD-PURSUIT-VERTICAL-2026-09-16 -->
 ## Food pursuit must make sustained progress toward animals far above (2026-09-16)
 
-- [ ] After clearing the cave-vine blocker, natural food pursuit climbed fromY7 toY47,
+- [x] After clearing the cave-vine blocker, natural food pursuit climbed fromY7 toY47,
   then repeatedly revisitedY39–47 while switching among surface animals aroundY84–89.
   Isolate vertical routing from target reselection; require actual food acquisition.
 
@@ -38,7 +38,7 @@
 <!-- STARVATION-PRIORITY-2026-09-16 -->
 ## Unknown food sources must not demote urgent food discovery (2026-09-16)
 
-- [ ] Natural gamer continued ore/chest collection at foodLevel0 until20HP became10HP.
+- [x] Natural gamer continued ore/chest collection at foodLevel0 until20HP became10HP.
   Unknown food distance receives priority0.1. Make urgent food selection outrank optional
   resources, including before equipment is available, and validate the full task selector.
 
@@ -52,7 +52,7 @@
 <!-- FOOD-SURFACE-EXPLORATION-2026-09-16 -->
 ## Underground food search must reach a suitable exploration area (2026-09-16)
 
-- [ ] Natural playthrough reached diamond tools and armor17, then searched for food for nearly
+- [x] Natural playthrough reached diamond tools and armor17, then searched for food for nearly
   three minutes inside the same chamber around31,-6,-142. No known food selects ordinary
   cave-height wandering; open neighbours suppress enclosed-body surface recovery. Reproduce
   and repair surface-seeking exploration while preserving local-food priority and navigation
