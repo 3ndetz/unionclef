@@ -1,5 +1,19 @@
 # TODOs
 
+<!-- MINING-PROGRESS-SERIES-2026-09-16 -->
+## Mining progress must not compare different blocks as one damage fraction (2026-09-16)
+
+- [x] Correct cross-block mining progress comparison; natural pursuit remains open.
+  The checker carries0.888 damage from the previous block into the next block's0..0.533
+  progress. Track actual work across target changes while retaining no-work timeout guards.
+
+<!-- FOOD-PURSUIT-VERTICAL-2026-09-16 -->
+## Food pursuit must make sustained progress toward animals far above (2026-09-16)
+
+- [ ] After clearing the cave-vine blocker, natural food pursuit climbed fromY7 toY47,
+  then repeatedly revisitedY39–47 while switching among surface animals aroundY84–89.
+  Isolate vertical routing from target reselection; require actual food acquisition.
+
 <!-- PILLAR-INTERACTION-CLEARANCE-2026-09-16 -->
 ## Pillar placement must account for non-colliding interaction obstructions (2026-09-16)
 

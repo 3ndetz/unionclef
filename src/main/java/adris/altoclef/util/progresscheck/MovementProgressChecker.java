@@ -11,6 +11,8 @@ public class MovementProgressChecker {
     private final IProgressChecker<Double> mineChecker;
 
     private BlockPos lastBreakingBlock = null;
+    private double lastMiningFraction;
+    private double miningWork;
 
     /**
      * Was the block we last aimed at actually SOLID when we took it?
@@ -71,9 +73,19 @@ public class MovementProgressChecker {
                     airProgressDenied++;
                 }
             }
-            lastBreakingBlock = breakBlock;
+            // Damage belongs to one block. A fresh block's 0% cannot be compared with
+            // the previous block's 88%: that falsely abandoned productive stair mining.
+            // Accumulate observed work instead; switching targets with zero damage earns
+            // neither progress nor a new timeout, so oscillating aim still times out.
+            double fraction = mod.getControllerExtras().getBreakingBlockProgress();
+            if (lastBreakingBlock == null || !lastBreakingBlock.equals(breakBlock)) {
+                lastMiningFraction = 0;
+            }
+            miningWork += Math.max(0, fraction - lastMiningFraction);
+            lastMiningFraction = fraction;
+            lastBreakingBlock = breakBlock == null ? null : breakBlock.toImmutable();
             lastBreakingWasSolid = breakBlock != null && !WorldHelper.isAir(breakBlock);
-            mineChecker.setProgress(mod.getControllerExtras().getBreakingBlockProgress());
+            mineChecker.setProgress(miningWork);
             return !mineChecker.failed();
         } else {
             mineChecker.reset();
