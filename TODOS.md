@@ -1151,6 +1151,14 @@ test + full nav-suite regression before it counts done.
       says once a second what the hand held and what it swapped to (`fixToolSwaps`), so the next
       fight names its writer. No bench yet: needs a mob that sees the bot from out of reach
       while it digs (a zombie behind a fence, the bot at an ore).
+      ⛔ `deploy/runner/equip_thrash_test.py` (2026-09-17) is that bench: a coal ore in front of
+      the bot, a zombie caged in iron bars six blocks behind (visible, never reachable),
+      `@get coal 1`. PASS = coal mined, `kaAura`'s equip half stayed at 0 and `fixToolSwaps`
+      stayed low, AND the out-of-reach branch fired at least once (a run where the zombie never
+      registers as a target proves nothing, same discipline as `creeper_behind_test.py`). Given
+      the fix already landed 2026-09-12, this bench is expected to PASS today, unlike the
+      cobweb one above — written to CONFIRM a fix already shipped, not to await one. Written, not
+      run: no docker exec from this seat, sanity-check on first use.
 - [ ] **G73/G74 the 23:13 run: 7.7 minutes on top of an iron ore seven blocks straight down**
       -- "the search toward a goal 7 below spent its budget (6784 nodes, 252 ms) -- one more try
       with 4x" x100, shimmy x48, nothing mined, the ore never blacklisted. G73 (FastPlanner
