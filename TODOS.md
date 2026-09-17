@@ -1502,6 +1502,18 @@ test + full nav-suite regression before it counts done.
       in `loop-bread` (the end-of-run world) but not at minute 15. Fix and reproduce from
       `loop-bread`. (That six-minute resume is also the checkpoint tooling proving itself: iron
       reached from a saved state in the time a fresh run spends on wood.)
+- [ ] **G104 — an 8-minute stall on the stone-sword craft in a fresh opening** (regression run
+      after the G103 fix, 2026-09-17, fresh start #57 at (1492,150,661); checkpoint `run4-end`).
+      Ladder to stone tools at 66 s, then stuck at (885.5,62,648.6) from t=66 to t=554 with the
+      chain "Crafting Recipe{minecraft:stone_sword}", cycling with "Picking up the crafting
+      table", "working through the night" and food; `blacklistExtra=8`, `failed to break=14`,
+      `CURSORBACK=67`, `thrown=[spruce_stairs… sand… torch…]`, `cb=0/1/53532/0`. NOT the G103
+      bread deadlock (that churn is gone — 8 blacklists here, not 971) and not the G103 guard's
+      doing; this is the craft-grid/cursor churn family (the shield-craft carousel already in
+      TODOS): a craft that needs a table plus inventory management (junk-throw, cursor hold) that
+      does not converge. It broke free on its own at t=554 (items 5 → 24 by t=620), so it is a
+      slow thrash, not a hard freeze. Reproduce from `run4-end` and read the craft-grid counters.
+      **Blocks the 0.95.4 release** — do not cut it until the opening reaches iron without this.
 - [x] **G92 — `DSIC near=… walk=… makeNew=…` is printed to CHAT every tick for 4000 ticks**
       (DoStuffInContainerTask:115, `dsicTrace < 4000`): 4000 lines in the 10-minute run, 200 s
       of chat spam. It has answered its question (near=true walk=182..659 makeNew=INF forceEl=true
