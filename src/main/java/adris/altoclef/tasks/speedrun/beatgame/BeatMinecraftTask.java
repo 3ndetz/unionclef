@@ -1260,6 +1260,26 @@ public class BeatMinecraftTask extends Task {
         }
     }
 
+    /**
+     * ⛔ A CRAFTING TABLE IS FOUR PLANKS — RECLAIM IT ONLY WHEN YOU CANNOT CHEAPLY MAKE ONE (G103,
+     * 2026-09-16). The reclaim ("Picking up the crafting table while we are at it") is a
+     * convenience, and it became a 46-minute deadlock: the third 60-minute run wanted a table to
+     * craft bread, had no table item, saw a placed one "on the way", and returned
+     * MineAndCollectTask(CRAFTING_TABLE) every tick — but the break kept false-failing on the
+     * survival world ("Block … failed to break! Maybe private area", WorldSurvivalChain's 0.5 s
+     * verdict), so it never obtained the table, never crafted the bread, and cycled with
+     * "Blacklisting extra crafting table" x41. The bot had four spruce logs the whole time. G80
+     * already ruled a table is worth four planks, not a climb or a dig; the same holds for a dig
+     * INTO a table that will not break. So: skip the reclaim when the pack can make a table now
+     * (four planks in hand, or a log to make them), and let DoStuffInContainerTask craft a fresh
+     * one — the deadlock cannot form because obtaining a table no longer depends on a break that
+     * fails.
+     */
+    private static boolean canCheaplyMakeCraftingTable(AltoClef mod) {
+        var st = mod.getItemStorage();
+        return st.getItemCount(ItemHelper.PLANKS) >= 4 || st.getItemCount(ItemHelper.LOG) >= 1;
+    }
+
     /** G78: a cell the sky does not reach -- a cave, by the only test that survives a valley at
      *  y=52. The brightest sky light among the block's six neighbours, under four: an opaque
      *  neighbour (the next log of a trunk) reads zero and must not decide, which is what the
@@ -1685,10 +1705,13 @@ public class BeatMinecraftTask extends Task {
         // a bank reached for through forty-six shimmies (00:38). A player picks the table up when
         // it is a step away and otherwise makes another. So: only a table on the way -- twelve
         // blocks across at most and within two of the feet in height -- is picked up.
-        if (!endPortalOpened && WorldHelper.getCurrentDimension() != Dimension.END && config.rePickupCraftingTable && !itemStorage.hasItem(Items.CRAFTING_TABLE) && !thisOrChildSatisfies(isCraftingTableTask) && (mod.getBlockScanner().anyFound(blockPos -> WorldHelper.canBreak(blockPos) && WorldHelper.canReach(blockPos) && onTheWay(mod, blockPos), Blocks.CRAFTING_TABLE) || mod.getEntityTracker().itemDropped(Items.CRAFTING_TABLE)) && pickupCrafting) {
+        if (!endPortalOpened && WorldHelper.getCurrentDimension() != Dimension.END && config.rePickupCraftingTable && !itemStorage.hasItem(Items.CRAFTING_TABLE) && !thisOrChildSatisfies(isCraftingTableTask) && !canCheaplyMakeCraftingTable(mod) && (mod.getBlockScanner().anyFound(blockPos -> WorldHelper.canBreak(blockPos) && WorldHelper.canReach(blockPos) && onTheWay(mod, blockPos), Blocks.CRAFTING_TABLE) || mod.getEntityTracker().itemDropped(Items.CRAFTING_TABLE)) && pickupCrafting) {
             setDebugState("Picking up the crafting table while we are at it.");
             return new MineAndCollectTask(Items.CRAFTING_TABLE, 1, new Block[]{Blocks.CRAFTING_TABLE}, MiningRequirement.HAND);
         }
+        // The reclaim is off the table (G103): if the pack can make one, drop the flag so the
+        // convenience does not keep re-arming and the container task crafts a fresh table.
+        if (pickupCrafting && canCheaplyMakeCraftingTable(mod)) pickupCrafting = false;
         if (config.rePickupSmoker && !endPortalOpened && WorldHelper.getCurrentDimension() != Dimension.END && !itemStorage.hasItem(Items.SMOKER) && (mod.getBlockScanner().anyFound(blockPos -> WorldHelper.canBreak(blockPos) && WorldHelper.canReach(blockPos), Blocks.SMOKER) || mod.getEntityTracker().itemDropped(Items.SMOKER)) && pickupSmoker) {
             setDebugState("Picking up the smoker while we are at it.");
             rePickupTask = new MineAndCollectTask(Items.SMOKER, 1, new Block[]{Blocks.SMOKER}, MiningRequirement.WOOD);
