@@ -1604,6 +1604,12 @@ test + full nav-suite regression before it counts done.
       `breakDown`/`breakStair` treat as a normal breakable obstruction once `BreakRules.canBreak`
       allows it — bench against a mineshaft cobweb tunnel (cheap, common terrain) and nav_hazard
       for regressions on the untouched blocks (lava/magma/fire/cactus/powder snow stay refused).
+      ⛔ `deploy/runner/cobweb_wall_test.py` (2026-09-17) is that bench, ready to run: a one-wide,
+      walled-and-roofed stone corridor with a cobweb plug at the midpoint (both feet and head
+      cells), `@goto` the far end. Currently expected to FAIL (that is the documented behaviour
+      above, not a bug in the bench) — a PASS is the signal the fix works. Written, not run: this
+      sandbox has no docker exec, only read visibility into the shared proxy, so the script itself
+      is untested against the real server and should be sanity-checked on first use.
 - [ ] **G19 elytra / boat / nether-portal travel** — only if the playthrough needs them.
 - [ ] **G20 cost-model retune** (JUMP_PENALTY/PLACE/FALL constants; split XZ/Y in octile heuristic).
 
