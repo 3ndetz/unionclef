@@ -95,9 +95,20 @@ Follow-up same day (fallback + trustworthy bench + BUILD-half evidence):
   a clean pad; one clean run consumed all 12 obsidian and reached "Done constructing nether portal".
   Other runs re-enter the gather mid-build and the obsidian<->frame interaction churns (a placed frame
   obsidian gets re-collected / re-needed). So the BUILD half is proven possible but flaky.
-- NEXT portal roots: (1) the BUILD-half gather/frame re-entry interaction (make the frame build never
-  re-collect its own placed obsidian), (2) the GATHER half's cast lava-death hazard + bucket churn.
-  Best measured on a real @gamer run -- the flat stand's cast keeps corrupting via death.
+- **World-read frame check (partial fix for the re-entry churn).** The re-gather-mid-build was traced
+  to `ConstructNetherPortalObsidianTask` deciding needed frame cells via the event-driven block
+  SCANNER, which lags a just-placed block -> freshly-placed frame obsidian read as "still needed" ->
+  re-gather -> CollectObsidianTask mined the placed frame. Now it reads the WORLD
+  (`getBlockState == OBSIDIAN`), immediate and exact. This removes the scanner-lag churn specifically.
+- **BUILD half still not CONSISTENTLY green (open).** Across ~15 stand runs the outcome varies: one
+  clean build to "Done constructing" (obsidian 12->0), others stick on a single placement
+  (surroundedByAir scaffolding on a clean/decent pad) or re-gather. Siting variance (clean-flat vs the
+  decent fallback) + the flat stand's flakiness (death corruption, give races, chunk-unload on scans)
+  make it hard to land a repeatable green here.
+- NEXT portal roots: (1) BUILD-half placement/scaffolding consistency on a clean/decent pad,
+  (2) the GATHER half's cast lava-death hazard + bucket churn. Best measured on a real @gamer run --
+  the flat stand's cast keeps corrupting via death. clean-siting + fallback + world-read + the hardened
+  bench are committed groundwork toward a dedicated multi-session portal pass.
 
 ## 2026-09-18 — post-iron ceiling from two playthroughs; G105 freeze fixed; G93 shipped
 

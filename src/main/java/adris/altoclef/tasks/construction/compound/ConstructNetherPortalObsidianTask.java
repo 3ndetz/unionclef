@@ -206,7 +206,14 @@ public class ConstructNetherPortalObsidianTask extends Task {
         if (origin != null) {
             for (Vec3i frameOffs : PORTAL_FRAME) {
                 BlockPos framePos = origin.add(frameOffs);
-                if (!mod.getBlockScanner().isBlockAtPosition(framePos, Blocks.OBSIDIAN)) {
+                // ⛔ READ THE WORLD, NOT THE BLOCK SCANNER (G108, 2026-09-18). The scanner is
+                // event-driven and lags a just-placed block, so a frame obsidian the bot placed this
+                // tick reads as "still needed" -> neededObsidian stays high -> the task re-enters the
+                // obsidian gather mid-build, and CollectObsidianTask then MINES that placed-but-
+                // unregistered frame obsidian as "nearby obsidian to collect", churning the build
+                // (obsidian consumed 8 yet 5 frame cells still 'needed', observed on the stand). The
+                // world read is immediate and exact.
+                if (mod.getWorld().getBlockState(framePos).getBlock() != Blocks.OBSIDIAN) {
                     placeTarget = framePos;
                     break;
                 }
