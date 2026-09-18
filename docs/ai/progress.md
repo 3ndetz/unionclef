@@ -995,3 +995,33 @@ bot regression:
   column making each mid-air cell standable + the queue pillar placing the STRUCTURE block, which
   needs a PillarTask block param -- it currently always equipThrowaway) would make the build fast and
   tight. Documented for a dedicated pass; the portal lights without it.
+
+### SHARP CORRECTION: the portal is NOT reliably green -- the top row HARD-STALLS (nav, not slowness)
+A 4th full-OBS run (default 500s window, robust detection, reserve buffer) HARD-STALLED: the bot
+placed 13/14 then froze on the ground at the last top-row corner (0,3,2) for 110s+, alternating
+"Placing frame" / "No tasks", never elevating, never wandering, until killed. So the earlier
+"converges reliably" read was WRONG -- it was three lucky runs. The portal lights only when the
+stochastic top-row placement happens to succeed on all four y+3 cells; it hard-stalls otherwise.
+
+Precise root (traced, BlockPlaceHelper):
+- placementStand correctly returns null for a top-row cell over the gap (the "stand on top" fallback
+  at line ~723 needs target.up() standable, which it is not over an open interior), so drainQueue
+  takes the PILLAR branch (sideStand==null && standable(head)).
+- The pillar branch then needs the body standing IN the target cell, so it calls
+  FastNavigator.startExact(head) to walk there. FastNavigator CANNOT reliably path the bot to stand
+  in a y+3 cell perched on a 1-wide column top over the frame gap -- it defers (walk cap), the queue
+  empties, PlaceBlockTask re-submits, and the body never moves. That tight defer/re-submit loop is
+  the hard stall (bot frozen on the ground at the last corner).
+
+So the remaining flaw is a tungsten NAV reliability problem: reaching/standing to place a high cell
+(y=origin+3) over an open gap. Candidate fixes for the next focused pass:
+- Give the placer a reachable SIDE stand for each top-row cell by pre-placing a throwaway support in
+  FRONT of it (a cobble at (1,2,z) makes (1,3,z) standable beside the target); then adjacentStand
+  finds it and the bot places from the side instead of pillaring into a narrow elevated cell. Remove
+  the supports before lighting (the x=+1,z=0/1 cells are already in PORTAL_INTERIOR's clear; z=-1/2
+  are harmless strays). This sidesteps the flaky pillar-into-cell entirely -- most promising.
+- OR harden FastNavigator.startExact to reliably pillar-into a high-over-gap cell.
+Both are careful tungsten work with nav-suite regression risk; deferred to a dedicated pass. VERIFIED
+and shipped this session: the flood gather reclaim (reliable 0->14), the tungsten pillar-block fix
+(no obsidian pillars), and the trustworthy bench. The portal's bottom row + both columns build
+reliably; the top row is the ceiling.
