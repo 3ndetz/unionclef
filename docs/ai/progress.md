@@ -31,14 +31,32 @@ top-row MIDDLE cells (over the interior) and a re-gather churn are the remaining
   `dy=-1` only for DOWN faces, side-stand preferred over pillar only when it exists, the raytrace
   re-verifies every placement. Nav suite re-run as the guard: 14/14 (nav_bridge INVALIDed once on a
   client-fall flake, PASSed clean on the fresh-client retry; nav_break and all others green).
-- **REMAINING (next layer):** (a) the top-row MIDDLE cells sit over the interior with no support
-  below and no side stand, so they defer; an interior scaffold-column attempt was tried and reverted
-  (it introduced a re-gather churn and did not green the portal). (b) a re-gather off-by-one churn in
-  full-OBS mode: obsidian appears at the frame origin/interior and the re-gather mines it, itemCount
-  lags neededObsidian by one, the build never closes (bench flood_solo: 0 portal, columns only). Both
-  want a dedicated pass: build the top-row middles from a proper temporary scaffold platform (removed
-  by the interior-clear), and stop the re-gather from targeting frame/interior obsidian. NB: run only
-  ONE portal bench at a time -- two concurrent bench processes fight over the client (@stop/@build).
+- **REMAINING (next layer), sharpened 2026-09-19 on a CLEAN single-bench run (flood_v3):**
+  1. **A placement-MISDIRECTION churn stalls the full flood->build path before the top row even
+     starts.** On the full OBS flood run the columns do NOT finish: obsidian keeps landing BESIDE the
+     frame plane (e.g. at 2357/2359,-57,358 and at the interior origin 2358,-56,358, x off the x=2358
+     frame) and the re-gather then mines it back, so the bot cycles "place left-column-top /
+     Mine And Collect / Destroy nearby obsidian" for minutes and never reaches the top row (bench
+     flood_v3: 120 s stuck on 2358,-54,357, obs oscillating 7<->8, 0 portal). This is NOT interference
+     (single bench, all other bench pythons killed and verified 0) and NOT the interior scaffold
+     (cobblestone, unused: cobble=64) -- it is real, and its ROOT is unidentified. It did NOT appear on
+     the GIVE_OBS isolation (giveobs4: columns built 10/14 clean) -- so it is specific to the full
+     gather+build path (some flood/gather world- or inventory-state interaction, or a placer misplace
+     that only the full path hits). NEEDS per-placement instrumentation: log which cell each
+     PlaceBlockTask / drainQueue placement actually fills vs its target.
+  2. **The top-row MIDDLE cells** (over the interior, no support below, not standable) still need a
+     temporary interior scaffold platform to stand-place from, removed by the interior-clear before
+     lighting. An interior scaffold-column attempt (isInteriorColumnCell + PlaceStructureBlockTask
+     under mid-air frame cells) was written and REVERTED this pass -- the build never reached the top
+     row (blocked by churn #1), so it could not be evaluated (cobble stayed 64).
+- **HARNESS lessons (2026-09-19):** run only ONE portal bench at a time -- TaskStop on the launcher
+  bash does NOT kill the detached `python nether_portal_test.py &` child, so benches accumulate and
+  fight over the client (@stop/@build), which corrupted several earlier diagnoses; kill the python
+  explicitly (PowerShell `Stop-Process` on the matching CommandLine). `docker cp` needs a
+  Windows-style source path (`C:/...`) even under MSYS_NO_PATHCONV=1.
+- **NET this pass:** flood gather robust + off-pool cornered frame + the placer fix (columns build,
+  nav 14/14) are committed (228bac27, 220560fe). The full flood->lit portal is NOT green -- churn #1
+  is the primary blocker and is the first thing the next dedicated pass must instrument and fix.
 
 ## 2026-09-18 (cont.) — G108 nether portal: FLOOD-LAVA gather redesign + off-pool siting + cornered frame (groundwork; frame-PLACE layer remains)
 
