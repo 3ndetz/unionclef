@@ -70,6 +70,9 @@ public class BlockStateChecker {
      */
 	public static boolean isConnected(BlockPos pos, WorldView world) {
 	    BlockState state = world.getBlockState(pos);
+	    // Off-thread planning reads a live world that can return null mid chunk-swap; a block that
+	    // is not there is not connected to anything. See Agent.isClimbing for the full note.
+	    if (state == null) return false;
 	    Block block = state.getBlock();
 
 	    // ViaVersion: any fence-like block with an adjacent fence-like neighbor
@@ -99,6 +102,7 @@ public class BlockStateChecker {
 	}
 
 	private static boolean isFenceLikeBlock(BlockState state) {
+	    if (state == null) return false;   // off-thread null read (see Agent.isClimbing)
 	    return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
 	            || state.getBlock() instanceof PaneBlock;
 	}
@@ -134,6 +138,7 @@ public class BlockStateChecker {
 	 *  thin connection bars to adjacent blocks of the same type. */
 	public static boolean isFenceOrWall(WorldView world, BlockPos pos) {
 	    BlockState state = world.getBlockState(pos);
+	    if (state == null) return false;   // off-thread null read (see Agent.isClimbing)
 	    return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
 	            || state.getBlock() instanceof PaneBlock;
 	}

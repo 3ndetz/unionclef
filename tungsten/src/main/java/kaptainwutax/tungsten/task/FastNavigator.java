@@ -1348,6 +1348,21 @@ public final class FastNavigator {
     /** Ticks the stall watchdog was allowed to run despite a queue claiming to be busy. */
     public static volatile int navWatchdogUngagged = 0;
 
+    /**
+     * A caught planning exception, WITH the frame that threw it. The two catches used to log only
+     * {@code e.getMessage()}, which for the off-thread null-BlockState NPE read "Cannot invoke
+     * BlockState.isIn(...) $$1 null" and named no class or line -- a whole diagnosis session was
+     * spent finding the site by hand because the trace was thrown away here. Log the top frames so
+     * the next null-read (a getBlock/isAir variant the isIn guards do not cover) is pinpointed at
+     * once. Kept short so a rare failure does not flood the chat/log.
+     */
+    private static void logPlanFailure(Throwable e) {
+        StringBuilder sb = new StringBuilder("FastNavigator plan failed: ").append(e);
+        StackTraceElement[] frames = e.getStackTrace();
+        for (int i = 0; i < frames.length && i < 6; i++) sb.append("\n    at ").append(frames[i]);
+        Debug.logWarning(sb.toString());
+    }
+
     private static void planAhead(BlockPos from) {
         if (planning || goal == null) return;
         // ⛔ PLAN FROM WHERE THE BOT IS, NOT FROM WHERE THE LAST LEG SAID IT WOULD END.
@@ -1427,7 +1442,7 @@ public final class FastNavigator {
                         }
                         applyPlan(world, start, resolvedGoal, budgetMs, result);
                     } catch (Exception e) {
-                        Debug.logWarning("FastNavigator plan failed: " + e.getMessage());
+                        logPlanFailure(e);
                     } finally {
                         if (generation == planGeneration.get()) planning = false;
                     }
@@ -1439,7 +1454,7 @@ public final class FastNavigator {
                         return;
                     }
                     planning = false;
-                    Debug.logWarning("FastNavigator plan failed: " + e.getMessage());
+                    logPlanFailure(e);
                 });
             }
         });

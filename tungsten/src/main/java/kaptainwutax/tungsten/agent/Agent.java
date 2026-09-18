@@ -1046,6 +1046,15 @@ public class Agent {
 
     public boolean isClimbing(WorldView world) {
         BlockState state = world.getBlockState(new BlockPos(this.blockX, this.blockY, this.blockZ));
+        // ⛔ AN OFF-THREAD SEARCH READS A LIVE ClientWorld, AND A LIVE WORLD RETURNS null MID-SWAP.
+        // The planner runs on the FastNavigator-plan thread while the render thread keeps swapping
+        // chunk sections in and out under the flee's wide search; for one read getBlockState can
+        // hand back null, and a null here NPE'd the WHOLE plan on `.isIn(CLIMBABLE)` — observed once
+        // as "FastNavigator plan failed: BlockState.isIn(...) $$1 null" at the moment the bot tried
+        // to flee a cave mob nest at y=2, so the escape route never computed and it died (2026-09-18
+        // @gamer run). This method is called on nearly every node expansion, so it is the site that
+        // meets the race most often. A block that is not there to be read is not climbable.
+        if (state == null) return false;
         if(state.isIn(BlockTags.CLIMBABLE)) return true;
         if(state.getBlock() instanceof TrapdoorBlock && this.canEnterTrapdoor(world, state)) return true;
         return false;
@@ -1308,6 +1317,9 @@ public class Agent {
      * friction is calculated from the correct block when standing on fences.
      */
     private static boolean isFenceLike(BlockState state) {
+        // Null-safe for the same off-thread reason as isClimbing: a transient null read is not a
+        // fence. Callers here pass getBlockState results straight in (getVelocityAffectingPos).
+        if (state == null) return false;
         return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
                 || state.getBlock() instanceof FenceGateBlock;
     }
@@ -1327,14 +1339,16 @@ public class Agent {
 
     public BlockPos getLandingPos(WorldView world) {
         BlockPos pos = new BlockPos(this.blockX, MathHelper.floor(this.posY - (double)0.2F), this.blockZ);
-        
-        if(!world.getBlockState(pos).isAir()) {
+
+        // Off-thread null reads (see isClimbing): a null is treated as "nothing to land on here".
+        BlockState here = world.getBlockState(pos);
+        if(here != null && !here.isAir()) {
             return pos;
         }
 
         BlockState state = world.getBlockState(pos.down());
 
-        if(state.getBlock() instanceof FenceGateBlock || state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)) {
+        if(state != null && (state.getBlock() instanceof FenceGateBlock || state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS))) {
             return pos.down();
         }
 
