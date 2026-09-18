@@ -228,6 +228,19 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
   ⛔ And capture the exit code. Piping gradle into `tail` throws it away, and a FAILED build
   then reports success to whatever is reading. That happened on the first attempt here.
 
+  ⛔⛔ A STALE `bin/` POISONS THE RELEASE JAR — A SOURCE CHANGE CAN BE ABSENT FROM THE BUILT JAR
+  (2026-09-18). IntelliJ compiles to `versions/<ver>/bin/main`, gradle to
+  `versions/<ver>/build/classes`. The remap pipeline picks up the stale `bin/main` classes, so a
+  `.java` edit that IS in `src/main`, IS in the preprocessed source, and IS in the shadowJar
+  (`-all.jar`) can still be ABSENT from the final remapped jar — with the OLD value. `gradle clean`
+  and `--no-build-cache` do NOT fix it (they never touch `bin/`). This shipped 0.95.8 with the G106
+  food change (foodUnits 220->140) missing: the deployed bot showed "Collect 220.0 units of food"
+  and the whole verification measured the old behaviour. THE FIX: `rm -rf versions/*/bin` before a
+  release build. THE GUARD: never trust that a change is in the jar — verify it, e.g.
+  `javap -p -c` the class inside the jar (via the Linux `.gradle/jdk21/bin/javap` in a
+  `debian:bookworm-slim` container) and read the constant, or check the value at runtime, BEFORE
+  releasing and BEFORE trusting any verification run.
+
   > ⛔ WHY THIS WAS REWRITTEN, 2026-09-07. The line used to read *NEVER run Gradle without
   > the user explicitly asking*, and the session read it exactly as written, which was
   > correct reading and a wrong outcome. Six Java commits shipped on 2026-09-05 having never
