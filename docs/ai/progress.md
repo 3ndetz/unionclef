@@ -33,11 +33,14 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
   (`:526`, `_moveChecker.check` now fails) condemns the target and reroutes. NOT reproducible from a
   world checkpoint (in-memory transient — restoring cp0918-1030-t494 ran fine, bucket rung @156 s),
   so verified by no-regression (nav suite) + the day-locked run no longer freezing, not a repro.
-- **G106 (food over-priority, open):** `CollectFoodPriorityCalculator` ×50s ALL food near a hay bale
-  (priority hit 1293), and food gates the nether fall-through (BeatMinecraftTask:2412 needs every
-  gather ≤0; foodUnits=220). Diamonds are opportunistic (not required). Day-locked the bot still
-  interleaves nether-prep (reached the bucket rung), so it is a slowdown, not a hard block. Deferred
-  behind G105.
+- **G106 (food over-priority) — FIXED + SHIPPED v0.95.8:** `CollectFoodPriorityCalculator` ×50'd ALL
+  food near a hay bale (priority hit 1293), and food gated the nether fall-through
+  (BeatMinecraftTask:2412 needs every gather ≤0; foodUnits=220 ≈ 27 meats kept a 25-min probe in
+  overworld prep). Fix: hay multiplier 50→7, foodUnits 220→140 (minFoodUnits 120); the bot
+  re-collects below the target and needsEmergencyFood ramps +inf when low, so the buffer is topped
+  up, not risked. Verified day-locked from cp0918-1030-t494: hp held 20 (bot eats, NO starvation),
+  food not dominating (iron-gather at priority 3.86), reached the bucket rung and descended to
+  DIAMOND DEPTH (y-9, +160 items). §4y frames: the flat windows are furnace smelting, no holds.
 - **G93 (shipped v0.95.6):** see below — a table craft no longer digs across the world for a dropped
   copy.
 
