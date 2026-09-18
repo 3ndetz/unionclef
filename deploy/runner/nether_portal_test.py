@@ -84,7 +84,12 @@ elif op=="findportal":
             for dz in range(-rad,rad+1):
                 try:
                     b=dict(mc.getBlockAt(cx+dx,cy+dy,cz+dz))
-                    nm=str(b.get("block") or b.get("name") or b)
+                    # ⛔ MATCH THE REGISTRY id, NOT the display name (2026-09-19). getBlockAt's
+                    # "block"/"name" is the LOCALIZED name ("портал незера" on a ru client), so a
+                    # substring test for "nether_portal" silently missed a real, lit portal and every
+                    # PASS was reported FAIL. The "id" field is "minecraft:nether_portal" regardless of
+                    # locale -- read that.
+                    nm=str(b.get("id") or b.get("block") or b.get("name") or b)
                 except Exception: nm=""
                 if "nether_portal" in nm.lower(): hit=[cx+dx,cy+dy,cz+dz]; break
             if hit: break

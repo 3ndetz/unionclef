@@ -789,7 +789,6 @@ public final class BlockPlaceHelper {
      * @return true if a block item is in hand when this returns.
      */
     public static boolean equipThrowaway(ClientPlayerEntity player) {
-        if (isScaffold(player.getMainHandStack())) return true;
         // The cheapest scaffold in the hotbar, not the first block: a player pillars with the
         // cobblestone, not the crafting table that happens to sit in slot 3.
         int best = -1, bestRank = Integer.MAX_VALUE;
@@ -799,6 +798,16 @@ public final class BlockPlaceHelper {
             int r = scaffoldRank(st);
             if (r < bestRank) { bestRank = r; best = i; }
         }
+        // ⛔ KEEP WHAT'S IN HAND ONLY IF IT IS ALREADY AS CHEAP AS THE CHEAPEST ALTERNATIVE (G108,
+        // 2026-09-19). The old check kept ANY held full-cube scaffold, which spent OBSIDIAN as pillar
+        // steps: the build queue pre-equips the structure block before a pillar step (BlockPlaceHelper
+        // pillar branch -> equipBlock(headCell.blockName())), and obsidian passes isScaffold (rank 5),
+        // so this returned true and PillarTask towered the portal up out of its own obsidian -- landing
+        // it in the interior, where the gather then mined it back (place/mine loop, top row never
+        // built). Pillaring/bridging is throwaway work; never let it consume the build material when
+        // cobblestone (rank 0) is a slot away. Held wins ties so we don't re-select every tick.
+        ItemStack held = player.getMainHandStack();
+        if (isScaffold(held) && scaffoldRank(held) <= bestRank) return true;
         if (best >= 0) {
             player.getInventory().setSelectedSlot(best);
             equipped = null;

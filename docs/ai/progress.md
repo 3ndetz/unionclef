@@ -938,3 +938,38 @@ TWO stray obsidian at (0,0,0),(0,1,0) -- these are PILLAR STEPS.
   churn), and the existing "Clear middle" phase (destroys PORTAL_INTERIOR non-air before lighting)
   removes the cobble pillar before flint&steel. A sub-agent is confirming where tungsten chooses the
   pillar block. This should green the full flood->build->light path.
+
+## 2026-09-19 (cont. 2) — G108 portal LIGHTS end-to-end (flood -> gather -> build -> light)
+
+The full obsidian-flood nether-portal path now builds AND lights a real portal on the stand -- the
+standing post-iron ceiling for weeks. Two fixes did it (the reclaim fix above was the third).
+
+- **tungsten BlockPlaceHelper.equipThrowaway: pillar/bridge with the CHEAPEST scaffold, never a
+  valuable full-cube already in hand.** The build queue pre-equips the structure block before a
+  pillar step (drainQueue pillar branch -> equipBlock(headCell.blockName())), and OBSIDIAN passes
+  isScaffold (rank 5), so equipThrowaway's "already holding a full cube -> keep it" short-circuit
+  towered the portal up out of its OWN obsidian -- pillar steps landing in the interior, which the
+  gather then mined back (place/mine loop, top row never built, 0 portal). Now it keeps the held
+  block only when it is already at least as cheap as the cheapest hotbar scaffold; obsidian (rank 5)
+  is swapped for cobblestone (rank 0) when available. Pillar/scaffold steps become throwaway; the
+  interior stays clean, the Clear-middle phase removes any throwaway, and the frame's obsidian is
+  spent only on frame cells.
+- **deploy/runner/nether_portal_test.py: findportal matches the registry id, not the localized
+  display name.** getBlockAt's "block"/"name" is localized ("портал незера" on this ru client), so
+  the old substring test for "nether_portal" reported every real, lit portal as FAIL -- a harness
+  bug that masked success. Read the "id" field ("minecraft:nether_portal") instead.
+- **Verified (bench OBS flood path, 5x5 lake), ground truth by block id at the build site:** frame
+  14/14 obsidian (bottom row + both columns + all 4 top-row cells), interior 6/6 nether_portal.
+  Confirmed on two independent runs (GIVE_OBS build-only and full flood OBS).
+
+### Known follow-up: top-row MIDDLE placement is functional but not yet deterministic
+The two top-row middle cells sit over the open interior (no solid below, no reachable side stand),
+so tungsten's queue pillar branch (which needs a standable cell) does not apply and PlaceBlockTask
+places them via its reactive wander + "go above the block" alternative (~36 s per middle on the
+stand; it recovers and places obsidian). It works but is slow/flaky. A deterministic fix -- have the
+queue pillar-place a TARGET cell with the STRUCTURE block (PillarTask always calls equipThrowaway, so
+it cannot currently place obsidian for a target; it only worked here because no cobblestone was in
+the HOTBAR during the frame build) -- is the clean next pass. An attempt to pre-build a cobblestone
+support column under each middle was REVERTED: it put cobblestone in the hotbar, which made the now-
+standable middle pillar-place cobble (equipThrowaway), triggering a place/destroy/replace churn. The
+milestone (portal lights) does not depend on it.
