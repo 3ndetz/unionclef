@@ -572,3 +572,18 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
   `OBS`/`GIVE_OBS` mode to `nether_portal_test.py`. Compiles clean.
 - Known follow-up: obsidian GATHERING (cast at ground + mine, 10 blocks) is slow/variable; it
   completes without stalling, but speeding it up is a separate optimization (G108b).
+
+### G108 correction: BOTH portal methods stall; frame-fix committed, NOT released
+- The definitive full-path obsidian run (720s, gather + place) did NOT complete cleanly: the
+  obsidian GATHERING (CollectObsidianTask) dug a 1-deep pit, cast one obsidian at (2347,-59) and
+  then STALLED ~60s "Block in range, mining..." on it (a down-diagonal mining-aim stall, 2 below
+  feet / 1 over), never collecting the 10 blocks. Inv confirmed 0 obsidian, wanderHits=0.
+- So the fix is NOT clean end-to-end: the bucket cast stalls on the upper (mid-air) FRAME, and
+  the obsidian method's FRAME-PLACEMENT is robust (benched PASS 139s) but its obsidian GATHERING
+  stalls on a down-aim mine of self-cast pit obsidian. The routing fix (8529ed12, prefer obsidian
+  w/ diamond pick) is a real improvement to the frame-build and is COMMITTED, but 0.95.11 is NOT
+  released -- the portal does not yet complete end-to-end on the bench.
+- Nether-portal building is a deeply fragile area (both builders stall in different places); a
+  clean fix is a dedicated multi-pass effort. Next tractable step: determine whether the gathering
+  mining-aim stall is a real bug or the flat-floor bench forcing a cramped self-cast pit (a
+  realistic lava-basin scene, or reading breakAim/dbAimWait/breakMissWhy at the stall).
