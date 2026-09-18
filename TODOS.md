@@ -1441,12 +1441,21 @@ test + full nav-suite regression before it counts done.
       the start is chosen — fixed to `execute positioned <spawn>` after the teleport), and the
       catalogue's pickup-first rule needs a cost: a drop that costs a dig is not cheaper than a
       craft from a tree in sight.
-- [ ] **G94 — a step down onto a snow layer is a hop the physics engine cannot cross** (same run,
+- [x] **G94 — a step down onto a snow layer is a hop the physics engine cannot cross** — NOT
+      REPRODUCIBLE on the current build (checked 2026-09-18, v0.95.7). Wrote the bench the item
+      asked for (`deploy/runner/snow_stair_test.py`: a 3-step staircase descending +z, each tread
+      grass + a snow layer, `@goto` the bottom — faithfully the reported `hop[0,-1,1]`
+      `[grass|snow|air]` geometry) and ran it at SNOW_LAYERS=1, 3 and 8: all PASS, the bot descends
+      in 4.4–7.8 s. So the snow step-DOWN is handled now (incidentally fixed by the nav work since
+      the 2026-09-16 run — G91/G97/G98/G99, or the descend/passability handling). The residual snow
+      friction seen in the day-locked runs is the FLAT `hop[-1,0,0]`/`hop[1,0,0]` across
+      `[grass|snow|air]`, and those were externally-stopped target-flips (tests0, stopBy), not hard
+      stalls. Original report kept below.
+      (same run,
       t=264–308, sixty seconds at (1264.3,66,-1404)): `gaveUp n3 idx2 … hop[0,-1,1] from
       (1264,66,-1405)[grass_block|snow|air] to (1264,65,-1404)[grass_block|snow|air]`, 32898
       tests. The feet cell of both ends holds a snow LAYER (a thin block, G82's family for the
-      planner; here it is the physics agent's landing/step that refuses). Bench: a two-block
-      staircase down with `snow` layers on the treads.
+      planner; here it is the physics agent's landing/step that refuses).
 - [ ] **G95 — the night job was a block 86 below** (same run, t=638–1013): `Resetting sleep
       through night task → Destroy block at (1240,-21,-1350) → reaching (dig allowed)` dug a
       straight shaft from y=63 to y=-28 in six minutes, into a trial chamber; `NIGERUNDAYOO,
