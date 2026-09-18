@@ -1494,13 +1494,23 @@ test + full nav-suite regression before it counts done.
       onto land holds JUMP while the body touches water (a hop from the ground, the swim-up
       afloat), and arrives only with the feet in the cell AND the body clear of the water (or at
       the cell's centre). Verified from the checkpoint, not from the bench.
-- [ ] **G100 — drowned in a flooded cave at y=0 while digging for diamonds** (same run,
+- [x] **G100 — drowned in a flooded cave at y=0 while digging for diamonds** (same run,
       t≈1250–1330, frame 21:30: "Misc World Survival Chain: Reaching breathable air — Finding
       a reachable air pocket", the body under water at y=-0.4 among gold ore, hp 12, finished
       by a zombie in the water; the first of three deaths, the respawn at world spawn 1700
-      blocks from the mine with nothing). The dig-down strategy walks into aquifers; the air
-      chain found no pocket in time. Not started: the dig should not enter a water column it
-      cannot leave, and GetToAirTask needs its own bench.
+      blocks from the mine with nothing). Root: GetToAirTask searched only for the nearest
+      EXISTING breathable cell (FastNavigator.startNearest) — in a stone-capped flooded pocket
+      none was reachable, so it did nothing and the bot drowned. **Fixed:** the air-seek now
+      scans its own column upward and DIGS the first solid cap over the water (a DestroyBlockTask
+      aimed up), climbing to the surface a block at a time; bedrock / sideways-only falls back to
+      the lateral search. Bench `air_pocket_test.py` (a walled, twice-lidded water column, bot
+      submerged under @gamer): dug both caps, surfaced 16/20 hp in 13.8 s; drowned every time
+      before. 0.95.5. Two bench traps found and guarded on the way: the survival chain only ticks
+      while AltoClef runs (an idle @stop bench never fires the air-seek), and a drown+respawn
+      misreads as "reached air" unless arrival is checked near the shaft. Follow-up (open): the
+      dig should not ENTER a water column it cannot leave (prevention), and with only an iron
+      pickaxe the escape still dips air negative — trigger earlier than air<half if a run cuts it
+      close.
 - [ ] **G101 — after a death the bot starts over at world spawn, at night, unarmed** (same run,
       deaths two and three at t≈2040 and t≈2320, frames 33:50 and 38:20: a zombie at melee
       range, `NIGERUNDAYOO … Routing to reachable safety`, hp 8, no weapon in the hotbar;
