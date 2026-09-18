@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- BLACKLISTNOW-THRESHOLD-LEAK-2026-09-18 -->
+## `blackListNow`'s decisive verdict quietly lowers a block's normal-path threshold, not just this one exclusion (Finding B, 2026-09-18)
+
+Read `AbstractObjectBlacklist.blackListNow`/`BlockScanner.requestBlockUnreachableNow`/
+`requestAreaUnreachableNow` (uncommitted at the time of this note, part of the canopy-log wedge
+fix) for a second pair of eyes. The mechanism is sound for its stated purpose (an already-proven
+give-up should exclude at once, not cost one of the normal four attempts) and the comment is
+explicit that only `numberOfFailures` should be affected, not `totalFailures` (pricing) — but it
+misses one more field that leaks: `blackListItem`'s own third parameter (line 20-53, pre-existing,
+not touched by this fix) unconditionally OVERWRITES `entry.numberOfFailuresAllowed` on every call,
+and `blackListNow` calls it with `1`. So after a decisive verdict fires on a block, that block's
+`numberOfFailuresAllowed` stays at `1` (not the normal default of `4`, from
+`BlockScanner.requestBlockUnreachable(pos)`) until some OTHER caller happens to re-blacklist the
+same position through the ordinary path and restores it to `4`.
+
+Because the whole point of a decisive verdict is to keep the bot away from that position, that
+"some other caller" may not come along again soon — meaning once the cool-off expires and the
+block is retried, a single fresh ordinary failure (not four) re-excludes it, contradicting the
+comment's own stated intent ("stays EVIDENCE, never a decision... the target is offered again"
+implies the SAME retry generosity as before, not a permanently stricter one). Not fixed here since
+the file is mid-edit on the parallel session's end — the likely fix is for `blackListNow` to save
+and restore the entry's prior `numberOfFailuresAllowed` after forcing the threshold check, or to
+bypass `blackListItem`'s threshold-overwrite entirely and only touch `numberOfFailures` directly.
+
 <!-- G107-CALLERS-STILL-UNGUARDED-2026-09-18 -->
 ## [FIXED 2026-09-18, G107b] G107's null-guard covers the predicates it touched, but two callers right next to them still dereference an unguarded read (2026-09-18)
 
