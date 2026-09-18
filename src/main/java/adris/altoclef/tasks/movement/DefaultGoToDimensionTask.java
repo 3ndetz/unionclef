@@ -7,6 +7,7 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Dimension;
 import adris.altoclef.util.helpers.WorldHelper;
 import net.minecraft.block.Blocks;
+import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.Optional;
@@ -22,6 +23,7 @@ public class DefaultGoToDimensionTask extends Task {
     private final Dimension _target;
     // Cached to keep build properties alive if this task pauses/resumes.
     private final Task _cachedNetherBucketConstructionTask = new ConstructNetherPortalBucketTask();
+    private final Task _cachedNetherObsidianConstructionTask = new ConstructNetherPortalObsidianTask();
 
     public DefaultGoToDimensionTask(Dimension target) {
         _target = target;
@@ -123,7 +125,21 @@ public class DefaultGoToDimensionTask extends Task {
             return new EnterNetherPortalTask(Dimension.NETHER);
         }
         return switch (mod.getModSettings().getOverworldToNetherBehaviour()) {
-            case BUILD_PORTAL_VANILLA -> _cachedNetherBucketConstructionTask;
+            // ⛔ PLACE OBSIDIAN, DON'T CAST IT IN PLACE (G108, benched 2026-09-18). The bucket
+            // cast (ConstructNetherPortalBucketTask) forms each frame block where it stands by
+            // building a mould + lava + water; that works at ground level but STALLS on the upper
+            // (mid-air) frame -- the mould cannot be built in the air, PlaceObsidianBucketTask's
+            // progress check trips, and it drops into TimeoutWanderTask(5) forever ("Wander for 5.0
+            // blocks", portal never completes). The obsidian method casts obsidian at GROUND level
+            // (the easy case), mines it with the diamond pickaxe the bot has by the nether stage,
+            // then PLACES the frame blocks -- a normal mid-air block place (PlaceStructureBlockTask
+            // builds its own scaffold), which is reliable. Bench A/B on a 5x5 lava lake: bucket
+            // FAILs (no portal in 180 s), obsidian PASSes ("Done constructing nether portal" in
+            // ~139 s). So prefer obsidian whenever the bot can mine it; keep the bucket cast as the
+            // fallback for the no-diamond-pickaxe case (early, before this stage).
+            case BUILD_PORTAL_VANILLA -> mod.getItemStorage().hasItem(Items.DIAMOND_PICKAXE)
+                    ? _cachedNetherObsidianConstructionTask
+                    : _cachedNetherBucketConstructionTask;
             case GO_TO_HOME_BASE -> new GetToBlockTask(mod.getModSettings().getHomeBasePosition());
         };
     }

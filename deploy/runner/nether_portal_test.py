@@ -32,6 +32,11 @@ BX, BZ = 2360, 360                     # platform centre
 FLOOR_Y = -58                          # y of the solid floor the bot stands on
 LAVA_SIZE = int(os.environ.get("LAVA_SIZE", "5"))
 NO_ROOM = os.environ.get("NO_ROOM", "0") == "1"
+# OBS=1 tests the OBSIDIAN method (ConstructNetherPortalObsidianTask via `@build portalobs`):
+# give 10 obsidian + a diamond pickaxe so the frame is PLACED (isolating placement from the
+# ground-cast gathering), and compare against the default bucket cast (`@build portal`), which
+# stalls on the mid-air upper frame (G108).
+OBS = os.environ.get("OBS", "0") == "1"
 WINDOW_S = int(os.environ.get("WINDOW_S", "180"))
 
 SNIP = r"""
@@ -128,15 +133,25 @@ def main():
     # block for its scaffold ("Place structure ... No placeable block in the inventory" -> stuck
     # shimmy, observed when this was omitted), so give cobblestone to match reality.
     rcon(f"give {BOT} minecraft:water_bucket 1")
-    rcon(f"give {BOT} minecraft:bucket 1")
     rcon(f"give {BOT} minecraft:flint_and_steel 1")
     rcon(f"give {BOT} minecraft:cobblestone 64")
+    if OBS:
+        # obsidian method: a diamond pickaxe + an empty bucket (to scoop lava for the ground
+        # cast) so it GATHERS obsidian itself (cast at ground + mine) and then PLACES the frame --
+        # the full path. GIVE_OBS=1 instead hands it the blocks to isolate placement.
+        rcon(f"give {BOT} minecraft:diamond_pickaxe 1")
+        rcon(f"give {BOT} minecraft:bucket 1")
+        if os.environ.get("GIVE_OBS", "0") == "1":
+            rcon(f"give {BOT} minecraft:obsidian 12")
+    else:
+        rcon(f"give {BOT} minecraft:bucket 1")
     time.sleep(2)
     start = py4j("state")
+    method = "portalobs (obsidian)" if OBS else "portal (bucket cast)"
     print(f"scene: {LAVA_SIZE}x{LAVA_SIZE} lava lake at ({lx},{FLOOR_Y},{lz})"
           + (" WALLED-IN (no room control)" if NO_ROOM else "")
-          + f"; bot at {start['pos']}; prereqs given (water bucket, bucket, flint&steel)")
-    py4j("cmd", c="@build portal")
+          + f"; bot at {start['pos']}; method={method}")
+    py4j("cmd", c=("@build portalobs" if OBS else "@build portal"))
     # Detection is via the TASK STRING (one py4j call/poll), never a per-poll block scan: the
     # task sets "Done constructing nether portal." on success and shows "Looking for lava lake" /
     # "Getting flint"/"Collecting lava"/"PlaceObsidian" as it works. A block scan (portal_found)

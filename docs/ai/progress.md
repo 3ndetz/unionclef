@@ -552,3 +552,23 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
   disliked anti-pattern; the real problem is casting the upper (mid-air) frame reliably. The bot
   has a diamond pickaxe by this stage, so mining obsidian (ConstructNetherPortalObsidianTask) may
   be the more robust method than the bucket cast -- to be weighed in the fix pass.
+
+### G108 fixed: place obsidian instead of casting it in place for the nether portal
+- Bench A/B on `nether_portal_test.py` (5x5 lava lake, flat stand), decisive:
+  - `@build portal` (bucket cast, the old default): FAIL -- lower frame casts, then STALLS on the
+    upper (mid-air) frame; PlaceObsidianBucketTask's progress check trips -> TimeoutWanderTask(5)
+    -> "Wander for 5.0 blocks" forever, portal never completes.
+  - `@build portalobs` (obsidian method), placement isolated (given 12 obsidian + diamond pick):
+    PASS, "Done constructing nether portal" in ~139 s -- it PLACES the upper frame blocks
+    (`Place structure{obsidian} at ...,-55/-54,...`) the cast could not form.
+  - obsidian method, FULL path (gathers obsidian by ground-cast + mine): steady progress, NO
+    stall (wanderHits=0), slower (gathering 10 obsidian by cast+mine is ~150-400 s and varies).
+- Fix (`DefaultGoToDimensionTask.goToNetherFromOverworldTask`): for BUILD_PORTAL_VANILLA, prefer
+  `ConstructNetherPortalObsidianTask` when the bot has a diamond pickaxe (true by the nether
+  stage -- it can mine cast obsidian); keep the bucket cast as the fallback for the no-diamond
+  case. Placing obsidian blocks is a normal mid-air place (PlaceStructureBlockTask scaffolds
+  itself) -- reliable -- vs forming each block in place, which cannot build a mould in the air.
+- Also added `@build portalobs` (BuildCommand) to bench the obsidian builder directly, and an
+  `OBS`/`GIVE_OBS` mode to `nether_portal_test.py`. Compiles clean.
+- Known follow-up: obsidian GATHERING (cast at ground + mine, 10 blocks) is slow/variable; it
+  completes without stalling, but speeding it up is a separate optimization (G108b).

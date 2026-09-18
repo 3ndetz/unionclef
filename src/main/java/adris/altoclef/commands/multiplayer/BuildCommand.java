@@ -10,6 +10,7 @@ import adris.altoclef.tasks.construction.PlaceSignTask;
 import adris.altoclef.tasks.construction.compound.ConstructGraveTask;
 import adris.altoclef.tasks.construction.compound.ConstructIronGolemTask;
 import adris.altoclef.tasks.construction.compound.ConstructNetherPortalBucketTask;
+import adris.altoclef.tasks.construction.compound.ConstructNetherPortalObsidianTask;
 import adris.altoclef.tasks.misc.PlaceBedAndSetSpawnTask;
 
 import java.util.List;
@@ -79,6 +80,12 @@ public class BuildCommand extends Command {
             case "portal" -> {
                 Debug.logMessage("Constructing portal!");
                 mod.runUserTask(new ConstructNetherPortalBucketTask(), this::finish);
+            }
+            case "portalobs" -> {
+                // The obsidian method: gather obsidian (cast at ground + mine) then PLACE the
+                // frame blocks. Exposed for benching the two portal builders side by side (G108).
+                Debug.logMessage("Constructing portal (obsidian method)!");
+                mod.runUserTask(new ConstructNetherPortalObsidianTask(), this::finish);
             }
             default -> {
                 Debug.logWarning("Unknown structure: " + commandName);
