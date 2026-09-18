@@ -662,3 +662,23 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - SHIPPED this session that DID move the score: G106 (confirmed), G107 (0.95.10), G107b (0.95.11),
   and the obsidian gathering spot-finding fix (committed). Post-iron progression to the nether
   transition is reliable (clean run, 0 deaths). The nether-portal BUILD is the standing ceiling.
+
+### G108 redesign attempt: flood-lava-lake obsidian collection -- PROMISING, partial, needs iteration
+- Confirmed the mechanic on the stand: a water source ABOVE or ADJACENT to a lava SOURCE turns it
+  to obsidian (both -> minecraft:obsidian). This uses lava the bot already found -- NO 10-block
+  mould, NO placed lava (the shared fragility of PlaceObsidianBucketTask).
+- Implemented a first flood path in CollectObsidianTask (flood the nearest reachable lake lava
+  source -> the existing "mine nearby obsidian" branch collects it -> reclaim the water) and
+  bench-tested it. IT PARTIALLY WORKED: early in the run the bot mined obsidian straight from the
+  flooded 5x5 lake (Destroy block at 2365..2368,-58 = the lake, now obsidian) -- real gathering via
+  flooding, no per-block cast. But then it dropped into "Mine And Collect raw_iron -> Wander for
+  Infinity": the water-bucket reclaim did not recover the bucket reliably (geometry/timing), so it
+  tried to craft a new one -> needs iron -> none on the flat stand -> wander. UNVERIFIED + does not
+  complete the portal -> REVERTED (main keeps only the verified gathering fix).
+- Next pass (the redesign, fresh): (1) reliable water reclaim after each conversion (ClearLiquid at
+  the exact water source, confirm the bucket is back before moving on), OR place water once at a
+  lake's high edge to flood a whole sheet and mine that; (2) full-lake coverage so >=10 obsidian is
+  produced; (3) build the frame at a chosen OPEN site away from the mined lake (the reverted
+  clean-siting scan is the sketch); (4) verify end-to-end on a REAL @gamer run (the flat stand's
+  no-iron + rcon-give-equip artifacts mask the real path). The mechanic works; the plumbing needs
+  careful iteration. This is a dedicated multi-iteration effort.
