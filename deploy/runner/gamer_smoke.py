@@ -35,6 +35,13 @@ FROM_CP = sys.argv[sys.argv.index("--from") + 1] if "--from" in sys.argv else No
 CP_EVERY = float(sys.argv[sys.argv.index("--checkpoint-every") + 1]) if "--checkpoint-every" in sys.argv else 0.0
 SAVE_END = (sys.argv[sys.argv.index("--save-end") + 1] if "--save-end" in sys.argv
             else ("" if "--no-save-end" in sys.argv else "last"))
+# --daylock: freeze the RESTORED world at day (no cycle, no weather) and clear standing
+# hostiles, right before @gamer. The night track (mob preemption, night deaths) is deferred
+# by the operator; this isolates the IN-SCOPE post-iron behaviour (progression, food, terrain)
+# from it so a run measures the daytime ceiling instead of a night death. The reset path already
+# forces day for a fresh run; this carries the same to a --from resume, whose checkpoint may be
+# night. It does NOT touch difficulty -- mobs can still exist, day just stops surface spawns.
+DAYLOCK = "--daylock" in sys.argv
 if FROM_CP:
     # the reset and the fresh-start spiral below still run (their world is discarded with the
     # swap); pin the spawn so the spiral's forest search does not spend minutes on ground the
@@ -759,6 +766,15 @@ def main():
         _self = py4j("gs").get("self") or {}
         pos = _self.get("pos"); spawn = None
         print(f"  resumed at: {pos} hp={_self.get('hp')} food={_self.get('food')}")
+    if DAYLOCK:
+        grcon("gamerule doDaylightCycle false")
+        grcon("gamerule doWeatherCycle false")
+        grcon("weather clear 1000000")
+        grcon("time set day")
+        # clear hostiles standing from the checkpoint's night so the first minute is not a fight
+        for _mob in ("zombie", "skeleton", "creeper", "spider", "enderman", "witch", "phantom", "drowned"):
+            grcon(f"kill @e[type=minecraft:{_mob}]")
+        print("  DAYLOCK: forced day, froze the cycle, cleared standing hostiles")
     phase("start"); print("[3] tungsten-primary (SHIPPED DEFAULT) + @gamer...")
     # MEASURE WHAT SHIPS. This used to call setTungstenPathing(True), which turned on four flags
     # at once -- including smartMoves, which is NOT a shipped default (it costs the search its
