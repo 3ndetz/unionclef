@@ -50,15 +50,22 @@ public class PlaceObsidianFloodTask extends Task {
     private static final int LAVA_SEARCH_RANGE = 64;
 
     private final TimerGame _convertWait = new TimerGame(3);
-    // Best-effort cap on the whole place+convert+reclaim cycle: never dead-end on a stubborn reclaim.
-    private final TimerGame _cycleDeadline = new TimerGame(25);
+    // After the last source is scooped, give the flowing water a moment to drain before we hand the
+    // fresh obsidian back to be mined -- so the miner never sees it still submerged (which would look
+    // like "no obsidian" and kick off a pointless re-flood).
+    private final TimerGame _drainSettle = new TimerGame(2.5);
+    // How far the flood's water can spread from _waterCell; the reclaim scans this for its sources.
+    private static final int RECLAIM_RADIUS = 12;
     private final MovementProgressChecker _progress = new MovementProgressChecker();
+    private final MovementProgressChecker _reclaimProgress = new MovementProgressChecker(2);
     private final Set<BlockPos> _rimBlacklist = new HashSet<>();
+    private final Set<BlockPos> _reclaimBlacklist = new HashSet<>();
 
-    private BlockPos _rim;        // solid edge block whose TOP face we click
-    private BlockPos _waterCell;  // rim.up(): where the water source lands and is reclaimed
-    private boolean _placed;      // water has been placed at _waterCell
-    private boolean _done;        // one flood cycle complete (converted + reclaimed / settled)
+    private BlockPos _rim;           // solid edge block whose TOP face we click
+    private BlockPos _waterCell;     // rim.up(): where the water source lands
+    private BlockPos _reclaimTarget; // the water source we're currently scooping back
+    private boolean _placed;         // water has been placed at _waterCell
+    private boolean _done;           // one flood cycle complete (converted + drained)
 
     @Override
     protected void onStart() {
@@ -70,34 +77,55 @@ public class PlaceObsidianFloodTask extends Task {
         // Don't let pathing dig out the rim we stand the water on.
         mod.getBehaviour().avoidBlockBreaking(pos -> _rim != null && pos.equals(_rim));
         _progress.reset();
-        _cycleDeadline.reset();
     }
 
     @Override
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        // Phase B: water is down -> wait for the conversion, then reclaim the source.
+        // Phase B: water is down -> wait for the conversion, then reclaim every source we made.
         if (_placed && _waterCell != null) {
             if (!_convertWait.elapsed()) {
                 setDebugState("Waiting for lava to turn to obsidian");
                 return null;
             }
-            boolean waterThere = mod.getWorld().getBlockState(_waterCell).getBlock() == Blocks.WATER;
-            if (!waterThere) {
-                // Reclaimed or drained -> cycle complete.
+            // No empty bucket to scoop with: a lost bucket is cheap and the obsidian is already made.
+            if (!mod.getItemStorage().hasItem(Items.BUCKET)) {
+                Debug.logMessage("(flood) no bucket to reclaim with -- leaving water, obsidian is made");
                 _done = true;
                 return null;
             }
-            // No empty bucket to scoop with, or we have spent long enough: leave the water source
-            // (a lost bucket is cheap and the obsidian is already made) and NEVER dead-end here.
-            if (!mod.getItemStorage().hasItem(Items.BUCKET) || _cycleDeadline.elapsed()) {
-                Debug.logMessage("(flood) leaving water source (obsidian already made, reclaim skipped)");
+            // Scoop back the water sources this flood placed. Removing a source drains ALL the flowing
+            // water it feeds, so once no reclaimable sources remain in the pool region the sheet is gone
+            // and the fresh obsidian is exposed for mining. Targeting a real SOURCE block (not one fixed
+            // cell that may have become flowing) is what lets ClearLiquidTask actually finish -- the
+            // old code scooped _waterCell forever if it was flowing, timed out, and left the sheet,
+            // which submerged the obsidian and drove an endless re-flood loop.
+            Optional<BlockPos> src = findNearestReclaimableSource(mod);
+            if (src.isEmpty()) {
+                // No sources left. Let any flowing water finish draining, then this cycle is done.
+                if (!_drainSettle.elapsed()) {
+                    setDebugState("Waiting for the flooded water to drain");
+                    return null;
+                }
                 _done = true;
                 return null;
             }
-            setDebugState("Reclaiming the water source");
-            return new ClearLiquidTask(_waterCell);
+            _drainSettle.reset();
+            if (!src.get().equals(_reclaimTarget)) {
+                _reclaimTarget = src.get();
+                _reclaimProgress.reset();
+            }
+            if (!_reclaimProgress.check(mod)) {
+                // Can't get to / scoop this source -> give up on it and try the next one.
+                Nav.cancel();
+                _reclaimBlacklist.add(_reclaimTarget);
+                _reclaimTarget = null;
+                _reclaimProgress.reset();
+                return null;
+            }
+            setDebugState("Reclaiming water source " + _reclaimTarget.toShortString());
+            return new ClearLiquidTask(_reclaimTarget);
         }
 
         // Phase A: need a filled water bucket to flood with.
@@ -124,7 +152,6 @@ public class PlaceObsidianFloodTask extends Task {
             _rim = rim.get();
             _waterCell = _rim.up();
             _progress.reset();
-            _cycleDeadline.reset();
         }
 
         // Progress guard: if we can't get to / place at this rim, blacklist it and pick another.
@@ -141,13 +168,41 @@ public class PlaceObsidianFloodTask extends Task {
         if (mod.getWorld().getBlockState(_waterCell).getBlock() == Blocks.WATER) {
             _placed = true;
             _convertWait.reset();
-            _cycleDeadline.reset();
+            _drainSettle.reset();
             return null;
         }
 
         // Place water on the TOP face of the rim -> it lands at _waterCell and floods the pool.
         setDebugState("Flooding the lava lake");
         return new InteractWithBlockTask(Items.WATER_BUCKET, Direction.UP, _rim, true);
+    }
+
+    /**
+     * Nearest still-water SOURCE block within {@link #RECLAIM_RADIUS} of where we placed the flood,
+     * skipping any we've already given up on. Scooping a source drains all the flowing water it feeds,
+     * so reclaiming the handful of sources drains the whole sheet -- and targeting a real SOURCE (not a
+     * fixed cell that may be flowing) is what lets the scoop actually complete.
+     */
+    private Optional<BlockPos> findNearestReclaimableSource(AltoClef mod) {
+        if (_waterCell == null) return Optional.empty();
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (int dx = -RECLAIM_RADIUS; dx <= RECLAIM_RADIUS; dx++) {
+            for (int dz = -RECLAIM_RADIUS; dz <= RECLAIM_RADIUS; dz++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    BlockPos p = _waterCell.add(dx, dy, dz);
+                    if (_reclaimBlacklist.contains(p)) continue;
+                    if (mod.getWorld().getBlockState(p).getBlock() != Blocks.WATER) continue;
+                    if (!WorldHelper.isSourceBlock(p, true)) continue;
+                    double d = p.getSquaredDistance(mod.getPlayer().getPos());
+                    if (d < bestDist) {
+                        bestDist = d;
+                        best = p;
+                    }
+                }
+            }
+        }
+        return Optional.ofNullable(best);
     }
 
     /**
