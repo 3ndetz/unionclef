@@ -74,27 +74,60 @@ public class ConstructNetherPortalObsidianTask extends Task {
             new Vec3i(-1, 2, 1)
     };
 
-    private static final Vec3i PORTALABLE_REGION_SIZE = new Vec3i(3, 6, 6);
-
     private final TimerGame _areaSearchTimer = new TimerGame(5);
 
     private BlockPos origin;
 
     private BlockPos _destroyTarget;
 
+    /**
+     * ⛔ THE FRAME MUST NOT BE SITED IN THE CAST PIT (G108, 2026-09-18). Gathering obsidian by
+     * casting (lava bucket + water in a mould, then mine) digs a chaotic, lava-adjacent hole and
+     * leaves the body enclosed in it. The old check accepted ANY spot whose 3x6x6 was merely
+     * placeable-or-breakable -- which a dug pit's air cells satisfy -- so {@code origin} landed IN
+     * the pit and every frame placement failed "Enclosed -- escaping via FastPlanner", wedging the
+     * build for ever (reproduced on the stand: 10 obsidian in the pack, frame positions all air,
+     * gather<->place cycling 300 s+). Scan OUTWARD for a genuinely CLEAN, FLAT, OPEN pad instead
+     * and build the frame there, off the pit.
+     */
     private static BlockPos getBuildableAreaNearby(AltoClef mod) {
-        BlockPos checkOrigin = mod.getPlayer().getBlockPos();
-        for (BlockPos toCheck : WorldHelper.scanRegion(checkOrigin, checkOrigin.add(PORTALABLE_REGION_SIZE))) {
-            if (MinecraftClient.getInstance().world == null) {
-                return null;
-            }
-            BlockState state = MinecraftClient.getInstance().world.getBlockState(toCheck);
-            boolean validToWorld = (WorldHelper.canPlace(toCheck) || WorldHelper.canBreak(toCheck));
-            if (!validToWorld || state.getBlock() == Blocks.LAVA || state.getBlock() == Blocks.WATER || state.getBlock() == Blocks.BEDROCK) {
-                return null;
+        BlockPos feet = mod.getPlayer().getBlockPos();
+        for (int r = 2; r <= 12; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;   // just the ring at radius r
+                    for (int dy = 1; dy >= -2; dy--) {                         // prefer at / just above foot level
+                        BlockPos origin = feet.add(dx, dy, dz);
+                        if (!mod.getChunkTracker().isChunkLoaded(origin)) continue;
+                        if (isCleanFlatBuildSite(mod, origin)) return origin;
+                    }
+                }
             }
         }
-        return checkOrigin;
+        return null;
+    }
+
+    /**
+     * A clean, open, flat pad for the portal: a solid floor under the whole footprint and clear air
+     * for the entire frame envelope above it, no lava/water in it. Built from the ground up, every
+     * obsidian places against the floor or the block below it -- no mid-air scaffolding, no pit, no
+     * lava, no body enclosure. Deliberately strict: a portal sited anywhere the cast dug up is the
+     * exact wedge this avoids.
+     */
+    private static boolean isCleanFlatBuildSite(AltoClef mod, BlockPos origin) {
+        World world = mod.getWorld();
+        if (world == null) return false;
+        // solid floor pad beneath the whole footprint (y=-2, x in [-1,1], z in [-1,2])
+        for (BlockPos f : WorldHelper.scanRegion(origin.add(-1, -2, -1), origin.add(1, -2, 2))) {
+            if (!WorldHelper.isSolidBlock(f)) return false;
+            var b = world.getBlockState(f).getBlock();
+            if (b == Blocks.LAVA || b == Blocks.WATER) return false;
+        }
+        // clear air for the whole frame envelope above the floor (y=-1..3, x in [-1,1], z in [-1,2])
+        for (BlockPos a : WorldHelper.scanRegion(origin.add(-1, -1, -1), origin.add(1, 3, 2))) {
+            if (!world.getBlockState(a).isAir()) return false;
+        }
+        return true;
     }
 
     @Override

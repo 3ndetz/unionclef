@@ -161,7 +161,11 @@ def main():
         # iron; give ample buckets so the bench never needs to craft one and the full obsidian path
         # can actually finish (this is what open/surface terrain -- the natural build site -- looks
         # like, where the obsidian method should complete).
-        rcon(f"give {BOT} minecraft:bucket 4")
+        # AMPLE buckets: the ground cast churns buckets (a placed water/lava it cannot always
+        # reclaim empties one), and on the flat stand a fresh bucket means "Mine raw_iron -> Wander"
+        # (no iron here). 4 ran out mid-gather; 16 lets the full obsidian path finish so the FRAME
+        # BUILD (the part the clean-siting fix changed) is actually reached. A real run has iron.
+        rcon(f"give {BOT} minecraft:bucket 16")
         if os.environ.get("GIVE_OBS", "0") == "1":
             rcon(f"give {BOT} minecraft:obsidian 12")
     else:

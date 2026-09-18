@@ -39,6 +39,43 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
   self_floor_dig (cobblestone 3.2 s) PASS, shaft_exit (out of the shaft 6.6 s) PASS. Built jar
   javap-confirmed to carry `blackListNow`/`requestBlockUnreachableNow`/`requestAreaUnreachableNow`.
 
+## 2026-09-18 (cont.2) — G108 nether portal: deep re-diagnosis + clean-siting core fix (groundwork)
+
+Re-entered the portal (the standing post-iron ceiling) and reproduced the failure deterministically
+on the flat stand (`nether_portal_test.py` OBS gathering path: force-equipped diamond pickaxe, a 5x5
+lava lake, buckets, cobblestone). Findings, in the order they surfaced (each downstream of the last):
+
+1. **Obsidian gathering by cast WORKS and accumulates** -- `wanderHits=0`, 6 obsidian @100s, 8 @150s,
+   10 @190s, cycling cast->mine near the lake. The old "fundamentally fragile gathering" read was a
+   cramped-terrain / pre-`faf41b61` artifact; with the footprint fix + resources it gathers fine.
+2. **The frame was SITED IN THE CAST PIT (root, FIXED).** Casting digs a chaotic, lava-adjacent hole
+   and leaves the body enclosed; `getBuildableAreaNearby` accepted ANY 3x6x6 that was merely
+   placeable-or-breakable -- which a dug pit's air cells satisfy -- so `origin` landed in the pit and
+   every frame placement failed "Enclosed -- escaping via FastPlanner", cycling gather<->place 300s+
+   with 10 obsidian in the pack and the frame positions all air. Fix: `getBuildableAreaNearby` now
+   scans OUTWARD (rings r=2..12) for a genuinely clean, flat, OPEN pad (`isCleanFlatBuildSite`: solid
+   floor under the whole footprint, clear air for the frame envelope, no lava/water) and builds off
+   the pit. VERIFIED (clean-wiped stand, given obsidian): the bot walks to a clean pad and PLACES the
+   frame there -- obsidian consumed 12 -> 4 (8 placed), NO "Enclosed -- escaping" wedge, which the old
+   pit-accepting code never reached. The siting root is fixed.
+3. **Bucket churn -> "Mine raw_iron -> Wander" (bench artifact, worked around).** The ground cast
+   empties a bucket it cannot always reclaim; 4 buckets ran out mid-gather and, with no iron on the
+   flat stand, the bot wandered for iron to craft one. Bench now gives 16. A real run has iron.
+4. **LAVA DEATH during the cast (open root, upstream).** A later run died near the lake mid-build and
+   respawned at world spawn -- the cast approach works right next to lava and occasionally steps in.
+   It also corrupted the stand (dead/relocated bot, failed give-setup), which is exactly why the
+   flat-stand verification is unreliable for the portal (death corruption + give races + false greens
+   from leftover portals -- one was caught: "Done constructing" fired on a leftover NETHER_PORTAL at
+   origin.up() with 0 obsidian consumed; the clean-wiped re-run above is the trustworthy one).
+
+Net: the frame-in-pit siting wedge is root-caused and FIXED (clean-siting, verified the frame builds
+on a clean pad). The portal still does not green end-to-end because the frame build's scaffolding
+needs more obsidian than 10, sending the bot back to the cast, whose remaining roots are the
+lava-death hazard and bucket churn (per-block cast). This is the multi-root redesign the earlier
+notes predicted; clean-siting is one verified root removed, committed as groundwork (cf. faf41b61,
+0.95.11 "groundwork, not a complete fix"). NEXT portal roots: the cast lava-death hazard, and the
+scaffolding obsidian overhead / bucket churn.
+
 ## 2026-09-18 — post-iron ceiling from two playthroughs; G105 freeze fixed; G93 shipped
 
 - **G105 validated + shipped (v0.95.7):** day-locked validation from the freeze checkpoint
