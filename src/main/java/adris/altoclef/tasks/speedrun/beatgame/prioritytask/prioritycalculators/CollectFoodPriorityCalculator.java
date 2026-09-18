@@ -58,9 +58,16 @@ public class CollectFoodPriorityCalculator extends ItemPriorityCalculator {
         //prevents from going to the nether without any food
         if (Double.isInfinite(distance) && foodPotential < foodUnits) return 0.1d;
 
+        // A hay bale is efficient food (9 wheat -> 9 bread, ~54 hunger), so grabbing one is worth
+        // a boost. But x50 applied to the WHOLE food priority -- and for a hay merely within 75
+        // blocks, not the food actually being collected -- drove the goal to ~1293 (measured on the
+        // 2026-09-18 day-locked run near a village), which buries diamond/nether progression under
+        // food for the whole stage (G106). A hay bale is worth ~7 animal kills; boost by that, not
+        // by thirty. Emergencies and a genuinely low reserve still ramp hard via needsEmergencyFood
+        // (+inf) and the foodPotential<10 branch below.
         Optional<BlockPos> hay = mod.getBlockScanner().getNearestBlock(Blocks.HAY_BLOCK);
         if ((hay.isPresent() && WorldHelper.inRangeXZ(hay.get(),mod.getPlayer().getBlockPos(),75))|| mod.getEntityTracker().itemDropped(Items.HAY_BLOCK)) {
-            multiplier = 50;
+            multiplier = 7;
         }
 
         if (foodPotential > foodUnits) {

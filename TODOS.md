@@ -1529,7 +1529,7 @@ test + full nav-suite regression before it counts done.
       dig should not ENTER a water column it cannot leave (prevention), and with only an iron
       pickaxe the escape still dips air negative — trigger earlier than air<half if a run cuts it
       close.
-- [~] **G105 — after iron the bot HARD-FREEZES ~200 s reaching a block to mine ("Waiting for the
+- [x] **G105 — after iron the bot HARD-FREEZES ~200 s reaching a block to mine ("Waiting for the
       approach to finish placing")** (found 2026-09-18, day-locked run from run5-end via the new
       --daylock lever; froze 200 s at (692,59,865) trying to mine raw_iron 1.4 blocks away, and
       earlier at a sweet-berry bush). Root: DestroyBlockTask treats a place/pillar/bridge as
@@ -1543,16 +1543,20 @@ test + full nav-suite regression before it counts done.
       BUILD_HELD_MAX=200); once wedged it drops the shield (dbBuildHeldStuck++) and the existing
       give-up condemns the target and reroutes. NOT deterministically reproducible from a world
       checkpoint (in-memory transient, the G103 lesson) — restoring cp0918-1030-t494 ran fine
-      (bucket rung @156 s). Verifying: nav suite green (no regression), dbBuildHeldStuck stays 0 in
-      a healthy run, and day-locked runs no longer freeze 200 s.
-- [ ] **G106 — food over-prioritised after iron (×50 hay -> priority ~1293), gating nether-prep
-      detours** (same runs): CollectFoodPriorityCalculator boosts ALL food ×50 when a hay bale is
-      within 75 blocks, and food is a gate to "Going to Nether" (the fall-through at
-      BeatMinecraftTask:2412 needs every gather task <=0, and foodUnits=220 ≈ 27 cooked meats).
-      Diamonds are opportunistic (not required). Day-locked the bot still interleaves nether-prep
-      (reached the bucket rung), so this is a slowdown/detour, not a hard block — deferred behind
-      G105. Levers: tame the ×50 hay multiplier (clearly over-amplified), and let the bot proceed
-      with a solid buffer instead of hoarding 220.
+      (bucket rung @156 s). VERIFIED + SHIPPED v0.95.7: nav suite 14/14 (0 gate failures), the
+      day-locked validation from the freeze checkpoint had 0 position stalls and mined deep
+      y65→y11 (+290 items), §4y frame review confirmed the two pauses were furnace smelting.
+- [~] **G106 — food over-prioritised after iron (×50 hay -> priority ~1293), gating nether-prep**
+      (same runs): CollectFoodPriorityCalculator boosted ALL food ×50 when a hay bale was within
+      75 blocks, and food gates "Going to Nether" (the fall-through at BeatMinecraftTask:2412 needs
+      every gather <=0, foodUnits=220 ≈ 27 cooked meats). Diamonds are opportunistic (not
+      required). The 25-min day-locked probe confirmed it: the bot progresses (bucket rung, deep
+      mining) but the 220-food stockpile kept it in overworld prep for the whole window without
+      leaving. **FIX (deployed, verifying):** hay multiplier 50 -> 7 (a hay bale is ~7 animal
+      kills, not 30), and foodUnits 220 -> 140 (minFoodUnits 120) so the bot proceeds with a solid
+      buffer it tops up, instead of hoarding 220; the emergency-food +inf ramp and gate
+      re-activation guard survival. Verifying via a day-locked run (reaches Going-to-Nether faster,
+      no starvation). 0.95.8.
 - [ ] **G101 — after a death the bot starts over at world spawn, at night, unarmed** (same run,
       deaths two and three at t≈2040 and t≈2320, frames 33:50 and 38:20: a zombie at melee
       range, `NIGERUNDAYOO … Routing to reachable safety`, hp 8, no weapon in the hotbar;
