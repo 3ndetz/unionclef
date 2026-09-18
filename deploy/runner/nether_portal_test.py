@@ -24,6 +24,17 @@ mask the mechanism under test.
 PASS = a NETHER_PORTAL block exists at the built origin inside the window.
 FAIL = no portal (stalled in the lava search / cast), which is the ceiling to diagnose.
 exit 0 = PASS.
+
+⛔ WHAT THIS FLAT BENCH CAN AND CANNOT TEST (2026-09-18). It cleanly proves the FRAME BUILD:
+the bucket cast (`@build portal`) FAILs on the mid-air upper frame; the obsidian method
+(`@build portalobs`) PLACEs the same frame and PASSes (~139 s with obsidian given). It CANNOT
+faithfully test the obsidian GATHERING (cast at ground + mine), for two harness reasons that are
+NOT bot bugs and both bite a real run's opposite way:
+  1. a plain `give diamond_pickaxe` is not auto-equipped, so obsidian (unbreakable by hand)
+     never mines -- forced into the main hand here (a real run holds its self-crafted pickaxe);
+  2. the flat stand has NO iron, so if the builder ever needs a fresh bucket it drops into
+     "Mine And Collect raw_iron -> Wander for Infinity" -- a real run has iron and buckets.
+So the full obsidian path is validated by a REAL @gamer run, not this bench.
 """
 import functools, json, os, subprocess, sys, time
 print = functools.partial(print, flush=True)
@@ -139,7 +150,12 @@ def main():
         # obsidian method: a diamond pickaxe + an empty bucket (to scoop lava for the ground
         # cast) so it GATHERS obsidian itself (cast at ground + mine) and then PLACES the frame --
         # the full path. GIVE_OBS=1 instead hands it the blocks to isolate placement.
+        # ⛔ HARNESS LESSON: a plain `give` drops the pickaxe into the pack but the bot does NOT
+        # auto-equip an externally-inserted item, so obsidian (unbreakable by hand) never mines and
+        # the mine "stalls" -- a TEST artifact, not a bot bug (a real run equips its self-crafted
+        # pickaxe, as iron/diamond mining proves). Force it into the main hand so the mine is real.
         rcon(f"give {BOT} minecraft:diamond_pickaxe 1")
+        rcon(f"item replace entity {BOT} weapon.mainhand with minecraft:diamond_pickaxe")
         rcon(f"give {BOT} minecraft:bucket 1")
         if os.environ.get("GIVE_OBS", "0") == "1":
             rcon(f"give {BOT} minecraft:obsidian 12")

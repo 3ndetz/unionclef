@@ -587,3 +587,21 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
   clean fix is a dedicated multi-pass effort. Next tractable step: determine whether the gathering
   mining-aim stall is a real bug or the flat-floor bench forcing a cramped self-cast pit (a
   realistic lava-basin scene, or reading breakAim/dbAimWait/breakMissWhy at the stall).
+
+### G108 re-correction: the obsidian GATHERING "stall" was a bench artifact, not a bot bug
+- Traced the earlier obsidian-gathering "stall" to root: the bot was NOT holding the diamond
+  pickaxe (getGameState held='empty') while trying to mine obsidian -- obsidian is unbreakable by
+  hand, so "Block in range, mining" hung forever. Isolated test: place accessible obsidian +
+  `give diamond_pickaxe` + `@get obsidian` -> 0 mined, held=empty, breakAim=0/mine=0 (break
+  executor never fired). FORCING the pickaxe into the main hand (`item replace ... weapon.mainhand`)
+  -> the bot mined all 3 obsidian immediately (obs=3). So mining obsidian WORKS; the bot just does
+  not auto-equip an rcon-`give`n item. A real run holds its self-crafted pickaxe (iron/diamond
+  mining already proves the equip path), so this does not occur in a real playthrough.
+- Second flat-bench artifact: with the pickaxe forced in hand the builder placed the frame, then
+  needed a fresh bucket and dropped into "Mine And Collect raw_iron -> Wander for Infinity" -- the
+  flat stand has NO iron. A real run has iron + buckets. So the full obsidian path cannot be
+  faithfully benched on the flat stand; the FRAME BUILD is proven (PASS 139s) and the full path is
+  validated by a REAL @gamer run.
+- Net: the G108 fix (prefer obsidian, place the frame) targets the ONE real ceiling (bucket
+  mid-air cast stall). Running a real @gamer validation from the `nether-reach` checkpoint with the
+  fix deployed to confirm end-to-end before releasing 0.95.11.
