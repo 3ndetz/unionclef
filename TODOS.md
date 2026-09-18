@@ -1421,7 +1421,16 @@ test + full nav-suite regression before it counts done.
       signature — `drift 2.327 (threshold 2.1) at tick 26, expected (7.52,-58.00,0.50) actual
       (7.62,-60.32,0.50)`: the simulation two blocks above the pad over the gap, the body in the
       gap. Not reproduced in four traced runs since; the next traced fall decides it.
-- [ ] **G93 — a pickaxe DROP ten blocks underground beats a forest thirty blocks away** (25-minute
+- [x] **G93 — a pickaxe DROP ten blocks underground beats a forest thirty blocks away** (FIXED
+      2026-09-18, v0.95.6, commit 1b2ff693). Root: `CraftInTableTask` inherited `ResourceTask`'s
+      pickup-before-craft with the default `getPickupRange()==-1` (unlimited) — `ResourceTask.onTick`
+      returns a `PickupDroppedItemTask` for ANY drop of the craft target while range<0, no cost
+      check. Its sibling `CraftInInventoryTask` already overrides the range to 0; the table craft
+      never got the same override. Added it: a table craft crafts, it does not detour to a distant
+      or buried drop. Verified `deploy/runner/buried_drop_vs_craft_test.py` PASS (crafts in 7.9s,
+      min_y=-60 = surface, never descends toward the drop 8 down); nav suite 14/14 PASS + G100 air
+      bench PASS on the same build (no regression). Original repro below.
+      (25-minute
       run, 2026-09-16 12:39 UTC, fresh start #44 at (1233,65,-1405)): a wooden pickaxe from an
       earlier run lay at (1236,56,-1406); `Get catalogued [[wooden_pickaxe]] → Pickup Dropped
       Items → Getting to drop … (dig/build allowed)` held the bot for the first seven minutes

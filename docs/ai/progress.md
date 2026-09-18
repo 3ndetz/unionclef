@@ -44,8 +44,20 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - Regression: nav_water PASS (baseline); the change is isolated to the submerged-no-air branch, which
   no nav course exercises. Full nav suite run as confirmation (nav_gaps hit its known void-fall flake,
   retried) — nav_water PASS and every gate course green through 9/14 (only nav_gaps's known void-fall flake, which retries); confirms the submerged-only change is regression-free.
-- Next targets: G93 (pickup-cost vs craft), G90 (tunnel per-cell), G94 (snow-step). G101 (death = base
-  loss) tied to the deferred night track.
+- **G93 (a buried pickaxe DROP beat crafting one):** FIXED same day, v0.95.6, commit 1b2ff693.
+  `CraftInTableTask` inherited `ResourceTask`'s pickup-before-craft with the default
+  `getPickupRange()==-1` (unlimited): `ResourceTask.onTick` (line 184) returns a
+  `PickupDroppedItemTask` for ANY drop of the craft target whenever `range < 0`, no cost check, so a
+  copy buried ten blocks down outranked a craft from planks in hand (the third 60-min run opened with
+  seven minutes of digging for it). Its sibling `CraftInInventoryTask` already returns 0 there ("this
+  shouldnt pickup items"); the table craft never got the override. Added it — a table craft crafts, it
+  does not detour to scavenge a distant/buried copy; ordinary pickup paths still collect drops when a
+  pickup is the goal. Verified `deploy/runner/buried_drop_vs_craft_test.py` PASS: two logs + two sticks
+  in the pack, a `wooden_pickaxe` dropped in a sealed pocket 8 blocks down, `@get wooden_pickaxe 1` →
+  crafted in 7.9s, min_y=-60 (surface, floor top -61), never descended. Same build: full nav suite
+  14/14 PASS (0 gate failures, 0 invalid) + G100 air bench PASS (dig=2, surfaced) — no regression.
+- Next targets: G90 (tunnel per-cell exec + pricing), G94 (snow-step), G96 (reach:armed nav=false
+  shimmy). G101 (death = base loss) tied to the deferred night track.
 
 ## Current playthrough status
 
