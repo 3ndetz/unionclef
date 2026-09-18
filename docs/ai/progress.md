@@ -605,3 +605,23 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - Net: the G108 fix (prefer obsidian, place the frame) targets the ONE real ceiling (bucket
   mid-air cast stall). Running a real @gamer validation from the `nether-reach` checkpoint with the
   fix deployed to confirm end-to-end before releasing 0.95.11.
+
+### G108 DEFINITIVE root: PlaceObsidianBucketTask's cast fragility, shared by BOTH portal methods
+- Faithful real-world test: `@build portalobs` on the gamer server, bot with self-crafted
+  EQUIPPED diamond pickaxe + buckets + flint&steel in real terrain. The obsidian GATHERING WORKED
+  there (obs climbed 0->7, mining real obsidian) -- confirming the flat-bench gathering stall was a
+  pure harness artifact (rcon-give not equipped). BUT it then stuck at "Place structure{...} ->
+  Wander for 5.0 blocks" at y=27 in the chaotic mined cavern.
+- Root: BOTH portal builders ultimately rely on PlaceObsidianBucketTask -- the bucket method casts
+  each FRAME block with it; the obsidian method's CollectObsidianTask casts obsidian at ground with
+  it. PlaceObsidianBucketTask builds a 10-block cast mould (CAST_FRAME) + lava + water; when the
+  mould cannot be built (mid-air upper frame, OR cramped/chaotic mined terrain), its progress check
+  trips -> `requestBlockUnreachable(_pos)` + `TimeoutWanderTask(5)` -> "Wander for 5.0 blocks"
+  loop, and the portal never completes. This reactive wander is the shared fragility.
+- So the routing fix (prefer obsidian, 8529ed12) is a real but PARTIAL improvement: obsidian
+  frame-PLACEMENT is robust (bench PASS 139s) vs the bucket cast stalling on the upper frame; but
+  the obsidian GATHERING's ground-cast still hits PlaceObsidianBucketTask's wander in chaotic
+  terrain. NOT a complete G108 fix; 0.95.11 NOT released.
+- The CLEAN G108 fix is a dedicated core pass on PlaceObsidianBucketTask: build the cast mould
+  reliably (or cast at a guaranteed-open spot, e.g. the surface) and replace the reactive
+  TimeoutWanderTask give-up with a real cast-spot search. That is the shared root both methods need.
