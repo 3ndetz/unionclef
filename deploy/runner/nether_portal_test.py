@@ -1,40 +1,37 @@
 #!/usr/bin/env python3
-"""Nether-portal bench: ConstructNetherPortalBucketTask against a known lava lake.
+"""Nether-portal bench: the obsidian method (ConstructNetherPortalObsidianTask) against a lava lake.
 
-WHY. The full @gamer run reaches "Construct Nether Portal" only ~12 minutes in, so testing
-the portal builder from a fresh inventory costs a whole run per attempt. The prepared next
-ceiling is this task's lava-lake path: `findLavaLake` accepts only a KNOWN lava lake of >=12
-connected SOURCE blocks (FluidState level 8), and `getPortalableRegion` needs a clear
-4x6x6 box within 20 blocks of it; on a miss the task falls to TimeoutWanderTask and
-re-searches every 5 s indefinitely (it never digs to lava, never gives up). This isolates
-that mechanism on the flat stand.
+WHY. The full @gamer run reaches "Construct Nether Portal" only ~12 minutes in, so testing the
+portal builder from a fresh inventory costs a whole run per attempt. This isolates the obsidian
+method end to end on the flat stand: FLOOD the lava lake to make obsidian (PlaceObsidianFloodTask),
+mine it, then build + light the frame on clean ground beside the pool.
 
 Scene (flat server, own stone platform): a solid stone floor, a lava SOURCE pool
-(LAVA_SIZE x LAVA_SIZE, default 5x5 = 25 source blocks) sunk flush into it, and open air
-with solid ground beside it for the portal. The bot starts on the floor a few blocks from
-the pool with the prerequisites already in the pack (water bucket + empty bucket +
-flint & steel), so the task goes straight to the lava search and the cast -- not to
-"Getting flint & steel" / "Getting buckets", which on a flat server have no source and would
-mask the mechanism under test.
+(LAVA_SIZE x LAVA_SIZE, default 5x5 = 25 source blocks) sunk flush into it, and open stone
+beside it for the frame. The bot starts on the floor a few blocks from the pool with the
+prerequisites already in the pack (water bucket + empty buckets + flint & steel + cobblestone),
+so the task goes straight to the flood + mine + build -- not to "Getting flint & steel" /
+"Getting buckets", which on a flat server have no source and would mask the mechanism under test.
 
-    python3 deploy/runner/nether_portal_test.py              # 5x5 lava lake beside a clear spot
-    LAVA_SIZE=3 python3 deploy/runner/nether_portal_test.py  # 3x3 = 9 sources: BELOW the >=12 gate (control: should NOT qualify)
-    NO_ROOM=1  python3 deploy/runner/nether_portal_test.py   # lake walled in: no portalable region (control: should wander)
+    python3 deploy/runner/nether_portal_test.py              # bucket-cast method (`@build portal`)
+    OBS=1 python3 deploy/runner/nether_portal_test.py        # obsidian FLOOD method (`@build portalobs`) -- the live path
+    OBS=1 GIVE_OBS=1 python3 ...                             # give the 10 obsidian, isolate the frame BUILD
+    LAVA_SIZE=3 python3 ...                                  # 3x3 = 9 sources (smaller pool)
+    NO_ROOM=1  python3 ...                                   # lake walled in (control)
 
-PASS = a NETHER_PORTAL block exists at the built origin inside the window.
-FAIL = no portal (stalled in the lava search / cast), which is the ceiling to diagnose.
-exit 0 = PASS.
+PASS = a real NETHER_PORTAL block exists near the build inside the window. exit 0 = PASS.
 
-⛔ WHAT THIS FLAT BENCH CAN AND CANNOT TEST (2026-09-18). It cleanly proves the FRAME BUILD:
-the bucket cast (`@build portal`) FAILs on the mid-air upper frame; the obsidian method
-(`@build portalobs`) PLACEs the same frame and PASSes (~139 s with obsidian given). It CANNOT
-faithfully test the obsidian GATHERING (cast at ground + mine), for two harness reasons that are
-NOT bot bugs and both bite a real run's opposite way:
-  1. a plain `give diamond_pickaxe` is not auto-equipped, so obsidian (unbreakable by hand)
-     never mines -- forced into the main hand here (a real run holds its self-crafted pickaxe);
-  2. the flat stand has NO iron, so if the builder ever needs a fresh bucket it drops into
-     "Mine And Collect raw_iron -> Wander for Infinity" -- a real run has iron and buckets.
-So the full obsidian path is validated by a REAL @gamer run, not this bench.
+⛔ TWO FLAT-STAND HARNESS ARTIFACTS, NEUTRALISED HERE (2026-09-18). Both are harness limits, not
+bot bugs, and both bite a real run's OPPOSITE way:
+  1. a plain `give diamond_pickaxe` is NOT auto-equipped (getBestToolSlot never sees an rcon-given
+     item), so once the flood leaves a bucket in hand the mine cannot re-select the pickaxe and
+     punches obsidian bare -> forever. A real run auto-equips its self-crafted pickaxe (iron/diamond
+     mining proves the path). Worked around by forcing the pickaxe into the main hand AND re-forcing
+     it whenever the task is mining and the hand is not a pickaxe (see the poll loop).
+  2. the flat stand has NO iron, so a fresh bucket means "Mine raw_iron -> Wander for Infinity".
+     A real run has iron; ample buckets are given so the bucket cycle never needs to craft one.
+The FLOOD mechanic itself, the frame BUILD, and the light are all faithfully exercised here; a real
+@gamer run is still the final confirmation for natural (chaotic) terrain.
 """
 import functools, json, os, subprocess, sys, time
 print = functools.partial(print, flush=True)
@@ -56,8 +53,10 @@ from py4j.java_gateway import JavaGateway,GatewayParameters
 req=json.loads(sys.argv[1])
 gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=25333,auto_convert=True))
 mc=gw.entry_point; op=req["op"]; out={}
+def selfd():
+    return dict(mc.getGameState().get("self") or {})
 def me():
-    s=dict(mc.getGameState().get("self") or {}); return s.get("pos")
+    return selfd().get("pos")
 if op=="state":
     obs=0; fns=0; wb=0
     try:
@@ -69,7 +68,8 @@ if op=="state":
             if "flint_and_steel" in it: fns+=c
             if "water_bucket" in it: wb+=c
     except Exception: pass
-    out={"inGame":mc.inGame(),"pos":me(),"busy":mc.hasActiveTask(),"obs":obs,"fns":fns,"wb":wb}
+    sd=selfd()
+    out={"inGame":mc.inGame(),"pos":sd.get("pos"),"busy":mc.hasActiveTask(),"obs":obs,"fns":fns,"wb":wb,"held":sd.get("held")}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
 elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
@@ -79,7 +79,7 @@ elif op=="blk": out={"b": {str(k): str(v) for k,v in dict(mc.getBlockAt(int(req[
 elif op=="findportal":
     cx,cy,cz,rad=int(req["x"]),int(req["y"]),int(req["z"]),int(req.get("rad",16))
     hit=None
-    for dy in range(0,6):
+    for dy in range(0,9):
         for dx in range(-rad,rad+1):
             for dz in range(-rad,rad+1):
                 try:
@@ -194,7 +194,7 @@ def main():
         # BUILD (the part the clean-siting fix changed) is actually reached. A real run has iron.
         rcon(f"give {BOT} minecraft:bucket 16")
         if os.environ.get("GIVE_OBS", "0") == "1":
-            rcon(f"give {BOT} minecraft:obsidian 12")
+            rcon(f"give {BOT} minecraft:obsidian 16")
     else:
         rcon(f"give {BOT} minecraft:bucket 1")
     time.sleep(2)
@@ -209,7 +209,7 @@ def main():
     need = {"flint_and_steel": ("fns", "minecraft:flint_and_steel 1", 1),
             "water_bucket": ("wb", "minecraft:water_bucket 1", 1)}
     if OBS and os.environ.get("GIVE_OBS", "0") == "1":
-        need["obsidian"] = ("obs", "minecraft:obsidian 12", 10)
+        need["obsidian"] = ("obs", "minecraft:obsidian 16", 14)
     for name, (key, give, mincount) in need.items():
         for _ in range(5):
             if start.get(key, 0) >= mincount:
@@ -232,6 +232,19 @@ def main():
         time.sleep(5)
         s = py4j("state")
         tsk = py4j("task")["t"]
+        # ⛔ KEEP THE PICKAXE EQUIPPED FOR THE MINE (2026-09-18). The obsidian-flood gather leaves an
+        # (empty) bucket in the hand after reclaiming its water; the mine then needs the diamond
+        # pickaxe back. On a REAL run the miner auto-equips its self-crafted pickaxe (iron/diamond
+        # mining proves the path). On the flat stand the pickaxe is rcon-GIVEN, which getBestToolSlot
+        # does not see, so the auto-equip cannot re-select it and the bot punches obsidian with a
+        # bucket for ever -- a pure harness artifact, not a bot bug. Re-force the pickaxe ONLY while
+        # the task is actually mining (never during the flood's water placement/reclaim, which needs
+        # the bucket), mimicking the real run's auto-equip so the flood path can be benched to green.
+        if OBS:
+            tl = tsk.lower(); held = str(s.get("held") or "")
+            mining = ("destroy block" in tl or "mine and collect" in tl or "mining or collecting" in tl)
+            if mining and "pickaxe" not in held:
+                rcon(f"item replace entity {BOT} weapon.mainhand with minecraft:diamond_pickaxe")
         chat = [m for m in py4j("chat", n=12)["chat"] if m not in seen]; seen.update(chat)
         blob = (tsk + " " + " ".join(chat)).lower()
         for w in ("looking for lava", "lava lake not found", "getting flint", "getting buckets",
@@ -254,19 +267,19 @@ def main():
         # @stop / forceload remove). rad 10 keeps the in-process getBlockAt scan fast.
         bp = s.get("pos") or [BX, FLOOR_Y, BZ]
         if "done constructing" in blob:
-            made = portal_found(int(bp[0]), FLOOR_Y + 2, int(bp[2]), rad=10)
+            made = portal_found(int(bp[0]), FLOOR_Y - 1, int(bp[2]), rad=10)
             if made:
                 done = True; break
             print("  ('done constructing' but NO portal block near the bot -- continuing)")
         # task finished without wandering -> confirm with a scan and stop
         if not s["busy"] and phases and "looking for lava" not in tsk.lower():
-            made = portal_found(int(bp[0]), FLOOR_Y + 2, int(bp[2]), rad=10)
+            made = portal_found(int(bp[0]), FLOOR_Y - 1, int(bp[2]), rad=10)
             if made:
                 done = True
             break
     # Final confirmation, centred on the bot's last position, BEFORE unloading the chunk.
     bp = (py4j("state").get("pos")) or [BX, FLOOR_Y, BZ]
-    made = portal_found(int(bp[0]), FLOOR_Y + 2, int(bp[2]), rad=10)
+    made = portal_found(int(bp[0]), FLOOR_Y - 1, int(bp[2]), rad=10)
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
     rcon(f"forceload remove {BX-18} {BZ-18} {BX+18} {BZ+18}")
     print(f"phases reached: {sorted(phases)}")

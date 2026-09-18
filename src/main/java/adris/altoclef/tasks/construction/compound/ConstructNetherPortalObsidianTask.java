@@ -32,22 +32,37 @@ public class ConstructNetherPortalObsidianTask extends Task {
     // but it's so heavily intertwined/changed that it would take forever to untangle and
     // retangle the two together.
 
-    // Order here matters
+    // ⛔ A FULL RECTANGLE WITH CORNERS, BUILT BOTTOM-UP -- NO MID-AIR PLACEMENT (G108, 2026-09-18).
+    // The old frame was the 10-block MINIMAL ring (no corners): the column bases sat one above the
+    // absent corners and the top row sat over the interior, so both were placed MID-AIR and needed a
+    // scaffold (PlaceStructureBlockTask), which reactively wanders and stalls -- the "mid-air upper
+    // frame" fragility that never lit a portal on ~half the runs (bench: 42 s wandering on one top
+    // cell, 0 portal). A cornered 14-block rectangle removes the mid-air entirely: every cell rests
+    // on the block directly BELOW it (or, for the top row, beside an already-placed neighbour), so
+    // PlaceBlockTask places each one against a real face and the scaffold path is never taken. The
+    // four extra obsidian are free -- the flood makes 20+ from one lake -- and a portal with corners
+    // lights and behaves exactly like one without. ORDER MATTERS: bottom row (on the floor pad), then
+    // both columns bottom-up, then the top row left-to-right; each entry has support by the time it
+    // is placed.
     private static final Vec3i[] PORTAL_FRAME = new Vec3i[]{
-            // Left side
+            // Bottom row on the floor pad (y=-1): z = -1,0,1,2
+            new Vec3i(0, -1, -1),
+            new Vec3i(0, -1, 0),
+            new Vec3i(0, -1, 1),
+            new Vec3i(0, -1, 2),
+            // Left column up (z=-1): each on the block below
             new Vec3i(0, 0, -1),
             new Vec3i(0, 1, -1),
             new Vec3i(0, 2, -1),
-            // Right side
+            // Right column up (z=2): each on the block below
             new Vec3i(0, 0, 2),
             new Vec3i(0, 1, 2),
             new Vec3i(0, 2, 2),
-            // Top
+            // Top row (y=3) left-to-right: corners rest on the columns, middles against their neighbour
+            new Vec3i(0, 3, -1),
             new Vec3i(0, 3, 0),
             new Vec3i(0, 3, 1),
-            // Bottom
-            new Vec3i(0, -1, 0),
-            new Vec3i(0, -1, 1)
+            new Vec3i(0, 3, 2)
     };
 
     private static final Vec3i[] PORTAL_INTERIOR = new Vec3i[]{
@@ -126,6 +141,15 @@ public class ConstructNetherPortalObsidianTask extends Task {
      * region. Side obstructions are tolerated -- the frame build's DestroyBlockTask clears them. This
      * is the fallback so the search never wanders for ever when no pristine pad is nearby, while
      * still rejecting the enclosed cast-pit that was the original wedge.
+     *
+     * <p>⛔ AND NO OBSIDIAN IN THE FLOOR OR FRAME REGION (G108, 2026-09-18). The obsidian method now
+     * FLOODS a lava lake to make obsidian, which leaves a flat obsidian SHEET where the bot is
+     * standing. That sheet reads as "solid floor + open air above", so the frame was sited ON it --
+     * and then the gather and the build fought over the same blocks: the re-gather mined the sheet
+     * (including cells the frame needed) while the builder placed into it, an endless place/mine churn
+     * that never completed (bench: obsidian cycling 0<->2 for 90 s, no portal). Reject obsidian in the
+     * footprint so the frame is built on FRESH ground beside the pool -- then it needs exactly its ten
+     * placements and never re-gathers.
      */
     private static boolean isDecentBuildSite(AltoClef mod, BlockPos origin) {
         World world = mod.getWorld();
@@ -133,14 +157,14 @@ public class ConstructNetherPortalObsidianTask extends Task {
         for (BlockPos f : WorldHelper.scanRegion(origin.add(-1, -2, -1), origin.add(1, -2, 2))) {
             if (!WorldHelper.isSolidBlock(f)) return false;                    // must have a floor (not a pit-with-no-floor / mid-air)
             var b = world.getBlockState(f).getBlock();
-            if (b == Blocks.LAVA || b == Blocks.WATER) return false;
+            if (b == Blocks.LAVA || b == Blocks.WATER || b == Blocks.OBSIDIAN) return false;
         }
         for (int dy = -1; dy <= 3; dy++) {                                     // open column above origin: not sealed in
             if (!world.getBlockState(origin.add(0, dy, 0)).isAir()) return false;
         }
         for (BlockPos a : WorldHelper.scanRegion(origin.add(-1, -1, -1), origin.add(1, 3, 2))) {
             var b = world.getBlockState(a).getBlock();
-            if (b == Blocks.LAVA || b == Blocks.WATER) return false;          // no lava/water in the frame region
+            if (b == Blocks.LAVA || b == Blocks.WATER || b == Blocks.OBSIDIAN) return false;  // no lava/water/obsidian in the frame region
         }
         return true;
     }
@@ -151,6 +175,10 @@ public class ConstructNetherPortalObsidianTask extends Task {
      * obsidian places against the floor or the block below it -- no mid-air scaffolding, no pit, no
      * lava, no body enclosure. Deliberately strict: a portal sited anywhere the cast dug up is the
      * exact wedge this avoids.
+     *
+     * <p>⛔ Also rejects an OBSIDIAN floor (G108, 2026-09-18): the flood-lava gather leaves an obsidian
+     * sheet, and a frame sited on it churns gather-against-build (see isDecentBuildSite). Building on
+     * fresh ground keeps the frame's ten placements the only obsidian the task ever spends here.
      */
     private static boolean isCleanFlatBuildSite(AltoClef mod, BlockPos origin) {
         World world = mod.getWorld();
@@ -159,7 +187,7 @@ public class ConstructNetherPortalObsidianTask extends Task {
         for (BlockPos f : WorldHelper.scanRegion(origin.add(-1, -2, -1), origin.add(1, -2, 2))) {
             if (!WorldHelper.isSolidBlock(f)) return false;
             var b = world.getBlockState(f).getBlock();
-            if (b == Blocks.LAVA || b == Blocks.WATER) return false;
+            if (b == Blocks.LAVA || b == Blocks.WATER || b == Blocks.OBSIDIAN) return false;
         }
         // clear air for the whole frame envelope above the floor (y=-1..3, x in [-1,1], z in [-1,2])
         for (BlockPos a : WorldHelper.scanRegion(origin.add(-1, -1, -1), origin.add(1, 3, 2))) {
@@ -201,33 +229,17 @@ public class ConstructNetherPortalObsidianTask extends Task {
                 return null;
             }
         }
-        int neededObsidian = 10;
-        BlockPos placeTarget = null;
-        if (origin != null) {
-            for (Vec3i frameOffs : PORTAL_FRAME) {
-                BlockPos framePos = origin.add(frameOffs);
-                // ⛔ READ THE WORLD, NOT THE BLOCK SCANNER (G108, 2026-09-18). The scanner is
-                // event-driven and lags a just-placed block, so a frame obsidian the bot placed this
-                // tick reads as "still needed" -> neededObsidian stays high -> the task re-enters the
-                // obsidian gather mid-build, and CollectObsidianTask then MINES that placed-but-
-                // unregistered frame obsidian as "nearby obsidian to collect", churning the build
-                // (obsidian consumed 8 yet 5 frame cells still 'needed', observed on the stand). The
-                // world read is immediate and exact.
-                if (mod.getWorld().getBlockState(framePos).getBlock() != Blocks.OBSIDIAN) {
-                    placeTarget = framePos;
-                    break;
-                }
-                neededObsidian--;
-            }
-        }
-
-        // Get obsidian if we don't have.
-        if (mod.getItemStorage().getItemCount(Items.OBSIDIAN) < neededObsidian) {
-            setDebugState("Getting obsidian");
-            return TaskCatalogue.getItemTask(Items.OBSIDIAN, neededObsidian);
-        }
-
-        // Find spot
+        // ⛔ SITE THE FRAME BEFORE GATHERING, ON PRISTINE GROUND (G108, 2026-09-18). The obsidian is
+        // now made by FLOODING a lava lake, which tears up the terrain where the bot gathers (a lava
+        // pool turned to obsidian, then mined into a pocked sheet with holes). This task used to gather
+        // ALL the obsidian FIRST and only then look for a build site -- so it always sited the frame
+        // standing in the mess it had just made: bottom cells over mined-out holes needed mid-air
+        // scaffolding, remaining pool obsidian sat in the frame region, and the gather/build fought over
+        // the same blocks in an endless place/mine churn that never lit a portal (bench: obsidian
+        // cycling 0<->10 for 240 s, no portal). Choosing the origin FIRST -- while the bot still stands
+        // on undisturbed ground -- fixes it at the root: the flood then happens at the lake (away from
+        // the origin), and the bot returns to a clean, reserved pad to build. A human picks the spot,
+        // goes for obsidian, and comes back; so does the bot now.
         if (origin == null) {
             if (_areaSearchTimer.elapsed()) {
                 _areaSearchTimer.reset();
@@ -236,6 +248,31 @@ public class ConstructNetherPortalObsidianTask extends Task {
             }
             setDebugState("Looking for portalable area...");
             return new TimeoutWanderTask();
+        }
+
+        int neededObsidian = PORTAL_FRAME.length;
+        BlockPos placeTarget = null;
+        for (Vec3i frameOffs : PORTAL_FRAME) {
+            BlockPos framePos = origin.add(frameOffs);
+            // ⛔ READ THE WORLD, NOT THE BLOCK SCANNER (G108, 2026-09-18). The scanner is
+            // event-driven and lags a just-placed block, so a frame obsidian the bot placed this
+            // tick reads as "still needed" -> neededObsidian stays high -> the task re-enters the
+            // obsidian gather mid-build, and CollectObsidianTask then MINES that placed-but-
+            // unregistered frame obsidian as "nearby obsidian to collect", churning the build
+            // (obsidian consumed 8 yet 5 frame cells still 'needed', observed on the stand). The
+            // world read is immediate and exact.
+            if (mod.getWorld().getBlockState(framePos).getBlock() != Blocks.OBSIDIAN) {
+                placeTarget = framePos;
+                break;
+            }
+            neededObsidian--;
+        }
+
+        // Get obsidian if we don't have (the frame site is already reserved, so this gathers away
+        // from it and returns).
+        if (mod.getItemStorage().getItemCount(Items.OBSIDIAN) < neededObsidian) {
+            setDebugState("Getting obsidian");
+            return TaskCatalogue.getItemTask(Items.OBSIDIAN, neededObsidian);
         }
 
         // Get flint and steel

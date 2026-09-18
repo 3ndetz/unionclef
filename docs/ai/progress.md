@@ -3,6 +3,61 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
+## 2026-09-18 (cont.) — G108 nether portal: FLOOD-LAVA gather redesign + off-pool siting + cornered frame (groundwork; frame-PLACE layer remains)
+
+Big multi-layer pass on the standing post-iron ceiling (the nether-portal BUILD). NOT released: the
+gather half is now robust and the frame STRUCTURE is fixed, but a residual `PlaceBlockTask`
+positioning flakiness on some frame cells keeps the flat-stand bench from a CONSISTENT green. The
+full path DID complete once end to end (bench4: 6 real NETHER_PORTAL blocks), so every layer works;
+the last one is just not yet reliable.
+
+- **Flood-lava-lake obsidian gather (the core win).** Replaced the per-block lava-bucket CAST
+  (`PlaceObsidianBucketTask`: a 10-block mould + placed lava + water, per obsidian) -- the shared
+  fragility of both portal methods -- with `PlaceObsidianFloodTask`: find a surface lava SOURCE with
+  a solid rim, place ONE water source on the rim's top face, the flowing water sheets across the pool
+  and turns every lava source it reaches to obsidian, then reclaim the one water source. Validated
+  the mechanic on the stand first (one edge placement floods a 5x5 pool = 25/25 obsidian; the source
+  stays put so the reclaim is exact -- the bucket cycles, no iron spent). `CollectObsidianTask` now
+  floods+mines instead of casting. No mid-air mould, many obsidian per placement. VERIFIED: the bot
+  floods, converts and gathers reliably (bench1: 0->10 obsidian, zero wander).
+- **Site the frame BEFORE gathering, on pristine ground.** The task used to gather ALL obsidian
+  first and only then look for a build site -- so it always sited the frame standing in the pocked,
+  half-mined pool it had just flooded (bottom cells over mined holes -> mid-air scaffold; remaining
+  pool obsidian in the frame region -> the gather and the build fought over the same blocks in an
+  endless place/mine churn, 0 portal). Reordered `ConstructNetherPortalObsidianTask.onTick` to pick
+  the origin FIRST (pristine ground), then gather (flood a lake AWAY from it), then return and build.
+  Site checks also reject OBSIDIAN in the floor/frame region (not just lava/water). VERIFIED: the
+  frame now lands on clean ground beside the pool (bench8/giveobs2: origin x=2358, pool x=2364-2368).
+- **Full 14-block CORNERED frame, built bottom-up (eliminates the mid-air scaffold).** The old
+  `PORTAL_FRAME` was the 10-block minimal ring (no corners): column bases sat one above the absent
+  corners and the top row sat over the interior, so both were placed MID-AIR via
+  `PlaceStructureBlockTask`, whose reactive `TimeoutWander` stalls (bench8: 42 s wandering on one top
+  cell). Changed to the 14-cell rectangle WITH corners, ordered bottom-row -> both columns bottom-up
+  -> top row, so every cell rests on the block directly below (or beside an already-placed
+  neighbour). VERIFIED partial: the bottom row + left column + right-column base build cleanly with
+  NO scaffold (1 cobblestone used, vs the old scaffold churn). Four extra obsidian are free (flood
+  makes 20+); a cornered portal lights identically.
+- **REMAINING (the next layer): `PlaceBlockTask` positioning flakiness.** With the cornered frame,
+  ~8/14 cells place cleanly, then it stalls PLACING a right-column cell (e.g. 2358,-55,360) whose
+  support (2358,-56,360) is obsidian and present -- so it is NOT a mid-air/support problem, it is
+  PlaceBlockTask unable to position/aim to place against the top face from the far side of the wall
+  it is building (bot straddling the frame plane at x=2358.5). Reactive "Wander for 5" then loops.
+  This placement-layer issue is pre-existing (it also bit the old 10-cell frame's cells) and is the
+  dedicated next pass: give the frame builder a proper "stand beside the plane, look at the support
+  face" placement, or a build order that never puts a built wall between the bot and the next cell.
+- **Bench hardened + a real bug it hid.** `deploy/runner/nether_portal_test.py`: the portal scan
+  started at y=FLOOR_Y+2 and scanned only 6 up, so it MISSED a real portal whose interior sits at
+  FLOOR_Y+1 (bench4 was a FALSE "no portal" -- ground truth was 6 NETHER_PORTAL blocks). Fixed to
+  scan from FLOOR_Y-1, 9 up. Also: keep the diamond pickaxe in hand during the MINE (the flood
+  leaves a bucket in hand and the flat stand's rcon-GIVEN pickaxe is not auto-equipped -- a pure
+  harness artifact the bench comments already document; a real run auto-equips its self-crafted
+  pickaxe); GIVE_OBS now hands 16 obsidian for the 14-cell frame. A one-time wide (±40) cleanup of
+  stray obsidian from earlier runs is needed if the bench world gets polluted (leftover obsidian
+  outside the ±18 per-run wipe distracts the gather).
+- **Verification reality:** the flat stand is faithful for the flood mechanic, the frame STRUCTURE
+  and the light; a real @gamer run remains the final confirmation for chaotic terrain. The
+  frame-PLACE flakiness must be greened (bench + @gamer) before any release.
+
 ## 2026-09-18 (cont.) — Finding B FIXED (v0.95.12): the post-death unreachable-canopy reach wedge
 
 - **Reproduced deterministically**, `deploy/runner/canopy_log_reach_test.py`. A dark-oak canopy log
