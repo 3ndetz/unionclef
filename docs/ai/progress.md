@@ -642,3 +642,23 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
   (PlaceStructureBlockTask) can't build in that dirtied terrain -- the give-obsidian placement test
   (pristine terrain) PASSes the same upper block. So: gather obsidian AWAY from the build site (or
   choose a clean origin before gathering), the next focused sub-fix.
+
+### G108 conclusion this session: portal is fundamentally fragile; two sub-fixes shipped, a clean fix needs a redesign
+- Attempted a THIRD layer (clean build siting: scan outward for an open, solid-floored site so the
+  frame is not placed in gather-dirtied terrain). It advanced the state (bot gathered + placed some
+  frame) but did NOT complete the portal (wide in-JVM scan: 0 nether_portal blocks), and requiring
+  an all-air site risks a cave-build regression. UNVERIFIED -> REVERTED (main keeps only verified
+  fixes). The bench's break-on-busy=False also fired on a transient no-task tick (a detector flaw
+  to fix if the bench is used again).
+- Root, restated: BOTH portal builders funnel through PlaceObsidianBucketTask's per-block cast (a
+  10-block mould + lava + water). It is fragile in exactly the situations a real portal build hits
+  -- the mid-air upper frame, and cramped/dirtied terrain -- and its only failure response is the
+  reactive TimeoutWander. Layer-fixing (routing -> gathering -> siting) each moves the failure
+  forward but does not green it, which is the signal that the CAST APPROACH itself is the problem.
+- Recommendation for the clean fix (a dedicated pass, likely multi-session): replace the per-block
+  cast with the speedrun-standard obsidian collection -- flood a lava LAKE with one water bucket so
+  a whole sheet becomes obsidian, then mine it -- and build the frame at a chosen open flat site.
+  That removes the mid-air mould entirely (the shared fragility). Big, careful, and best fresh.
+- SHIPPED this session that DID move the score: G106 (confirmed), G107 (0.95.10), G107b (0.95.11),
+  and the obsidian gathering spot-finding fix (committed). Post-iron progression to the nether
+  transition is reliable (clean run, 0 deaths). The nether-portal BUILD is the standing ceiling.
