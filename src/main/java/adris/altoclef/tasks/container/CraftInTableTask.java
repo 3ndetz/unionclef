@@ -164,6 +164,24 @@ public class CraftInTableTask extends ResourceTask {
     }
 
     /**
+     * ⛔ A CRAFT TASK CRAFTS; IT DOES NOT DIG ACROSS THE WORLD FOR A DROPPED COPY (G93, 2026-09-18).
+     * ResourceTask's pickup-before-craft returns a PickupDroppedItemTask for ANY drop of the target
+     * while getPickupRange() allows it, and the default is getResourcePickupRange() == -1, i.e.
+     * UNLIMITED -- range < 0 in ResourceTask.onTick is always true. The third 60-minute run spent
+     * its first seven minutes chasing a wooden_pickaxe DROP a previous life left ten blocks
+     * underground ("Getting to drop item.minecraft.wooden_pickaxe at 1236,56,-1406 (dig/build
+     * allowed)"), digging down for it, while spruce to craft one stood across the lake. Its sibling
+     * CraftInInventoryTask already returns 0 here (craft, do not scavenge); CraftInTableTask simply
+     * never got the same override. Matching it: a table craft does not chase a dropped copy -- it
+     * has, or gathers, the materials and makes one. (A drop still gets picked up by the ordinary
+     * PickupDroppedItemTask paths when THAT is the goal; this only stops a CRAFT from detouring.)
+     */
+    @Override
+    protected double getPickupRange(AltoClef mod) {
+        return 0;
+    }
+
+    /**
      * Returns the debug string name of the craft task.
      * If the craft task is not null, it calls the toDebugString() method of the craft task and returns the result.
      * Otherwise, it returns null.
