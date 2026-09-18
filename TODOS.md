@@ -1,5 +1,47 @@
 # TODOs
 
+<!-- GITHUB-ISSUES-STALE-CANDIDATES-2026-09-18 -->
+## GitHub issues worth a closing pass -- this sandbox has no `gh` and no API write token, so this is a recommendation, not an action (2026-09-18)
+
+Read all five open issues via the public API (`curl`, no auth needed for reads). Three
+(#25, #32, #5) are already correctly handled: the owner answered each on 2026-09-01, either
+asking the reporter to re-test against the current build or (for #5, a running "more versions"
+invitation) explicitly choosing to leave it open. Checked whether anything landed since those
+answers that would change the verdict — only one relevant commit (`c74a4022`, this session,
+2026-09-05, `CraftInTableTask`'s recipe-book path), and it is the 3x3 crafting-TABLE path, not the
+2x2 personal-inventory grid #25/#32 are actually about — so those two verdicts stand exactly as
+written, nothing to add.
+
+Two read as stronger candidates for an actual close, both old and both without reporter
+follow-up after a request for reproduction detail:
+
+- **#12 "Freezes indefinitely after using @gamer on 1.21.11"** (filed 2026-04-07, last owner
+  reply 2026-07-22 asking for a coordinate/seed — no reply since). The report itself has zero
+  reproduction detail (no seed, no coordinate, "a few performance mods" unnamed). Since April,
+  the anti-stuck/anti-freeze front has been close to the CENTRAL theme of this whole project's
+  work: the drift-immune walker the July reply already cited, plus (this session alone) G13's
+  per-cell mining watchdog, G62's tower-refusal memory, G67's bridge-timeout memory, G91's
+  physics-root hand-off, G97-99's pit/shaft/swim fixes, the whole `UnstuckChain`/`lastDriveNote`
+  line (G80/G81) — a running total in the dozens. A vague, five-month-old freeze report with no
+  way to reproduce it against a codebase that has changed this much is no longer actionable;
+  recommend closing with a comment naming the accumulated anti-freeze work and inviting a fresh,
+  detailed report (seed, coordinate, log) if it still happens on the current release.
+- **#2 "Lacks void PvP"** (filed 2026-03-18, last activity 2026-03-24 — a release-note reply,
+  "have much problems, but better than autoclef's old approach" — never closed, never revisited
+  in six months). tungsten's PvP path (`CombatPathfinder`, `TriggerBot`, `KillAura`) has had
+  continuous, substantial work since that reply, including this session's own G11 (tripwire
+  hazard), G71 (equip-thrash fix), and the hazard/obstruction handling reviewed this session.
+  Recommend the same treatment: a comment naming what has changed since March and asking whether
+  the specific complaints (eating mid-fight, dropping into the void near an opponent) still
+  reproduce, then close if there is no response in a reasonable window.
+
+Neither recommendation is executed here — `gh` is confirmed absent from this sandbox (checked
+fresh, not assumed stale) and there is no GitHub API token available to authenticate a write
+through the raw REST API; the git remote's own stored credential is scoped to `git push`/`fetch`
+and reusing it for an unrelated API call would be exactly the kind of credential misuse this
+project's own security posture warns against. Left as a clear, actionable recommendation for
+whoever has `gh` or web access (the parallel session's Windows host almost certainly does).
+
 <!-- CHECKPOINT-SAVE-UNVERIFIED-RCON-2026-09-17 -->
 ## `checkpoint.py save` copies the world without checking that save-off/flush actually succeeded (2026-09-17)
 
