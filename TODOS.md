@@ -1555,8 +1555,15 @@ test + full nav-suite regression before it counts done.
       leaving. **FIX (deployed, verifying):** hay multiplier 50 -> 7 (a hay bale is ~7 animal
       kills, not 30), and foodUnits 220 -> 140 (minFoodUnits 120) so the bot proceeds with a solid
       buffer it tops up, instead of hoarding 220; the emergency-food +inf ramp and gate
-      re-activation guard survival. Verifying via a day-locked run (reaches Going-to-Nether faster,
-      no starvation). 0.95.8.
+      re-activation guard survival. **SHIPPED 0.95.9 (0.95.8 was STALE):** 0.95.8's jar did NOT
+      contain the change -- a stale IntelliJ `versions/1.21.11/bin/main` (foodUnits=220, hay=50) was
+      picked up by the remap pipeline (clean/--no-build-cache don't touch bin/); the deployed bot
+      showed "Collect 220". Fixed: `rm -rf versions/*/bin` + rebuild; javap-verified the 0.95.9 jar
+      has `sipush 140` + `double 7.0d`. ALSO: foodUnits is a CONFIG (configs/beat_minecraft.json)
+      that overrides the class default -- updated the stand's config to 140; existing users must
+      edit/delete their json (hay-tame is code, so it is live for all). Lesson in AGENTS.md. Runtime
+      re-run (no starvation) pending stand recovery -- the gamer-server crashed on the contended
+      stand.
 - [ ] **G101 — after a death the bot starts over at world spawn, at night, unarmed** (same run,
       deaths two and three at t≈2040 and t≈2320, frames 33:50 and 38:20: a zombie at melee
       range, `NIGERUNDAYOO … Routing to reachable safety`, hp 8, no weapon in the hotbar;
