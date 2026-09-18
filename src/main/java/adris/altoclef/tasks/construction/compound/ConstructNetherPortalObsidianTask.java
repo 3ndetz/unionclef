@@ -89,6 +89,27 @@ public class ConstructNetherPortalObsidianTask extends Task {
             new Vec3i(-1, 2, 1)
     };
 
+    // ⛔ A TEMPORARY STANDING WALL IN FRONT OF THE FRAME, SO THE TOP ROW IS PLACED FROM A SIDE STAND
+    // (G108, 2026-09-19). The top row (y=origin+3) sits over the open interior: it has no reachable
+    // ground stand beside it, so the placer fell to the pillar branch, which asks FastNavigator to
+    // stand IN the cell -- and it cannot reliably path onto a cell perched on a 1-wide column top over
+    // the gap, so it deferred in a tight loop and the build HARD-STALLED at 13/14 on ~half the runs.
+    // Building a solid cobblestone wall one row in front (x=+1) up to the column top (y=+2) gives the
+    // bot a stable strip to stand on -- feet at (1, y+3, z), on top of the wall -- from which
+    // placementStand returns that side stand and the top row places obsidian via the normal (reliable)
+    // side-stand path, never the pillar. Built bottom-up like the frame columns, then mined back out
+    // before lighting. Cobblestone, so the obsidian gather never touches it.
+    private static final Vec3i[] FRONT_SCAFFOLD;
+    static {
+        java.util.List<Vec3i> fs = new java.util.ArrayList<>();
+        for (int dy = -1; dy <= 2; dy++) {
+            for (int dz = -1; dz <= 2; dz++) {
+                fs.add(new Vec3i(1, dy, dz));
+            }
+        }
+        FRONT_SCAFFOLD = fs.toArray(new Vec3i[0]);
+    }
+
     private final TimerGame _areaSearchTimer = new TimerGame(5);
 
     private BlockPos origin;
@@ -286,6 +307,19 @@ public class ConstructNetherPortalObsidianTask extends Task {
             return TaskCatalogue.getItemTask(Items.FLINT_AND_STEEL, 1);
         }
 
+        // Before placing a TOP-ROW cell (y = origin+3, over the open interior), raise the temporary
+        // front standing wall so the cell gets a reachable SIDE stand instead of the flaky
+        // pillar-into-cell climb. Built bottom-up; each block rests on the one below (or the floor pad
+        // the site check guarantees at x=+1), so it places from a side stand exactly like the frame
+        // columns do. It is mined back out below, before the interior is cleared and the portal is lit.
+        if (placeTarget != null && placeTarget.getY() == origin.getY() + 3 && !frontScaffoldComplete(mod)) {
+            BlockPos scaffoldCell = nextFrontScaffoldCell(mod);
+            if (scaffoldCell != null) {
+                setDebugState("Raising front scaffold to reach the top row");
+                return new PlaceStructureBlockTask(scaffoldCell);
+            }
+        }
+
         // Place frame
         if (placeTarget != null) {
             World world = mod.getWorld();
@@ -330,6 +364,14 @@ public class ConstructNetherPortalObsidianTask extends Task {
             return new PlaceBlockTask(placeTarget, Blocks.OBSIDIAN);
         }
 
+        // The frame is complete -> mine the temporary front scaffold back out (top-down, so removing a
+        // support never strands the bot above the rest) before clearing the interior and lighting.
+        BlockPos scaffoldBlock = highestFrontScaffoldBlock(mod);
+        if (scaffoldBlock != null) {
+            setDebugState("Removing front scaffold");
+            return new DestroyBlockTask(scaffoldBlock);
+        }
+
         // Clear middle
         if (_destroyTarget != null && !WorldHelper.isAir(_destroyTarget)) {
             return new DestroyBlockTask(_destroyTarget);
@@ -348,6 +390,39 @@ public class ConstructNetherPortalObsidianTask extends Task {
     private boolean surroundedByAir(World world, BlockPos pos) {
         return world.getBlockState(pos.west()).isAir() && world.getBlockState(pos.south()).isAir() && world.getBlockState(pos.east()).isAir() &&
                 world.getBlockState(pos.up()).isAir() && world.getBlockState(pos.down()).isAir() && world.getBlockState(pos.north()).isAir();
+    }
+
+    /** Every cell of the temporary front standing wall is solid. */
+    private boolean frontScaffoldComplete(AltoClef mod) {
+        for (Vec3i o : FRONT_SCAFFOLD) {
+            if (!WorldHelper.isSolidBlock(origin.add(o))) return false;
+        }
+        return true;
+    }
+
+    /** The next front-scaffold cell to place: the lowest air cell that already rests on a solid block,
+     *  so the wall goes up bottom-up and every block places from a side stand. Null when complete. */
+    private BlockPos nextFrontScaffoldCell(AltoClef mod) {
+        for (int dy = -1; dy <= 2; dy++) {
+            for (int dz = -1; dz <= 2; dz++) {
+                BlockPos p = origin.add(1, dy, dz);
+                if (WorldHelper.isSolidBlock(p)) continue;          // already built
+                if (!WorldHelper.isSolidBlock(p.down())) continue;  // no support yet; build lower first
+                return p;
+            }
+        }
+        return null;
+    }
+
+    /** The highest non-air front-scaffold cell, to mine the wall back out top-down. Null when gone. */
+    private BlockPos highestFrontScaffoldBlock(AltoClef mod) {
+        for (int dy = 2; dy >= -1; dy--) {
+            for (int dz = -1; dz <= 2; dz++) {
+                BlockPos p = origin.add(1, dy, dz);
+                if (!WorldHelper.isAir(p)) return p;
+            }
+        }
+        return null;
     }
 
     @Override
