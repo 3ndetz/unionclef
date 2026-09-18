@@ -92,6 +92,17 @@ public class ConstructNetherPortalObsidianTask extends Task {
      */
     private static BlockPos getBuildableAreaNearby(AltoClef mod) {
         BlockPos feet = mod.getPlayer().getBlockPos();
+        // PASS 1: prefer a genuinely clean, flat, open pad (no scaffolding, no obstruction).
+        BlockPos clean = scanForSite(mod, feet, true);
+        if (clean != null) return clean;
+        // PASS 2: fall back to a DECENT site -- solid floor under the footprint and an open column
+        // above the origin, tolerating side obstructions the frame build clears. This is strictly
+        // better than the old check (which accepted an enclosed pit) yet never wanders for ever when
+        // no perfectly-clean pad exists nearby (the over-strictness risk of pass 1 alone).
+        return scanForSite(mod, feet, false);
+    }
+
+    private static BlockPos scanForSite(AltoClef mod, BlockPos feet, boolean strict) {
         for (int r = 2; r <= 12; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
@@ -99,12 +110,39 @@ public class ConstructNetherPortalObsidianTask extends Task {
                     for (int dy = 1; dy >= -2; dy--) {                         // prefer at / just above foot level
                         BlockPos origin = feet.add(dx, dy, dz);
                         if (!mod.getChunkTracker().isChunkLoaded(origin)) continue;
-                        if (isCleanFlatBuildSite(mod, origin)) return origin;
+                        if (strict ? isCleanFlatBuildSite(mod, origin) : isDecentBuildSite(mod, origin)) {
+                            return origin;
+                        }
                     }
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * A DECENT (not perfect) build site: a solid floor under the whole footprint and an OPEN column
+     * above the origin (so the body is not sealed in a pit), with no lava/water anywhere in the frame
+     * region. Side obstructions are tolerated -- the frame build's DestroyBlockTask clears them. This
+     * is the fallback so the search never wanders for ever when no pristine pad is nearby, while
+     * still rejecting the enclosed cast-pit that was the original wedge.
+     */
+    private static boolean isDecentBuildSite(AltoClef mod, BlockPos origin) {
+        World world = mod.getWorld();
+        if (world == null) return false;
+        for (BlockPos f : WorldHelper.scanRegion(origin.add(-1, -2, -1), origin.add(1, -2, 2))) {
+            if (!WorldHelper.isSolidBlock(f)) return false;                    // must have a floor (not a pit-with-no-floor / mid-air)
+            var b = world.getBlockState(f).getBlock();
+            if (b == Blocks.LAVA || b == Blocks.WATER) return false;
+        }
+        for (int dy = -1; dy <= 3; dy++) {                                     // open column above origin: not sealed in
+            if (!world.getBlockState(origin.add(0, dy, 0)).isAir()) return false;
+        }
+        for (BlockPos a : WorldHelper.scanRegion(origin.add(-1, -1, -1), origin.add(1, 3, 2))) {
+            var b = world.getBlockState(a).getBlock();
+            if (b == Blocks.LAVA || b == Blocks.WATER) return false;          // no lava/water in the frame region
+        }
+        return true;
     }
 
     /**

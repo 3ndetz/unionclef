@@ -73,8 +73,31 @@ on a clean pad). The portal still does not green end-to-end because the frame bu
 needs more obsidian than 10, sending the bot back to the cast, whose remaining roots are the
 lava-death hazard and bucket churn (per-block cast). This is the multi-root redesign the earlier
 notes predicted; clean-siting is one verified root removed, committed as groundwork (cf. faf41b61,
-0.95.11 "groundwork, not a complete fix"). NEXT portal roots: the cast lava-death hazard, and the
-scaffolding obsidian overhead / bucket churn.
+0.95.11 "groundwork, not a complete fix").
+
+Follow-up same day (fallback + trustworthy bench + BUILD-half evidence):
+- **Siting made robust (fallback).** Pass-1 clean-flat siting could be over-strict -- the area search
+  wanders the body while looking, and with no pristine pad nearby it drifted off "Looking for
+  portalable area" for ever. `getBuildableAreaNearby` now does TWO passes: prefer a clean-flat pad,
+  else a DECENT site (`isDecentBuildSite`: solid floor under the footprint + open column above the
+  origin + no lava/water) -- rejects the enclosed pit but never wanders without end (strictly better
+  than the old lenient check).
+- **Scaffold is COBBLESTONE, not obsidian** (`PlaceStructureBlockTask` places a throwaway) -- so the
+  frame needs exactly ~10 obsidian, not a hidden overhead. (Corrects the earlier scaffolding-overhead
+  guess.)
+- **Bench hardened into a trustworthy instrument** (`nether_portal_test.py`): a WIDE +/-18 wipe clears
+  leftover portals/obsidian (a leftover NETHER_PORTAL at origin.up() had produced a false "Done
+  constructing" with 0 obsidian consumed); setup is VERIFIED (bot in-game + obsidian/flint&steel/
+  water-bucket actually applied, re-give a few times -- a post-death respawn screen no-ops `give`);
+  and 'done' is confirmed against an ACTUAL nether_portal block via a fast in-process client scan
+  CENTRED ON THE BOT (the frame sites outward, so a scene-centred scan missed it).
+- **BUILD half works, but not yet consistently.** With all prereqs present the bot builds the frame on
+  a clean pad; one clean run consumed all 12 obsidian and reached "Done constructing nether portal".
+  Other runs re-enter the gather mid-build and the obsidian<->frame interaction churns (a placed frame
+  obsidian gets re-collected / re-needed). So the BUILD half is proven possible but flaky.
+- NEXT portal roots: (1) the BUILD-half gather/frame re-entry interaction (make the frame build never
+  re-collect its own placed obsidian), (2) the GATHER half's cast lava-death hazard + bucket churn.
+  Best measured on a real @gamer run -- the flat stand's cast keeps corrupting via death.
 
 ## 2026-09-18 — post-iron ceiling from two playthroughs; G105 freeze fixed; G93 shipped
 

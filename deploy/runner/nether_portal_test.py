@@ -58,13 +58,38 @@ gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=253
 mc=gw.entry_point; op=req["op"]; out={}
 def me():
     s=dict(mc.getGameState().get("self") or {}); return s.get("pos")
-if op=="state": out={"inGame":mc.inGame(),"pos":me(),"busy":mc.hasActiveTask()}
+if op=="state":
+    obs=0; fns=0; wb=0
+    try:
+        for s in mc.getInventoryFull().get("slots") or []:
+            sd=dict(s)
+            if sd.get("empty"): continue
+            it=str(sd.get("item") or sd.get("name") or ""); c=int(sd.get("count") or 0)
+            if "obsidian" in it: obs+=c
+            if "flint_and_steel" in it: fns+=c
+            if "water_bucket" in it: wb+=c
+    except Exception: pass
+    out={"inGame":mc.inGame(),"pos":me(),"busy":mc.hasActiveTask(),"obs":obs,"fns":fns,"wb":wb}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
 elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(req.get("n",12))]}
 elif op=="task": out={"t": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-500:]}
 elif op=="blk": out={"b": {str(k): str(v) for k,v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
+elif op=="findportal":
+    cx,cy,cz,rad=int(req["x"]),int(req["y"]),int(req["z"]),int(req.get("rad",16))
+    hit=None
+    for dy in range(0,6):
+        for dx in range(-rad,rad+1):
+            for dz in range(-rad,rad+1):
+                try:
+                    b=dict(mc.getBlockAt(cx+dx,cy+dy,cz+dz))
+                    nm=str(b.get("block") or b.get("name") or b)
+                except Exception: nm=""
+                if "nether_portal" in nm.lower(): hit=[cx+dx,cy+dy,cz+dz]; break
+            if hit: break
+        if hit: break
+    out={"portal":hit}
 print(json.dumps(out,default=str)); gw.close()
 """
 
@@ -86,9 +111,14 @@ def rcon(c):
 
 def build():
     half = LAVA_SIZE // 2
-    # a generous air box over the whole area, then a solid stone floor
-    rcon(f"fill {BX-12} {FLOOR_Y+1} {BZ-12} {BX+12} {FLOOR_Y+8} {BZ+12} minecraft:air")
-    rcon(f"fill {BX-12} {FLOOR_Y-3} {BZ-12} {BX+12} {FLOOR_Y} {BZ+12} minecraft:stone")
+    # ⛔ WIDE WIPE (2026-09-18): the obsidian method sites the frame OUTWARD (up to r~12) on a clean
+    # pad, so leftover obsidian AND a leftover NETHER_PORTAL from a previous run land well outside a
+    # ±12 box -- and a leftover portal at origin.up() makes the task report "Done constructing" with
+    # ZERO obsidian consumed (a false green, caught 2026-09-18). Clear a ±18 box to bedrock-free
+    # stone every run so no run can pass on another run's portal.
+    R = 18
+    rcon(f"fill {BX-R} {FLOOR_Y+1} {BZ-R} {BX+R} {FLOOR_Y+10} {BZ+R} minecraft:air")
+    rcon(f"fill {BX-R} {FLOOR_Y-3} {BZ-R} {BX+R} {FLOOR_Y} {BZ+R} minecraft:stone")
     # the lava lake: a pool of SOURCE lava sunk flush into the floor, centred at (BX,BZ)
     # (offset a few blocks from the bot's start so there is a clear region between them)
     lx, lz = BX + 6, BZ
@@ -99,18 +129,15 @@ def build():
         rcon(f"fill {lx-half-1} {FLOOR_Y+1} {lz-half-1} {lx+half+1} {FLOOR_Y+5} {lz+half+1} minecraft:stone hollow")
 
 
-def portal_found(cx, cy, cz, rad=10):
-    # A NETHER_PORTAL anywhere in the portalable region (within ~20 blocks of the lake). This is
-    # SLOW (one rcon per block), so it is called sparingly -- once when the task finishes or at
-    # the window's end -- never every poll. Rows are cheap to skip with `execute if block` only
-    # where a portal could be, so we scan a modest box around the lake at head height.
-    for dy in range(0, 5):
-        for dx in range(-rad, rad + 1):
-            for dz in range(-rad, rad + 1):
-                r = rcon(f"execute if block {cx+dx} {cy+dy} {cz+dz} minecraft:nether_portal")
-                if "passed" in r.lower():
-                    return (cx + dx, cy + dy, cz + dz)
-    return None
+def portal_found(cx, cy, cz, rad=16):
+    # A NETHER_PORTAL anywhere in the build region. Client-side, IN-PROCESS scan (one docker exec,
+    # getBlockAt looping in the JVM-local python) -- NOT rcon-per-block, which at rad 16 would be
+    # ~6500 slow docker-exec calls. Returns the first portal cell or None.
+    try:
+        p = py4j("findportal", x=cx, y=cy, z=cz, rad=rad).get("portal")
+        return tuple(p) if p else None
+    except Exception:
+        return None
 
 
 def main():
@@ -125,7 +152,7 @@ def main():
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop"); time.sleep(1)
     rcon(f"gamemode survival {BOT}")
     rcon("difficulty peaceful")
-    rcon(f"forceload add {BX-16} {BZ-16} {BX+16} {BZ+16}"); time.sleep(1)
+    rcon(f"forceload add {BX-18} {BZ-18} {BX+18} {BZ+18}"); time.sleep(1)
     build()
     time.sleep(1)
     # verify the lake is real SOURCE lava (fill places source blocks)
@@ -171,7 +198,26 @@ def main():
     else:
         rcon(f"give {BOT} minecraft:bucket 1")
     time.sleep(2)
+    # ⛔ VERIFY SETUP APPLIED (2026-09-18). A death in a prior run can leave the bot on the respawn
+    # screen, so `give` silently no-ops and the run tests an empty bot (a harness artifact, not a bot
+    # bug). Confirm the bot is in-world and, when we handed it obsidian, that the obsidian actually
+    # landed; re-give a few times before giving up so the run is real.
     start = py4j("state")
+    if not start.get("inGame"):
+        print("FAIL: bot not in-game at setup (dead/respawning?) -- recreate the client"); return 2
+    # ensure the prerequisites actually landed (a post-death respawn screen makes `give` no-op).
+    need = {"flint_and_steel": ("fns", "minecraft:flint_and_steel 1", 1),
+            "water_bucket": ("wb", "minecraft:water_bucket 1", 1)}
+    if OBS and os.environ.get("GIVE_OBS", "0") == "1":
+        need["obsidian"] = ("obs", "minecraft:obsidian 12", 10)
+    for name, (key, give, mincount) in need.items():
+        for _ in range(5):
+            if start.get(key, 0) >= mincount:
+                break
+            rcon(f"give {BOT} {give}"); time.sleep(1); start = py4j("state")
+        if start.get(key, 0) < mincount:
+            print(f"FAIL: {name} give did not apply ({key}={start.get(key)}) -- recreate the client"); return 2
+    start_obs = start.get("obs", 0)
     method = "portalobs (obsidian)" if OBS else "portal (bucket cast)"
     print(f"scene: {LAVA_SIZE}x{LAVA_SIZE} lava lake at ({lx},{FLOOR_Y},{lz})"
           + (" WALLED-IN (no room control)" if NO_ROOM else "")
@@ -195,28 +241,40 @@ def main():
                 phases.add(w)
         if "looking for lava" in blob or "lava lake not found" in blob or "timeout" in blob:
             wander += 1
+        cur_obs = s.get("obs", start_obs)
+        print(f"  t={time.time()-t0:.0f}s pos={s['pos']} busy={s['busy']} obs={cur_obs} "
+              f"consumed={start_obs-cur_obs} wanderHits={wander} phases={sorted(phases)} | {tsk[-140:]}")
+        # ⛔ CONFIRM 'done' WITH A REAL PORTAL BLOCK (2026-09-18). "Done constructing" fires when
+        # origin.up() is a NETHER_PORTAL -- which was a leftover from a previous run in one case (0
+        # obsidian consumed, a false green). With the wide wipe above, ANY nether_portal found now
+        # was built THIS run, so confirm the task-string 'done' against an actual block scan over the
+        # wider build area (the obsidian method sites the frame OUTWARD on a clean pad).
+        # Scan CENTERED ON THE BOT (the obsidian method sites the frame OUTWARD, so the portal is
+        # where the body ended up, not the scene centre) while the chunk is still loaded (before any
+        # @stop / forceload remove). rad 10 keeps the in-process getBlockAt scan fast.
+        bp = s.get("pos") or [BX, FLOOR_Y, BZ]
         if "done constructing" in blob:
-            done = True
-        print(f"  t={time.time()-t0:.0f}s pos={s['pos']} busy={s['busy']} wanderHits={wander} "
-              f"phases={sorted(phases)} | {tsk[-150:]}")
-        if done:
-            break
-        # task finished without wandering -> likely built; confirm with the scan and stop
+            made = portal_found(int(bp[0]), FLOOR_Y + 2, int(bp[2]), rad=10)
+            if made:
+                done = True; break
+            print("  ('done constructing' but NO portal block near the bot -- continuing)")
+        # task finished without wandering -> confirm with a scan and stop
         if not s["busy"] and phases and "looking for lava" not in tsk.lower():
+            made = portal_found(int(bp[0]), FLOOR_Y + 2, int(bp[2]), rad=10)
+            if made:
+                done = True
             break
-    # Confirm with a block scan ONLY when the task did not already report "done" (the scan is
-    # rcon-per-block: modest radius, run at most once). A midpoint centre between bot and lake
-    # is where the portalable region lands in this scene.
-    made = None
-    if not done:
-        made = portal_found((BX + lx) // 2, FLOOR_Y + 2, lz, rad=6)
+    # Final confirmation, centred on the bot's last position, BEFORE unloading the chunk.
+    bp = (py4j("state").get("pos")) or [BX, FLOOR_Y, BZ]
+    made = portal_found(int(bp[0]), FLOOR_Y + 2, int(bp[2]), rad=10)
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
-    rcon(f"forceload remove {BX-16} {BZ-16} {BX+16} {BZ+16}")
+    rcon(f"forceload remove {BX-18} {BZ-18} {BX+18} {BZ+18}")
     print(f"phases reached: {sorted(phases)}")
-    if made or done:
-        print(f"result: portal {'LIT at '+str(made) if made else 'reported done'} in {time.time()-t0:.1f}s")
-        print("PASS: nether portal constructed"); return 0
-    print(f"result: no portal after {WINDOW_S}s (wanderHits={wander}, phases={sorted(phases)})")
+    if made:
+        print(f"result: NETHER_PORTAL LIT at {made} in {time.time()-t0:.1f}s")
+        print("PASS: nether portal constructed (real portal block confirmed)"); return 0
+    print(f"result: no portal block after {WINDOW_S}s (done_flag={done}, wanderHits={wander}, "
+          f"phases={sorted(phases)})")
     print("FAIL: portal not built -- inspect the lava search / cast (the ceiling)"); return 1
 
 
