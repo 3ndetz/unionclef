@@ -156,7 +156,12 @@ def main():
         # pickaxe, as iron/diamond mining proves). Force it into the main hand so the mine is real.
         rcon(f"give {BOT} minecraft:diamond_pickaxe 1")
         rcon(f"item replace entity {BOT} weapon.mainhand with minecraft:diamond_pickaxe")
-        rcon(f"give {BOT} minecraft:bucket 1")
+        # ⛔ HARNESS LESSON 2: the flat stand has NO iron, so if the builder ever needs a fresh
+        # bucket it drops into "Mine And Collect raw_iron -> Wander for Infinity". A real run has
+        # iron; give ample buckets so the bench never needs to craft one and the full obsidian path
+        # can actually finish (this is what open/surface terrain -- the natural build site -- looks
+        # like, where the obsidian method should complete).
+        rcon(f"give {BOT} minecraft:bucket 4")
         if os.environ.get("GIVE_OBS", "0") == "1":
             rcon(f"give {BOT} minecraft:obsidian 12")
     else:
