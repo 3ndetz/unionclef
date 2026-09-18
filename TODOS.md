@@ -1520,6 +1520,30 @@ test + full nav-suite regression before it counts done.
       dig should not ENTER a water column it cannot leave (prevention), and with only an iron
       pickaxe the escape still dips air negative — trigger earlier than air<half if a run cuts it
       close.
+- [~] **G105 — after iron the bot HARD-FREEZES ~200 s reaching a block to mine ("Waiting for the
+      approach to finish placing")** (found 2026-09-18, day-locked run from run5-end via the new
+      --daylock lever; froze 200 s at (692,59,865) trying to mine raw_iron 1.4 blocks away, and
+      earlier at a sweet-berry bush). Root: DestroyBlockTask treats a place/pillar/bridge as
+      progress UNCONDITIONALLY — it resets the stall checkers (DestroyBlockTask:426) and yields the
+      whole task (DestroyBlockTask:466, "Waiting for the approach to finish placing") every tick
+      builderOwnsInputs() is true. A place/pillar that CYCLES without advancing (plan -> fail ->
+      re-plan the same -> repeat; navPillarRuns=76, placeInRange=202 placeClicked=0,
+      dbBuilderYield=1405, body never moved) therefore suppresses the give-up machinery for ever.
+      **Fix (built, verifying):** a BREAK stays shielded unconditionally (a dig-down is still by
+      design), but a PLACE/PILLAR is shielded only while it MOVES the body (_ticksSinceMoved <
+      BUILD_HELD_MAX=200); once wedged it drops the shield (dbBuildHeldStuck++) and the existing
+      give-up condemns the target and reroutes. NOT deterministically reproducible from a world
+      checkpoint (in-memory transient, the G103 lesson) — restoring cp0918-1030-t494 ran fine
+      (bucket rung @156 s). Verifying: nav suite green (no regression), dbBuildHeldStuck stays 0 in
+      a healthy run, and day-locked runs no longer freeze 200 s.
+- [ ] **G106 — food over-prioritised after iron (×50 hay -> priority ~1293), gating nether-prep
+      detours** (same runs): CollectFoodPriorityCalculator boosts ALL food ×50 when a hay bale is
+      within 75 blocks, and food is a gate to "Going to Nether" (the fall-through at
+      BeatMinecraftTask:2412 needs every gather task <=0, and foodUnits=220 ≈ 27 cooked meats).
+      Diamonds are opportunistic (not required). Day-locked the bot still interleaves nether-prep
+      (reached the bucket rung), so this is a slowdown/detour, not a hard block — deferred behind
+      G105. Levers: tame the ×50 hay multiplier (clearly over-amplified), and let the bot proceed
+      with a solid buffer instead of hoarding 220.
 - [ ] **G101 — after a death the bot starts over at world spawn, at night, unarmed** (same run,
       deaths two and three at t≈2040 and t≈2320, frames 33:50 and 38:20: a zombie at melee
       range, `NIGERUNDAYOO … Routing to reachable safety`, hp 8, no weapon in the hotbar;

@@ -3,6 +3,32 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
+## 2026-09-18 — post-iron ceiling from two playthroughs; G105 freeze fixed; G93 shipped
+
+- **Method (operator's loop):** resumed the post-iron checkpoint `run5-end` (iron tools) and ran
+  forward. `run6` (night) died to a creeper and lost the whole inventory to world spawn (the
+  deferred night track). Built a new `--daylock` lever (freeze a resumed run at day, clear
+  hostiles) to isolate the in-scope daytime ceiling; `run6day` (day-locked) then surfaced the real
+  non-night blockers.
+- **G105 (HARD freeze, FIXED — v0.95.7):** day-locked, the bot froze 200 s at (692,59,865) trying
+  to mine a block 1.4 away, "Waiting for the approach to finish placing." `DestroyBlockTask` shields
+  a builder (bridge/pillar/place) unconditionally every tick — resets the stall checkers
+  (`:426`) and yields the whole task (`:466`) while `builderOwnsInputs()`. A place/pillar that
+  CYCLES without advancing (plan→fail→re-plan→repeat; navPillarRuns=76, placeClicked=0,
+  dbBuilderYield=1405, body still) thus suppressed the give-up for ever. Fix: a BREAK stays shielded
+  (a dig-down is still by design), but a PLACE/PILLAR is shielded only while `_ticksSinceMoved <
+  BUILD_HELD_MAX=200`; once wedged the shield drops (`dbBuildHeldStuck++`) and the existing give-up
+  (`:526`, `_moveChecker.check` now fails) condemns the target and reroutes. NOT reproducible from a
+  world checkpoint (in-memory transient — restoring cp0918-1030-t494 ran fine, bucket rung @156 s),
+  so verified by no-regression (nav suite) + the day-locked run no longer freezing, not a repro.
+- **G106 (food over-priority, open):** `CollectFoodPriorityCalculator` ×50s ALL food near a hay bale
+  (priority hit 1293), and food gates the nether fall-through (BeatMinecraftTask:2412 needs every
+  gather ≤0; foodUnits=220). Diamonds are opportunistic (not required). Day-locked the bot still
+  interleaves nether-prep (reached the bucket rung), so it is a slowdown, not a hard block. Deferred
+  behind G105.
+- **G93 (shipped v0.95.6):** see below — a table craft no longer digs across the world for a dropped
+  copy.
+
 ## 2026-09-17/18 — the bread deadlock fixed from a checkpoint (G103), G104 found
 
 - **G103 (the 46-minute bread/crafting-table loop)** root-caused by resuming the `loop-bread`
