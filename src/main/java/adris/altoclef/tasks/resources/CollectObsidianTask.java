@@ -48,14 +48,25 @@ public class CollectObsidianTask extends ResourceTask {
     }
 
     private static BlockPos getGoodObsidianPosition(AltoClef mod) {
-        BlockPos start = mod.getPlayer().getBlockPos().add(-3,-3,-3);
-        BlockPos end = mod.getPlayer().getBlockPos().add(3,3,3);
+        // ⛔ CHECK THE CAST FOOTPRINT, NOT A 7x7x7 (G108, 2026-09-18). The old scan was radius 3
+        // (343 cells) and required EVERY cell to be canBreak AND canPlace -- both of which need
+        // canReach. In any ordinary spot the outer cells (buried under the floor, behind a wall,
+        // simply far) are unreachable, so this returned null and CollectObsidianTask fell into
+        // "Walking until we find a spot to place obsidian -> Wander for Infinity", walking the bot
+        // a thousand blocks away and never casting a single obsidian. Reproduced on the flat stand
+        // via the obsidian portal method. PlaceObsidianBucketTask only ever touches _pos, _pos.up,
+        // _pos.up(2) and its CAST_FRAME (x/z within 1, y within [-1,1]); check exactly that box
+        // (radius 1 in x/z, y from -1 to +2) so a normal standable spot qualifies and the cast can
+        // proceed. bedrock/avoided/genuinely-unreachable cells still disqualify a spot, as before.
+        BlockPos feet = mod.getPlayer().getBlockPos();
+        BlockPos start = feet.add(-1, -1, -1);
+        BlockPos end = feet.add(1, 2, 1);
         for (BlockPos pos : WorldHelper.scanRegion(start, end)) {
             if (!WorldHelper.canBreak(pos) || !WorldHelper.canPlace(pos)) {
                 return null;
             }
         }
-        return mod.getPlayer().getBlockPos();
+        return feet;
     }
 
     @Override

@@ -625,3 +625,20 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - The CLEAN G108 fix is a dedicated core pass on PlaceObsidianBucketTask: build the cast mould
   reliably (or cast at a guaranteed-open spot, e.g. the surface) and replace the reactive
   TimeoutWanderTask give-up with a real cast-spot search. That is the shared root both methods need.
+
+### G108 progress: obsidian GATHERING spot-finding fixed (infinite wander gone); frame-placement-in-dirtied-terrain is the next layer
+- Reproduced the obsidian-gathering infinite wander ON THE FLAT OPEN BENCH: `CollectObsidianTask.
+  getGoodObsidianPosition` scanned a 7x7x7 (radius 3) and required EVERY cell canBreak AND canPlace
+  -- both need `canReach`, and buried/distant cells in that radius are unreachable, so it returned
+  null on ordinary ground -> "Walking until we find a spot to place obsidian -> Wander for
+  Infinity", walking the bot 1000+ blocks away, zero obsidian cast.
+- FIX: check the actual cast footprint (radius 1 in x/z, y -1..+2 -- what PlaceObsidianBucketTask's
+  CAST_FRAME + _pos + _pos.up(2) touch) instead of a 7x7x7. Aligns the spot test with what the
+  cast needs; bedrock/avoided/unreachable cells still disqualify. Compiled, built, deployed.
+- VERIFIED the fix advances the state: the bench bot now GATHERS its obsidian and reaches frame
+  placement (was: infinite wander at gathering). NEXT LAYER: it then stalls placing the UPPER frame
+  block ("Place structure{obsidian} at ...,-55,... -> Wander for 5.0 blocks") because the gathering
+  cast obsidian + dug lava pits AT the build site, and the frame's mid-air scaffold
+  (PlaceStructureBlockTask) can't build in that dirtied terrain -- the give-obsidian placement test
+  (pristine terrain) PASSes the same upper block. So: gather obsidian AWAY from the build site (or
+  choose a clean origin before gathering), the next focused sub-fix.
