@@ -899,3 +899,42 @@ Follow-up same day (fallback + trustworthy bench + BUILD-half evidence):
   clean-siting scan is the sketch); (4) verify end-to-end on a REAL @gamer run (the flat stand's
   no-iron + rcon-give-equip artifacts mask the real path). The mechanic works; the plumbing needs
   careful iteration. This is a dedicated multi-iteration effort.
+
+## 2026-09-19 (cont.) — G108 portal: flood-reclaim churn FIXED (gather 0->14 clean); top-row build is the new ceiling
+
+The gather-phase re-flood churn (the standing blocker from the previous entry) is fixed at the root
+and VERIFIED. Committed b247b852, pushed, main + 1.21.11 synced.
+
+- **Root of the gather churn (PlaceObsidianFloodTask reclaim).** The flood converts the pool to
+  obsidian but leaves a wide WATER SHEET on top, because the reclaim scooped ONE fixed cell
+  (`_waterCell`). `ClearLiquidTask` scoops only SOURCE blocks (SOURCE_ONLY raytrace) yet its
+  `isFinished` waits for that cell to be fluid-EMPTY -- so when `_waterCell` held FLOWING water it
+  could neither scoop nor finish, the 25s cycle deadline fired, the sheet was left, the submerged
+  obsidian failed `canReach` (=> `canBreak` false), the miner found nothing, and CollectObsidianTask
+  re-flooded -- accumulating sources forever (measured: pool y=-58 all obsidian, y=-57 all water, 33
+  water blocks, obs=0, bucket=17, chat spamming "reclaim skipped").
+- **Fix.** Reclaim now scans a RECLAIM_RADIUS box for actual still-water SOURCE blocks
+  (`WorldHelper.isSourceBlock(p,true)`) and scoops the nearest reachable one until none remain;
+  removing a source drains all the flowing water it feeds, so the whole sheet clears and the obsidian
+  is exposed. Per-source `MovementProgressChecker` blacklists an unreachable source and moves on
+  (deterministic termination -- no timeout band-aid); a 2.5s drain-settle lets flowing water dissipate
+  before `_done` so the miner never sees submerged obsidian. Removed `_cycleDeadline` entirely.
+- **Verified (bench OBS flood path, 5x5 lake, WINDOW_S=320).** obsidian gathers 0->14 steadily,
+  ~10s/block, ZERO re-flood, ZERO "reclaim skipped", wanderHits=0. Previously churned indefinitely at
+  obs=0. Then the frame build starts.
+
+### New ceiling: the frame TOP ROW (y=origin+3) build
+Ground-truth of the frame after a full run (origin 2358,-56,358): bottom row 4/4 obsidian, left
+column 3/3, right column 3/3 -- **10/14 clean**. Top row 0/4 (all air, never placed). Interior has
+TWO stray obsidian at (0,0,0),(0,1,0) -- these are PILLAR STEPS.
+- **Mechanism.** PlaceBlockTask hands the top-row cell to `BlockPlaceHelper.beginBatch([target],
+  "obsidian")`. tungsten cannot reach a cell 4 blocks up over the open interior, so it PILLARS up in
+  the interior column below the target -- placing the TARGET block (obsidian) as the pillar steps.
+  That obsidian (a) pollutes the portal interior (must be air) and (b) is unprotected, so the gather
+  mines it back as "nearby obsidian" -> place-pillar / mine-pillar / re-gather loop, obs oscillating
+  3-5, top row never finishes in the window (result: no portal after 320s).
+- **Planned fix (in progress).** Make the placer pillar/scaffold with a THROWAWAY block
+  (cobblestone), not the structure block: then the gather never touches it (cobble != obsidian, no
+  churn), and the existing "Clear middle" phase (destroys PORTAL_INTERIOR non-air before lighting)
+  removes the cobble pillar before flint&steel. A sub-agent is confirming where tungsten chooses the
+  pillar block. This should green the full flood->build->light path.
