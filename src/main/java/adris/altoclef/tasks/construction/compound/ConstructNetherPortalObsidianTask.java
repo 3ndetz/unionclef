@@ -269,10 +269,15 @@ public class ConstructNetherPortalObsidianTask extends Task {
         }
 
         // Get obsidian if we don't have (the frame site is already reserved, so this gathers away
-        // from it and returns).
+        // from it and returns). Gather a small RESERVE on top of the frame's need: a top-row cell
+        // occasionally loses a block during placement (a mis-place that the loop then clears, or a
+        // drop while repositioning at head height), and re-gathering a single block means a full
+        // round-trip back to the lake mid-build -- which on a tight window is the difference between
+        // finishing and timing out at 13/14 (measured). The spare is free: one lake flood makes 20+.
+        int obsidianReserve = 3;
         if (mod.getItemStorage().getItemCount(Items.OBSIDIAN) < neededObsidian) {
             setDebugState("Getting obsidian");
-            return TaskCatalogue.getItemTask(Items.OBSIDIAN, neededObsidian);
+            return TaskCatalogue.getItemTask(Items.OBSIDIAN, neededObsidian + obsidianReserve);
         }
 
         // Get flint and steel

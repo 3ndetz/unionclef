@@ -45,7 +45,10 @@ NO_ROOM = os.environ.get("NO_ROOM", "0") == "1"
 # ground-cast gathering), and compare against the default bucket cast (`@build portal`), which
 # stalls on the mid-air upper frame (G108).
 OBS = os.environ.get("OBS", "0") == "1"
-WINDOW_S = int(os.environ.get("WINDOW_S", "180"))
+# The obsidian FLOOD path is slow: gather a lake (~160s) + build the frame, whose top row is placed
+# by a reactive wander (~150s). 180s (fine for the bucket-cast smoke test) times out mid-build; the
+# full flood->build->light path needs a generous window. Measured completions land ~280-500s.
+WINDOW_S = int(os.environ.get("WINDOW_S", "500" if OBS else "180"))
 
 SNIP = r"""
 import json,sys
@@ -138,11 +141,17 @@ def portal_found(cx, cy, cz, rad=16):
     # A NETHER_PORTAL anywhere in the build region. Client-side, IN-PROCESS scan (one docker exec,
     # getBlockAt looping in the JVM-local python) -- NOT rcon-per-block, which at rad 16 would be
     # ~6500 slow docker-exec calls. Returns the first portal cell or None.
-    try:
-        p = py4j("findportal", x=cx, y=cy, z=cz, rad=rad).get("portal")
-        return tuple(p) if p else None
-    except Exception:
-        return None
+    # ⛔ RETRY, DON'T SWALLOW (2026-09-19). A single py4j hiccup during a BUSY build made this
+    # return None -- reported as "no portal" while a real, lit portal stood at the site (ground
+    # truth: 6 nether_portal blocks by id). Retry a few times with a longer timeout before believing
+    # there is no portal; only a clean scan that finds nothing is a real negative.
+    for _ in range(3):
+        try:
+            p = py4j("findportal", to=90, x=cx, y=cy, z=cz, rad=rad).get("portal")
+            return tuple(p) if p else None
+        except Exception:
+            time.sleep(2)
+    return None
 
 
 def main():

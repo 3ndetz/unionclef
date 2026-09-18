@@ -973,3 +973,25 @@ the HOTBAR during the frame build) -- is the clean next pass. An attempt to pre-
 support column under each middle was REVERTED: it put cobblestone in the hotbar, which made the now-
 standable middle pillar-place cobble (equipThrowaway), triggering a place/destroy/replace churn. The
 milestone (portal lights) does not depend on it.
+
+### Correction + hardening: the portal build CONVERGES; the "FAIL" verdicts were harness bugs
+After the milestone commit (0164779b) a fresh full-OBS run reported FAIL at 340s -- which looked like
+the portal was flaky. Ground truth by block id says otherwise: the portal build CONVERGES and lights
+on every run checked (three: GIVE_OBS build-only, full flood OBS, and a 520s full flood OBS -- each
+left frame 14/14 obsidian + interior 6/6 nether_portal). Two HARNESS bugs and one slow path, not a
+bot regression:
+- **Bench window too short.** The top-row is placed by PlaceBlockTask's reactive wander (~150s), so
+  the full flood->build->light path lands ~280-500s; the 340s window cut a run off at 13/14 (right
+  corner still air). WINDOW_S now defaults to 500 for the OBS path.
+- **portal_found swallowed py4j errors.** A single py4j hiccup during the busy build made it return
+  None -> "no portal near the bot", while a real lit portal stood at the site. It now retries (3x,
+  90s timeout) before believing a negative; only a clean scan that finds nothing is a real FAIL.
+- **Obsidian reserve.** A top-row placement occasionally loses a block (a mis-place the loop clears,
+  or a drop while repositioning at head height); re-gathering one block is a full round-trip to the
+  lake mid-build, which is what ran the 340s window out. ConstructNetherPortalObsidianTask now
+  gathers neededObsidian + 3 so a small loss does not force that trip.
+- **Remaining optimization (not a blocker):** the top-row wander is slow and wide-ranging (the bot
+  wandered 13-19 blocks off during a middle placement). A deterministic top-row placement (support
+  column making each mid-air cell standable + the queue pillar placing the STRUCTURE block, which
+  needs a PillarTask block param -- it currently always equipThrowaway) would make the build fast and
+  tight. Documented for a dedicated pass; the portal lights without it.
