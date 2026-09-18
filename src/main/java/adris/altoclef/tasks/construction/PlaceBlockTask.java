@@ -128,6 +128,22 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         }
 
 
+        // ⛔ THE BUILD DRAIN OWNS THE BODY WHILE IT WALKS/PILLARS -- DO NOT YANK IT (G108, 2026-09-18).
+        // Placement is handed to BlockPlaceHelper's tick drain, which for a cell it cannot reach from
+        // here WALKS to a stand or, for a column step, WALKS INTO the cell and PILLARS up (stand,
+        // jump, place below). That manoeuvre is exactly the "the body stands still on purpose" case
+        // that MineAndCollectTask and DestroyBlockTask already carve out: while it runs, this task's
+        // body-movement progress check trips and the reactive wander drags the bot off mid-climb, so
+        // the drain never finishes and the cell loops (measured: a portal right-column cell whose
+        // support was already placed -- bot straddling the support at head height, "Wander for 5" on
+        // repeat, 0 portal). The drain has its OWN bounded walk/pillar caps and defers a cell it
+        // truly cannot reach, so letting it drive is safe; reset our clock while it does.
+        if (kaptainwutax.tungsten.task.FastNavigator.isActive()
+                || kaptainwutax.tungsten.task.PillarTask.isActive()
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+            progressChecker.reset();
+        }
+
         // Check if we're approaching our point. If we fail, wander for a bit.
         if (!progressChecker.check(mod)) {
             failCount++;

@@ -431,7 +431,16 @@ public final class BlockPlaceHelper {
         // Measured before this: a 3-tall column left its top two cells unbuildable from every
         // position on the ground, because to place the third block you must stand on the second,
         // and the second is a cell you are yourself filling. NOSTAND(5,-59,0) NOSTAND(5,-58,0).
-        if (standable(mc.world, head)) {
+        // ⛔ A CELL WITH A REACHABLE SIDE STAND IS NOT A PILLAR STEP (G108, 2026-09-18). The pillar
+        // branch below fires whenever the target can be stood in (air + air above + solid below) --
+        // but a portal-frame column cell whose support is the block directly below ALSO satisfies
+        // that, and climbing onto a lone 1-wide support in a wall plane never converges (the bot
+        // straddles it and the walk times out). If instead there is a normal side stand -- a ground
+        // cell beside the support from which the exposed top face traces clear (placementStand now
+        // finds it, see the DOWN-face change above) -- prefer walking there and placing from the
+        // side. Only when there is NO side stand (a genuine open-air column) do we pillar.
+        BlockPos sideStand = placementStand(mc.world, head, wantedState(player, headCell.blockName()));
+        if (sideStand == null && standable(mc.world, head)) {
             if (player.getBlockPos().equals(head)) {
                 if (!equipBlock(player, headCell.blockName())) {
                     QUEUE.poll();
@@ -685,7 +694,16 @@ public final class BlockPlaceHelper {
             if (!RealPlacement.canPlaceAgainst(world, against)) continue;
             if (world instanceof net.minecraft.world.World w
                     && !placementPlausible(w, target, state)) continue;
-            BlockPos stand = adjacentStand(world, target, against, allowSameLevel);
+            // ⛔ A TOP-FACE PLACEMENT IS MADE FROM BESIDE THE SUPPORT, ONE LEVEL DOWN (G108,
+            // 2026-09-18). When the only placeable neighbour is the block directly BELOW the target
+            // (facing == DOWN -- e.g. a portal-frame column cell whose sole support is the block
+            // under it), the stand is beside that support at the SUPPORT's level, i.e. feet at
+            // target.y-1. adjacentStand offers dy=-1 only when allowSameLevel, which is false here
+            // because target.up() is air -- so the valid stand was never found and the cell fell
+            // through to the pillar branch, which tried to climb the lone 1-wide support and never
+            // converged. Allow dy=-1 for the DOWN face; the head is in the neighbour column (never
+            // the target), so the existing stand.up()==target / stand.y<target.y-1 guards still hold.
+            BlockPos stand = adjacentStand(world, target, against, allowSameLevel || facing == Direction.DOWN);
             if (stand != null) return stand;
         }
         // GoalPlace — stand on top of the cell and place downwards (BuilderProcess.java:1147).

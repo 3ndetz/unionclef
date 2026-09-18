@@ -3,6 +3,43 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
+## 2026-09-19 — G108 portal: the frame-PLACEMENT layer (columns build now; top-row middles + a re-gather churn remain)
+
+Continuing the nether-portal build (the flood-gather + off-pool cornered frame from 228bac27 reaches
+the frame build; the frame itself was flaky). A sub-agent read tungsten's placement pipeline end to
+end and pinned the column-cell stall precisely; two minimal BlockPlaceHelper edits + a PlaceBlockTask
+guard now build the whole bottom row and both columns cleanly (bench: 10/14, wanderHits=0). The
+top-row MIDDLE cells (over the interior) and a re-gather churn are the remaining layer.
+
+- **Root of the column stall (tungsten BlockPlaceHelper).** `drainQueue`'s pillar branch fires
+  whenever the target is `standable` (air+air-above+solid-below). A portal column cell sits on the
+  cell below it, so it is standable -- and the placer tried to CLIMB onto that lone 1-wide support in
+  the wall plane, which never converges (the bot straddles it); meanwhile `placementStand` could not
+  offer the natural stand (beside the support, one level down) because `adjacentStand` only searches
+  `dy=-1` when `allowSameLevel`, false when the target has air above.
+- **Fix (verified: columns build, no regression).** (1) `placementStand` (BlockPlaceHelper): allow
+  `dy=-1` for the DOWN face -- `adjacentStand(..., allowSameLevel || facing == Direction.DOWN)` -- so a
+  top-face placement can be made from beside the support at the support's level; the head/self guards
+  still hold. (2) `drainQueue` pillar branch: compute the side stand first and only pillar when there
+  is none (`sideStand == null && standable(head)`), so a cell with a reachable side stand
+  walks-and-places instead of failing to climb. (3) `PlaceBlockTask`: reset the progress clock while
+  the build drain owns the body (FastNavigator/PillarTask/BlockPathWalker active) -- the same
+  "movement/dig is progress" carve-out MineAndCollectTask/DestroyBlockTask already have -- so the
+  reactive wander no longer yanks the bot off mid-climb. Bench: bottom row + both columns build with
+  no scaffold, 1 cobblestone used, wanderHits=0 (was: 42 s wandering on one cell, 0 portal).
+- **Regression: none.** BlockPlaceHelper backs ALL placement, so the change is deliberately narrow --
+  `dy=-1` only for DOWN faces, side-stand preferred over pillar only when it exists, the raytrace
+  re-verifies every placement. Nav suite re-run as the guard: 14/14 (nav_bridge INVALIDed once on a
+  client-fall flake, PASSed clean on the fresh-client retry; nav_break and all others green).
+- **REMAINING (next layer):** (a) the top-row MIDDLE cells sit over the interior with no support
+  below and no side stand, so they defer; an interior scaffold-column attempt was tried and reverted
+  (it introduced a re-gather churn and did not green the portal). (b) a re-gather off-by-one churn in
+  full-OBS mode: obsidian appears at the frame origin/interior and the re-gather mines it, itemCount
+  lags neededObsidian by one, the build never closes (bench flood_solo: 0 portal, columns only). Both
+  want a dedicated pass: build the top-row middles from a proper temporary scaffold platform (removed
+  by the interior-clear), and stop the re-gather from targeting frame/interior obsidian. NB: run only
+  ONE portal bench at a time -- two concurrent bench processes fight over the client (@stop/@build).
+
 ## 2026-09-18 (cont.) — G108 nether portal: FLOOD-LAVA gather redesign + off-pool siting + cornered frame (groundwork; frame-PLACE layer remains)
 
 Big multi-layer pass on the standing post-iron ceiling (the nether-portal BUILD). NOT released: the
