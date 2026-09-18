@@ -3,6 +3,29 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
+## 2026-09-17/18 — the bread deadlock fixed from a checkpoint (G103), G104 found
+
+- **G103 (the 46-minute bread/crafting-table loop)** root-caused by resuming the `loop-bread`
+  checkpoint and reading the live task tree: `BeatMinecraftTask`'s "Picking up the crafting table
+  while we are at it" (line 1688) returns `MineAndCollectTask(CRAFTING_TABLE)` every tick when the
+  bot lacks a table item and a placed one is on the way, preempting the flow that would craft a
+  fresh table; the break false-fails on the survival world, so the reclaim never gets the table and
+  the run churns ("Blacklisting extra crafting table" ×971) with four logs in the pack. Fix: reclaim
+  only when the pack cannot cheaply make a table (four planks / a log), and drop the reclaim flag so
+  it stops re-arming — `DoStuffInContainerTask` crafts a fresh one (G80's "a table is four planks").
+  Verified from the checkpoint (the point of having one): before, 971 blacklists over the loop;
+  after, two 5-minute resumes read 0, and the bot forages + mines with items 63 → 104. Commit
+  `fce9331b`. (Correction: the "reclaim=0" figure first used was invalid — the reclaim's debug-state
+  string is not written to `latest.log`; the valid log-based metric is `blacklistExtra`, 971 → 0.)
+- **G104 (found by the regression run, not a regression of G103):** a fresh opening reached stone
+  tools at 66 s then spent eight minutes on a stone-sword craft frozen at (885,62,648),
+  `cb=0/1/53532/0` (the block scanner rejecting every cobblestone candidate), self-clearing at
+  t=554. Shield bench passes, so the craft-grid carousel itself is fine; this is a survival-world
+  interaction of the same family, occasional and self-resolving. Recorded, `run4-end` near it.
+- Checkpoint tooling now the standard debug loop: `checkpoint.py save/restore/list`,
+  `gamer_smoke.py --from NAME` / `--checkpoint-every N` / `--save-end`. On disk: post-run2,
+  cp0916-2241-t900/t1849/t2800, run3-end, loop-bread, run4-end.
+
 ## Current playthrough status
 
 - Goal remains a complete natural `@gamer` playthrough, with visual observation and regression tests. Nether/End and full completion are not validated.
