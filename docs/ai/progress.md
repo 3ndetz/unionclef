@@ -5,6 +5,18 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 
 ## 2026-09-18 — post-iron ceiling from two playthroughs; G105 freeze fixed; G93 shipped
 
+- **G105 validated + shipped (v0.95.7):** day-locked validation from the freeze checkpoint
+  (cp0918-1030-t494) — 0 position stalls (vs 200 s frozen without the fix), bot mined deep
+  y65→y11, +290 items, GAMER_SMOKE PASS. §4y frame review: the two flat windows are furnace
+  smelting (iron ×7, gold ×5), verified from extracted frames — no hidden holds. Nav suite 14/14.
+  Operator sent the report (TG 9007) + the sped-up video (9008).
+- **G94 closed — NOT reproducible:** wrote `snow_stair_test.py` (the specified staircase, faithful
+  to the `hop[0,-1,1]` `[grass|snow|air]` geometry) and ran SNOW_LAYERS=1/3/8 — all descend in
+  4.4–7.8 s. The snow step-down is handled now (incidental fix from the nav work since 2026-09-16).
+- **Next probe:** a 25-min day-locked run from run5-end (all fixes in) to find the next post-iron
+  ceiling now that the hard freeze is gone — does it reach the nether?
+
+
 - **Method (operator's loop):** resumed the post-iron checkpoint `run5-end` (iron tools) and ran
   forward. `run6` (night) died to a creeper and lost the whole inventory to world spawn (the
   deferred night track). Built a new `--daylock` lever (freeze a resumed run at day, clear
