@@ -695,7 +695,7 @@ public class Agent {
             }
         } else {
             BlockPos pos = this.getVelocityAffectingPos(world);
-            float slipperiness = world.getBlockState(pos).getBlock().getSlipperiness();
+            float slipperiness = stateOrAir(world, pos).getBlock().getSlipperiness();   // off-thread null-safe (G107b)
             float xzDrag = this.onGround ? slipperiness * 0.91F : 0.91F;
             double ajuVelY = this.applyMovementInput(world, slipperiness);
 
@@ -740,7 +740,7 @@ public class Agent {
             this.velY = Math.max(this.velY, -0.15000000596046448D);
             this.velZ = MathHelper.clamp(this.velZ, -0.15000000596046448D, 0.15000000596046448D);
 
-            BlockState state = world.getBlockState(new BlockPos(this.blockX, this.blockY, this.blockZ));
+            BlockState state = stateOrAir(world, new BlockPos(this.blockX, this.blockY, this.blockZ));   // off-thread null-safe (G107b)
 
             if(this.velY < 0.0D && !state.isOf(Blocks.SCAFFOLDING) && this.input.playerInput.sneak()) {
                 this.velY = 0.0D;
@@ -819,7 +819,7 @@ public class Agent {
         this.onGround = this.verticalCollision && movY < 0.0D;
 
         BlockPos landingPos = this.getLandingPos(world);
-        BlockState landingState = world.getBlockState(landingPos);
+        BlockState landingState = stateOrAir(world, landingPos);   // off-thread null-safe (G107b)
 
         this.fall(world, ajuY, landingState);
 
@@ -1042,6 +1042,21 @@ public class Agent {
         }
 
         return new Vec3d(d, e, f);
+    }
+
+    /**
+     * A block read that never returns null, for the off-thread physics simulation (G107b). Every
+     * getBlockState in this class runs on the FastNavigator-plan thread against a live ClientWorld
+     * the render thread is swapping chunk sections on, so a read can hand back null for one tick.
+     * The physics predicates then NPE'd on it (isClimbing was one, fixed in 243a2cab; the fall
+     * landing read and getVelocityMultiplier were the two the second-pass review flagged next).
+     * An unloaded/racing cell behaves like AIR for physics -- default slipperiness (0.6), velocity
+     * multiplier 1.0, isOf(...) false -- which is exactly what vanilla's EmptyChunk returns, so
+     * this is purely additive: it changes nothing when the read is non-null.
+     */
+    private static BlockState stateOrAir(WorldView world, BlockPos pos) {
+        BlockState s = world.getBlockState(pos);
+        return s == null ? Blocks.AIR.getDefaultState() : s;
     }
 
     public boolean isClimbing(WorldView world) {
@@ -1289,10 +1304,10 @@ public class Agent {
     }
 
     public float getVelocityMultiplier(WorldView world) {
-    	BlockState blockState = world.getBlockState(new BlockPos(this.blockX, this.blockY, this.blockZ));
+    	BlockState blockState = stateOrAir(world, new BlockPos(this.blockX, this.blockY, this.blockZ));   // off-thread null-safe (G107b)
 		float f = blockState.getBlock().getVelocityMultiplier();
 		if (!blockState.isOf(Blocks.WATER) && !blockState.isOf(Blocks.BUBBLE_COLUMN)) {
-			return (double)f == 1.0 ? world.getBlockState(this.getLandingPos(world)).getBlock().getVelocityMultiplier() : f;
+			return (double)f == 1.0 ? stateOrAir(world, this.getLandingPos(world)).getBlock().getVelocityMultiplier() : f;
 		} else {
 			return f;
 		}

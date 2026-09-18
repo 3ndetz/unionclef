@@ -1,7 +1,12 @@
 # TODOs
 
 <!-- G107-CALLERS-STILL-UNGUARDED-2026-09-18 -->
-## G107's null-guard covers the predicates it touched, but two callers right next to them still dereference an unguarded read (2026-09-18)
+## [FIXED 2026-09-18, G107b] G107's null-guard covers the predicates it touched, but two callers right next to them still dereference an unguarded read (2026-09-18)
+
+> RESOLVED: added `Agent.stateOrAir(world,pos)` (returns AIR default on a null off-thread read --
+> vanilla EmptyChunk semantics, purely additive) and routed the racy reads through it:
+> `getVelocityMultiplier` (both reads), the fall landing state, plus the slipperiness read and the
+> sneak-check state read in the physics loop. Compiles clean. The original note is kept below.
 
 Read `Agent.java` after commit `243a2cab` (the off-thread null-BlockState NPE fix, a real
 mid-flee death) for a second pair of eyes, since the same file has two more sites doing the exact
