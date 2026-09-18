@@ -1,7 +1,14 @@
 # TODOs
 
 <!-- BLACKLISTNOW-THRESHOLD-LEAK-2026-09-18 -->
-## `blackListNow`'s decisive verdict quietly lowers a block's normal-path threshold, not just this one exclusion (Finding B, 2026-09-18)
+## [FIXED 2026-09-18, v0.95.13] `blackListNow`'s decisive verdict quietly lowers a block's normal-path threshold, not just this one exclusion (Finding B, 2026-09-18)
+
+> RESOLVED: `blackListNow` now calls `blackListItem` with the ORDINARY default allowed-failures
+> (`DECISIVE_KEEPS_ALLOWED = 4`, matching `requestBlockUnreachable`) instead of `1`, then pushes
+> `numberOfFailures` over that threshold. So the verdict still excludes at once, but the block keeps
+> its normal retry generosity after the cool-off -- no leaked lowered threshold. Verified: canopy
+> wedge still PASS (excludes the cluster, explores), regression subset PASS. The original note is
+> kept below.
 
 Read `AbstractObjectBlacklist.blackListNow`/`BlockScanner.requestBlockUnreachableNow`/
 `requestAreaUnreachableNow` (uncommitted at the time of this note, part of the canopy-log wedge

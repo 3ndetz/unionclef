@@ -102,14 +102,25 @@ public abstract class AbstractObjectBlacklist<T> {
      * to look for wood it could actually reach.
      */
     public void blackListNow(AltoClef mod, T item) {
-        blackListItem(mod, item, 1);
+        // Keep the NORMAL allowed-failures threshold (4, the ordinary requestBlockUnreachable
+        // default), not a lowered one: blackListItem overwrites numberOfFailuresAllowed on every
+        // call, so passing 1 here would leave the block permanently stricter (excluded after a
+        // single ordinary failure once the cool-off lapses) until some other caller happened to
+        // restore it -- contradicting "stays evidence, the target is offered again with the same
+        // generosity". We only want to EXCLUDE IT NOW, not change how it is retried later.
+        blackListItem(mod, item, DECISIVE_KEEPS_ALLOWED);
         BlacklistEntry entry = entries.get(item);
         if (entry != null && !entry.deliberate) {
-            // Push over the allowed-failures threshold so unreachable() fires now. numberOfFailures
-            // only (not totalFailures): the verdict excludes, the price still counts real attempts.
+            // Push over the (normal) threshold so unreachable() fires now. numberOfFailures only,
+            // not totalFailures: the verdict excludes, the price still counts real attempts.
             entry.numberOfFailures = Math.max(entry.numberOfFailures, entry.numberOfFailuresAllowed + 1);
         }
     }
+
+    /** The allowed-failures a decisive verdict leaves on a block: the ordinary default, so future
+     *  retries after the cool-off are as generous as any other target's. Matches the 4 hardcoded in
+     *  {@code BlockScanner.requestBlockUnreachable}. */
+    private static final int DECISIVE_KEEPS_ALLOWED = 4;
 
     /** True for an exclusion the brain made on purpose (allowedFailures == 0): never rested,
      *  never handed back as a last resort, never priced -- see the note in blackListItem. */
