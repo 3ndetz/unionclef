@@ -527,3 +527,28 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 - **The death that ends the run (in-scope report, scope flagged):** at y=2 the bot walked into a large dark cave that is a mob nest. Frames: zombie (KillEntityTask, stone sword) -> creeper (RunAwayFromCreepersTask) -> skeletons (RunAwayFromHostilesTask, "flee 30"). DamageWatch: `deathsSeen=1`, 7 hits / 23 dmg, all melee range (`rangedHits=0`, gap 1.5-4.1), classified `dmgOther` -- a mob, not terrain. Respawn at world spawn, empty inventory = base loss. Then the bot **wedged** re-gathering wood, targeting a dark_oak_log 6 blocks up in a canopy ("reach route gave up") for 90+s (Finding B, open).
 - **G107 (fixed, v0.95.10): the flee plan crashed with an off-thread NPE.** At the death moment, one `FastPlanner.plan` on the `FastNavigator-plan` thread hit `Cannot invoke BlockState.isIn(...) $$1 null` -- the search reads a live ClientWorld while the render thread swaps chunk sections, and `getBlockState` returned null for one read; the block-classification predicates dereferenced it and failed the whole plan (so no escape route). Root cause found by static analysis + the remapped-jar name-stripping ($$1 = the null receiver). Fix: `Agent.isClimbing/isFenceLike/getLandingPos` and `BlockStateChecker.isConnected/isFenceLikeBlock/isFenceOrWall` treat a null read as air-like (vanilla EmptyChunk semantics); `FastNavigator`'s two catches now log the top stack frames, not just `getMessage()` (the message named no class/line, which is why finding it took a pass). Compiled clean; **verified in the built jar** by javap (`isClimbing` does `ifnonnull / iconst_0 / ireturn` before the `isIn`/method_26164 call, inside the nested tungsten jar). Committed 243a2cab.
 - **Scope note to operator (TG 9020):** the cave-mob swarm death is combat/survival (near the deferred night/mob-preemption track); only the pure-pathfinder bugs (G107 NPE; Finding B wedge) are taken as in-scope for now. Asked whether to prioritise combat survival.
+
+### Next frontier reproduced: the nether-portal CAST stalls on the upper frame (G108, open)
+- After G107 the bot runs the full post-iron chain; the 12-min run reached "Going to Nether ->
+  Construct Nether Portal -> Getting flint & steel", the 22-min run over-mined (467 items, RNG
+  path) and did not reach nether in the window (both PASS, 0 deaths). Checkpoints saved
+  (cp0918-1418-t240/t521/t806/t1083, save-end `nether-reach`).
+- New bench `deploy/runner/nether_portal_test.py`: flat stand, a 5x5 lava SOURCE lake + prereqs
+  (water bucket, empty bucket, flint&steel, cobblestone) + `@build portal`
+  (BuildCommand -> ConstructNetherPortalBucketTask). Deterministic, ~4 min, no 22-min run needed.
+  Controls: LAVA_SIZE=3 (below the >=12 gate), NO_ROOM=1 (no portalable region).
+- CEILING (G108): the cast STARTS (lower frame obsidian placed via PlaceObsidianBucketTask:
+  mold CAST_FRAME + lava + water) then STALLS on the UPPER frame blocks (mid-air, y ~2+ above
+  the floor). PlaceObsidianBucketTask's only failure response is reactive:
+  `_progressChecker.check` fail -> `Nav.cancel` + `requestBlockUnreachable(_pos)` +
+  `TimeoutWanderTask(5)` -> the bot loops "Wander for 5.0 blocks > Exploring" forever, portal
+  never completes. Bench FAILs (no portal in 180s); bot has ALL materials (both buckets,
+  cobblestone x43, flint&steel), so it is the mid-air mold/cast that fails, not a missing item.
+- First bench run also surfaced a setup-sensitivity: with NO throwaway blocks given, the cast's
+  "Place structure" step reports "No placeable block in the inventory" and shimmy-loops -- a real
+  run has cobblestone, so the bench now gives it; the REMAINING stall (upper frame) is the real
+  ceiling.
+- Root to fix (next pass, carefully -- not a band-aid): the reactive wander is the operator's
+  disliked anti-pattern; the real problem is casting the upper (mid-air) frame reliably. The bot
+  has a diamond pickaxe by this stage, so mining obsidian (ConstructNetherPortalObsidianTask) may
+  be the more robust method than the bucket cast -- to be weighed in the fix pass.
