@@ -44,6 +44,15 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     /** Ticks the approach clock was held because the executor was digging/placing toward the
      *  block or a pillar was going up (G32: a dig is progress, not a stall). */
     public static volatile int dbBuildHeld;
+    /** A PLACE/PILLAR builder is progress only while it MOVES the body. Past this many ticks with
+     *  the body still, a place/pillar is treated as WEDGED, its shield is dropped and the give-up
+     *  below reroutes. Generous (10 s) so no legitimate bridge/pillar -- which advances or rises
+     *  the body within a few ticks -- ever trips it; only a cycling wedge does. See the 2026-09-18
+     *  day-locked freeze (200 s at 692,59,865: dbBuilderYield in the thousands, body never moved). */
+    private static final int BUILD_HELD_MAX = 200;
+    /** Ticks a wedged place/pillar was denied its shield because the body had not moved for
+     *  BUILD_HELD_MAX. Reads 0 in a healthy run; non-zero means the freeze watchdog fired. */
+    public static volatile int dbBuildHeldStuck;
     /** G47: tool swaps this task made itself before swinging (a pickaxe in the hotbar was never
      *  selected by the fix chain while navigation was live). Read dbToolEquipped. */
     public static volatile int dbToolEquipped;
@@ -421,12 +430,27 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         // (dig bench: dbTargets=9/0, dbFar=6). The same rule FastNavigator's watchdog uses: while
         // the executor holds a break/place queue or a pillar is being built, the clock is held.
         var exD = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-        boolean buildingTowardIt = (exD != null && (exD.breakQueue != null || exD.placeQueue != null))
+        // A BREAK is progress even while the body is still (a dig-down mines a cell, the body drops,
+        // the next cell is mined; a hard block takes seconds in place) -- G32, and the executor's own
+        // break timeout bounds a stuck break, so keep shielding it unconditionally. A PLACE/PILLAR is
+        // different: it is progress only while it MOVES the body (a pillar rises, a bridge advances).
+        // A place/pillar that CYCLES without advancing -- plan, fail, re-plan the same, repeat --
+        // moves nothing, and shielding it unconditionally suppressed the give-up for 200 s at
+        // (692,59,865) day-locked. Shield it only while the body is moving; once wedged, drop the
+        // shield so the give-up below condemns the target and reroutes.
+        boolean breakingTowardIt = exD != null && exD.breakQueue != null;
+        boolean placingTowardIt = (exD != null && exD.placeQueue != null)
                 || kaptainwutax.tungsten.task.PillarTask.isActive();
-        if (buildingTowardIt) {
+        if (breakingTowardIt) {
             dbBuildHeld++;
             _moveChecker.reset();
             _lastApproachMs = System.currentTimeMillis();
+        } else if (placingTowardIt && _ticksSinceMoved < BUILD_HELD_MAX) {
+            dbBuildHeld++;
+            _moveChecker.reset();
+            _lastApproachMs = System.currentTimeMillis();
+        } else if (placingTowardIt) {
+            dbBuildHeldStuck++;   // wedged place/pillar: stop shielding, let the give-up fire
         } else if (Nav.isPathing()) {
             if (!kaptainwutax.tungsten.TungstenConfig.get().stallCheckNeedsMovement
                     || _ticksSinceMoved < STALL_MOVE_GRACE) {
@@ -439,7 +463,13 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         // The approach may be building its own footing. Do not mine a newly
         // reachable occluder mid-pillar: that steals its downward aim and block.
         // Keep the same approach child alive until the placement step releases it.
-        if (kaptainwutax.tungsten.TungstenModDataContainer.builderOwnsInputs()) {
+        // ⛔ BUT ONLY WHILE THE BUILD IS MOVING THE BODY. Yielding to builderOwnsInputs() every
+        // tick with no bound is the other half of the 200 s freeze: a wedged place/pillar/bridge
+        // keeps this task returning approachTask() for ever, so the give-up below never runs. A
+        // build that is actually advancing (pillar rising, bridge stepping) keeps _ticksSinceMoved
+        // low and is untouched; a wedged one crosses BUILD_HELD_MAX and we fall through to reroute.
+        if (kaptainwutax.tungsten.TungstenModDataContainer.builderOwnsInputs()
+                && _ticksSinceMoved < BUILD_HELD_MAX) {
             dbBuilderYield++;
             isMining = false;
             mod.getInputControls().release(Input.CLICK_LEFT);
