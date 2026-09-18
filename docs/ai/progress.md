@@ -26,6 +26,27 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
   `gamer_smoke.py --from NAME` / `--checkpoint-every N` / `--save-end`. On disk: post-run2,
   cp0916-2241-t900/t1849/t2800, run3-end, loop-bread, run4-end.
 
+## 2026-09-18 — G100 fixed (dig up for air), closed-loop run
+
+- **G100 (drowned mining diamonds at y=0):** `GetToAirTask` only searched for the nearest EXISTING
+  reachable air; in a stone-capped flooded pocket there is none, so it did nothing and the bot
+  drowned. Fix: while submerged, scan the column upward and DIG the first solid cap over the water
+  (a `DestroyBlockTask` aimed up), climbing to the surface a block at a time; bedrock/sideways-only
+  falls back to the old lateral search. Commit 4d215874, release 0.95.5.
+- Verified from a purpose-built bench, `air_pocket_test.py` — and the bench itself taught two
+  lessons (both now guarded): the survival chain only ticks while AltoClef is RUNNING, so the
+  faithful test runs `@gamer` (an idle `@stop` bench never fires the air-seek and looked like the
+  fix was dead — onTick=0); and a drown+respawn reads as "reached air" unless arrival is checked
+  near the shaft. Under `@gamer` the bot dug both cap blocks (dig=2, cap computed at the lid) and
+  surfaced with 16/20 hp in ~14 s; before, it drowned every time. Diagnostic method: the debug-state
+  string ("Reaching breathable air") is NOT logged, so a real `Debug.logMessage` was needed to
+  measure the dig firing — the same "grep the log for a debug-state string" trap paid for in G92/G103.
+- Regression: nav_water PASS (baseline); the change is isolated to the submerged-no-air branch, which
+  no nav course exercises. Full nav suite run as confirmation (nav_gaps hit its known void-fall flake,
+  retried) — nav_water PASS and every gate course green through 9/14 (only nav_gaps's known void-fall flake, which retries); confirms the submerged-only change is regression-free.
+- Next targets: G93 (pickup-cost vs craft), G90 (tunnel per-cell), G94 (snow-step). G101 (death = base
+  loss) tied to the deferred night track.
+
 ## Current playthrough status
 
 - Goal remains a complete natural `@gamer` playthrough, with visual observation and regression tests. Nether/End and full completion are not validated.
