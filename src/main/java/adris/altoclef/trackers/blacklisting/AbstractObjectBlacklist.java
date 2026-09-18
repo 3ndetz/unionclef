@@ -80,6 +80,37 @@ public abstract class AbstractObjectBlacklist<T> {
         }
     }
 
+    /**
+     * ⛔ A DECISIVE VERDICT, NOT ONE OF FIVE ATTEMPTS (Finding B, 2026-09-18). Record a failure that
+     * has already been PROVEN once -- the navigator gave a reach/dig route to this target up several
+     * times in a row with the body making no progress (G74) -- and make {@link #unreachable} return
+     * true AT ONCE, so the chooser drops the target now instead of costing one of five attempts and
+     * moving on to a sibling before any single target ever crosses the threshold.
+     *
+     * <p>It stays EVIDENCE, never a decision (G63): the exclusion cools off after {@link #COOL_OFF_MS}
+     * and the target is offered again, and a materially closer approach or a better tool still
+     * restores it in {@link #blackListItem}. It is NOT marked {@code deliberate} (permanent). The
+     * price ({@link #penaltyBlocks}, from {@code totalFailures}) counts real attempts only, so a
+     * decisive verdict does not over-price the target for later.
+     *
+     * <p>Why this exists: without it, {@code requestBlockUnreachable}'s default of four allowed
+     * failures meant G74's "given up 3 times in a row — marking it unreachable" registered only
+     * failure 1 of 5; the chooser (pure nearest-distance) then picked a neighbouring log, marked
+     * IT once, and cycled the whole canopy for ever, the 45 s cool-off resetting counts before any
+     * one block was excluded. A bot that respawned under an unreachable dark-oak canopy wedged on
+     * it indefinitely ("reach route gave up" for 90+ s) instead of excluding it and wandering off
+     * to look for wood it could actually reach.
+     */
+    public void blackListNow(AltoClef mod, T item) {
+        blackListItem(mod, item, 1);
+        BlacklistEntry entry = entries.get(item);
+        if (entry != null && !entry.deliberate) {
+            // Push over the allowed-failures threshold so unreachable() fires now. numberOfFailures
+            // only (not totalFailures): the verdict excludes, the price still counts real attempts.
+            entry.numberOfFailures = Math.max(entry.numberOfFailures, entry.numberOfFailuresAllowed + 1);
+        }
+    }
+
     /** True for an exclusion the brain made on purpose (allowedFailures == 0): never rested,
      *  never handed back as a last resort, never priced -- see the note in blackListItem. */
     public boolean excludedDeliberately(T item) {

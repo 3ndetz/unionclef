@@ -79,6 +79,52 @@ public class BlockScanner {
         blacklist.blackListItem(mod, pos, 4);
     }
 
+    /**
+     * A DECISIVE unreachable verdict (Finding B, 2026-09-18): the block's reach/dig route was given
+     * up repeatedly with no progress (G74), which is strong enough evidence to exclude it at once
+     * rather than cost one of four attempts. Unlike {@link #requestBlockUnreachable(BlockPos)} it
+     * makes {@link #isUnreachable} true immediately, but it still cools off and is retried (never a
+     * permanent 'deliberate' exclusion). See {@link adris.altoclef.trackers.blacklisting.AbstractObjectBlacklist#blackListNow}.
+     */
+    public void requestBlockUnreachableNow(BlockPos pos) {
+        blacklist.blackListNow(mod, pos);
+    }
+
+    /**
+     * {@link #requestBlockUnreachableNow(BlockPos)} for the block AND the local cluster of the SAME
+     * block type around it (Finding B, 2026-09-18). Unreachability is a LOCAL GEOMETRIC FACT: a
+     * canopy log 6 up that a reach route cannot reach has same-height neighbours it cannot reach
+     * either, so condemning them together lets the bot leave an unreachable patch after ONE verdict.
+     *
+     * <p>Without this, a decisive per-block verdict still lost to the cluster: grinding a 3x3 canopy
+     * one log at a time (~3 give-ups each) took longer than the 45 s cool-off, so the first logs
+     * came back into the candidate pool before the last were excluded and the list never emptied --
+     * the bot churned on the same patch for ever instead of exploring for wood it could reach.
+     *
+     * <p>Still EVIDENCE, never a decision: each cooled-off entry is retried, so a patch wrongly
+     * lumped in (a reachable block of the same type within the radius) is offered again in 45 s.
+     * The radius is small and same-type only, and a genuine vertical separation (a reachable trunk
+     * base far below an unreachable canopy log) is outside it. Reach targets only -- the dig route
+     * (a movement goal into solid rock) stays per-block so this never condemns rock a tunnel needs.
+     */
+    public void requestAreaUnreachableNow(BlockPos pos, double radius) {
+        requestBlockUnreachableNow(pos);
+        if (mod.getWorld() == null) return;
+        Block target = mod.getWorld().getBlockState(pos).getBlock();
+        HashSet<BlockPos> tracked = trackedBlocks.get(target);
+        if (tracked == null) return;
+        // snapshot, then mark -- blackListNow does not touch trackedBlocks, but a scan may
+        List<BlockPos> near = new LinkedList<>();
+        for (BlockPos p : tracked) {
+            if (!p.equals(pos) && p.isWithinDistance(pos.toCenterPos(), radius)) {
+                near.add(p);
+            }
+        }
+        for (BlockPos p : near) {
+            requestBlockUnreachableNow(p);
+        }
+    }
+
 
     public boolean isUnreachable(BlockPos pos) {
         return blacklist.unreachable(pos);

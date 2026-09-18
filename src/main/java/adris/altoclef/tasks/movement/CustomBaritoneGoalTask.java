@@ -1568,7 +1568,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 if (noteRouteGiveUp(block)) {
                     kaptainwutax.tungsten.Debug.logWarning("Tungsten: the reach route to " + block.toShortString()
                             + " was given up " + ROUTE_GIVEUPS_MAX + " times in a row — marking it unreachable");
-                    mod.getBlockScanner().requestBlockUnreachable(block);
+                    // Finding B (2026-09-18): a DECISIVE verdict -- exclude it now (with the usual
+                    // cool-off/retry), not one of five attempts, AND condemn the local same-type
+                    // cluster: grinding an unreachable canopy one log at a time took longer than the
+                    // cool-off, so the first logs came back before the last were excluded and the bot
+                    // churned on the patch for ever instead of exploring. The radius is small and
+                    // same-type; a reachable trunk base far below the canopy is outside it.
+                    mod.getBlockScanner().requestAreaUnreachableNow(block, 3.0);
                     pdRouteRefused++;
                     return false;
                 }
@@ -1648,7 +1654,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 if (noteRouteGiveUp(cell)) {
                     kaptainwutax.tungsten.Debug.logWarning("Tungsten: the dig route into " + cell.toShortString()
                             + " was given up " + ROUTE_GIVEUPS_MAX + " times in a row — marking it unreachable");
-                    mod.getBlockScanner().requestBlockUnreachable(cell);
+                    // Finding B (2026-09-18): a DECISIVE verdict -- exclude it now, see driveReach above.
+                    mod.getBlockScanner().requestBlockUnreachableNow(cell);
                     pdRouteRefused++;
                     return false;
                 }

@@ -3,6 +3,42 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
+## 2026-09-18 (cont.) — Finding B FIXED (v0.95.12): the post-death unreachable-canopy reach wedge
+
+- **Reproduced deterministically**, `deploy/runner/canopy_log_reach_test.py`. A dark-oak canopy log
+  6 up, boxed in leaves (no ground cell has line of sight to it), empty post-respawn pocket (nothing
+  to pillar with), no reachable log in scan range, the bot walking in from 20 W: it stopped ~4
+  blocks short and cycled "reaching X / reach route gave up / marking it unreachable" for the whole
+  window, never excluding the log, never exploring (baseline FAIL, wandered=False, pdRouteRefused
+  climbing but nothing excluded). This is the post-death recovery wedge from the cave-mob report
+  (the bot respawned under a canopy and could not re-gather wood; Finding B, now closed).
+- **Root cause (two layers).** (1) The mining chooser (`MineAndCollectTask.getClosest`) picks the
+  nearest non-blacklisted breakable block with NO reachability check -- `WorldHelper.canReach(pos)`
+  is just `!isUnreachable(pos)` -- so an unreachable elevated log is a valid target until tried and
+  condemned. (2) G74's reach-route give-up DID fire ("given up 3 times in a row -- marking it
+  unreachable") but called `requestBlockUnreachable`, whose default allows FOUR failures, so one
+  verdict counted as failure 1 of 5; the chooser (pure nearest-distance) then picked a sibling log
+  and the canopy was never excluded. Even made per-block-decisive it lost to the 45 s cool-off:
+  grinding a 3x3 canopy one log at a time (~3 give-ups each) took longer than the cool-off, so the
+  first logs returned to the pool before the last were excluded and the candidate list never emptied.
+- **Fix (core, minimal, G63-respecting).** `AbstractObjectBlacklist.blackListNow` -- a DECISIVE
+  verdict that excludes the target at once but stays EVIDENCE: cools off after 45 s and is retried,
+  a materially closer approach / better tool still restores it, never marked `deliberate`
+  (permanent); the price (`penaltyBlocks`, from `totalFailures`) counts real attempts only. Exposed
+  as `BlockScanner.requestBlockUnreachableNow`; and `requestAreaUnreachableNow(pos, r)` condemns the
+  local SAME-TYPE cluster together (unreachability is a local geometric fact), so an unreachable
+  patch is left after ONE verdict. G74's reach route uses the area form (radius 3); the dig route (a
+  movement goal into rock) stays per-block so a tunnel's rock is never condemned.
+- **Not a geometric reach pre-filter** -- that is the `chop_canopy` regression zone (an over-strict
+  reach filter once rejected EVERY candidate, scan=0/0/18384). The fix keeps "try, fail, exclude,
+  retry"; it only makes G74's already-strong verdict take effect at once, over the local patch.
+- **Verified on the stand (v0.95.12).** Canopy wedge: before FAIL (wedged whole window) -> after
+  PASS (condemned the cluster in one verdict, `pdRouteRefused=2`, `wandered=True`, then explored).
+  No regression: canopy recovery variant (took the reachable column, 13 s) PASS, tree_reach (log
+  from the ground, no pillar) PASS, canopy_drop (towered to the drop, flaws=none) PASS,
+  self_floor_dig (cobblestone 3.2 s) PASS, shaft_exit (out of the shaft 6.6 s) PASS. Built jar
+  javap-confirmed to carry `blackListNow`/`requestBlockUnreachableNow`/`requestAreaUnreachableNow`.
+
 ## 2026-09-18 — post-iron ceiling from two playthroughs; G105 freeze fixed; G93 shipped
 
 - **G105 validated + shipped (v0.95.7):** day-locked validation from the freeze checkpoint
