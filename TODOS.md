@@ -1,5 +1,33 @@
 # TODOs
 
+<!-- G107-CALLERS-STILL-UNGUARDED-2026-09-18 -->
+## G107's null-guard covers the predicates it touched, but two callers right next to them still dereference an unguarded read (2026-09-18)
+
+Read `Agent.java` after commit `243a2cab` (the off-thread null-BlockState NPE fix, a real
+mid-flee death) for a second pair of eyes, since the same file has two more sites doing the exact
+read this commit just proved can return null mid chunk-swap, neither covered by the new guards:
+
+1. **`Agent`'s own fall-handling code** (around line 821): `BlockPos landingPos =
+   this.getLandingPos(world); BlockState landingState = world.getBlockState(landingPos);` then
+   `landingState.getBlock()` a few lines later with no null check on `landingState` itself —
+   `getLandingPos` is now null-safe internally, but the CALLER re-reads the block state at the
+   position it returns and dereferences that fresh read directly.
+2. **`Agent.getVelocityMultiplier(WorldView)`**: `BlockState blockState =
+   world.getBlockState(new BlockPos(...)); float f = blockState.getBlock()...` — unguarded at the
+   very top, before `getLandingPos` even enters the picture, and the same method's own fallback
+   branch calls `world.getBlockState(this.getLandingPos(world)).getBlock()...` chained directly
+   with no check either.
+
+Not fixed here: adding a null guard is the same low-risk, purely-additive pattern the commit itself
+uses six times (never changes non-null behaviour), but the RIGHT fallback value for
+`getVelocityMultiplier` specifically (what velocity multiplier an unloaded/air-like read should
+report) is a physics-domain judgement call this seat cannot verify without a live client, and this
+is the exact file/area the parallel session is actively mid-investigation on (their own improved
+`logPlanFailure` stack-frame logging is explicitly built to catch "the next null read" fast) — a
+collision with their own natural next step is more likely here than almost anywhere else in the
+codebase right now. Left as a precise pointer: if the new logging catches another NPE from either
+of these two sites, this note already has the fix's shape.
+
 <!-- GITHUB-ISSUES-STALE-CANDIDATES-2026-09-18 -->
 ## GitHub issues worth a closing pass -- this sandbox has no `gh` and no API write token, so this is a recommendation, not an action (2026-09-18)
 
