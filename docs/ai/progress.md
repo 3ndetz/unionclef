@@ -1075,3 +1075,21 @@ intermittent before the first flood produces minable obsidian; a real world has 
 the bench's portal_found string-index was the "no portal" blind spot -- fixed, but worth a broader
 sweep for the same int(str) pattern elsewhere. Next ceiling is post-portal (the nether), which needs
 a full @gamer playthrough -- fps-limited on this stand.
+
+### 2026-09-19 (cont. 3) — fix B (cobble-in-frame churn) shipped; deep nav-stall is the ceiling
+Fix B (f5a6692b): a build-queue pillar placing a TARGET cell now towers with the STRUCTURE block
+(obsidian), not the cheapest throwaway. Verified: OBS bench run built the whole frame with ZERO
+frame-region destroys (obs 14->2, no place/destroy churn). Also EnterNetherPortalTask now constructs
+via the obsidian method (or the caller's task), never the fragile bucket cast (the getPortalTask was
+dead code). Released 0.95.15.
+
+REMAINING CEILING (deep, intermittent ~1 in 4-5 builds): a placement/nav stall that fix B does NOT
+address. Ground truth from a hard stall: the bot placed cobblestone at (2360,-57,358) -- which is the
+SIDE STAND it needs to stand in to place the front-scaffold cell (2359,-57,358)=(1,-1,0) -- and got
+stuck on top of it, "Placing cobblestone" forever. So the bot mis-places a throwaway at/near its own
+placement stand (FastNavigator approach, or placementStand picking an about-to-be-occupied stand),
+then cannot stand there. Hits frame cells (a bottom-row run-4 stall) and front-scaffold cells (this
+one) alike. This is a tungsten placementStand/FastNavigator reliability bug -- the next focused pass:
+trace why a throwaway lands on the chosen side stand and prevent it (or re-pick a stand when the
+first is occupied). The front-scaffold also ADDS cells that can hit this, so consider whether a
+smaller/no-scaffold top-row approach nets better once the stall is fixed.
