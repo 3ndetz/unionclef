@@ -1012,6 +1012,21 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         if (st.getHardness(mod.getWorld(), blocking) < 0) {
             return false;
         }
+        // ⛔ AN OBSTRUCTION CLEAR MUST HONOR BREAK PROTECTION, NOT JUST THE INTENDED TARGET
+        // (G108, 2026-09-19). Clearing whatever the reach ray hits is a RAW CLICK_LEFT swing
+        // (InputControls.hold), which bypasses the planner/executor's canBreakHook -> BreakRules
+        // -> shouldAvoidBreaking chain entirely. Measured on the nether portal: while removing the
+        // front scaffold, an out-of-reach scaffold cell left the ray stopped by the top-row FRAME
+        // obsidian (the frame plane sits one block above the scaffold top, air in front), so this
+        // branch mined the protected frame cell for the full 9 s obsidian dig -- corrupting the
+        // finished frame, forcing a re-gather that drained the lava lake, and stranding the
+        // re-placement (the scaffold that was that cell's only stand is gone). The intended TARGET
+        // may be dug freely, but an OBSTRUCTION we only want out of the way must respect the same
+        // avoiders every other break path does; refuse to clear a protected block and let the task
+        // reposition for a clean line instead.
+        if (mod.getExtraBaritoneSettings().shouldAvoidBreaking(blocking)) {
+            return false;
+        }
         return !blocking.equals(mod.getPlayer().getBlockPos().down());
     }
 
