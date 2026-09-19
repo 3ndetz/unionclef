@@ -3,7 +3,52 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — G108 portal: misdirection backstop (v0.95.18) + the recovery ceiling, precisely located
+## 2026-09-19 (latest) — G108 portal: the flood ceiling FIXED at the core (v0.95.19), full flood 6/6
+
+The remaining full-flood failure was root-caused to a single wrong line and fixed. Full obsidian
+flood went 4/6 -> 6/6 on a fresh, uncontended stand; nav regression clean.
+
+- **Root (tungsten `BlockPlaceHelper.placementStand`).** The intermittent stall was always the same
+  cell -- the first bottom-row frame cell (2358,-57,357) -- with the body standing in/beside it,
+  "Wandering" or "Placing" for the whole window and never placing it (measured 246 s on one run). The
+  drain trace named it: the drain PILLARED a ground cell (`pillarbase=... PILLAR(...)`, walking the
+  body INTO the cell to jump-place) and `blockedByOwnBody` climbed to 5..28. It only pillared because
+  `placementStand` returned null. Reading the source: `placementStand` ("where do I stand to place
+  this") gated every candidate facing on `placementPlausible(target)`, which tests whether the block
+  would intersect an ENTITY -- the player -- at its CURRENT position. Once the body drifts onto the
+  target cell (routine for a bottom-row cell reached from the gather side, or after a wander lands the
+  body on it), plausibility fails for every facing, `placementStand` returns null, `drainQueue` takes
+  the PILLAR branch (`sideStand==null && standable(head)`), which walks the body FURTHER into the
+  cell -- a self-sustaining jam.
+- **Fix (v0.95.19, shipped).** Remove the `placementPlausible` gate from `placementStand`.
+  Stand-finding is about a FUTURE position, so the body's current overlap is irrelevant; the real
+  placement-plausibility check already runs in `drainQueue`'s main place loop, at the moment of
+  placing, when the body is at the stand (`blockedByOwnBody++` there). `adjacentStand` already excludes
+  the target cell and any stand whose head is the target, so the chosen stand never leaves the body in
+  the cell it fills. Column-top cells that genuinely need pillaring are unaffected (their sides are
+  open air, so `adjacentStand` still finds no stand). Measured: full flood 4/6 -> **6/6** (fresh
+  client, clean bench; 3 of 6 teleported into the nether). Nav guard
+  nav_break/nav_wall2/nav_bridge/nav_flat/nav_staircase/nav_descend **6/6** (the drain change does not
+  regress movement-time building).
+- **Two attempts measured and REVERTED (kept off), with reasons:**
+  1. **The three wander-recovery flags** (`wanderSearchMustMove`, `wanderTargetFollowsTheGround`,
+     `wanderSpiralCountsLegsNotTries`) -- to make the escape wander re-pick a reachable point instead
+     of jamming ~60 s against the frame wall. Measured neutral-to-worse, and decisively: the body then
+     THRASHED near the frame but the place still never landed. That proved the wander was a SYMPTOM,
+     not the root -- the place-stall is upstream of it. Reverted; the real fix is `placementStand`.
+  2. **The per-cell directed escape** in `ConstructNetherPortalObsidianTask` (a `TimerGame(10)` ->
+     `GetToBlockTask(lastGoodPos)`). It never fired -- not on any passing run and not on the failing
+     one -- because `PlaceBlockTask`'s own wander engaged first. Dead reactive code; removed.
+- **Method note (RULE ZERO / instrument-affects-measurement).** A fix-arm reading of 3/6 was
+  DISCARDED as confounded: it ran with a heavy per-tick block-probe instrument (~12 `docker exec`
+  reads every wander tick) that starved the client during the exact phase under test. Removing the
+  probe gave the clean 6/6. The instrumentation (`buildQueue()` drain-counter dump + per-cell block
+  probe) was added to `nether_portal_test.py` to catch the trace, then reverted so it cannot skew a
+  rate. Also confirmed: much of the earlier "~4/5" variance is the client fps AGEING over a long
+  batch (early runs pass, late runs fail) and a competing `uctest-mc-tester2` container -- a bench
+  artifact, per RULE ZERO/SEVEN, not a bot defect.
+
+## 2026-09-19 — G108 portal: misdirection backstop (v0.95.18) + the recovery ceiling, precisely located
 
 The full-flood ceiling was peeled one more layer. Two more roots fixed/attempted, and the TRUE
 remaining blocker is now precisely located: stall DETECTION is comprehensive, stall RECOVERY is not.
