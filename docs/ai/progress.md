@@ -33,22 +33,29 @@ build; the next frontier moved one step forward, to the frame build on real terr
   scan chose far above the deep lava). The frame build is 6/6 on the FLAT bench (v0.95.19); real
   terrain -- an uneven, elevated pad -- is messier. Food (v0.95.20), flood-approach (v0.95.21) and the
   obsidian mine (v0.95.22) are all fixed and validated.
-  - **SHARPENED (live @build repro on the gamer world, 2026-09-19).** Gave 17 obsidian + prereqs, tp'd
-    to natural terrain, `@build portalobs`. The frame reached ~half-built then the drain reported
-    **`NOSTAND(725,75,818)`** (deferNoFace=1, queued=0) on a column-base frame cell: the cell's
-    support below (725,74,818) is obsidian, but the STAND cells beside it are `air`/`spruce_leaves`
-    -- there is no solid pad at stand level, so `placementStand` finds nothing and the cell is
-    deferred, and the task loops ("Placing" <-> "No tasks"). This matches the real run's wander.
-    ROOT CLASS: on chaotic terrain the site lacks the solid, flat pad the flat bench's
-    `isCleanFlatBuildSite` guarantees; `getBuildableAreaNearby` either falls to the weaker
-    `isDecentBuildSite` or sites on uneven ground, so frame cells have no reachable stand. (Caveat:
-    this fast repro also lacked cobblestone for the front scaffold and used an arbitrary tp, so a
-    clean checkpoint repro -- the bot's own site scan + gathered cobblestone -- is still owed before
-    the fix.) FIX DIRECTION (the next pass, a real core change, not a band-aid): build the portal on a
-    pad the bot LEVELS/LAYS itself (it has cobblestone), or make the site scan require a genuinely
-    solid stand-complete pad and lay one when none exists -- so every frame cell has a solid stand on
-    any terrain. This is the deep nav+build seam NAVIGATION.md flags known-hard; it is the last layer
-    between the validated pieces (food, flood, mine, flat-frame) and a lit portal on natural terrain.
+  - **CLEAN diagnosis (checkpoint repro, the bot's own site + gathered materials, 2026-09-19).** An
+    earlier fast `@build` repro looked like the frame floated over air, but that was CONFOUNDED (I
+    tp'd the bot onto trees, so it sited over a void). The clean checkpoint run corrects it: the real
+    frame is GROUNDED -- at the wander cell (736,70,828) the column below reads obsidian 67/68/69 on
+    STONE from y=66 down. So the site pad IS solid; the stall is the HIGH FRAME CELL, plus a long
+    shuttle. Two intertwined factors, both measured live at the wander:
+    1. **High-cell stand.** (736,70,828) is a 1-wide frame cell 3-4 blocks above the y=66 ground; the
+       neighbours (735/737,*,828) are air, so there is no ground side stand and it needs the
+       pillar/scaffold path -- the same high-cell case the flat bench handles 6/6, failing here on the
+       real elevated column.
+    2. **Deep-mine <-> elevated-build shuttle.** The drain trace at the stall is
+       `pillarbase=736,70,828 from=787,22,813` -- the body is at the MINE (787,22), ~51 blocks away
+       and ~45 BELOW the build site (736,67), holding obsidian but unable to return and place, so
+       PlaceBlockTask wanders ("Wander for 5"). The flood lava is deep (y=21) and far from the surface
+       build pad the site scan chose, so every "mine more obsidian -> carry it back up and across ->
+       place a high cell" round trip is long and nav-fragile.
+    This is the deep, MULTI-FACTOR nav+build seam NAVIGATION.md flags known-hard -- not one wrong line
+    like the four fixes this session. The next pass must pinpoint which of the high-cell chain
+    (front scaffold built? pillar fired? placementStand?) fails on the real column AND whether the
+    site scan should keep the build near the lava / at a height that avoids the deep vertical shuttle.
+    Everything upstream (food v0.95.20, flood-approach v0.95.21, obsidian mine v0.95.22, flat frame
+    v0.95.19) is fixed and validated; this multi-factor seam is the last layer before a lit portal on
+    natural terrain.
 
 ## 2026-09-19 — natural-terrain capstone: portal path stalled on the obsidian MINE holding a water bucket (fixed in v0.95.22, below)
 
