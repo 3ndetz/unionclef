@@ -1643,13 +1643,29 @@ test + full nav-suite regression before it counts done.
       then "Collecting building materials" from zero). Recorded as data for the night track
       (G77, deferred by the operator); the part that is not the night: a death costs the whole
       base because nothing is carried back and the respawn point is never set.
-- [ ] **G102 — `[Alto Clef] Average Position: (1826.0, -13.0, 370.0)` printed 13446 times** in
+- [x] **G102 — `[Alto Clef] Average Position: (1826.0, -13.0, 370.0)` printed 13446 times** in
       the second 60-minute run, the coordinates of the mine the bot died in, still printed
       1700 blocks away after the respawn. Find the writer and gate or remove it.
-- [ ] **the nether stage was entered for the first time** (same run, t=1948: `Going to Nether →
+      **FIXED v0.95.3 (commit `35a0ea99`, 2026-09-16):** the writer was
+      `BeatMinecraftTask.doSimpleSearchForEndPortal`'s `mod.log("Average Position: " + average)`,
+      called every tick the frame count was met, always the same value once the ring is fully
+      scanned. Gated on change with a `lastLoggedPortalAverage` field so it logs once per distinct
+      value instead of once per tick. Checkbox was left unflipped for three days after the fix
+      shipped -- found and corrected 2026-09-19 by reading the current source against this entry
+      rather than trusting the box, the same stale-checkbox pattern already recorded elsewhere in
+      this file.
+- [x] **the nether stage was entered for the first time** (same run, t=1948: `Going to Nether →
       Going to dimension: NETHER → Construct Nether Portal → Getting flint & steel → Craft
       2x2`), on the rebuilt inventory after the first death, and lost to death two. Nothing of
       the portal path has been exercised yet; the next run that survives will show it.
+      **SUPERSEDED** by the whole nether-portal build investigation this note anticipated (v0.95.9
+      through v0.95.23+, `docs/ai/progress.md`, G108-shaped but never itself G-numbered): routing,
+      gathering, siting, frame geometry, placement physics, reclaim reliability and pillar material
+      were each found and fixed in turn, ending in a `minecraft:nether_portal` built and lit on real
+      natural terrain (v0.95.23) and a clean capstone run (2026-09-19) chaining food, flint, the
+      nether rung, flooding and obsidian-mining with zero stalls, limited only by the test window's
+      length. The portal path has now been exercised extensively; what this line was watching for
+      has already happened. Checked, not just assumed, before flipping the box.
 - [ ] **G103 — the bread/food target deadlocks the whole run: 46 minutes of craft-bread ⟷
       pick-up-crafting-table, no iron** (third 60-minute run, 2026-09-16, fresh start #56 at
       (1792,150,661); checkpoint `loop-bread` reproduces it, `cp0916-2241-t900` is 15 min in as it
