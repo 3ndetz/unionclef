@@ -3,7 +3,39 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — natural-terrain capstone: portal path now stalls on the obsidian MINE holding a water bucket (next frontier, precisely located)
+## 2026-09-19 (latest) — v0.95.22: the obsidian MINE equips its pickaxe (deadlock fixed); natural-terrain path now reaches the FRAME build
+
+The capstone's obsidian-mine stall (bot "mining" exposed obsidian with a water bucket, 0 progress)
+was root-caused live and fixed. The natural-terrain path now mines the obsidian and reaches the frame
+build; the next frontier moved one step forward, to the frame build on real terrain.
+
+- **Root (found by live diagnosis, no guessing).** `DestroyBlockTask.equipBestToolFor` skipped the
+  tool equip whenever `PathExecutor.isPlacingNow()` was true. That is QUEUE-based (`placeQueue`
+  non-empty, PathExecutor:332), true whenever a STALE bridge/place segment lingers from the approach
+  route -- not only during an active place. On natural terrain the route to the flooded obsidian left
+  a place segment queued, so isPlacingNow stayed true, equipBestToolFor was skipped every tick, the
+  pickaxe was never equipped, and the bot "mined" exposed obsidian with the flood's water bucket for
+  7+ minutes (obsidian 0) -- and because it could not break, the queue never drained: a deadlock.
+  Confirmed on the LIVE stall (no full repro): the target was real exposed obsidian, food 20/20 (not
+  hunger), a hotbar pickaxe was skipped too (not a main-inv reach issue), and manually selecting the
+  pickaxe let it break -- so only the equip was blocked, by isPlacingNow.
+- **Fix (v0.95.22, shipped).** Remove the `isPlacingNow` guard from `equipBestToolFor`. Every caller
+  is a breaking context that has just claimed the tick (`minerMineUntilMs`/`minerAimUntilMs` set
+  immediately before), so the executor yields and will not place this tick -- the miner owns the hand
+  and must equip its tool. FoodChain-eating guard stays.
+- **Validated on `nether-reach` (natural terrain).** Obsidian mined **0 -> 14** (was stuck at 0), and
+  the bot reached "Building nether portal with obsidian" and placed 10 of the obsidian on natural
+  terrain. Nav regression nav_break/nav_wall2/nav_bridge/nav_flat/nav_staircase/nav_descend **6/6**
+  (the change only makes the mining tool equip more reliable). Did not light the portal in the 24-min
+  window (natural terrain + underground mob combat is slow).
+- **Next frontier (moved forward one step): the natural-terrain FRAME build.** After placing ~10
+  obsidian the frame build wanders at the build site (measured 728,75,827 -- an elevated pad the site
+  scan chose far above the deep lava). The frame build is 6/6 on the FLAT bench (v0.95.19); real
+  terrain -- an uneven, elevated pad -- is messier. That is the next pass: the frame build on natural
+  terrain, then the light + nether entry. Food (v0.95.20), flood-approach (v0.95.21) and the obsidian
+  mine (v0.95.22) are all fixed and validated.
+
+## 2026-09-19 — natural-terrain capstone: portal path stalled on the obsidian MINE holding a water bucket (fixed in v0.95.22, below)
 
 After the three portal releases (v0.95.19/20/21) I ran a 24-min `--from nether-reach` capstone to see
 the full natural-terrain portal light + nether entry. The bot chained the whole path cleanly: food
