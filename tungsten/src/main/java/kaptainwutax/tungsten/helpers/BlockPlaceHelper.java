@@ -454,8 +454,10 @@ public final class BlockPlaceHelper {
                     walkDebug += "PILLAR(" + head.toShortString() + ") ";
                 }
                 // One step: the block lands in this cell and we come to rest on top of it, which
-                // is where the next cell of the run wants us anyway.
-                kaptainwutax.tungsten.task.PillarTask.startTo(head.getY() + 1);
+                // is where the next cell of the run wants us anyway. Tower with the STRUCTURE block
+                // (this IS the target cell), not a throwaway -- otherwise the frame-builder gets a
+                // cobblestone where obsidian belongs and destroys/re-places it forever (G108).
+                kaptainwutax.tungsten.task.PillarTask.startTo(head.getY() + 1, headCell.blockName());
                 idleTicks = 0;
                 return;
             }
@@ -889,6 +891,13 @@ public final class BlockPlaceHelper {
         if (id.endsWith("_log") || id.endsWith("_wood") || id.endsWith("_stem") || id.endsWith("_hyphae")) return 2;
         if (id.contains("ore") || id.endsWith("_block") || id.equals("obsidian") || id.equals("crying_obsidian")) return 5;
         return 3;
+    }
+
+    /** Public gate to {@link #equipBlock} for PillarTask: a build-queue pillar placing a TARGET cell
+     *  must tower with the STRUCTURE block, not a throwaway. Returns false when it is not in the
+     *  hotbar (the pillar then stops rather than tower the frame out of the wrong block). */
+    public static boolean equipNamedBlock(ClientPlayerEntity player, String blockName) {
+        return equipBlock(player, blockName);
     }
 
     /** Hold {@code blockName}. Returns false when it is not in the hotbar at all — the caller

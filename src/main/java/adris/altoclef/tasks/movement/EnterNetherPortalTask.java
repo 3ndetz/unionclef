@@ -3,7 +3,6 @@ package adris.altoclef.tasks.movement;
 import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasks.DoToClosestBlockTask;
-import adris.altoclef.tasks.construction.compound.ConstructNetherPortalBucketTask;
 import adris.altoclef.tasks.construction.compound.ConstructNetherPortalObsidianTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Dimension;
@@ -103,18 +102,21 @@ public class EnterNetherPortalTask extends Task {
             return new DoToClosestBlockTask(blockPos -> new GetToBlockTask(blockPos, false), standablePortal, Blocks.NETHER_PORTAL);
         }
 
-        //this probably isn't needed here, the check should fail everytime
-        
-        if (!mod.getBlockScanner().anyFound(standablePortal, Blocks.NETHER_PORTAL)) {
-            setDebugState("Making new nether portal.");
-            if (WorldHelper.getCurrentDimension() == Dimension.OVERWORLD) {
-                return new ConstructNetherPortalBucketTask();
-            } else {
-                return new ConstructNetherPortalObsidianTask();
-            }
+        // No standable portal found -> construct one.
+        // ⛔ CONSTRUCT WITH THE OBSIDIAN METHOD, NOT THE FRAGILE BUCKET CAST (G108, 2026-09-19). This
+        // branch built via ConstructNetherPortalBucketTask in the overworld -- the per-block cast that
+        // stalls on the mid-air upper frame (the whole reason G108 switched to the obsidian method,
+        // now reliable: flood a lake, build the cornered frame incl. the top row from a front
+        // scaffold, light). And the caller-supplied getPortalTask was DEAD CODE: the anyFound check
+        // above and its negation covered every case and both returned, so the old trailing
+        // `return getPortalTask` was unreachable and the obsidian task Playground/FastTravelTask hand
+        // in never ran. Prefer the caller's task; otherwise default to obsidian (reliable in both
+        // dimensions -- it floods a lake in the overworld, trades with piglins in the nether).
+        setDebugState("Making new nether portal.");
+        if (getPortalTask != null) {
+            return getPortalTask;
         }
-        setDebugState("Getting our portal");
-        return getPortalTask;
+        return new ConstructNetherPortalObsidianTask();
     }
 
     @Override

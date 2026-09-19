@@ -114,9 +114,24 @@ public class PillarTask {
         return refusedColumn.getX() == column.getX() && refusedColumn.getZ() == column.getZ();
     }
 
+    /**
+     * ⛔ WHICH BLOCK TO TOWER WITH (G108, 2026-09-19). A pillar to GAIN HEIGHT (a nav climb) spends
+     * throwaway -- {@code startTo(ty)} leaves {@code structureBlock} null and the tick picks the
+     * cheapest scaffold. But the build queue also pillars to place a TARGET cell (a portal frame block
+     * the placer reaches only by towering into it), and THAT block must be the structure material, not
+     * cobblestone: {@code startTo(ty, "obsidian")} pins it, so the frame cell is obsidian, not a
+     * throwaway the frame-builder then destroys and re-places forever.
+     */
+    private static String structureBlock;
+
     public static synchronized boolean startTo(int ty) {
+        return startTo(ty, null);
+    }
+
+    public static synchronized boolean startTo(int ty, String structureBlockName) {
         ClientPlayerEntity p = MinecraftClient.getInstance().player;
         if (p == null) return false;
+        structureBlock = structureBlockName;
         targetY = ty;
         climbGoalY = ty;
         placed = 0;
@@ -144,6 +159,7 @@ public class PillarTask {
 
     public static void stop() {
         active = false;
+        structureBlock = null;   // next pillar defaults to a throwaway climb unless told otherwise
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.options != null) {
             mc.options.jumpKey.setPressed(false);
@@ -218,10 +234,16 @@ public class PillarTask {
             }
         }
 
-        // Same re-equip as BridgeTask: a tower that stops halfway because one stack ended is
-        // not a tower. One policy, one place — helpers/BlockPlaceHelper.equipThrowaway.
-        if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.equipThrowaway(player)) {
-            Debug.logMessage("Pillar: out of blocks — nothing placeable in the hotbar");
+        // Re-equip each tick so a tower does not stop halfway when one stack ends. For a nav climb
+        // that is the cheapest throwaway (equipThrowaway); for a build-queue pillar placing a TARGET
+        // cell it is the STRUCTURE block (structureBlock), so the frame cell is obsidian, not a
+        // throwaway the frame-builder destroys and re-places forever (G108).
+        boolean equipped = structureBlock != null
+                ? kaptainwutax.tungsten.helpers.BlockPlaceHelper.equipNamedBlock(player, structureBlock)
+                : kaptainwutax.tungsten.helpers.BlockPlaceHelper.equipThrowaway(player);
+        if (!equipped) {
+            Debug.logMessage("Pillar: out of blocks — nothing placeable in the hotbar (want "
+                    + (structureBlock == null ? "scaffold" : structureBlock) + ")");
             stop();
             return;
         }
