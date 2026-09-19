@@ -40,6 +40,19 @@ the deep (y=37) nether-reach checkpoint is a hard FLOOD DEADLOCK:
   into / stand where it can fall into the lava it is flooding (surface flooding is safe; the cramped
   underground lake is where it dies). Daylock does NOT stop cave mobs (Mob Defense fired p80), a
   secondary underground hazard. This is a SEPARATE issue from the deadlock, revealed by fixing it.
+- **Lava death REPRODUCED + mechanism (2nd run from flood-stuck).** After escaping and wandering
+  ("Going to Nether -> Searching for a lava lake"), the bot returned to the lake and died mining
+  obsidian. Trace (y is the tell): flooding+mining at y=21 around (784-788,816-821), obs 0->5, then
+  y 21 -> 20.9 -> 20.3 as it mines DOWN INTO the basin, steps into unconverted lava, dead (respawn
+  109,135,-28). So the flood converts the SURFACE layer of lava sources to obsidian, but lava remains
+  deeper in the basin; the obsidian collect (MineAndCollectTask/DestroyBlockTask) follows the vein
+  down into the basin and the body steps onto a cell adjacent to / above remaining lava. The
+  reclaimed water no longer protects it. Reproducible: the bot eventually returns to the lake and
+  dies this way. FIX DIRECTION (next, core, not a bandaid): make the obsidian collect lava-SAFE --
+  candidates: (a) mine only obsidian reachable from a safe stand not adjacent to / above lava (don't
+  descend into the basin); (b) keep the protective water sheet over the basin while mining, reclaim
+  LAST, so a mis-step lands in water not lava; (c) flood the basin more completely before mining.
+  Needs a lava-safe-mining repro and careful testing so it does not regress the surface build.
 
 ## 2026-09-19 — v0.95.22: the obsidian MINE equips its pickaxe (deadlock fixed); natural-terrain path now reaches the FRAME build
 
