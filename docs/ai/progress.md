@@ -30,6 +30,16 @@ nether checkpoint (bot alive just after entry) should be captured first for a de
 this run's entry was proven but the bot died before an auto-checkpoint caught it in the nether.
 The underground-lava-survival worst-case (flood-stuck) remains a documented robustness follow-up,
 lower priority now that the typical path reaches the nether.
+- **One-run nether entry RE-VALIDATED (RULE FIVE, 2nd sample) + `nether-fresh` checkpoint captured.**
+  A second nether-reach run flooded a deep lava lake, mined obsidian safely (obs 14, hp 20 throughout,
+  no lava death), built + lit the frame, and entered the nether -- the bench's new nether-entry hook
+  fired ("NETHER ENTERED -- clearing nearby hostiles + healing"), saving `nether-fresh`: bot in
+  minecraft:the_nether at (79.6,56,113.3), hp 20, food 20, xp 15, 34 stacks (fully equipped). That is
+  the deterministic, survivable START for the NETHER-STAGE pass. With the entry hostiles cleared the
+  bot then SURVIVED in the nether (hp 20 at t=30 min, winning a mob fight), where the first run died to
+  Enderman knockback -- so nether survival is tractable from a clean start.
+- NEXT PASS start: `python3 deploy/runner/gamer_smoke.py N --from nether-fresh` -> nether-stage
+  survival + progression (Enderman/ledge/lava fall-safety, mob defense, then blaze rods / fortress).
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
