@@ -40,6 +40,20 @@ lower priority now that the typical path reaches the nether.
   Enderman knockback -- so nether survival is tractable from a clean start.
 - NEXT PASS start: `python3 deploy/runner/gamer_smoke.py N --from nether-fresh` -> nether-stage
   survival + progression (Enderman/ledge/lava fall-safety, mob defense, then blaze rods / fortress).
+- **NETHER STAGE observed live from nether-fresh -- it WORKS, and its core blocker is LAVA SAFETY.**
+  The bot's nether goal is correct and it PROGRESSES: "Beating the game -> Hunting endermen for pearls
+  4/14 [ender_pearl x 14]" -- it survives the nether, fights mobs (Mob Defense), and collects ender
+  pearls (4/14, items 864). Then it DIED: server "tester1 tried to swim in lava to escape Enderman"
+  -- fighting/fleeing an Enderman near the nether's lava it backed INTO the lava. So the nether stage
+  is tractable, and its #1 blocker is the SAME lava-safety root as the underground-portal worst-case:
+  the pathfinder / combat movement steps the body into lava when near lava. In the nether (lava
+  everywhere) this is critical.
+  ⭐ **UNIFIED HIGHEST-LEVERAGE FRONTIER: robust LAVA AVOIDANCE** (tungsten pathfinder + combat/flee):
+  the body must never step into lava, even fighting/fleeing near it. Fixing it unblocks BOTH the
+  underground-portal worst-case (flood-stuck burns) AND nether-stage progression (Enderman combat
+  near lava). Repro: `--from nether-fresh` (dies to lava-vs-Enderman) and `--from flood-stuck` (burns
+  under the lake). This is the next focused pass -- deep + delicate (do not regress lava-crossing /
+  descent), with those two deterministic repros.
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
