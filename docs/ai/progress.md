@@ -27,16 +27,24 @@ remaining blocker is now precisely located: stall DETECTION is comprehensive, st
   3. **Dropping the `drainDriving &&` guard on PlaceBlockTask's stall check.** Prematurely wandered a
      legit aim pause (drain not walking while the crosshair settles) and broke the clean build.
      Reverted; the guard stays.
-- **THE REMAINING BLOCKER, precisely: stall RECOVERY cannot relocate a build-trapped body.** Every
-  detector now fires (shimmy grace with a fixed anchor; the parked-aim per-cell timer). What fails is
-  the escape: `TimeoutWanderTask`/tungsten nav cannot path a body off a spot trapped by the build --
-  a 1-block step at the frame edge, a narrow scaffold ledge, a gather-dug lip. Measured signature: the
-  body BOBS (feet y oscillating ~1 block) for 100-180 s and covers 0 blocks. A likely factor: the
-  spiral wander sometimes targets a point ACROSS the frame, so nav jams against the obsidian wall.
-  **Next pass (the ONE core fix to make):** a recovery that reliably relocates a build-trapped body --
-  a DIRECTED step to a known-clear approach cell AWAY from the frame (not a random spiral that can aim
-  through it), or a sturdier/wider stand so the body never gets trapped. This is the nav+build seam
-  NAVIGATION.md flags known-hard; it is the standing post-iron portal ceiling (full flood ~3/4).
+- **THE REMAINING BLOCKER, precisely: stall RECOVERY is TOO SLOW (not absent).** Every detector now
+  fires (shimmy grace with a fixed anchor; the parked-aim per-cell timer). The escape wander
+  (`TimeoutWanderTask`) DOES eventually relocate a build-trapped body -- measured, the body BOBS in
+  place ~60 s at a frame-stuck spot (feet y oscillating ~1 block, "Wander … Exploring", 0 blocks
+  covered) and THEN breaks free and travels ~30 blocks away. So nav CAN path off the spot; it just
+  jams on the wander's first spiral point (unreachable -- likely aimed ACROSS the frame, into the
+  obsidian wall) for ~60 s before re-picking a reachable one. On a full flood with several high cells
+  each costing a ~60 s escape, the run blows the window -> FAIL.
+  - **Hunger REFUTED (2026-09-19):** a permanent saturation effect (foodLevel 20, verified) did NOT
+    prevent the parked stall OR the slow escape -- so FoodChain is not the interrupter; the re-arm
+    churn / parked aim is something else (Unstuck-chain suspected) and the escape slowness is
+    independent of it.
+  **Next pass (the ONE core fix to make):** make the escape FAST -- a DIRECTED move to a known-clear
+  approach cell (not the random spiral that jams ~60 s against the frame), or shorten the wander's
+  per-point jam timeout so it re-picks a reachable point in a few seconds, or a sturdier/wider stand
+  so the body never gets trapped at the frame edge. Detection is done; only fast recovery remains.
+  This is the nav+build seam NAVIGATION.md flags known-hard; the standing post-iron portal ceiling
+  (isolated build 8/8; full flood ~3/4).
 
 ## 2026-09-19 (later) — G108 portal: shimmy-stall fix (v0.95.16) + full-flood cell-loss fix (v0.95.17)
 
