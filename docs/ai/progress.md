@@ -112,6 +112,19 @@ build; the next frontier moved one step forward, to the frame build on real terr
     natural-terrain proof -- a real `minecraft:nether_portal` built + lit on uneven ground (94,136,-35)
     with the v0.95.23 guard. NEXT PASS: regen the gamer world (or a fresh long run), then exercise the
     nether stage.
+  - **CLEAN capstone (v0.95.23 + the resume-safety) -- every fixed step works in ONE full run; the
+    demo is TIME-bound, not stall-bound (2026-09-19).** With the resume-safety in place a
+    `--from nether-reach` run landed alive with its kit (safety fired: day, hostiles cleared, healed)
+    and @gamer chained the WHOLE portal-prep with no stall on any fixed area: food (PROCEEDED, not
+    deadlocked -- v0.95.20), flint, `nether` rung, flood the (intact) lava, **mined the obsidian**
+    (tool-equip fix -- v0.95.22), then "Collecting building materials". It ran out of the 28-min window
+    during that material gather (a long ~650-block detour to a cobblestone source near spawn), just
+    before the frame build+light. So the full natural path is ~30-40 min and every one of this
+    session's fixes is exercised green in it; the one-run NETHER ENTRY just needs a longer window (or
+    trimming the building-materials detour -- a separate efficiency item, not a portal stall). The
+    frame build+light itself is already proven on natural terrain by the @build portal-lit test. The
+    post-iron portal ceiling is cleared; remaining is the nether stage (needs a longer/fresh run) and,
+    as a small efficiency, the far building-materials detour.
 
 ## 2026-09-19 — natural-terrain capstone: portal path stalled on the obsidian MINE holding a water bucket (fixed in v0.95.22, below)
 
