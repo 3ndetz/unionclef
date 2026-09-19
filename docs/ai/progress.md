@@ -3,6 +3,40 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
+## 2026-09-19 (later) — G108 portal: shimmy-stall fix (v0.95.16) + full-flood cell-loss fix (v0.95.17)
+
+Two released fixes closed the two dominant post-iron portal failures. The isolated build bench went to
+8/8; the full flood's dominant intermittent failure (a lava-lake-draining churn) was root-caused and
+fixed.
+
+- **The shimmy stall (v0.95.16).** The remaining post-iron stall was a SHIMMY, not a freeze: a
+  placement that could not reach its stand oscillated the body ~0.4 blocks/tick against the cell (75+ s
+  under "Placing … at …", frame never completing). Two-part core fix: (1) `MovementProgressChecker`'s
+  grace anchor was a FOLLOWING anchor with a 0.02-block per-tick bar, so a shimmy cleared it every tick
+  and the grace never expired — replaced with a FIXED anchor + 1-block NET-distance bar, exposed as
+  `stalledInPlace()`; (2) `PlaceBlockTask` wanders on `stalledInPlace()`, and RELEASES the build drain
+  (`clearQueue` + `FastNavigator.stop()`) before the wander, because the wander and the drain both steer
+  tungsten — two owners of one nav singleton had frozen the body for 50 s. Verified: GIVE_OBS build
+  bench 8/8, two runs hit a shimmy and recovered in one wander; `mob_melee` combat regression clean
+  (the shared-utility change does not regress combat).
+- **The full-flood cell-loss (v0.95.17).** On the full flood the finished frame was being corrupted:
+  `DestroyBlockTask`'s obstruction-clear (the branch that mines whatever the reach ray is stopped by
+  when the target is briefly out of reach) is a RAW `CLICK_LEFT` swing that bypasses the
+  planner/executor break-protection chain, and `canClear` only rejected air/fluid/unbreakable/
+  self-floor. While removing the front scaffold, an out-of-reach scaffold cell left the ray stopped by
+  the top-row FRAME obsidian (frame plane one block above the scaffold top, air in front), so the bot
+  mined a finished frame cell (9 s obsidian dig) — the frame re-read incomplete, the re-gather drained
+  the finite lava lake into "Searching for a lava lake … Wander for Infinity" (timeout). Root-caused by
+  a sub-agent trace (file:line). Fix: `DestroyBlockTask.canClear` now refuses any block
+  `shouldAvoidBreaking` rejects, the same check every other break path makes — the intended TARGET is
+  still dug, only an OBSTRUCTION must respect protection. General fix (DestroyBlockTask backs beds,
+  portals, protected zones). Full flood: baseline 3/4 (the fail was this cell-loss), Fix verified 2/2
+  clean (scaffold removal completes, frame intact, obsidian stays 0).
+- **Bench correctness (v0.95.16).** The portal bench scanned for a portal block within rad 10 of the
+  BOT client-side; a freshly lit portal teleports the bot to the nether, unloading the overworld build
+  chunk, so the near-bot scan found nothing and reported FAIL on a working portal. Now reads the bot's
+  dimension server-side each poll — entering the nether is a definitive PASS.
+
 ## 2026-09-19 — G108 portal: the frame-PLACEMENT layer (columns build now; top-row middles + a re-gather churn remain)
 
 Continuing the nether-portal build (the flood-gather + off-pool cornered frame from 228bac27 reaches
