@@ -30,11 +30,13 @@ public class CollectFoodPriorityCalculator extends ItemPriorityCalculator {
 
     private final AltoClef mod;
     private final double foodUnits;
+    private final double minFoodUnits;
 
-    public CollectFoodPriorityCalculator(AltoClef mod ,double foodUnits) {
+    public CollectFoodPriorityCalculator(AltoClef mod, double foodUnits, double minFoodUnits) {
         super(Integer.MAX_VALUE,Integer.MAX_VALUE);
         this.mod = mod;
         this.foodUnits = foodUnits;
+        this.minFoodUnits = minFoodUnits;
     }
 
     /** Hunger remains urgent even when discovery has no known food target yet. */
@@ -55,8 +57,22 @@ public class CollectFoodPriorityCalculator extends ItemPriorityCalculator {
         double multiplier = 1;
         double foodPotential = CollectFoodTask.calculateFoodPotential(mod);
 
-        //prevents from going to the nether without any food
-        if (Double.isInfinite(distance) && foodPotential < foodUnits) return 0.1d;
+        // ⛔ AN UNREACHABLE TOP-UP MUST NOT DEADLOCK THE NETHER (G106 completion, 2026-09-19).
+        // When no food source is reachable (distance infinite) and the reserve is short of the
+        // top-up target, this used to return 0.1 UNCONDITIONALLY -- a weak-but-positive priority
+        // that keeps CollectFood selected over the "Going to Nether" fall-through (gated on every
+        // gather <= 0, BeatMinecraftTask), so on food-depleted terrain the bot wanders for food
+        // that is not there FOR EVER and never builds the portal (measured: resume of the
+        // nether-reach checkpoint stalled on "Collect 140 food / Wander for Infinity", 0 portal).
+        // The G106 intent was already "proceed with a solid buffer it tops up, not hoard": minFood-
+        // Units (120) is that buffer. So keep blocking the nether (0.1, and keep exploring) only
+        // while the reserve is BELOW the survival floor; once it is adequate but the top-up is
+        // unreachable, stand down (NEGATIVE_INFINITY) so progression fires. A reachable food source
+        // (finite distance) still tops up to foodUnits normally, and needsEmergencyFood (+inf above)
+        // and the low-reserve ramp still guard survival.
+        if (Double.isInfinite(distance) && foodPotential < foodUnits) {
+            return foodPotential < minFoodUnits ? 0.1d : Double.NEGATIVE_INFINITY;
+        }
 
         // A hay bale is efficient food (9 wheat -> 9 bread, ~54 hunger), so grabbing one is worth
         // a boost. But x50 applied to the WHOLE food priority -- and for a hay merely within 75

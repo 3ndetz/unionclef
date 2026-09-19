@@ -671,7 +671,7 @@ public class BeatMinecraftTask extends Task {
         food.addAll(List.of(Items.WHEAT, Items.BREAD));
 
         gatherResources.add(new ResourcePriorityTask(
-                new CollectFoodPriorityCalculator(mod, config.foodUnits),
+                new CollectFoodPriorityCalculator(mod, config.foodUnits, config.minFoodUnits),
                 // STARVING BEATS UNARMED. The stone+sword gate is right for the OPENING — do not
                 // send a barehanded bot to punch cows before it has tools. But it also means a bot
                 // that gets hurt before it reaches stone tier CANNOT GO FOR FOOD AT ALL, and
