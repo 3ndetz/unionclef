@@ -3,7 +3,31 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — G106 completed (v0.95.20): unreachable food no longer deadlocks the nether; natural-terrain portal path exercised end to end
+## 2026-09-19 (latest) — v0.95.21: flood-gather approaches FLOODABLE lava, not the nearest buried pocket (natural terrain)
+
+With the food gate fixed (v0.95.20) the natural-terrain run reached the flood-gather and stalled
+"Approaching lava to flood": `PlaceObsidianFloodTask`'s no-rim fallback approached
+`getNearestBlock(Blocks.LAVA)` of ANY kind, and the nearest lava was a DEEP BURIED pocket -- the bot
+at the surface (y=61) committed to lava at y=27 directly below it, which cannot be flooded (no air
+above the source) and which the nav cannot shaft ~34 blocks down to, while `canReach()` optimistically
+said the cell above it was reachable. Stuck the whole window, 0 obsidian.
+
+- **Fix (v0.95.21, shipped).** The fallback now approaches the nearest FLOODABLE lava (a surface
+  source, air above) so getting closer lets `findFloodRim` succeed on arrival; with none known it
+  explores. Only the no-rim fallback changes; the flat bench (rim found immediately) is untouched.
+- **Validated on `nether-reach` (natural terrain).** "Approaching lava to flood" stall ticks: ~9 min
+  -> **0**. The bot places the flood water (787,21,818), the lava turns to obsidian, and it mines the
+  17 obsidian (Collect 17 obsidian at y=21). `GAMER_SMOKE: PASS`, nether rung @156s. The whole
+  pre-nether path now chains: food buffer -> flint -> obsidian rung -> "Building nether portal with
+  obsidian" -> flood -> mine obsidian. It ran out of the 14-min window mid-mining (natural terrain +
+  underground mob combat is slower than the flat bench), NOT on a stall.
+- **State of the portal ceiling after this session's three releases.** The build (v0.95.19, bench
+  6/6), the food gate (v0.95.20) and the flood-approach (v0.95.21) are all fixed and validated. On
+  natural terrain the path is now gated by TIME (deep obsidian mining + mob combat inside one bench
+  window), not by any stall. Next pass: a longer window / a checkpoint nearer the flood, or trimming
+  the pre-nether gather cost, to see the full light + nether entry on natural terrain.
+
+## 2026-09-19 — G106 completed (v0.95.20): unreachable food no longer deadlocks the nether; natural-terrain portal path exercised end to end
 
 With the portal build fixed (v0.95.19) I resumed the `nether-reach` checkpoint to confirm it on
 natural terrain. It could not: the bot deadlocked BEFORE the portal on "Collect 140 food / Wander for
