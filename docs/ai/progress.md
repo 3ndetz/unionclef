@@ -20,9 +20,16 @@ checkpoint nether-reach (y=37, NOT the flood-stuck death-trap), daylock, v0.95.2
 - Nether checkpoint saved for the NEXT frontier (the NETHER STAGE): run end-save nether-attempt-v25
   (+ mid-run cp0919-2044-t918). TODOS "the nether stage was entered for the first time" is now live.
 
-NEXT FRONTIER: the NETHER STAGE (blaze rods, fortress, wither skulls, ...) from the nether-entry
-checkpoint. The underground-lava-survival worst-case (flood-stuck) remains a documented robustness
-follow-up, lower priority now that the typical path reaches the nether.
+NEXT FRONTIER: the NETHER STAGE. In this very run the bot ENTERED the nether then died there --
+server log "tester1 was doomed to fall by Enderman" (18:02:17, an Enderman knocked it off a ledge --
+a fall, near the nether's lava), then "slain by Zombie" after the respawn. So the nether stage's first
+hazards are live: Enderman knockback near ledges/lava (fall death) and mob defense in a dimension that
+is ALWAYS hostile (daylock only affects the overworld surface). Next pass: nether-stage survival
+(Enderman handling + fall/ledge safety near lava + mob defense), toward blaze rods / fortress. A clean
+nether checkpoint (bot alive just after entry) should be captured first for a deterministic start --
+this run's entry was proven but the bot died before an auto-checkpoint caught it in the nether.
+The underground-lava-survival worst-case (flood-stuck) remains a documented robustness follow-up,
+lower priority now that the typical path reaches the nether.
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
