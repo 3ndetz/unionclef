@@ -64,6 +64,23 @@ the deep (y=37) nether-reach checkpoint is a hard FLOOD DEADLOCK:
   pathfinder steps the body INTO lava. NEXT (deep) PASS: robust lava-avoidance in cramped quarters
   (tungsten) -- left for a focused, regression-tested change, not rushed. flood-stuck is a worst-case
   death-trap (bot wedged UNDER the lake); a typical playthrough may reach the portal on safer ground.
+- **Complete mechanism of the "burned to death" mode (WorldSurvivalChain read).** The pathfinder
+  treats lava as blocked (MovementHelper: `isLava -> return true`), so the death is not a plain walk
+  into lava; it is a brief lava/fire CONTACT in the cramped basin that lights the FIRE STATUS, which
+  then ticks the bot to death. A self-douse ALREADY EXISTS (WorldSurvivalChain lines 192-224: on fire
+  -> place water at feet -> extinguish -> pick up), but every one of its preconditions fails in the
+  flood: (1) it needs a filled WATER_BUCKET, which the flood has just SPENT placing the flood water
+  (empty bucket until reclaim); (2) it is skipped while EscapeFromLavaTask runs (`!(mainTask
+  instanceof EscapeFromLavaTask ...)`), so a bot both in lava and on fire escapes the lava but never
+  douses and burns after; (3) placing water needs `isSolidBlock(feet.down())` + `canPlace(feet)`,
+  neither reliable in a lava basin; the fallback "go stand in existing water" can route back through
+  lava. So the underground lava death is a CONFLUENCE (cramped position + spent bucket + douse
+  preconditions), a deep SURVIVAL frontier, not one clean edit. The real lever is v0.95.24's escape:
+  when the bot LEAVES the death-trap (blacklists the rim) it survives; when it commits to an in-range
+  rim in the basin it burns. NEXT PASS candidates: (i) flood-site safety -- reject a rim whose stand
+  sits in a lava-danger zone so the bot escapes to a lake it can flood from solid ground; (ii) keep a
+  reserve of water / douse from the flood water; (iii) don't skip the self-douse under EscapeFromLava.
+  All delicate (survival chain / flood-site); to be done carefully with a repro, not rushed.
 
 ## 2026-09-19 — v0.95.22: the obsidian MINE equips its pickaxe (deadlock fixed); natural-terrain path now reaches the FRAME build
 
