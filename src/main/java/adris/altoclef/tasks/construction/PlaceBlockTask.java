@@ -150,13 +150,9 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         // which kept the plain movement check happy (the body "moved") while nothing was placed.
         // Measured: 75+ s under "Placing cobblestone at 2359,-57,360", the frame never completing.
         // stalledInPlace() reads the FIXED-anchor grace, so a shimmy in place is caught the same as
-        // a freeze WHILE THE DRAIN DRIVES. The drainDriving gate stays: dropping it (tried
-        // 2026-09-19) prematurely wandered a LEGIT aim+place pause -- placing a cell holds the body
-        // still for a second or two while the crosshair settles with the drain NOT walking, and a
-        // 2 s in-place grace tripped on that and broke the clean GIVE_OBS build (was 8/8). The
-        // parked-aim deadlock (drain not driving, aim never converging) is caught instead by the
-        // per-cell stall timer in ConstructNetherPortalObsidianTask, which is immune to this
-        // task's re-arm resets and uses a threshold well past any real placement.
+        // a freeze; when the drain is driving yet the body has not left a 1-block radius for the
+        // grace window, we fall through to the wander, which relocates the body and lets the drain
+        // re-pick a stand from somewhere the shimmy cannot recur.
         // Check if we're approaching our point. If we fail, wander for a bit.
         if (!progressChecker.check(mod) || (drainDriving && progressChecker.stalledInPlace())) {
             failCount++;

@@ -117,24 +117,6 @@ public class ConstructNetherPortalObsidianTask extends Task {
     private BlockPos _destroyTarget;
 
     /**
-     * ⛔ PER-CELL PARKED-AIM DEADLOCK ESCAPE (G108, 2026-09-19). A top-row frame cell can PARK: the
-     * stand is reachable and the body already on it, but the placer's live-aim ray never converges
-     * because a higher-priority chain (food/unstuck on a hungry flat stand, or any interrupt on a
-     * real run) keeps interrupting UserTaskChain and re-arming PlaceBlockTask -- wiping ITS own
-     * progress clocks (onStart reset + clearQueue) faster than they can trip, so it hard-stalls with
-     * the drain NOT driving (measured: 120+ s frozen on 2358,-53,358, wanderHits=0, task cycling
-     * "No tasks"). PlaceBlockTask's own stall check cannot catch it -- its clocks keep being reset,
-     * and the {@code drainDriving} gate is off in a parked (non-walking) state, and dropping that
-     * gate prematurely wanders legit aim pauses (broke the clean build, tried 2026-09-19). So the
-     * escape lives HERE, on this long-lived task that outlives the re-arm: track how long the SAME
-     * placeTarget has gone unplaced, and past {@code PLACE_STALL} (far above any real placement, far
-     * below the stall) hand the body to a wander to relocate, then re-decide from the new position.
-     */
-    private BlockPos _placeStallCell;
-    private final TimerGame _placeStallTimer = new TimerGame(12);
-    private final TimeoutWanderTask _placeStallWander = new TimeoutWanderTask(4);
-
-    /**
      * ⛔ THE FRAME MUST NOT BE SITED IN THE CAST PIT (G108, 2026-09-18). Gathering obsidian by
      * casting (lava bucket + water in a mould, then mine) digs a chaotic, lava-adjacent hole and
      * leaves the body enclosed in it. The old check accepted ANY spot whose 3x6x6 was merely
@@ -268,13 +250,6 @@ public class ConstructNetherPortalObsidianTask extends Task {
                 return null;
             }
         }
-
-        // Once a parked-cell escape wander is under way, run it to completion (see _placeStallTimer)
-        // regardless of what placeTarget recomputes to, so relocating the body is not interrupted.
-        if (_placeStallWander.isActive() && !_placeStallWander.isFinished()) {
-            setDebugState("Breaking a parked placement -- wandering to reset");
-            return _placeStallWander;
-        }
         // ⛔ SITE THE FRAME BEFORE GATHERING, ON PRISTINE GROUND (G108, 2026-09-18). The obsidian is
         // now made by FLOODING a lava lake, which tears up the terrain where the bot gathers (a lava
         // pool turned to obsidian, then mined into a pocked sheet with holes). This task used to gather
@@ -394,21 +369,6 @@ public class ConstructNetherPortalObsidianTask extends Task {
 
             if (!world.getBlockState(placeTarget).isAir() && !world.getBlockState(placeTarget).getBlock().equals(Blocks.OBSIDIAN)) {
                 return new DestroyBlockTask(placeTarget);
-            }
-            // Per-cell parked-aim deadlock escape (see _placeStallCell/_placeStallTimer). Reset the
-            // clock whenever the target cell changes -- a new target means the previous cell was
-            // placed, i.e. real progress. If the SAME cell has been the target past the threshold,
-            // the placer is parked (aim never converging under the re-arm churn): release the drain
-            // and hand the body to a wander to relocate, then re-decide next tick from a fresh spot.
-            if (!placeTarget.equals(_placeStallCell)) {
-                _placeStallCell = placeTarget;
-                _placeStallTimer.reset();
-            } else if (_placeStallTimer.elapsed()) {
-                setDebugState("Cell " + placeTarget.toShortString() + " parked too long -- wandering to reset");
-                kaptainwutax.tungsten.helpers.BlockPlaceHelper.clearQueue();
-                kaptainwutax.tungsten.task.FastNavigator.stop();
-                _placeStallTimer.reset();
-                return _placeStallWander;
             }
             setDebugState("Placing frame...");
             return new PlaceBlockTask(placeTarget, Blocks.OBSIDIAN);
