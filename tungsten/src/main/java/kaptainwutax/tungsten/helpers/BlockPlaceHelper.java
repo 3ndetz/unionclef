@@ -695,11 +695,22 @@ public final class BlockPlaceHelper {
         for (Direction facing : kaptainwutax.tungsten.path.movements.Movement
                 .HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP) {
             BlockPos against = target.offset(facing);
-            // BOTH halves of upstream's condition (BuilderProcess.java:1058). The second half is
-            // the one that says "and the block would actually fit there".
             if (!RealPlacement.canPlaceAgainst(world, against)) continue;
-            if (world instanceof net.minecraft.world.World w
-                    && !placementPlausible(w, target, state)) continue;
+            // ⛔ DO NOT GATE STAND-FINDING ON THE BODY'S CURRENT POSITION (G108, 2026-09-19).
+            // This used to also require placementPlausible(target) here -- upstream's
+            // BuilderProcess.java:1058 second half. But placementPlausible tests whether the block
+            // would intersect an ENTITY, and the only entity that matters is the player. This method
+            // answers "WHERE do I stand to place this", i.e. a position the body will MOVE to -- so
+            // testing plausibility against where the body is RIGHT NOW is the wrong question. When the
+            // body has drifted into the target cell (routine for a bottom-row cell reached from the
+            // gather side, or after a wander lands the body on it), plausibility fails for EVERY
+            // facing, this returns null, and drainQueue then takes the PILLAR branch -- which walks
+            // the body further INTO the cell, so plausibility keeps failing (blockedByOwnBody climbs)
+            // and the placement jams for ever (measured: 246 s on 2358,-57,357, obsidian portal flood).
+            // The real placement plausibility check belongs -- and already runs -- in drainQueue's
+            // main place loop, at the moment of placing, when the body is actually at the stand
+            // (blockedByOwnBody++ there). adjacentStand already excludes the target cell and any stand
+            // whose head is the target, so the chosen stand never has the body in the cell it fills.
             // ⛔ A TOP-FACE PLACEMENT IS MADE FROM BESIDE THE SUPPORT, ONE LEVEL DOWN (G108,
             // 2026-09-18). When the only placeable neighbour is the block directly BELOW the target
             // (facing == DOWN -- e.g. a portal-frame column cell whose sole support is the block
