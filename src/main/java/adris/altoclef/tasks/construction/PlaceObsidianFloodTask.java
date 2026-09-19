@@ -139,9 +139,24 @@ public class PlaceObsidianFloodTask extends Task {
         if (_rim == null || _waterCell == null) {
             Optional<BlockPos> rim = findFloodRim(mod);
             if (rim.isEmpty()) {
-                // No reachable surface lava lake nearby. Approach the nearest known lava if we can,
-                // otherwise explore for one -- locating lava is a genuine subgoal, not a give-up.
-                Optional<BlockPos> lava = mod.getBlockScanner().getNearestBlock(Blocks.LAVA);
+                // No reachable surface lava lake nearby. Approach the nearest FLOODABLE lava --
+                // a SURFACE source (a source with air above it) -- so getting closer actually lets
+                // findFloodRim succeed on arrival; otherwise explore for one.
+                //
+                // ⛔ DO NOT APPROACH ANY LAVA (G108, 2026-09-19). This used to approach the nearest
+                // Blocks.LAVA of any kind. On natural terrain the nearest lava is routinely a DEEP
+                // BURIED pocket (measured: the bot at the surface y=61 committed to lava at y=27
+                // directly below it), which (a) cannot be flooded at all -- no air above the source to
+                // land water on -- and (b) canReach() reports reachable for the cell above it while
+                // the nav cannot actually shaft ~34 blocks down to it, so GetToBlockTask stalled
+                // "Approaching lava to flood" for the whole window and the portal never built.
+                // Filtering to a surface source targets lava the flood can USE and the body can stand
+                // beside; a source buried in rock is skipped, and with none known we explore for a
+                // real lake instead of committing to an unreachable, unfloodable pocket.
+                Optional<BlockPos> lava = mod.getBlockScanner().getNearestBlock(
+                        mod.getPlayer().getPos(),
+                        p -> WorldHelper.isSourceBlock(p, false) && WorldHelper.isAir(p.up()),
+                        Blocks.LAVA);
                 if (lava.isPresent() && WorldHelper.canReach(lava.get().up())) {
                     setDebugState("Approaching lava to flood");
                     return new GetToBlockTask(lava.get().up(), false);
