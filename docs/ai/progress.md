@@ -27,8 +27,19 @@ the deep (y=37) nether-reach checkpoint is a hard FLOOD DEADLOCK:
 - **Validated live from `flood-stuck`.** Deadlock BROKEN: the bot left (788,19,819) within ~1 min of
   @gamer (vs 27 min frozen before), blacklisted the rim, and relocated/ascended out of the pocket
   ((788,19,819)->(796,16,779)->(799,25,769)), with UnstuckChain ownership back to 0 (was 1919).
-  [regression: OBS flat bench + nav baselines pending; full obsidian->nether depends on finding
-  accessible lava, watched separately.]
+  Regression: OBS flat bench PASS (nether_portal lit at (2358,-56,358), real block, 273 s); nav
+  baselines nav_flat/staircase/descend 3/3 PASS (~29 fps). Released v0.95.24 (asset verified),
+  commit 26e23911 (main + 1.21.11 synced).
+- **Full-path re-run (flood-stuck, 30 min): the fix WORKS end-to-end -> then a NEW frontier.** With
+  v0.95.24 the bot escaped, returned to the SAME lake, found a reachable rim, FLOODED it and MADE
+  OBSIDIAN (obs=3, mining hardness-50 obsidian at (786,21,818)) -- exactly what hung forever before.
+  Then it DIED: server log "tester1 tried to swim in lava" (16:26:28) -- it stepped into the lava
+  while flooding/mining the underground lake, respawned ~950 blocks away, re-laddered. So the deadlock
+  fix traded a permanent 27-min hang for a recoverable lava DEATH (the run continues now instead of
+  freezing). NEXT FOCUSED PASS: lava-safety during the underground flood -- the bot must not path
+  into / stand where it can fall into the lava it is flooding (surface flooding is safe; the cramped
+  underground lake is where it dies). Daylock does NOT stop cave mobs (Mob Defense fired p80), a
+  secondary underground hazard. This is a SEPARATE issue from the deadlock, revealed by fixing it.
 
 ## 2026-09-19 — v0.95.22: the obsidian MINE equips its pickaxe (deadlock fixed); natural-terrain path now reaches the FRAME build
 
