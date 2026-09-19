@@ -1025,3 +1025,32 @@ Both are careful tungsten work with nav-suite regression risk; deferred to a ded
 and shipped this session: the flood gather reclaim (reliable 0->14), the tungsten pillar-block fix
 (no obsidian pillars), and the trustworthy bench. The portal's bottom row + both columns build
 reliably; the top row is the ceiling.
+
+### FIX SHIPPED: top row via a temporary FRONT SCAFFOLD -- clean, fast, ground-truth green (01a85111)
+The top-row hard-stall is fixed at the root. Before placing a top-row cell, ConstructNetherPortal now
+raises a temporary cobblestone standing wall one row in FRONT of the frame (x=+1, up to y=+2), built
+bottom-up like the columns. That gives the bot a stable strip to stand on (feet at (1,y+3,z), on top
+of the wall), so placementStand returns a SIDE stand and the top row places obsidian via the reliable
+side-stand path -- never the pillar-into-cell that FastNavigator could not reach. The wall is mined
+back out (top-down) before the interior is cleared and the portal is lit; cobblestone, so the gather
+never touches it.
+- **First run, ground truth by block id:** whole frame 14/14 obsidian (incl. all four top-row cells
+  via the side stand), scaffold 0 remnants, interior 6/6 nether_portal, DONE at t=308 (vs 450-620s of
+  churn before, and no hard-stall). The deterministic build is also much faster.
+- **Reliability rate:** running the OBS bench x4 more (RULE FIVE) with a ground-truth id scan per run
+  (the bench's own portal_found proved flaky during a busy run -- returns None while a real lit portal
+  stands at the site; a manual run of the identical scan finds it, so ground truth is the arbiter).
+- **Known secondary flakiness (flat stand):** one run spent ~90s early on "searching for liquid /
+  Wander for Infinity" before the first flood produced minable obsidian (the flood/reclaim
+  occasionally leaves no water bucket and the flat stand has no natural water). It recovered. A real
+  run has natural water; noted as a gather-robustness follow-up, separate from the top-row fix.
+
+### Bench blind spot found: the "no portal" verdicts were a STRING-INDEXING bug, not py4j flakiness
+The bench reported "done constructing but NO portal near the bot" on every green run. Root: the bot
+position from py4j comes back as a "x,y,z" STRING, and the confirmation scanned
+`portal_found(int(pos[0]), FLOOR_Y-1, int(pos[2]), ...)` -- `int(pos[0])`/`int(pos[2])` take the
+first and THIRD CHARACTERS ('2' and '6' of "2360.1,..."), so it scanned around (2,6) and missed the
+real portal at ~(2358,358). A manual scan with explicit ints always found it, which is why the code
+"looked" right. Fixed with a `scan_center()` that parses the string (deploy/runner/nether_portal_test.py).
+The earlier id-field and retry fixes were real but secondary; THIS was the blind spot. With it, the
+bench detects the lit portal directly (no ground-truth workaround needed).

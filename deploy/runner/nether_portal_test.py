@@ -154,6 +154,19 @@ def portal_found(cx, cy, cz, rad=16):
     return None
 
 
+def scan_center(pos):
+    # ⛔ THE BOT POS COMES BACK AS A "x,y,z" STRING (2026-09-19). The confirmation used
+    # int(pos[0]) / int(pos[2]) -- which take the first and THIRD CHARACTERS of that string
+    # ('2' and '6' of "2360.1,..."), scanning around (2,6) and MISSING every real portal, so
+    # every genuine PASS was reported "no portal near the bot". Parse the string (or a list) into
+    # the x/z scan center. This, not py4j flakiness, was the bench's blind spot.
+    try:
+        v = [float(t) for t in pos.split(",")] if isinstance(pos, str) else list(pos)
+        return int(v[0]), int(v[2])
+    except Exception:
+        return BX, BZ
+
+
 def main():
     if BOT not in rcon("list"):
         print("connecting to test-server")
@@ -279,21 +292,21 @@ def main():
         # Scan CENTERED ON THE BOT (the obsidian method sites the frame OUTWARD, so the portal is
         # where the body ended up, not the scene centre) while the chunk is still loaded (before any
         # @stop / forceload remove). rad 10 keeps the in-process getBlockAt scan fast.
-        bp = s.get("pos") or [BX, FLOOR_Y, BZ]
+        cx, cz = scan_center(s.get("pos"))
         if "done constructing" in blob:
-            made = portal_found(int(bp[0]), FLOOR_Y - 1, int(bp[2]), rad=10)
+            made = portal_found(cx, FLOOR_Y - 1, cz, rad=10)
             if made:
                 done = True; break
             print("  ('done constructing' but NO portal block near the bot -- continuing)")
         # task finished without wandering -> confirm with a scan and stop
         if not s["busy"] and phases and "looking for lava" not in tsk.lower():
-            made = portal_found(int(bp[0]), FLOOR_Y - 1, int(bp[2]), rad=10)
+            made = portal_found(cx, FLOOR_Y - 1, cz, rad=10)
             if made:
                 done = True
             break
     # Final confirmation, centred on the bot's last position, BEFORE unloading the chunk.
-    bp = (py4j("state").get("pos")) or [BX, FLOOR_Y, BZ]
-    made = portal_found(int(bp[0]), FLOOR_Y - 1, int(bp[2]), rad=10)
+    cx, cz = scan_center(py4j("state").get("pos"))
+    made = portal_found(cx, FLOOR_Y - 1, cz, rad=10)
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
     rcon(f"forceload remove {BX-18} {BZ-18} {BX+18} {BZ+18}")
     print(f"phases reached: {sorted(phases)}")
