@@ -8,6 +8,7 @@ import adris.altoclef.tasks.construction.DestroyBlockTask;
 import adris.altoclef.tasks.construction.PlaceBlockTask;
 import adris.altoclef.tasks.construction.PlaceStructureBlockTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
+import adris.altoclef.tasks.movement.GetToBlockTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.WorldHelper;
@@ -305,6 +306,24 @@ public class ConstructNetherPortalObsidianTask extends Task {
         if (!mod.getItemStorage().hasItem(Items.FLINT_AND_STEEL)) {
             setDebugState("Getting flint and steel");
             return TaskCatalogue.getItemTask(Items.FLINT_AND_STEEL, 1);
+        }
+
+        // ⛔ KEEP THE BUILDER AT THE BUILD (G108, 2026-09-19). On messy natural terrain a placement
+        // that cannot reach its stand falls to TimeoutWanderTask, and that wander DRIFTS the body far
+        // from the frame -- measured 26 blocks away on the gamer server, holding the block, never
+        // returning, so the build is abandoned. (The flat bench never drifts: its pad is clean, every
+        // stand solid, no placement stalls -- proven, a hand-laid clean pad builds AND lights the
+        // portal on the same server.) So whenever we are in the build phase and the body has strayed
+        // well past the frame's stand range, walk it back to the origin first; the drain then
+        // re-approaches the cell locally. This also pulls the body back from the lava after a gather.
+        // No-op on the bench, where the body stays within a couple of blocks of the frame.
+        if (placeTarget != null) {
+            BlockPos body = mod.getPlayer().getBlockPos();
+            long ddx = body.getX() - origin.getX(), ddz = body.getZ() - origin.getZ();
+            if (ddx * ddx + ddz * ddz > 100) {   // strayed > 10 blocks horizontally from the frame
+                setDebugState("Returning to the portal build");
+                return new GetToBlockTask(origin, false);
+            }
         }
 
         // Before placing a TOP-ROW cell (y = origin+3, over the open interior), raise the temporary
