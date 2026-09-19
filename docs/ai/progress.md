@@ -3,7 +3,31 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — v0.95.21: flood-gather approaches FLOODABLE lava, not the nearest buried pocket (natural terrain)
+## 2026-09-19 (latest) — natural-terrain capstone: portal path now stalls on the obsidian MINE holding a water bucket (next frontier, precisely located)
+
+After the three portal releases (v0.95.19/20/21) I ran a 24-min `--from nether-reach` capstone to see
+the full natural-terrain portal light + nether entry. The bot chained the whole path cleanly: food
+buffer -> flint -> obsidian rung -> "Building nether portal with obsidian" -> flood the lava
+(787,21,818) -> obsidian made. Then it STALLED on the obsidian MINE: 7+ minutes (t=676..1121)
+"Destroy block at 787,21,817 -> Block in range, mining...", obsidian count stuck at 0, no nether.
+
+- **Root (ground truth), NOT yet fixed.** The target (787,21,817) is real, EXPOSED obsidian (air
+  above, not submerged), and the bot has a diamond pickaxe in the pack -- but its held item is a
+  `water_bucket` (the flood's bucket). You cannot mine obsidian with a bucket, so the mine "runs"
+  forever with 0 progress. After the flood, the pickaxe is not re-equipped for the obsidian mine. The
+  flat bench masks this: `nether_portal_test.py` force-equips a diamond pickaxe whenever the task is
+  mining and the hand is not a pickaxe (a documented harness workaround, lines ~293-305), so the
+  bench never exercised the real auto-equip -- and it is the auto-equip (or a water-bucket re-equip
+  fight) that is failing on the live run. This is the next pass: find why the obsidian mine keeps /
+  does not override the flood's water bucket (miner tool-equip path -- MineAndCollectTask /
+  DestroyBlockTask / PreEquipItemChain, and PlaceObsidianFloodTask's bucket hand-off). Reproduces on
+  the `nether-reach` checkpoint every run.
+- **Everything upstream is fixed and validated this session:** the frame build (v0.95.19, bench 6/6),
+  the food gate (v0.95.20), and the flood-approach (v0.95.21) -- so the natural-terrain path reaches
+  the obsidian mine with no stall before it. The remaining blocker is this one tool-equip step, then
+  the frame build (already 6/6) + light.
+
+## 2026-09-19 — v0.95.21: flood-gather approaches FLOODABLE lava, not the nearest buried pocket (natural terrain)
 
 With the food gate fixed (v0.95.20) the natural-terrain run reached the flood-gather and stalled
 "Approaching lava to flood": `PlaceObsidianFloodTask`'s no-rim fallback approached
