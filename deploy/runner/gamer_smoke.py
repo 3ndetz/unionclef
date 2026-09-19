@@ -766,6 +766,24 @@ def main():
         _self = py4j("gs").get("self") or {}
         pos = _self.get("pos"); spawn = None
         print(f"  resumed at: {pos} hp={_self.get('hp')} food={_self.get('food')}")
+        # ⛔ SURVIVE THE RESTORE (2026-09-19). A checkpoint like nether-reach sits UNDERGROUND (y~37)
+        # in the dark, so on resume the bot can be killed by standing mobs before @gamer's survival
+        # chain heals it -- it then respawns at WORLD SPAWN, EMPTY, and re-runs the whole tool ladder,
+        # wrecking the run (measured: a capstone re-laddered wood@132s / iron@377s and never reached
+        # the portal, while other resumes of the SAME checkpoint survived -- pure luck of the spawn).
+        # A checkpoint is a TEST ENTRY POINT, not a survival test, so make the entry deterministic:
+        # force day, clear nearby hostiles, and top up health/food right after the restore, so the run
+        # reliably lands alive with the checkpoint's kit. (Survival-at-a-bad-spawn is its own track,
+        # G101; it must not decide whether a portal/nether resume even starts.)
+        grcon("time set day")
+        for _mob in ("zombie", "skeleton", "creeper", "spider", "enderman", "witch", "phantom",
+                     "drowned", "husk", "stray", "cave_spider", "zombie_villager"):
+            grcon(f"kill @e[type=minecraft:{_mob},distance=..64]")
+        grcon(f"effect give {BOT} minecraft:instant_health 1 20 true")
+        grcon(f"effect give {BOT} minecraft:regeneration 15 4 true")
+        grcon(f"data merge entity {BOT} {{Health:20.0f,foodLevel:20,foodSaturationLevel:20.0f}}")
+        time.sleep(2)
+        print("  post-restore safety: forced day, cleared hostiles (r<=64), healed + fed")
     if DAYLOCK:
         grcon("gamerule doDaylightCycle false")
         grcon("gamerule doWeatherCycle false")
