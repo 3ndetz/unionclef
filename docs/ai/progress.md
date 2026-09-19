@@ -3,7 +3,34 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — v0.95.22: the obsidian MINE equips its pickaxe (deadlock fixed); natural-terrain path now reaches the FRAME build
+## 2026-09-19 (latest) — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
+
+The "650-block material detour" from the earlier capstone was a MISREAD (minePick max=47 all run, zero
+far picks -- the debug string showed a task TARGET, not the bot's position; the exact trap TungstenConfig
+records). The bot never lacks materials (cobblestone 197->293 mid-run). The REAL post-iron ceiling from
+the deep (y=37) nether-reach checkpoint is a hard FLOOD DEADLOCK:
+
+- **Live root cause (checkpointed as `flood-stuck`).** From y=37 the @gamer bot descended to a lava lake
+  at y=21, ended wedged in a pocket at (788,19,819) UNDER the lake, committed to a rim ON the lake it
+  could not climb to, and FROZE there for the whole 27-min run (obs 0, mqSteps=0, UnstuckChain owning
+  1919 ticks). Two defects combined: (1) `rimFor` kept a rim if `canReach(rim) || canReach(rim.up())`,
+  but water is placed by clicking the rim (InteractWithBlockTask marks the RIM unreachable), so rim.up()'s
+  optimism (`canReach = !isUnreachable`) re-selected the same rim forever; (2) both progress guards
+  measured raw body displacement, which the UnstuckChain's in-place shimmy reset every tick -- so nothing
+  ever blacklisted the unreachable rim. canReach's optimism is the same trap v0.95.23 flagged for buried
+  lava, here horizontal (a lake the bot is under).
+- **Fix (v0.95.24, isolated to PlaceObsidianFloodTask).** The clickable rim must itself be reachable
+  (`canReach(rim)`), and the rim commit is guarded by APPROACH DISTANCE to the rim, not displacement, so
+  a shimmy jiggle cannot fake progress; the flood blacklists a rim after ~10s of no approach, re-selects,
+  and with the reachable-looking rims exhausted explores for lava it can stand beside. No-op on the
+  surface (distance falls, guard never trips), so it cannot regress the validated surface build.
+- **Validated live from `flood-stuck`.** Deadlock BROKEN: the bot left (788,19,819) within ~1 min of
+  @gamer (vs 27 min frozen before), blacklisted the rim, and relocated/ascended out of the pocket
+  ((788,19,819)->(796,16,779)->(799,25,769)), with UnstuckChain ownership back to 0 (was 1919).
+  [regression: OBS flat bench + nav baselines pending; full obsidian->nether depends on finding
+  accessible lava, watched separately.]
+
+## 2026-09-19 — v0.95.22: the obsidian MINE equips its pickaxe (deadlock fixed); natural-terrain path now reaches the FRAME build
 
 The capstone's obsidian-mine stall (bot "mining" exposed obsidian with a water bucket, 0 progress)
 was root-caused live and fixed. The natural-terrain path now mines the obsidian and reaches the frame

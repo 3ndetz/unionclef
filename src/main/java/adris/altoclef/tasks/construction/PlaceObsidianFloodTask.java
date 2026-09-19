@@ -61,6 +61,34 @@ public class PlaceObsidianFloodTask extends Task {
     private final Set<BlockPos> _rimBlacklist = new HashSet<>();
     private final Set<BlockPos> _reclaimBlacklist = new HashSet<>();
 
+    // ⛔ APPROACH PROGRESS IS DISTANCE TO THE RIM, NOT RAW BODY DISPLACEMENT (G108, 2026-09-19).
+    //
+    // Measured on the gamer server from the deep (y=37) nether-reach checkpoint: the bot descended to
+    // a lava lake at y=21, ended in a cramped pocket at y=19 UNDER it, committed to a rim on the lake
+    // it could not climb up to, and FROZE at (788,19,819) for the whole 27-minute run -- obsidian 0,
+    // portal never built. The rim's stand was optimistically "reachable" (canReach = !isUnreachable,
+    // and nothing had marked it yet), so the flood committed; then the UnstuckChain shimmied the
+    // wedged body in place, and BOTH movement-based progress checkers here and in InteractWithBlockTask
+    // read the jiggle as movement and reset every time, so neither ever concluded the rim was
+    // unreachable and blacklisted it. A permanent deadlock built entirely out of "the body moved".
+    //
+    // Distance to the water cell only falls when the body is genuinely getting to the rim; a jiggle in
+    // a pocket cannot fake it. So the rim commit is guarded by approach, not displacement: reset while
+    // the best distance keeps improving (or once we are in range for the interact task to place), and
+    // blacklist the rim after RIM_NO_APPROACH_LIMIT flood ticks with no improvement -- then the rim is
+    // skipped and the flood re-selects, and with all reachable-looking rims exhausted it explores for
+    // lava it can actually stand beside. Reset on every new rim.
+    private double _bestApproachSq = Double.MAX_VALUE;
+    private int _noApproachTicks = 0;
+    // Flood ticks of no approach to the rim before it is judged unreachable. The flood owns most ticks
+    // (the shimmy a minority), so this is ~10 s of the body never getting closer -- long enough not to
+    // punish a legitimate long walk (which keeps beating its own best distance), short enough that a
+    // genuinely unreachable rim is abandoned quickly instead of hanging the whole run.
+    private static final int RIM_NO_APPROACH_LIMIT = 200;
+    // Within this squared distance of the water cell the body is close enough for InteractWithBlockTask
+    // to do the placing; the approach is done, so the guard rests (5 blocks).
+    private static final double RIM_IN_RANGE_SQ = 25.0;
+
     private BlockPos _rim;           // solid edge block whose TOP face we click
     private BlockPos _waterCell;     // rim.up(): where the water source lands
     private BlockPos _reclaimTarget; // the water source we're currently scooping back
@@ -167,6 +195,29 @@ public class PlaceObsidianFloodTask extends Task {
             _rim = rim.get();
             _waterCell = _rim.up();
             _progress.reset();
+            _bestApproachSq = Double.MAX_VALUE;
+            _noApproachTicks = 0;
+        }
+
+        // Approach guard (shimmy-proof): blacklist a rim the body never gets closer to. Distance to
+        // the water cell, not raw displacement, so the unstuck shimmy jiggling a wedged body in place
+        // cannot fake progress. See the field comment above (the y=19-under-a-lake deadlock).
+        double approachSq = mod.getPlayer().getPos().squaredDistanceTo(
+                _waterCell.getX() + 0.5, _waterCell.getY() + 0.5, _waterCell.getZ() + 0.5);
+        if (approachSq <= RIM_IN_RANGE_SQ) {
+            _noApproachTicks = 0;                 // close enough; let the interact task place
+        } else if (approachSq < _bestApproachSq - 0.25) {
+            _bestApproachSq = approachSq;         // genuine progress toward the rim
+            _noApproachTicks = 0;
+        } else if (++_noApproachTicks > RIM_NO_APPROACH_LIMIT) {
+            Nav.cancel();
+            _rimBlacklist.add(_rim);
+            _rim = null;
+            _waterCell = null;
+            _progress.reset();
+            _bestApproachSq = Double.MAX_VALUE;
+            _noApproachTicks = 0;
+            return null;
         }
 
         // Progress guard: if we can't get to / place at this rim, blacklist it and pick another.
@@ -176,6 +227,8 @@ public class PlaceObsidianFloodTask extends Task {
             _rim = null;
             _waterCell = null;
             _progress.reset();
+            _bestApproachSq = Double.MAX_VALUE;
+            _noApproachTicks = 0;
             return null;
         }
 
@@ -245,7 +298,14 @@ public class PlaceObsidianFloodTask extends Task {
             if (_rimBlacklist.contains(rim)) continue;
             if (!WorldHelper.isSolidBlock(rim)) continue;            // solid to click
             if (!WorldHelper.isAir(rim.up())) continue;              // air above to hold the water
-            if (!WorldHelper.canReach(rim) && !WorldHelper.canReach(rim.up())) continue;
+            // ⛔ THE CLICKABLE RIM ITSELF MUST BE REACHABLE (G108, 2026-09-19). This used to accept the
+            // rim if EITHER the rim OR the water cell above it was reachable. But water is placed by
+            // clicking the rim's TOP face (InteractWithBlockTask on `rim`), and that task marks `rim`
+            // -- not rim.up() -- unreachable when it cannot get there. The old OR then kept re-selecting
+            // the same rim through rim.up()'s optimism (canReach = !isUnreachable, never set on it), so
+            // a rim on a lava lake the bot was stuck UNDER was chosen again and again. Require the rim
+            // the bot must actually reach and click.
+            if (!WorldHelper.canReach(rim)) continue;
             return Optional.of(rim);
         }
         return Optional.empty();
