@@ -64,16 +64,33 @@ public class CollectObsidianTask extends ResourceTask {
         // strand a placed water source by jumping to mining the moment the first obsidian appears.
         boolean floodBusy = _floodTask != null && _floodTask.isActive() && !_floodTask.isFinished();
 
+        // ⛔ DO NOT MINE OBSIDIAN THAT SITS AGAINST LAVA (G108, 2026-09-19). The flood turns the
+        // lava lake's SURFACE sources to obsidian, but lava remains deeper in the basin where the
+        // water never reached. Mining the surface obsidian then follows the vein DOWN into the basin,
+        // and the body steps onto the lava that is exposed -- measured on the gamer server from the
+        // deep nether-reach checkpoint: obs 0->5 while y fell 21 -> 20.3, then "tried to swim in lava"
+        // and a respawn 950 blocks away. So an obsidian block is only a target if none of its six
+        // neighbours is lava; the body never has to stand next to lava to mine it. When only
+        // lava-adjacent obsidian is left, this comes back empty and the flood runs another cycle,
+        // converting more of the basin before mining resumes. Drops on the ground are collected
+        // regardless (a dropped item needs no safe stand).
+        Predicate<BlockPos> lavaSafe = (p -> {
+            for (BlockPos n : new BlockPos[]{p.up(), p.down(), p.north(), p.south(), p.east(), p.west()}) {
+                if (mod.getWorld().getBlockState(n).getFluidState()
+                        .isIn(net.minecraft.registry.tag.FluidTags.LAVA)) return false;
+            }
+            return true;
+        });
         // Mine obsidian that already exists (from a flood, or found naturally) or was dropped.
         Predicate<BlockPos> goodObsidian = (blockPos ->
                 blockPos.isWithinDistance(mod.getPlayer().getPos(), 800)
-                        && WorldHelper.canBreak(blockPos));
+                        && WorldHelper.canBreak(blockPos) && lavaSafe.test(blockPos));
         if (!floodBusy && (mod.getBlockScanner().anyFound(goodObsidian, Blocks.OBSIDIAN)
                 || mod.getEntityTracker().itemDropped(Items.OBSIDIAN))) {
             setDebugState("Mining/Collecting obsidian");
             _floodTask = null;
             return new MineAndCollectTask(new ItemTarget(Items.OBSIDIAN, _count),
-                    new Block[]{Blocks.OBSIDIAN}, MiningRequirement.DIAMOND);
+                    new Block[]{Blocks.OBSIDIAN}, MiningRequirement.DIAMOND).withTargetFilter(lavaSafe);
         }
 
         // No water in the nether -> trade with piglins for obsidian instead.

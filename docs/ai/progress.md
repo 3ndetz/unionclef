@@ -53,6 +53,17 @@ the deep (y=37) nether-reach checkpoint is a hard FLOOD DEADLOCK:
   descend into the basin); (b) keep the protective water sheet over the basin while mining, reclaim
   LAST, so a mis-step lands in water not lava; (c) flood the basin more completely before mining.
   Needs a lava-safe-mining repro and careful testing so it does not regress the surface build.
+- **v0.95.25: obsidian collect refuses lava-adjacent obsidian (approach (a)) -- PARTIAL.** Shipped:
+  CollectObsidianTask targets an obsidian block only if none of its 6 neighbours is lava, via a new
+  OPTIONAL null-default target filter on MineAndCollectTask (37 other callers untouched). Regression
+  OBS flat bench PASS (portal lit 216 s -- on a flat lake all lava converts so the filter is a no-op).
+  BUT the underground death has a SECOND mode this does not fix: from flood-stuck the bot committed to
+  an in-range rim beside the lava and "burned to death" flooding, BEFORE reaching obsidian mining
+  (server: "tester1 burned to death" 17:14:24; bot stationary at 788,19,819 t=21..66 then dead t~88,
+  respawn 111,136,-36). Root of BOTH modes: in the cramped space around an underground lake the
+  pathfinder steps the body INTO lava. NEXT (deep) PASS: robust lava-avoidance in cramped quarters
+  (tungsten) -- left for a focused, regression-tested change, not rushed. flood-stuck is a worst-case
+  death-trap (bot wedged UNDER the lake); a typical playthrough may reach the portal on safer ground.
 
 ## 2026-09-19 — v0.95.22: the obsidian MINE equips its pickaxe (deadlock fixed); natural-terrain path now reaches the FRAME build
 

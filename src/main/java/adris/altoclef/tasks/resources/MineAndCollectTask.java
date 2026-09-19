@@ -58,6 +58,17 @@ public class MineAndCollectTask extends ResourceTask {
         this(new ItemTarget(item, count), blocksToMine, requirement);
     }
 
+    /**
+     * Gate which target blocks may be mined by an extra per-position test (ANDed with the usual
+     * reachable/breakable checks). Fluent, so a caller can write {@code new MineAndCollectTask(...)
+     * .withTargetFilter(p -> ...)}. Null (the default) is the unchanged behaviour. Used by the
+     * obsidian collect to refuse obsidian sitting against lava.
+     */
+    public MineAndCollectTask withTargetFilter(java.util.function.Predicate<net.minecraft.util.math.BlockPos> filter) {
+        _subtask.setTargetFilter(filter);
+        return this;
+    }
+
     public static Block[] itemTargetToBlockList(ItemTarget[] targets) {
         List<Block> result = new ArrayList<>(targets.length);
         for (ItemTarget target : targets) {
@@ -220,12 +231,16 @@ public class MineAndCollectTask extends ResourceTask {
         private final MovementProgressChecker progressChecker = new MovementProgressChecker();
         private final Task _pickupTask;
         private BlockPos miningPos;
+        /** Optional extra gate on which target blocks may be chosen/kept; null = no gate (default). */
+        private java.util.function.Predicate<BlockPos> _targetFilter = null;
 
         public MineOrCollectTask(Block[] blocks, ItemTarget[] targets) {
             _blocks = blocks;
             _targets = targets;
             _pickupTask = new PickupDroppedItemTask(_targets, true);
         }
+
+        public void setTargetFilter(java.util.function.Predicate<BlockPos> filter) { _targetFilter = filter; }
 
         @Override
         protected Vec3d getPos(AltoClef mod, Object obj) {
@@ -266,7 +281,7 @@ public class MineAndCollectTask extends ResourceTask {
             minePickCalls++;
             Pair<Double, Optional<BlockPos>> closestBlock = dropsOnly
                     ? new Pair<>(Double.POSITIVE_INFINITY, Optional.empty())
-                    : getClosestBlock(mod,pos,  _blocks);
+                    : getClosestBlock(mod,pos,  _targetFilter, _blocks);
             Pair<Double, Optional<ItemEntity>> closestDrop = getClosestItemDrop(mod,pos,  _targets);
 
             double blockSq = closestBlock.getLeft();
@@ -424,6 +439,18 @@ public class MineAndCollectTask extends ResourceTask {
         }
 
         public static Pair<Double,Optional<BlockPos> > getClosestBlock(AltoClef mod,Vec3d pos ,Block... blocks) {
+            return getClosestBlock(mod, pos, null, blocks);
+        }
+
+        /**
+         * As {@link #getClosestBlock(AltoClef, Vec3d, Block...)}, with an OPTIONAL extra per-position
+         * gate ANDed into every candidate scan. Null means "no extra gate" and is byte-for-byte the
+         * old behaviour, so the 37 existing callers are untouched. The obsidian collect uses it to
+         * refuse obsidian sitting against lava -- see CollectObsidianTask (G108, 2026-09-19: the bot
+         * mined the flood's obsidian DOWN into the lake basin and stepped into the lava that the water
+         * had not reached, "tried to swim in lava").
+         */
+        public static Pair<Double,Optional<BlockPos> > getClosestBlock(AltoClef mod,Vec3d pos ,java.util.function.Predicate<BlockPos> extraFilter, Block... blocks) {
 
             // !! DIGGING THE BLOCK UNDER YOUR OWN FEET IS HOW A BOT BURIES ITSELF.
             //
@@ -478,6 +505,7 @@ public class MineAndCollectTask extends ResourceTask {
                 // is a question about the WORLD rather than about how far we have fallen.
                 int limit = enclosedAtFeet(mod, feetY) ? feetY : feetY - 1;
                 Optional<BlockPos> onSurface = mod.getBlockScanner().getNearestBlock(pos, check -> {
+                    if (extraFilter != null && !extraFilter.test(check)) return false;
                     if (check.getY() < limit) {
                         scanBelowFeet++;
                         return false;
@@ -493,6 +521,7 @@ public class MineAndCollectTask extends ResourceTask {
             BlockPos underfoot = mod.getPlayer() == null ? null : mod.getPlayer().getBlockPos().down();
             if (kaptainwutax.tungsten.TungstenConfig.get().mineAvoidUnderfoot && underfoot != null) {
                 Optional<BlockPos> preferred = mod.getBlockScanner().getNearestBlock(pos, check -> {
+                    if (extraFilter != null && !extraFilter.test(check)) return false;
                     if (check.equals(underfoot)) {
                         scanUnderfoot++;
                         return false;
@@ -506,6 +535,7 @@ public class MineAndCollectTask extends ResourceTask {
                 }
             }
             Optional<BlockPos> closestBlock = mod.getBlockScanner().getNearestBlock(pos, check -> {
+                if (extraFilter != null && !extraFilter.test(check)) return false;
 
                 // WHY IS THERE NOTHING TO MINE? MEASURE IT, DO NOT GUESS AGAIN.
                 // Four fixes to the wander machinery all measured an identical course score,
@@ -612,6 +642,7 @@ public class MineAndCollectTask extends ResourceTask {
         @Override
         protected boolean isValid(AltoClef mod, Object obj) {
             if (obj instanceof BlockPos b) {
+                if (_targetFilter != null && !_targetFilter.test(b)) return false;
                 return mod.getBlockScanner().isBlockAtPosition(b, _blocks) && WorldHelper.canBreak(b);
             }
             if (obj instanceof ItemEntity drop) {
