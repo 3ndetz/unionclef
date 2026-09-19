@@ -31,9 +31,24 @@ build; the next frontier moved one step forward, to the frame build on real terr
 - **Next frontier (moved forward one step): the natural-terrain FRAME build.** After placing ~10
   obsidian the frame build wanders at the build site (measured 728,75,827 -- an elevated pad the site
   scan chose far above the deep lava). The frame build is 6/6 on the FLAT bench (v0.95.19); real
-  terrain -- an uneven, elevated pad -- is messier. That is the next pass: the frame build on natural
-  terrain, then the light + nether entry. Food (v0.95.20), flood-approach (v0.95.21) and the obsidian
-  mine (v0.95.22) are all fixed and validated.
+  terrain -- an uneven, elevated pad -- is messier. Food (v0.95.20), flood-approach (v0.95.21) and the
+  obsidian mine (v0.95.22) are all fixed and validated.
+  - **SHARPENED (live @build repro on the gamer world, 2026-09-19).** Gave 17 obsidian + prereqs, tp'd
+    to natural terrain, `@build portalobs`. The frame reached ~half-built then the drain reported
+    **`NOSTAND(725,75,818)`** (deferNoFace=1, queued=0) on a column-base frame cell: the cell's
+    support below (725,74,818) is obsidian, but the STAND cells beside it are `air`/`spruce_leaves`
+    -- there is no solid pad at stand level, so `placementStand` finds nothing and the cell is
+    deferred, and the task loops ("Placing" <-> "No tasks"). This matches the real run's wander.
+    ROOT CLASS: on chaotic terrain the site lacks the solid, flat pad the flat bench's
+    `isCleanFlatBuildSite` guarantees; `getBuildableAreaNearby` either falls to the weaker
+    `isDecentBuildSite` or sites on uneven ground, so frame cells have no reachable stand. (Caveat:
+    this fast repro also lacked cobblestone for the front scaffold and used an arbitrary tp, so a
+    clean checkpoint repro -- the bot's own site scan + gathered cobblestone -- is still owed before
+    the fix.) FIX DIRECTION (the next pass, a real core change, not a band-aid): build the portal on a
+    pad the bot LEVELS/LAYS itself (it has cobblestone), or make the site scan require a genuinely
+    solid stand-complete pad and lay one when none exists -- so every frame cell has a solid stand on
+    any terrain. This is the deep nav+build seam NAVIGATION.md flags known-hard; it is the last layer
+    between the validated pieces (food, flood, mine, flat-frame) and a lit portal on natural terrain.
 
 ## 2026-09-19 — natural-terrain capstone: portal path stalled on the obsidian MINE holding a water bucket (fixed in v0.95.22, below)
 
