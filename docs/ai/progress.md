@@ -3,6 +3,41 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
+## 2026-09-19 (latest) — G108 portal: misdirection backstop (v0.95.18) + the recovery ceiling, precisely located
+
+The full-flood ceiling was peeled one more layer. Two more roots fixed/attempted, and the TRUE
+remaining blocker is now precisely located: stall DETECTION is comprehensive, stall RECOVERY is not.
+
+- **Misdirection (v0.95.18, shipped).** Frame cells with no side stand fell to the build-queue PILLAR
+  branch, which sends the body to balance on the 1-wide wall over the interior; it drifts, and
+  PillarTask cast the frame obsidian into the DRIFTED column (verifying only against the body's own
+  cell), landing off-plane at x-1/x+1/interior, which the re-gather then mined back until the lava
+  lake drained. Fix (3a): a structure-block pillar is pinned to its target column
+  (`PillarTask.startTo(ty,block,tx,tz)` + place gate refuses any off-column cell). Root-caused by a
+  sub-agent trace; off-plane on BOTH sides = pillar drift, not a face bug.
+- **Reverted, measured NET-NEGATIVE:**
+  1. **Column-top scaffold extension (3b, `y>=origin+2`).** Adds the scaffold's OWN high edge cells
+     (dy=2), which stall the same high-over-open-space way as the frame cells they were meant to help
+     -- full flood 0/2. Back to `==origin+3`.
+  2. **Per-cell parked-aim escape timer (Fix #2).** DETECTION was correct and fired reliably (a 12 s
+     per-cell timer on the long-lived ConstructNetherPortal, immune to the re-arm churn that wipes
+     PlaceBlockTask's own clocks). But its RECOVERY -- a `TimeoutWanderTask` -- FROZE: the bot bobbed
+     in place ~180 s at a 1-block step west of the frame, "Wander for 4.0 / Exploring", never moving.
+     Reverted: detection with no working recovery only trades a place-freeze for a wander-freeze.
+  3. **Dropping the `drainDriving &&` guard on PlaceBlockTask's stall check.** Prematurely wandered a
+     legit aim pause (drain not walking while the crosshair settles) and broke the clean build.
+     Reverted; the guard stays.
+- **THE REMAINING BLOCKER, precisely: stall RECOVERY cannot relocate a build-trapped body.** Every
+  detector now fires (shimmy grace with a fixed anchor; the parked-aim per-cell timer). What fails is
+  the escape: `TimeoutWanderTask`/tungsten nav cannot path a body off a spot trapped by the build --
+  a 1-block step at the frame edge, a narrow scaffold ledge, a gather-dug lip. Measured signature: the
+  body BOBS (feet y oscillating ~1 block) for 100-180 s and covers 0 blocks. A likely factor: the
+  spiral wander sometimes targets a point ACROSS the frame, so nav jams against the obsidian wall.
+  **Next pass (the ONE core fix to make):** a recovery that reliably relocates a build-trapped body --
+  a DIRECTED step to a known-clear approach cell AWAY from the frame (not a random spiral that can aim
+  through it), or a sturdier/wider stand so the body never gets trapped. This is the nav+build seam
+  NAVIGATION.md flags known-hard; it is the standing post-iron portal ceiling (full flood ~3/4).
+
 ## 2026-09-19 (later) — G108 portal: shimmy-stall fix (v0.95.16) + full-flood cell-loss fix (v0.95.17)
 
 Two released fixes closed the two dominant post-iron portal failures. The isolated build bench went to
