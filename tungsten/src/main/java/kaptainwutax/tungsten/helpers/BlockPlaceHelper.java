@@ -456,8 +456,12 @@ public final class BlockPlaceHelper {
                 // One step: the block lands in this cell and we come to rest on top of it, which
                 // is where the next cell of the run wants us anyway. Tower with the STRUCTURE block
                 // (this IS the target cell), not a throwaway -- otherwise the frame-builder gets a
-                // cobblestone where obsidian belongs and destroys/re-places it forever (G108).
-                kaptainwutax.tungsten.task.PillarTask.startTo(head.getY() + 1, headCell.blockName());
+                // cobblestone where obsidian belongs and destroys/re-places it forever (G108). Pin
+                // the target COLUMN too: the body can drift off a 1-wide stand over open air, and
+                // without the column pin the pillar cast the structure block into the drifted
+                // column, off the frame plane (G108, 2026-09-19).
+                kaptainwutax.tungsten.task.PillarTask.startTo(
+                        head.getY() + 1, headCell.blockName(), head.getX(), head.getZ());
                 idleTicks = 0;
                 return;
             }

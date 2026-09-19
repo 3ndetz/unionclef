@@ -307,12 +307,23 @@ public class ConstructNetherPortalObsidianTask extends Task {
             return TaskCatalogue.getItemTask(Items.FLINT_AND_STEEL, 1);
         }
 
-        // Before placing a TOP-ROW cell (y = origin+3, over the open interior), raise the temporary
-        // front standing wall so the cell gets a reachable SIDE stand instead of the flaky
-        // pillar-into-cell climb. Built bottom-up; each block rests on the one below (or the floor pad
-        // the site check guarantees at x=+1), so it places from a side stand exactly like the frame
-        // columns do. It is mined back out below, before the interior is cleared and the portal is lit.
-        if (placeTarget != null && placeTarget.getY() == origin.getY() + 3 && !frontScaffoldComplete(mod)) {
+        // Before placing a HIGH cell (the COLUMN TOPS at y=origin+2 and the TOP ROW at y=origin+3,
+        // both over the open interior), raise the temporary front standing wall so the cell gets a
+        // reachable SIDE stand instead of the flaky pillar-into-cell climb. Built bottom-up; each
+        // block rests on the one below (or the floor pad the site check guarantees at x=+1), so it
+        // places from a side stand exactly like the lower frame cells do. It is mined back out below,
+        // before the interior is cleared and the portal is lit.
+        //
+        // ⛔ WHY y>=origin+2, NOT ==origin+3 (G108, 2026-09-19). A column-top cell (rel y=2, e.g.
+        // (0,2,-1)/(0,2,2)) has no reachable side stand either -- its only placeable neighbour is the
+        // block below -- so placementStand returns null and the drain PILLARS into it. The build
+        // pillar sends the body to balance on the 1-wide wall over open air, it drifts, and the
+        // structure block lands off the frame plane (x-1/x+1/interior), which the frame then
+        // re-gathers and re-mines forever (measured: full flood churn draining the lava lake). With
+        // the 4-tall scaffold up, placementStand offers a stable side stand for the column tops too,
+        // so every frame cell places from the scaffold via the reliable (verified) drain path and
+        // the pillar is never taken for a frame cell.
+        if (placeTarget != null && placeTarget.getY() >= origin.getY() + 2 && !frontScaffoldComplete(mod)) {
             BlockPos scaffoldCell = nextFrontScaffoldCell(mod);
             if (scaffoldCell != null) {
                 setDebugState("Raising front scaffold to reach the top row");

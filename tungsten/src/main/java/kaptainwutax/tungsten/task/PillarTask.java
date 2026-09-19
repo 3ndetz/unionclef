@@ -124,14 +124,32 @@ public class PillarTask {
      */
     private static String structureBlock;
 
+    /**
+     * ⛔ THE TARGET COLUMN A STRUCTURE PILLAR MUST STAY IN (G108, 2026-09-19). A nav climb only
+     * cares about HEIGHT, so it leaves these unset ({@code Integer.MIN_VALUE}) and the tick fills
+     * whatever column the body is in. But a build-queue pillar casts a NAMED structure block to
+     * place one specific frame cell -- and {@code FastNavigator.startExact(cell)} sends the body to
+     * balance ON a 1-wide wall over open air, from which it slides to an adjacent column; the tick
+     * then cast the structure block into THAT drifted column (measured: portal obsidian landing at
+     * x-1, x+1 and the interior, then re-gathered forever). When a target column is pinned, the
+     * place gate refuses any cell whose x/z is not it, so a drifted body never mislays the block.
+     */
+    private static int targetX = Integer.MIN_VALUE, targetZ = Integer.MIN_VALUE;
+
     public static synchronized boolean startTo(int ty) {
         return startTo(ty, null);
     }
 
     public static synchronized boolean startTo(int ty, String structureBlockName) {
+        return startTo(ty, structureBlockName, Integer.MIN_VALUE, Integer.MIN_VALUE);
+    }
+
+    public static synchronized boolean startTo(int ty, String structureBlockName, int tx, int tz) {
         ClientPlayerEntity p = MinecraftClient.getInstance().player;
         if (p == null) return false;
         structureBlock = structureBlockName;
+        targetX = tx;
+        targetZ = tz;
         targetY = ty;
         climbGoalY = ty;
         placed = 0;
@@ -160,6 +178,7 @@ public class PillarTask {
     public static void stop() {
         active = false;
         structureBlock = null;   // next pillar defaults to a throwaway climb unless told otherwise
+        targetX = targetZ = Integer.MIN_VALUE;   // and to filling whatever column the body is in
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.options != null) {
             mc.options.jumpKey.setPressed(false);
@@ -356,6 +375,15 @@ public class PillarTask {
                 BlockPos c = BlockPos.ofFloored(px, player.getY() - dy, pz);
                 BlockPos b = c.down();
                 if (isAir(world, c) && !isAir(world, b)) { placeAt = c; against = b; break; }
+            }
+            // ⛔ A STRUCTURE PILLAR NEVER CASTS OUTSIDE ITS TARGET COLUMN (G108, 2026-09-19). The
+            // body drifts off a 1-wide build stand over open air; without this, the tick cast the
+            // named block (obsidian) into the drifted column, off the frame plane, and the frame
+            // re-gathered/re-mined it forever. A nav climb (targetX unset) is unaffected.
+            if (placeAt != null && structureBlock != null && targetX != Integer.MIN_VALUE
+                    && (placeAt.getX() != targetX || placeAt.getZ() != targetZ)) {
+                placeAt = null;
+                against = null;
             }
             dAir++;
             if (player.getY() > dApex) dApex = player.getY();
