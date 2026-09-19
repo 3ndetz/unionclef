@@ -3,7 +3,28 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
+## 2026-09-19 (latest) — MILESTONE: one-run underground -> NETHER entry, live (v0.95.24 + v0.95.25 clear the portal ceiling)
+
+**The post-iron nether-portal ceiling is CLEARED end-to-end.** A scope run from the canonical deep
+checkpoint nether-reach (y=37, NOT the flood-stuck death-trap), daylock, v0.95.24 + v0.95.25:
+
+- Reached the flood fast, flooded a DEEP lava lake at y=9, mined obsidian **safely** (obs climbed to
+  11+, hp stayed 20 the whole time -- NO lava death), ascended (y=9 -> 68) with the obsidian, built
+  and lit the frame, and **ENTERED THE NETHER** (dim=NETHER at 78,56,112 then moving to 92,51,114).
+  This is the first live one-run underground->nether entry -- the "time-bound" gap from the very first
+  capstone, now closed.
+- **So the lava death was flood-stuck-SPECIFIC** (the worst-case death-trap where the bot is wedged
+  UNDER the lake), not the common path. From a normal deep approach the fixes flood + collect obsidian
+  cleanly. The deep survival confluence (documented below) is a worst-case robustness item, not a
+  blocker for the typical playthrough -- reprioritised accordingly.
+- Nether checkpoint saved for the NEXT frontier (the NETHER STAGE): run end-save nether-attempt-v25
+  (+ mid-run cp0919-2044-t918). TODOS "the nether stage was entered for the first time" is now live.
+
+NEXT FRONTIER: the NETHER STAGE (blaze rods, fortress, wither skulls, ...) from the nether-entry
+checkpoint. The underground-lava-survival worst-case (flood-stuck) remains a documented robustness
+follow-up, lower priority now that the typical path reaches the nether.
+
+## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
 The "650-block material detour" from the earlier capstone was a MISREAD (minePick max=47 all run, zero
 far picks -- the debug string showed a task TARGET, not the bot's position; the exact trap TungstenConfig
