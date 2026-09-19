@@ -56,6 +56,35 @@ build; the next frontier moved one step forward, to the frame build on real terr
     Everything upstream (food v0.95.20, flood-approach v0.95.21, obsidian mine v0.95.22, flat frame
     v0.95.19) is fixed and validated; this multi-factor seam is the last layer before a lit portal on
     natural terrain.
+  - **DECISIVE ISOLATION + the true root (2026-09-19).** Two clean gamer-server experiments settled
+    it. (1) On a hand-laid CLEAN flat stone pad, given obsidian+cobblestone, the bot builds AND LIGHTS
+    the portal -- a real `minecraft:nether_portal` at (698,68,836). So the whole frame+light chain is
+    SOUND on the gamer server; nothing about it is broken. (2) On UNEVEN natural ground (snow/grass/
+    dirt, a sweet-berry bush in the footprint) it stalls -- and a tried `pad-prep` (lay cobblestone in
+    footprint holes + clear the envelope before building) FAILED the SAME way and was reverted:
+    laying the pad hit the identical stall, so the pad is NOT the root. THE ROOT is
+    PLACEMENT-RECOVERY WANDER-DRIFT on messy terrain: when a placement can't reach its stand
+    (obstruction / uneven ground / a plant that regrows), PlaceBlockTask/PlaceStructureBlockTask fall
+    to `TimeoutWanderTask`, the wander DRIFTS the body far from the build (measured 26 blocks away,
+    holding the block), and it never returns -- the build site is lost. Confirmed against the earlier
+    flat-bench work: the wander-recovery flags (wanderSearchMustMove/TargetFollowsTheGround/
+    SpiralCountsLegsNotTries) were tried and reverted there too. So the last layer is a RECOVERY that
+    keeps the builder AT the build (a directed return to the frame, or a local-only wander) instead of
+    drifting off -- the core nav+build recovery the flat bench never needs because its pad is clean.
+    The clean-pad proof means once the body stays put, the portal lights on natural terrain.
+  - ⭐ **FIXED + SHIPPED v0.95.23 (2026-09-19): the natural-terrain portal LIGHTS.**
+    `ConstructNetherPortalObsidianTask` now keeps the builder AT the build -- while in the build phase,
+    if the body has strayed > 10 blocks horizontally from the origin (the wander-drift), it walks back
+    to the origin before continuing, and the drain re-approaches the cell locally (this also pulls the
+    body back from the lava after a gather). Validated on the gamer server, uneven natural ground: the
+    bot stayed local, built the frame, and LIT the portal -- a real `minecraft:nether_portal` at
+    (94,136,-35), "Done constructing" -- where before it drifted 26 blocks off and never finished.
+    No-op on the flat bench (the body never strays 10 blocks on a clean pad; the guard's counter read
+    0 across the flat runs), flat flood 4/5 (run 3 the pre-existing local scaffold shimmy, unrelated).
+    With this, ALL layers of the natural-terrain nether portal are fixed and validated end to end:
+    food gate (v0.95.20) -> flood-approach (v0.95.21) -> obsidian mine (v0.95.22) -> frame build
+    (v0.95.19) -> stay-at-the-build recovery (v0.95.23) -> lit portal. The post-iron portal ceiling is
+    cleared on natural terrain.
 
 ## 2026-09-19 — natural-terrain capstone: portal path stalled on the obsidian MINE holding a water bucket (fixed in v0.95.22, below)
 
