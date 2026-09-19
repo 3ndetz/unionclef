@@ -64,8 +64,20 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     private static void equipBestToolFor(AltoClef mod, BlockPos block) {
         try {
             if (mod.getFoodChain().isTryingToEat()) return;
-            var exec = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            if (exec != null && exec.isPlacingNow()) return;   // the placer owns the hand right now
+            // ⛔ DO NOT SKIP THE MINING TOOL EQUIP ON A NON-EMPTY PLACE QUEUE (G108, 2026-09-19).
+            // This used to `return` when {@code exec.isPlacingNow()} -- but that is queue-based
+            // ({@code placeQueue != null && !placeQueue.isEmpty()}, PathExecutor.java:332), so it is
+            // true whenever a STALE bridge/place segment lingers in the queue, not only during an
+            // active place. Every caller here is a BREAKING context that has just claimed the tick
+            // ({@code minerMineUntilMs}/{@code minerAimUntilMs} set immediately before the call), so
+            // the executor yields and will NOT place this tick -- yet the guard still fired and
+            // skipped the tool equip. Measured on the natural-terrain portal (nether-reach): after
+            // flooding, the route to the obsidian left a place segment queued, so isPlacingNow stayed
+            // true, equipBestToolFor was skipped every tick, the pickaxe was never equipped, the bot
+            // "mined" exposed obsidian with a WATER BUCKET in hand for 7+ minutes (obsidian stuck at
+            // 0), and because it could not break, the queue never drained -- a deadlock. Proven:
+            // manually selecting the pickaxe let it break, and the equip then worked. The miner owns
+            // the hand when it is breaking; equip its tool unconditionally.
             BlockState state = mod.getWorld().getBlockState(block);
             Optional<Slot> best = StorageHelper.getBestToolSlot(mod, state);
             if (best.isEmpty()) return;
