@@ -3,7 +3,34 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — G108 portal: the flood ceiling FIXED at the core (v0.95.19), full flood 6/6
+## 2026-09-19 (latest) — G106 completed (v0.95.20): unreachable food no longer deadlocks the nether; natural-terrain portal path exercised end to end
+
+With the portal build fixed (v0.95.19) I resumed the `nether-reach` checkpoint to confirm it on
+natural terrain. It could not: the bot deadlocked BEFORE the portal on "Collect 140 food / Wander for
+Infinity" -- the food-depleted 22-min checkpoint world (rule 4a3). Root: `BeatMinecraftTask` gates
+"Going to Nether" behind every gather <=0, and `CollectFoodPriorityCalculator` returned 0.1 (weak but
+positive) whenever food was UNREACHABLE and the reserve < foodUnits(140), keeping CollectFood selected
+over the fall-through for ever. This is the unfinished half of G106 (which had already set
+foodUnits=140 / minFoodUnits=120 as the "proceed with a buffer, don't hoard" values but never coded
+the "proceed").
+
+- **Fix (v0.95.20, shipped).** `CollectFoodPriorityCalculator` now takes `minFoodUnits`; on the
+  unreachable-food branch it blocks the nether (0.1, keep exploring) only while the reserve is BELOW
+  the floor, and stands down (`NEGATIVE_INFINITY`) once it is adequate (>= minFoodUnits) but the
+  top-up is unreachable. Reachable food still tops up to foodUnits; emergency +inf and the low-reserve
+  ramp still guard survival. One caller updated (`BeatMinecraftTask`).
+- **Validated on `nether-reach` (natural terrain).** Before: stalled on food, no rung past `nether`.
+  After: the bot proceeds -- flint, `nether` rung @133.6s, wood, then **"Building nether portal with
+  obsidian -> Making obsidian by flooding lava"** -- the FIRST end-to-end exercise of the
+  natural-terrain portal path past the gathers. hp stayed 20 (proceeded with an adequate buffer, not
+  starving). `GAMER_SMOKE: PASS`, fps 27.
+- **Next frontier it exposed (separate, not food, not placement).** The natural-terrain flood-gather
+  then stalls "Approaching lava to flood": the chosen lava source is deep underground (y=27) directly
+  below the bot at the surface (y=61) and the nav does not dig the ~34 blocks down to it. A
+  nav/dig-to-a-deep-target problem -- the next pass. The portal BUILD is validated on the bench
+  (isolated 8/8, full flood 6/6).
+
+## 2026-09-19 — G108 portal: the flood ceiling FIXED at the core (v0.95.19), full flood 6/6
 
 The remaining full-flood failure was root-caused to a single wrong line and fixed. Full obsidian
 flood went 4/6 -> 6/6 on a fresh, uncontended stand; nav regression clean.

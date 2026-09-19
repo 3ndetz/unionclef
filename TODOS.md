@@ -1610,7 +1610,16 @@ test + full nav-suite regression before it counts done.
       (bucket rung @156 s). VERIFIED + SHIPPED v0.95.7: nav suite 14/14 (0 gate failures), the
       day-locked validation from the freeze checkpoint had 0 position stalls and mined deep
       y65→y11 (+290 items), §4y frame review confirmed the two pauses were furnace smelting.
-- [~] **G106 — food over-prioritised after iron (×50 hay -> priority ~1293), gating nether-prep**
+- [x] **G106 — food over-prioritised after iron (×50 hay -> priority ~1293), gating nether-prep**
+      ⭐ COMPLETED v0.95.20 (2026-09-19): the other half -- an UNREACHABLE food top-up no longer
+      deadlocks the nether. CollectFoodPriorityCalculator's `Double.isInfinite(distance) &&
+      foodPotential < foodUnits` branch returned 0.1 unconditionally (weak-but-positive -> blocks the
+      "Going to Nether" fall-through for ever on food-depleted terrain); it now stands down
+      (NEGATIVE_INFINITY) once the reserve is >= minFoodUnits, so the bot proceeds with its buffer.
+      Validated on the nether-reach checkpoint: before, stalled on "Collect 140 food / Wander for
+      Infinity"; after, it progresses to "Building nether portal with obsidian -> flooding lava",
+      GAMER_SMOKE PASS, hp 20 throughout. Next frontier exposed: nav does not dig down to a DEEP lava
+      source (y=27 under the bot at y=61) for the natural-terrain flood-gather -- a separate nav pass.
       (same runs): CollectFoodPriorityCalculator boosted ALL food ×50 when a hay bale was within
       75 blocks, and food gates "Going to Nether" (the fall-through at BeatMinecraftTask:2412 needs
       every gather <=0, foodUnits=220 ≈ 27 cooked meats). Diamonds are opportunistic (not
