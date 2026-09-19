@@ -97,6 +97,21 @@ build; the next frontier moved one step forward, to the frame build on real terr
     needs the checkpoint inventory-restore fixed first (or a fresh full run). The NETHER stage
     (TODOS "the nether stage was entered for the first time") is the next post-iron frontier now that
     the portal path builds + lights.
+  - **Capstone retries -- ALL bench/world-state confounded, none a fix issue (final, 2026-09-19).** I
+    added a post-restore safety to gamer_smoke (force day, clear hostiles r<=64, heal+feed) so a
+    resume lands the bot alive with its kit (committed) -- but the one-run capstone still could not
+    complete, blocked by THREE separate BENCH obstacles, none of them the portal fixes: (1) a
+    transient `docker inspect` timeout mid-restore crashed a run during the 2 GB world swap; (2) after
+    a manual salvage (@gamer on the restored kit at 700,37) the bot reached the flood site but then
+    "Searching for a lava lake to flood -> Wander for Infinity" -- the gamer world's lava at 787,21 was
+    already CONSUMED/converted by this session's many prior runs + @build repros, so there is no
+    floodable lava left near the build (the flood-approach fix then correctly EXPLORES, but a stripped
+    world has nothing to find). So a clean end-to-end capstone AND the nether-stage frontier need a
+    FRESH (regenerated) gamer world -- the current one is too degraded by this session's testing. The
+    portal ceiling itself stays fully validated: isolated build 8/8, flat flood ~5/6, and the decisive
+    natural-terrain proof -- a real `minecraft:nether_portal` built + lit on uneven ground (94,136,-35)
+    with the v0.95.23 guard. NEXT PASS: regen the gamer world (or a fresh long run), then exercise the
+    nether stage.
 
 ## 2026-09-19 — natural-terrain capstone: portal path stalled on the obsidian MINE holding a water bucket (fixed in v0.95.22, below)
 
