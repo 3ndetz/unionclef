@@ -1054,3 +1054,24 @@ real portal at ~(2358,358). A manual scan with explicit ints always found it, wh
 "looked" right. Fixed with a `scan_center()` that parses the string (deploy/runner/nether_portal_test.py).
 The earlier id-field and retry fixes were real but secondary; THIS was the blind spot. With it, the
 bench detects the lit portal directly (no ground-truth workaround needed).
+
+### MILESTONE: nether portal RELIABLY GREEN + released v0.95.14 (G108 done)
+The obsidian nether-portal path builds and lights end to end, reliably. Reliability rate (checklist
+RULE FIVE), OBS bench, ground truth by block id (6/6 nether_portal per run): flood_scaffold2 GREEN,
+first-harness run1 GREEN, then harness runs 1/2/3 GREEN (run2/run3 the FIXED bench also self-reported
+"PASS: NETHER_PORTAL LIT ... in ~223s") -> 5 green runs, no top-row hard-stall, ~220s per build.
+Confirmed on the REAL @gamer path: DefaultGoToDimensionTask.goToNetherFromOverworldTask() builds via
+ConstructNetherPortalObsidianTask (the task the front-scaffold fix changed), obsidian preferred over
+the bucket cast. Released as v0.95.14 (gradlew :1.21.11:githubRelease; asset
+unionclef-1.21.11-0.95.14.jar verified via gh release view).
+
+The four fixes that got here (all committed + pushed, main + 1.21.11 synced): flood reclaim scoops
+real sources (b247b852); tungsten pillars with the cheapest scaffold not obsidian (0164779b);
+top row built from a temporary front scaffold, not a mid-air pillar (01a85111); trustworthy bench --
+block-id match + retry + pos-string parse (0164779b/98cb7344/3c9b6501).
+
+Remaining follow-ups (not blockers, documented): (1) the flat-stand water-search hiccup (~40s
+intermittent before the first flood produces minable obsidian; a real world has natural water); (2)
+the bench's portal_found string-index was the "no portal" blind spot -- fixed, but worth a broader
+sweep for the same int(str) pattern elsewhere. Next ceiling is post-portal (the nether), which needs
+a full @gamer playthrough -- fps-limited on this stand.
