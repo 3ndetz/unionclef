@@ -85,6 +85,18 @@ build; the next frontier moved one step forward, to the frame build on real terr
     food gate (v0.95.20) -> flood-approach (v0.95.21) -> obsidian mine (v0.95.22) -> frame build
     (v0.95.19) -> stay-at-the-build recovery (v0.95.23) -> lit portal. The post-iron portal ceiling is
     cleared on natural terrain.
+  - **Capstone (full one-run chain) attempt -- CONFOUNDED by a checkpoint-tooling bug, not the fixes.**
+    A `--from nether-reach` full run to confirm food->flood->mine->build->light->nether in ONE pass
+    restored the WORLD but NOT the bot's 22-min INVENTORY (it re-ran the whole ladder: wood tools
+    @132s, iron @377s), so it could not reach the portal inside the 26-min window. Two things it DID
+    show live: the food fix works (t=755-822 "Collect food", then it PROCEEDED, no deadlock -- v0.95.20
+    re-validated), and the bot laddered normally. The end-to-end chain remains validated PIECEWISE (the
+    pre-frame path in the earlier checkpoint runs; the frame build+light on natural terrain by the
+    @build portal-lit proof). NEXT-PASS TOOLING NOTE: the checkpoint restore does not reliably restore
+    the player inventory (only the world), so a clean end-to-end capstone / the NETHER-stage frontier
+    needs the checkpoint inventory-restore fixed first (or a fresh full run). The NETHER stage
+    (TODOS "the nether stage was entered for the first time") is the next post-iron frontier now that
+    the portal path builds + lights.
 
 ## 2026-09-19 — natural-terrain capstone: portal path stalled on the obsidian MINE holding a water bucket (fixed in v0.95.22, below)
 
