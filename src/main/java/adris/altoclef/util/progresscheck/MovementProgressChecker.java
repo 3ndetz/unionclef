@@ -106,8 +106,36 @@ public class MovementProgressChecker {
      * #resetIfPathingWithGrace} centralized it here.
      */
     private static final int STALL_MOVE_GRACE = 40;
+    /**
+     * Net distance (blocks) the body must travel FROM the grace anchor to count as genuinely
+     * moving rather than shimmying in place. Squared for {@link Vec3d#squaredDistanceTo}.
+     *
+     * <p>⛔ WHY THIS REPLACED A 0.02-BLOCK PER-TICK BAR (2026-09-19). The old test compared each
+     * tick only against the one before it (a FOLLOWING anchor) with a 0.0004 (=0.02²) threshold.
+     * A blocked build drain does not FREEZE -- it SHIMMIES, oscillating ~0.4 blocks a tick against
+     * the cell it cannot place. Measured on the portal front scaffold: the body sat at
+     * (2359.5,-56,359.5)±0.4 for 75+ seconds under "Placing cobblestone at 2359,-57,360", every
+     * tick clearing the 0.02 bar, so {@code ticksSinceMoved} reset to 0 every tick, the grace never
+     * expired, and the checker was reset for ever -- the exact stall it exists to catch, wearing the
+     * costume of motion. A FIXED anchor with a net-distance bar treats a shimmy as stationary (it
+     * never gets far from the anchor) while a real walk or pillar leaves the anchor at once and
+     * re-anchors. 1.0 block sits far above any shimmy's amplitude and far below a walking stride
+     * over the grace window (a walk covers ~8 blocks in 40 ticks).
+     */
+    private static final double STALL_MOVE_MIN_SQ = 1.0;
     private int ticksSinceMoved = 0;
     private Vec3d lastMoveTickPos = null;
+
+    /**
+     * True when the body has stayed within {@link #STALL_MOVE_MIN_SQ} of a FIXED anchor for at
+     * least {@link #STALL_MOVE_GRACE} ticks -- a genuine in-place stall whether the body is frozen
+     * OR shimmying. The distance checker alone can miss a shimmy, because a body oscillating in
+     * place keeps showing motion to a per-tick test; this reads the accumulated grace directly, so
+     * the caller can escape a shimmy deterministically instead of waiting on the distance timeout.
+     */
+    public boolean stalledInPlace() {
+        return ticksSinceMoved >= STALL_MOVE_GRACE;
+    }
 
     /**
      * Reset this checker when {@code isPathing} is true -- UNLESS the body has been still for
@@ -130,17 +158,15 @@ public class MovementProgressChecker {
         var self = mod.getPlayer();
         if (self != null) {
             Vec3d pos = self.getPos();
-            // ⛔ SELF-CAUGHT ON RE-AUDIT: this used to write `lastMoveTickPos = pos`
-            // unconditionally, every call -- comparing each tick only against the ONE
-            // immediately before it, rather than TimeoutWanderTask/DestroyBlockTask's original
-            // fixed anchor (only replaced once real movement is detected, or on the first call).
-            // Slow-but-genuine drift just under the 0.0004 threshold on any SINGLE tick would
-            // then never accumulate into a detected move, however far the body travels over many
-            // ticks -- the opposite of what the grace period is for. Only replace the anchor when
-            // it actually moves (or is unset), matching the original exactly.
+            // A FIXED anchor and a NET-distance bar (see STALL_MOVE_MIN_SQ). The anchor is only
+            // replaced once the body has genuinely LEFT it -- travelled STALL_MOVE_MIN blocks away
+            // -- not on every sub-bar twitch. A shimmy stays inside that radius and accumulates
+            // ticksSinceMoved toward the grace; a real walk or pillar leaves the radius at once and
+            // re-anchors, keeping the grace fresh. (The earlier 0.02-block bar with a following
+            // anchor did the opposite: a shimmy cleared it every tick and the grace never grew.)
             if (lastMoveTickPos == null) {
                 lastMoveTickPos = pos;
-            } else if (pos.squaredDistanceTo(lastMoveTickPos) > 0.0004) {
+            } else if (pos.squaredDistanceTo(lastMoveTickPos) > STALL_MOVE_MIN_SQ) {
                 ticksSinceMoved = 0;
                 lastMoveTickPos = pos;
             } else {

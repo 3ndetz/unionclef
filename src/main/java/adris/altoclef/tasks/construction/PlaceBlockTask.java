@@ -128,27 +128,49 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         }
 
 
-        // ⛔ THE BUILD DRAIN OWNS THE BODY WHILE IT WALKS/PILLARS -- DO NOT YANK IT (G108, 2026-09-18).
-        // Placement is handed to BlockPlaceHelper's tick drain, which for a cell it cannot reach from
-        // here WALKS to a stand or, for a column step, WALKS INTO the cell and PILLARS up (stand,
-        // jump, place below). That manoeuvre is exactly the "the body stands still on purpose" case
-        // that MineAndCollectTask and DestroyBlockTask already carve out: while it runs, this task's
-        // body-movement progress check trips and the reactive wander drags the bot off mid-climb, so
-        // the drain never finishes and the cell loops (measured: a portal right-column cell whose
-        // support was already placed -- bot straddling the support at head height, "Wander for 5" on
-        // repeat, 0 portal). The drain has its OWN bounded walk/pillar caps and defers a cell it
-        // truly cannot reach, so letting it drive is safe; reset our clock while it does.
-        if (kaptainwutax.tungsten.task.FastNavigator.isActive()
+        // ⛔ THE BUILD DRAIN OWNS THE BODY WHILE IT WALKS/PILLARS -- DO NOT YANK IT WHILE IT MOVES,
+        // BUT DO CATCH IT WHEN IT FREEZES (G108, 2026-09-18/2026-09-19). Placement is handed to
+        // BlockPlaceHelper's tick drain, which WALKS to a stand or WALKS INTO a cell and PILLARS up.
+        // While that genuinely runs (the body moving) the plain body-movement check would wrongly trip
+        // and the reactive wander would drag the bot off mid-climb, so we must not yank it. BUT the
+        // first version reset UNCONDITIONALLY whenever the drain was "active" -- and a nav/pillar that
+        // is active yet STUCK (the body frozen, e.g. standing on a throwaway it mis-placed at its own
+        // placement stand) is exactly the stall this check exists to catch. An unconditional reset
+        // blinds it, and the cell loops forever (measured: 100 s+ frozen "Placing" on one cell, 0
+        // portal). resetIfPathingWithGrace keeps the "don't yank a MOVING climb" guarantee (it still
+        // resets while the body has moved within the last STALL_MOVE_GRACE ticks) but lets a genuinely
+        // FROZEN drain fall through to the wander below, which re-picks a stand and recovers.
+        boolean drainDriving = kaptainwutax.tungsten.task.FastNavigator.isActive()
                 || kaptainwutax.tungsten.task.PillarTask.isActive()
-                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
-            progressChecker.reset();
-        }
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+        progressChecker.resetIfPathingWithGrace(mod, drainDriving);
 
+        // ⛔ A SHIMMY IS A STALL (G108, 2026-09-19). The drain does not always FREEZE when it
+        // cannot reach a stand -- it SHIMMIES, oscillating ~0.4 blocks a tick against the cell,
+        // which kept the plain movement check happy (the body "moved") while nothing was placed.
+        // Measured: 75+ s under "Placing cobblestone at 2359,-57,360", the frame never completing.
+        // stalledInPlace() reads the FIXED-anchor grace, so a shimmy in place is caught the same as
+        // a freeze; when the drain is driving yet the body has not left a 1-block radius for the
+        // grace window, we fall through to the wander, which relocates the body and lets the drain
+        // re-pick a stand from somewhere the shimmy cannot recur.
         // Check if we're approaching our point. If we fail, wander for a bit.
-        if (!progressChecker.check(mod)) {
+        if (!progressChecker.check(mod) || (drainDriving && progressChecker.stalledInPlace())) {
             failCount++;
             if (!tryingAlternativeWay()) {
                 Debug.logMessage("Failed to place, wandering timeout.");
+                // ⛔ RELEASE THE DRAIN BEFORE HANDING THE BODY TO THE WANDER (G108, 2026-09-19).
+                // The wander MOVES via tungsten, and so does the build drain: BlockPlaceHelper's
+                // tick drain keeps re-issuing FastNavigator.startExact(stand) every tick while its
+                // queue is non-empty. Two owners of one nav singleton froze the body -- MEASURED:
+                // 50 s pinned at (2359.5,-55,356.5) under "Wander for 5.0 blocks / Exploring", the
+                // wander never covering an inch because the drain re-grabbed the nav each tick. So
+                // when we give up on this cell, clear the queue (the drain stops re-issuing) and
+                // stop its lingering nav ONCE, leaving the wander sole owner. The cell is not lost:
+                // once the wander ends, onTick re-submits it (queued()==0 -> beginBatch) and the
+                // drain re-picks a stand from the new, un-stuck position. This branch runs once per
+                // wander episode -- the wander-active guard above returns before it on later ticks.
+                BlockPlaceHelper.clearQueue();
+                kaptainwutax.tungsten.task.FastNavigator.stop();
                 return wanderTask;
             } else {
                 Debug.logMessage("Trying alternative way of placing block...");
