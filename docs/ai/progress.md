@@ -54,6 +54,18 @@ lower priority now that the typical path reaches the nether.
   near lava). Repro: `--from nether-fresh` (dies to lava-vs-Enderman) and `--from flood-stuck` (burns
   under the lake). This is the next focused pass -- deep + delicate (do not regress lava-crossing /
   descent), with those two deterministic repros.
+  - **Scoped fix LOCATION (source read).** The A* pathfinder already treats lava as blocked
+    (MovementHelper: `isLava -> return true`), so PLANNED walks avoid it. The gap is non-planned
+    movement near lava: (1) `RunAwayTask.safeFleePoint` picks a flee point via `snapGround` +
+    `hasRoomBeyond`, checking VOID-safety but NOT lava -- so it can flee onto/through lava; (2)
+    `RunAwayTask.driveAwayRaw` key-drives away with no ground/lava probe, relying on `VoidGuard`
+    afterwards, and VoidGuard (`VoidDetector.voidWithin`) clamps away from the VOID only, no lava
+    equivalent. FIX: add a lava clamp analogous to VoidGuard (a `voidWithin`-style "lavaWithin" that
+    vetoes a key-step toward adjacent lava) and make `safeFleePoint` reject a candidate whose ground
+    is lava or whose step path crosses lava; the same clamp helps combat movement (MobDefenseChain
+    strafe/approach) near lava. TEST: `--from nether-fresh` (flee-into-lava) and `--from flood-stuck`
+    (flood burn), plus combat regression (edge_duel) and lava-crossing/descent (mine_diamond) so the
+    clamp does not forbid legitimate lava interaction.
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
