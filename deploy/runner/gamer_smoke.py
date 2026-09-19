@@ -1058,6 +1058,14 @@ def main():
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     fps_samples = []
     _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M")
+    # CAPTURE THE NETHER ENTRY THE MOMENT IT HAPPENS. The one-run underground->nether entry is proven
+    # (v0.95.24 + v0.95.25), but the bot dies within ~30 s of arriving (Enderman knockback off a ledge)
+    # -- faster than a 2 GB checkpoint copy -- so no periodic checkpoint ever caught it ALIVE in the
+    # nether. To give the NETHER-STAGE pass a deterministic start, the first tick the bot is in the
+    # nether we clear nearby hostiles and heal (so the ~40 s save lands on a live bot, not a corpse),
+    # then freeze `nether-fresh`. Clearing at the SAVE instant only, not during the run, so it captures
+    # a clean start without turning off the dimension's hazards for the run itself.
+    _nether_cp_done = False
     while time.time()-t0 < MINUTES*60:
         time.sleep(20)
         if CP_EVERY and time.time() - _cp_last >= CP_EVERY * 60:
@@ -1070,6 +1078,26 @@ def main():
             _cp_last = time.time()
         try:
             gs=py4j("gs"); inv=py4j("inv"); ht=py4j("hasTask")
+            # Nether entry -> one clean, survivable checkpoint for the nether-stage pass.
+            if not _nether_cp_done:
+                _dim = str((gs.get("self") or {}).get("dimension") or "")
+                if "NETHER" in _dim.upper():
+                    _nether_cp_done = True
+                    print("  NETHER ENTERED -- clearing nearby hostiles + healing, then saving nether-fresh")
+                    for _mob in ("zombie","skeleton","enderman","ghast","blaze","piglin","hoglin",
+                                 "zombified_piglin","magma_cube","wither_skeleton","creeper"):
+                        try: grcon(f"kill @e[type=minecraft:{_mob},distance=..80]")
+                        except Exception: pass
+                    try:
+                        grcon(f"effect give {BOT} minecraft:instant_health 1 20 true")
+                        grcon(f"effect give {BOT} minecraft:regeneration 10 4 true")
+                        grcon(f"effect give {BOT} minecraft:fire_resistance 30 0 true")
+                    except Exception: pass
+                    try:
+                        _cp.save("nether-fresh",
+                                 note=f"clean nether entry (hostiles cleared, healed) run {RUN_SEQ[0]}")
+                    except Exception as _ne:            # noqa: BLE001
+                        print(f"  nether-fresh checkpoint failed: {str(_ne)[:120]}")
             # WHAT IS IT DOING WHEN IT FAILS? Asking after the run is useless — the task
             # chain reads "No tasks" the moment @gamer ends, which is what my first attempt
             # measured. Sample it WHILE the run is alive, and only when it changes, so the
