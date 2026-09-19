@@ -8,6 +8,31 @@ Format: Investigate → Plan → Implement. Completed investigation history is p
 The remaining full-flood failure was root-caused to a single wrong line and fixed. Full obsidian
 flood went 4/6 -> 6/6 on a fresh, uncontended stand; nav regression clean.
 
+**Natural-terrain confirmation attempt (`gamer_smoke --from nether-reach`) -- CONFOUNDED, not a bot
+result.** After the bench 6/6 I resumed the `nether-reach` checkpoint (run 1 at 22 min, bot at
+700,37,838, diamond kit, water bucket, cobblestone, NO obsidian) on the survival server to watch the
+portal build on natural terrain. The bot reached the `nether` rung at 156 s (gained obsidian +
+flint&steel), then STALLED: `LADDER STALLED: no new rung for 150 s`. Live task read: `Collect 140.0
+units of food -> Wander for Infinity / Exploring`, obsidian back to 0. This is NOT a portal-build
+failure and NOT my fix -- the portal phase was never reached. It is CHECKLIST rule 4a3 ("the bot eats
+the course it is graded on"): the checkpoint world is a 22-minute-old world whose animals run 1 had
+already eaten, so on resume the bot needs 140 food units, finds none within reach, and
+`CollectFoodPriorityCalculator.calculatePriority` returns 0.1 on the `Double.isInfinite(distance) &&
+foodPotential < foodUnits` branch (line 59) -> weak-but-nonzero CollectFood -> wander for food that is
+not there. `BeatMinecraftConfig.foodUnits = 140`, `minFoodUnits = 120`.
+  - **What this does and does not establish.** It does NOT test the portal on natural terrain (the run
+    never got there), and it is NOT evidence of a food-chain bug on a normal run (food is gathered en
+    route when the terrain is not pre-depleted). A clean natural-terrain portal confirmation needs a
+    FRESH world (the survival world persists and degrades between runs -- rule 4a3), not a resume of a
+    depleted checkpoint. Tracked as the next pass: either wipe/regen the gamer world for a from-scratch
+    run, or take a checkpoint whose surroundings still hold food. The portal BUILD itself is validated
+    on the bench (isolated 8/8, full flood 6/6) and its fix shipped in v0.95.19.
+  - **Latent (real, but not today's blocker): the food deadlock on depleted terrain.** If the bot ever
+    holds < minFoodUnits and no food is reachable, line 59's 0.1 return wanders for food indefinitely
+    instead of proceeding. That is a genuine "wander for infinity" fragility, but it only bites on
+    already-stripped terrain; do not fix it on the confounded checkpoint -- reproduce it on a fresh run
+    first (RULE ZERO/FIVE), or it will be tuned against an artifact.
+
 - **Root (tungsten `BlockPlaceHelper.placementStand`).** The intermittent stall was always the same
   cell -- the first bottom-row frame cell (2358,-57,357) -- with the body standing in/beside it,
   "Wandering" or "Placing" for the whole window and never placing it (measured 246 s on one run). The
