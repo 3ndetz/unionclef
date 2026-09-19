@@ -33,7 +33,7 @@ bot bugs, and both bite a real run's OPPOSITE way:
 The FLOOD mechanic itself, the frame BUILD, and the light are all faithfully exercised here; a real
 @gamer run is still the final confirmation for natural (chaotic) terrain.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, re, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BZ = 2360, 360                     # platform centre
@@ -117,6 +117,23 @@ def rcon(c):
     return sh(["docker", "exec", SERVER, "rcon-cli", c]).stdout.strip()
 
 
+def bot_dim():
+    # Server-side, authoritative, and dimension-INDEPENDENT (unlike the client-side getBlockAt
+    # scan, which only sees chunks loaded around the body). Returns e.g. "minecraft:overworld"
+    # or "minecraft:the_nether", or "" if it cannot be read.
+    #
+    # ⛔ WHY THIS EXISTS (2026-09-19). The PASS check scanned for a NETHER_PORTAL block within
+    # rad 10 of the BOT. But a freshly LIT portal teleports the body that lit it: the bot walks
+    # into its own portal, is sent to the nether, and the overworld build chunk UNLOADS on the
+    # client -- so the near-bot getBlockAt scan then sees nothing and every such run was reported
+    # FAIL, though the portal had built AND lit AND worked. The teleport IS the proof: on this
+    # wiped flat stand the only portal is the one just built, so a dimension change to the nether
+    # cannot happen without it. Read the dimension server-side and treat entering the nether as a
+    # definitive PASS, independent of where the body ends up or which chunks the client holds.
+    m = re.search(r'"(minecraft:[a-z_]+)"', rcon(f"data get entity {BOT} Dimension"))
+    return m.group(1) if m else ""
+
+
 def build():
     half = LAVA_SIZE // 2
     # ⛔ WIDE WIPE (2026-09-18): the obsidian method sites the frame OUTWARD (up to r~12) on a clean
@@ -190,7 +207,11 @@ def main():
     # start on the floor a few blocks from the lake
     sx, sy, sz = BX + 0.5, FLOOR_Y + 1, BZ + 0.5
     rcon(f"spawnpoint {BOT} {BX} {FLOOR_Y+1} {BZ}")
-    rcon(f"tp {BOT} {sx} {sy} {sz}")
+    # ⛔ FORCE THE OVERWORLD (2026-09-19). A prior run's portal can leave the bot in the nether;
+    # a plain `tp <coords>` keeps the current dimension, so the bot would start the new run in
+    # the nether while the scene is built in the overworld -- and the reached-nether PASS latch
+    # below would false-trigger on the leftover dimension. `execute in ... run tp` moves it back.
+    rcon(f"execute in minecraft:overworld run tp {BOT} {sx} {sy} {sz}")
     rcon(f"effect give {BOT} minecraft:instant_health 1 10 true")
     rcon(f"clear {BOT}")
     # the prerequisites, so the task goes straight to the lava search + cast. A real run reaches
@@ -255,10 +276,20 @@ def main():
     # "Getting flint"/"Collecting lava"/"PlaceObsidian" as it works. A block scan (portal_found)
     # is rcon-per-block and far too slow to run each poll; it is used ONCE, at the end, to confirm.
     t0 = time.time(); done = False; seen = set(); wander = 0; phases = set()
+    reached_nether = False
     while time.time() - t0 < WINDOW_S:
         time.sleep(5)
         s = py4j("state")
         tsk = py4j("task")["t"]
+        # A dimension change to the nether is definitive proof of a built + lit portal (see
+        # bot_dim). Checked server-side every poll so it holds even after the body wanders on
+        # or teleports back to the overworld.
+        dim = bot_dim()
+        if dim and "overworld" not in dim:
+            reached_nether = True
+            print(f"  t={time.time()-t0:.0f}s BOT ENTERED {dim} -- portal built, lit AND used "
+                  f"(teleport = proof); PASS")
+            done = True; break
         # ⛔ KEEP THE PICKAXE EQUIPPED FOR THE MINE (2026-09-18). The obsidian-flood gather leaves an
         # (empty) bucket in the hand after reclaiming its water; the mine then needs the diamond
         # pickaxe back. On a REAL run the miner auto-equips its self-crafted pickaxe (iron/diamond
@@ -304,12 +335,18 @@ def main():
             if made:
                 done = True
             break
-    # Final confirmation, centred on the bot's last position, BEFORE unloading the chunk.
-    cx, cz = scan_center(py4j("state").get("pos"))
-    made = portal_found(cx, FLOOR_Y - 1, cz, rad=10)
+    # Final confirmation. The nether latch is authoritative on its own; only bother with the
+    # client-side block scan when the body never left (still in the overworld, chunk loaded).
+    made = None
+    if not reached_nether:
+        cx, cz = scan_center(py4j("state").get("pos"))
+        made = portal_found(cx, FLOOR_Y - 1, cz, rad=10)
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
     rcon(f"forceload remove {BX-18} {BZ-18} {BX+18} {BZ+18}")
     print(f"phases reached: {sorted(phases)}")
+    if reached_nether:
+        print(f"result: portal BUILT + LIT + USED (bot teleported to the nether) in {time.time()-t0:.1f}s")
+        print("PASS: nether portal constructed (dimension change confirmed)"); return 0
     if made:
         print(f"result: NETHER_PORTAL LIT at {made} in {time.time()-t0:.1f}s")
         print("PASS: nether portal constructed (real portal block confirmed)"); return 0
