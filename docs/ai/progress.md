@@ -101,6 +101,14 @@ lower priority now that the typical path reaches the nether.
     Both parked: re-test v0.95.26 unrecorded from flood-stuck; instrument the flat-bench "Waiting"
     stall (which rim/water cell the flood chose vs the scene lake). Not chased now -- it would not
     change the shipped state (v0.95.25) and the nether-entry demo is the priority.
+  - **RESOLVED by a controlled comparison: the v0.95.26 freeze WAS the clamp.** The next recorded
+    nether-reach run, on v0.95.25, went to the SAME lake (787.7,21,820.5 -- the flood-stuck spot),
+    under the SAME recorder, and did NOT freeze: it flooded and mined -- obs 1 -> 3 -> 5 -> 8 -> 9
+    over 100 s, body moving (z 817 -> 813), UnstuckChain ownership 0, "Mining/Collecting obsidian".
+    Same lake, same recorder, same stand (fps 30 / 20 TPS): only the jar differed, and v0.95.26 sat
+    there for 12+ minutes. The revert's "measured regression" claim is reinstated with this evidence.
+    The blanket key-release IS the cause: with lava on every side the guard releases every direction.
+    The flat-bench "Waiting for lava" stall on v0.95.25 remains a separate, uncharacterised item.
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
