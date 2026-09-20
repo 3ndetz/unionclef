@@ -16,6 +16,27 @@ condition; a no-op inside the frame's own column of height. The two earlier succ
 did not land in this geometry (RULE FIVE). Release 0.95.27 (0.95.26 stays retired: the reverted
 clamp). Validation pending: recorded re-run from nether-reach + OBS bench + nav baselines.
 
+- **Validation, on film (frames verified before sending).** A natural recorded re-run on 0.95.27
+  had no flood freeze but ran out of its 32-min window at 12/17 obsidian (deep basin, slow collect)
+  -- three recorded natural runs missed the entry for three different reasons (freeze / vertical gap
+  / window) while the two logged entries were unrecorded, so the build path was validated on a
+  deterministic entry demo: nether-reach + 17 obsidian and flint&steel GIVEN via rcon after restore
+  (stated honestly in the caption; the mining itself is on the earlier timelapse, TG 9083). Result:
+  "Returning to the portal build" FIRED at t=254 s (the vertical return, fix #1, seen in frame), the
+  frame went up at y=69 with the front scaffold, the portal lit, the bot ENTERED THE NETHER at t=269 s
+  and began "Hunting endermen for pearls" with a diamond sword (t=329 s), then died to nether lava
+  (~t=400 s; the documented nether-stage frontier). Sent to the operator as TG 9087 (4x, 0-420 s).
+  The entry hook refreshed `nether-fresh` from this run. TG 9082 was a dud (330 s of the main menu,
+  bench never started: my cwd mistake; sent unwatched -- rule violated once, every clip since verified).
+- **Bench lessons this session:** (1) never trust `pgrep` in the client container -- scan /proc (the
+  codebase's own pattern); a false "ffmpeg stopped" cost a spurious watchdog. (2) Git Bash rewrites
+  `/mc-data/...` args to `C:/Program Files/Git/mc-data/...` before docker sees them (MSYS path
+  conversion) -- wrap container paths in `sh -c "..."`; a bare path gave "Protocol not found".
+  (3) A run-exit waiter keyed on process age must start after the startup window, else it fires at
+  once (two false "RUN EXITED"). (4) Telegram rejects >4096 chars with a bare 400 -- use
+  tg_send_long.py. (5) The recorder does NOT starve the client (30/29/29 fps) and server TPS is 20;
+  recorded-run failures were real stalls, not the recorder.
+
 ## 2026-09-19 — MILESTONE: one-run underground -> NETHER entry, live (v0.95.24 + v0.95.25 clear the portal ceiling)
 
 **The post-iron nether-portal ceiling is CLEARED end-to-end.** A scope run from the canonical deep
