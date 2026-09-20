@@ -320,7 +320,18 @@ public class ConstructNetherPortalObsidianTask extends Task {
         if (placeTarget != null) {
             BlockPos body = mod.getPlayer().getBlockPos();
             long ddx = body.getX() - origin.getX(), ddz = body.getZ() - origin.getZ();
-            if (ddx * ddx + ddz * ddz > 100) {   // strayed > 10 blocks horizontally from the frame
+            long ddy = body.getY() - origin.getY();
+            // ⛔ ...AND STRAYED VERTICALLY TOO (G108, 2026-09-21). This guard measured X/Z only, so a
+            // body standing right UNDER the frame's column was "at the build" to it. Measured on a
+            // recorded nether-reach run: the frame origin was chosen on the surface at (732,69,832),
+            // the bot then mined its obsidian deep and ended at (731.7,13,833.7) -- 1.4 blocks away
+            // horizontally, 56 blocks BELOW -- so this check never fired, PlaceBlockTask fell to
+            // TimeoutWanderTask ("Wander for 5 blocks / Failed exploring") against a wall at y=13 for
+            // the last four minutes of the run, and the portal that had all 14 obsidian in hand was
+            // never placed. A frame is five blocks tall and its stands are within a couple of blocks
+            // of the origin, so more than six blocks of vertical separation is never "at the build":
+            // walk back up (or down) to the origin first, exactly as for a horizontal drift.
+            if (ddx * ddx + ddz * ddz > 100 || Math.abs(ddy) > 6) {   // strayed > 10 blocks horizontally, or > 6 vertically
                 setDebugState("Returning to the portal build");
                 return new GetToBlockTask(origin, false);
             }

@@ -3,7 +3,20 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-19 (latest) — MILESTONE: one-run underground -> NETHER entry, live (v0.95.24 + v0.95.25 clear the portal ceiling)
+## 2026-09-21 (latest) — v0.95.27: the builder returns to the frame when strayed VERTICALLY (new stall found on film)
+
+The recorded nether-reach run on v0.95.25 (deaths 0, fps 28, GAMER_SMOKE PASS) flooded, mined all 14
+obsidian and STARTED the frame -- then no nether entry. Late frames (t=28..32 min, verified) are
+identical: bot at (731.7,13,833.7) facing a wall, `PlaceBlockTask: Place obsidian at (732,69,832) ->
+Wandering / Failed exploring`. The frame origin was chosen on the SURFACE (y=69) while the bot was up
+there; it then mined deep and ended 1.4 blocks away horizontally and **56 blocks below**. 0.95.23's
+return-to-build guard measured X/Z only (`ddx²+ddz² > 100`), so it never fired; the wander cannot
+climb 56 blocks. Fix: the guard also returns the builder when |dy| > 6 (a frame is five tall). One
+condition; a no-op inside the frame's own column of height. The two earlier successful entries simply
+did not land in this geometry (RULE FIVE). Release 0.95.27 (0.95.26 stays retired: the reverted
+clamp). Validation pending: recorded re-run from nether-reach + OBS bench + nav baselines.
+
+## 2026-09-19 — MILESTONE: one-run underground -> NETHER entry, live (v0.95.24 + v0.95.25 clear the portal ceiling)
 
 **The post-iron nether-portal ceiling is CLEARED end-to-end.** A scope run from the canonical deep
 checkpoint nether-reach (y=37, NOT the flood-stuck death-trap), daylock, v0.95.24 + v0.95.25:
