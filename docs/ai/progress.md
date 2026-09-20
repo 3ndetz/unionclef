@@ -87,6 +87,20 @@ lower priority now that the typical path reaches the nether.
     the nether: strictly worse. Reverted wholesale to v0.95.25 (last version proven to reach the
     nether). Lesson for the lava pass: any lava guard must be DIRECTION-specific (veto only the step
     INTO lava, keep the steps away from it) and knockback-aware -- never a blanket release.
+  - **RULE ZERO audit of that freeze, with numbers.** The v0.95.26 freeze run was the only one under
+    the screen recorder, so the stand was suspected first. MEASURED and EXCLUDED, one by one:
+    (1) client fps: 30 baseline / 29 under libx264 x11grab 15fps / 29 under mjpeg 6fps
+    (getPerfStats) -- the recorder does not starve the client; (2) server tick: flat test-server
+    2.2 ms/tick, gamer-server 6.0 ms/tick, both "running normally" at 20 TPS (`tick query`);
+    (3) TimerGame's clock: ClientConnection ticks / 20 (not time-of-day), so the flat server's
+    frozen daytime (1000) is irrelevant. With the stand clean, the v0.95.26 clamp is back to being
+    the leading explanation of THAT freeze -- but with a caveat: a recorded OBS flat-bench run on the
+    twice-proven v0.95.25 ALSO stalled ("Waiting for lava to turn to obsidian" 320+ s, unstuck shimmy
+    every ~10 s, bot drifted 26 blocks from the lake; frames verified), so a stand-side or bench
+    confounder (dirty arena / leftover lava outside the wipe?) exists and is NOT yet characterised.
+    Both parked: re-test v0.95.26 unrecorded from flood-stuck; instrument the flat-bench "Waiting"
+    stall (which rim/water cell the flood chose vs the scene lake). Not chased now -- it would not
+    change the shipped state (v0.95.25) and the nether-entry demo is the priority.
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
