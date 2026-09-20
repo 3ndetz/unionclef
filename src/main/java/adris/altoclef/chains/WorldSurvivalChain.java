@@ -43,6 +43,22 @@ public class WorldSurvivalChain extends SingleTaskChain {
     private BlockPos _extinguishWaterPosition;
 
     /**
+     * LAVA-ENTRY INSTRUMENT (G108 nether stage, 2026-09-21): WHAT WAS THE BODY DOING ON THE TICK IT
+     * ENTERED LAVA. Three own-movement clamps did not stop "tried to swim in lava" on the nether
+     * stage, and a 3-second bench tracer never caught the instant, so the mechanism was being
+     * guessed at (knockback? combat approach? flee?) -- RULE ONE, instrument it. Snapshotted ONCE on
+     * the rising edge of {@code player.isInLava()}, read over py4j as {@code lavaEntryStats()}:
+     * hurtTime > 0 means a hit landed within ~10 ticks (knockback into lava); onGround 0 with speed
+     * means flung; stage PURSUE with combatFwd 1 means it walked in while closing; flee 1 means the
+     * flee took it in. Counters only; nothing here changes behaviour.
+     */
+    public static volatile int lavaEntries;
+    public static volatile int lavaEntryHurtTime, lavaEntryOnGround, lavaEntrySpeedCm,
+            lavaEntryFlee, lavaEntryPunk, lavaEntryCombatFwd;
+    public static volatile String lavaEntryStage = "-", lavaEntryPos = "-";
+    private boolean wasInLavaLastTick = false;
+
+    /**
      * How far around a block that REFUSED TO BREAK we stop trying to break anything.
      *
      * <p>⛔ THIS WAS 50, WHICH BANS A 101x101x101 CUBE ON ONE FAILURE AND IS HOW mine_stone DIES.
@@ -157,6 +173,23 @@ public class WorldSurvivalChain extends SingleTaskChain {
         // an && tells you nothing about which. Two candidates, both settled by one run: isInLava()
         // may judge SUBMERSION rather than occupancy, or the behaviour stack may be holding
         // escapeLava false somewhere despite its default of true.
+        // Lava-entry instrument: snapshot the body's state on the tick it enters lava (see fields).
+        boolean inLavaNow = mod.getPlayer().isInLava();
+        if (inLavaNow && !wasInLavaLastTick) {
+            lavaEntries++;
+            var p = mod.getPlayer();
+            lavaEntryHurtTime = p.hurtTime;
+            lavaEntryOnGround = p.isOnGround() ? 1 : 0;
+            Vec3d v = p.getVelocity();
+            lavaEntrySpeedCm = (int) Math.round(Math.sqrt(v.x * v.x + v.z * v.z) * 100.0);
+            lavaEntryFlee = kaptainwutax.tungsten.task.RunAwayTask.isActive() ? 1 : 0;
+            lavaEntryPunk = kaptainwutax.tungsten.task.PunkPlayerTask.isActive() ? 1 : 0;
+            lavaEntryStage = String.valueOf(kaptainwutax.tungsten.combat.CombatController.lastStage);
+            lavaEntryCombatFwd = kaptainwutax.tungsten.combat.CombatController.lastForwardPressed ? 1 : 0;
+            lavaEntryPos = p.getBlockPos().toShortString();
+        }
+        wasInLavaLastTick = inLavaNow;
+
         if (isInLavaOhShit(mod)) {
             lavaCondHazard++;
         }

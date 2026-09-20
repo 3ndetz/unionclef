@@ -1279,6 +1279,26 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /**
+     * What the body was doing on the tick it last entered lava -- the lava-entry instrument in
+     * WorldSurvivalChain. Read this after a "tried to swim in lava" death instead of guessing:
+     * hurtTime > 0 = knocked in, onGround 0 + speed = flung, stage PURSUE + combatFwd 1 = walked in
+     * while closing on a target, flee 1 = the flee took it in. entries counts rising edges.
+     */
+    public Map<String, Object> lavaEntryStats() {
+        Map<String, Object> out = new HashMap<>();
+        out.put("entries", adris.altoclef.chains.WorldSurvivalChain.lavaEntries);
+        out.put("hurtTime", adris.altoclef.chains.WorldSurvivalChain.lavaEntryHurtTime);
+        out.put("onGround", adris.altoclef.chains.WorldSurvivalChain.lavaEntryOnGround);
+        out.put("speedCm", adris.altoclef.chains.WorldSurvivalChain.lavaEntrySpeedCm);
+        out.put("flee", adris.altoclef.chains.WorldSurvivalChain.lavaEntryFlee);
+        out.put("punk", adris.altoclef.chains.WorldSurvivalChain.lavaEntryPunk);
+        out.put("stage", adris.altoclef.chains.WorldSurvivalChain.lavaEntryStage);
+        out.put("combatFwd", adris.altoclef.chains.WorldSurvivalChain.lavaEntryCombatFwd);
+        out.put("pos", adris.altoclef.chains.WorldSurvivalChain.lavaEntryPos);
+        return out;
+    }
+
     /** Mark a protected area (claim / private) the mod must NOT build or mine in
      *  — a cube of radius r around (x,y,z). Mirrors the anti-cheat convention
      *  "can't break here → treat the surrounding area as claimed". The agent
