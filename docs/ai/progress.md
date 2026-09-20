@@ -66,6 +66,17 @@ lower priority now that the typical path reaches the nether.
     strafe/approach) near lava. TEST: `--from nether-fresh` (flee-into-lava) and `--from flood-stuck`
     (flood burn), plus combat regression (edge_duel) and lava-crossing/descent (mine_diamond) so the
     clamp does not forbid legitimate lava interaction.
+  - **v0.95.26 SHIPPED the free-form clamp -- and it did NOT stop the nether death (a decisive
+    negative).** lavaAhead/isLavaAt in VoidDetector; safeFleePoint skips lava candidates; driveAwayRaw
+    releases keys on a lava heading; VoidGuard.protect clamps keys/velocity into lava like the void.
+    Nav baselines 3/3 PASS (~30 fps; a no-op without lava). But from nether-fresh the bot STILL died
+    "tried to swim in lava" (twice, incl. a plain one with no "to escape"). Three own-movement clamps
+    not preventing it is strong evidence the entry is NOT the bot's own keys: most likely Enderman
+    KNOCKBACK into lava (Endermen hit hard; the nether stage fights them over lava) or a
+    combat-approach gap. A first death-tick tracer missed the instant (the nether death is ~30 s
+    in, faster than 3 s sampling). NEXT: a tick-resolution death instrument (hurtTime / onGround /
+    velocity / feet-lava at entry), then knockback-aware positioning near lava -- not another
+    movement clamp. Stop patching the wrong layer.
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
