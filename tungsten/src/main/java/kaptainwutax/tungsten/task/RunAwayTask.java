@@ -493,6 +493,13 @@ public class RunAwayTask {
                 Vec3d cand = new Vec3d(p.x + dx * step, p.y, p.z + dz * step);
                 Vec3d ground = snapGround(world, cand);
                 if (ground == null) continue;
+                // NEVER FLEE ONTO OR THROUGH LAVA (G108, 2026-09-19). safeFleePoint checked the void
+                // but not lava, so a bot cornered by a mob near the nether's lava fled into it
+                // ("tried to swim in lava to escape Enderman"). Skip a candidate whose ground is lava
+                // or whose straight run to it crosses lava; a nearer/other direction is tried instead,
+                // and if all are lava the flee holds (cornered) rather than stepping in.
+                if (VoidDetector.isLavaAt(ground, world)
+                        || VoidDetector.lavaAhead(p, dx, dz, world, step)) continue;
                 double score = ground.distanceTo(threat.getEntityPos());
                 if (hasRoomBeyond(world, ground, dx, dz)) {
                     if (score > bestScore) { bestScore = score; best = ground; }
@@ -649,6 +656,21 @@ public class RunAwayTask {
         double str = away.dotProduct(right);
 
         var options = MinecraftClient.getInstance().options;
+        // ⛔ DO NOT KEY-DRIVE INTO LAVA (G108, 2026-09-19). driveAwayRaw deliberately has no ground
+        // probe (measured to cost more than it protects for the VOID, which VoidGuard clamps after) --
+        // but lava is lethal and VoidGuard has no lava clamp, so a flee heading into lava walked
+        // straight in ("tried to swim in lava to escape Enderman", nether stage). If the away heading
+        // leads into lava within a step and a half, release the keys and hold: the planned
+        // safeFleePoint (which now also rejects lava) picks a lateral escape on the next cycle, and a
+        // held bot beside lava beats a dead one in it.
+        if (VoidDetector.lavaAhead(player.getEntityPos(), away.x, away.z, world, 1.6)) {
+            options.forwardKey.setPressed(false);
+            options.backKey.setPressed(false);
+            options.rightKey.setPressed(false);
+            options.leftKey.setPressed(false);
+            options.sprintKey.setPressed(false);
+            return;
+        }
         options.forwardKey.setPressed(fwd > 0.35);
         options.backKey.setPressed(fwd < -0.35);
         options.rightKey.setPressed(str > 0.35);
