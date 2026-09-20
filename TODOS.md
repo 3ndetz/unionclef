@@ -1,5 +1,36 @@
 # TODOs
 
+<!-- VOIDGUARD-LAVA-CLAMP-MISSING-FROM-APPLY-2026-09-20 -->
+## `VoidGuard`'s new lava clamp (G108, 2026-09-19) is only on `protect()`, not on `apply()` -- the combat-strafe death it names stays unfixed as staged
+
+Found while reading the in-progress, still-uncommitted G108 lava-avoidance diff live (session
+`unionclef`, 2026-09-20). The docs entry for this fix (`docs/ai/progress.md`, "nether stage WORKS
+... core blocker is lava safety") names TWO live deaths sharing one root: fleeing an Enderman into
+lava ("tried to swim in lava to escape Enderman") and approaching/fighting one near lava (plain
+"tried to swim in lava"), and states the fix as "the same clamp helps combat movement
+(MobDefenseChain strafe/approach) near lava" -- i.e. both paths were meant to get it.
+
+As staged, only the FLEE path does. `VoidGuard.protect(player, pos, vel, world)` -- the key-writing
+overload `RunAwayTask`'s flee clamps through (per its own doc comment, "the flee task clamps after
+the pathfinder executor has already set keys") -- gained `lavaByKey`/`lavaByVel` checks mirroring
+the existing void clamp exactly. `VoidGuard.apply(CombatMoveIntent, player, pos, vel, world)` -- the
+INTENT-based overload the combat pipeline resolves through instead of writing keys directly (own
+doc comment: "the combat pipeline resolves all movement into ONE intent per tick... the guard must
+be able to act BEFORE that write"), confirmed by grep to be the exact call site
+`CombatController.java:538` uses for `MobDefenseChain`'s own strafe/approach movement -- has NO
+lava check added. It still only guards the void (`nearVoid`, `edgeByKey`, `edgeByVel`,
+`jumpTowardEdge`), unchanged from before this pass.
+
+So the second of the two named live deaths, the one that happens while APPROACHING or STRAFING a
+mob rather than fleeing it, is not addressed by the diff as it stands right now -- committing it
+in this state would fix one of the two reproductions the docs commit itself cites, not both, while
+the docs would read as if the fix were unified. Likely just mid-edit (this is a natural "add it to
+the sibling overload next" step, and the whole thread this session has shown consistently catches
+gaps like this before shipping) -- flagged here in case it lands before that happens, the same
+shape as the two earlier TODOS.md notes this session that were directly cited and fixed in a
+follow-up commit (`be849bb9`, `48049b85`). Not editing the file myself; it is still open on the
+other side.
+
 <!-- BLACKLISTNOW-THRESHOLD-LEAK-2026-09-18 -->
 ## [FIXED 2026-09-18, v0.95.13] `blackListNow`'s decisive verdict quietly lowers a block's normal-path threshold, not just this one exclusion (Finding B, 2026-09-18)
 
