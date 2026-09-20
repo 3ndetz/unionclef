@@ -31,6 +31,21 @@ shape as the two earlier TODOS.md notes this session that were directly cited an
 follow-up commit (`be849bb9`, `48049b85`). Not editing the file myself; it is still open on the
 other side.
 
+**UPDATE 2026-09-20, later same day: it shipped exactly as flagged (v0.95.26, commit `08746e20`),
+`VoidGuard.apply()` still unchanged.** Re-diffed the shipped commit directly against this note --
+the `VoidGuard.java` hunk is byte-for-byte the same 23 lines described above, still only inside
+`protect()`. The very next commit (`52b25742`) reports the death from `nether-fresh` persisted
+even with all three own-movement clamps live, and reasons from that negative result to "most
+likely Enderman KNOCKBACK into lava... or a combat-approach gap" as the next thing to instrument.
+**`CombatController.java:538`'s call to the still-unguarded `VoidGuard.apply()` is a live candidate
+for exactly that "combat-approach gap"**, confirmed by the same grep as before, unchanged. Worth
+checking directly (a code read, not a new instrument) before building the planned tick-resolution
+death tracer: if the death happens while `MobDefenseChain` is actively approaching/strafing an
+Enderman near lava rather than mid-knockback, this gap alone could be sufficient without needing
+new instrumentation to find it. Not asserting it IS the cause over knockback -- both remain live
+candidates -- only that this specific, already-identified, still-open gap should be ruled in or
+out before assuming the answer must be knockback specifically.
+
 <!-- BLACKLISTNOW-THRESHOLD-LEAK-2026-09-18 -->
 ## [FIXED 2026-09-18, v0.95.13] `blackListNow`'s decisive verdict quietly lowers a block's normal-path threshold, not just this one exclusion (Finding B, 2026-09-18)
 
