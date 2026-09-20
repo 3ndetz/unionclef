@@ -176,29 +176,6 @@ public final class VoidGuard {
             // stick over the player's control after the driving task ends).
             mc.options.sneakKey.setPressed(false);
         }
-
-        // ⛔ LAVA IS AS LETHAL AS THE VOID, AND THIS GUARD SAW ONLY THE VOID (G108, 2026-09-19).
-        // Free-form combat/flee movement near lava walked straight in -- "tried to swim in lava to
-        // escape Enderman" (fleeing) and plain "tried to swim in lava" (approaching/strafing a mob)
-        // on the nether stage. The A* planner already blocks lava, and this guard is the FINAL WORD on
-        // the keys for the NON-planned movement (it runs under !movementOwnsTick, so it never touches
-        // a pathfinder bridge across lava). So it gets the same clamp as the void: if the pressed keys
-        // or the velocity head into lava within the stopping lookahead, cut jump/sprint and, for a
-        // key-driven step, release the movement keys. A bot held beside lava beats one swimming in it.
-        boolean lavaByKey = keyHeading != null
-                && VoidDetector.lavaAhead(pos, keyHeading[0], keyHeading[1], world, look);
-        boolean lavaByVel = horizSpeed > 0.04
-                && VoidDetector.lavaAhead(pos, vel.x, vel.z, world, look);
-        if (lavaByKey || lavaByVel) {
-            mc.options.jumpKey.setPressed(false);
-            mc.options.sprintKey.setPressed(false);
-            if (lavaByKey) {
-                mc.options.forwardKey.setPressed(false);
-                mc.options.backKey.setPressed(false);
-                mc.options.leftKey.setPressed(false);
-                mc.options.rightKey.setPressed(false);
-            }
-        }
     }
 
     /** Convenience overload using the player's current entity pos/velocity. */

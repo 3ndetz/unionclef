@@ -117,43 +117,6 @@ public final class VoidDetector {
         return false;
     }
 
-    /**
-     * The lava twin of {@link #edgeAhead}: true if a free-form step toward {@code (dx,dz)} would put
-     * the body INTO lava within {@code maxDist}. The A* planner already treats lava as blocked, so
-     * this exists only for the non-planned movement that has no such guard -- the flee fallback
-     * ({@code RunAwayTask.driveAwayRaw}) and combat strafe -- where the bot has walked into lava
-     * fleeing a mob ("tried to swim in lava to escape Enderman", nether stage, 2026-09-19). Samples
-     * the feet cell and the one below it (a step that drops you into lava) along the direction.
-     */
-    public static boolean lavaAhead(Vec3d pos, double dx, double dz, WorldView world, double maxDist) {
-        double len = Math.sqrt(dx * dx + dz * dz);
-        if (len < 1e-4) return false;
-        dx /= len; dz /= len;
-        int steps = Math.max(2, (int) Math.ceil(maxDist / 0.45));
-        int y = MathHelper.floor(pos.y);
-        for (int i = 1; i <= steps; i++) {
-            double d = maxDist * i / steps;
-            int x = MathHelper.floor(pos.x + dx * d), z = MathHelper.floor(pos.z + dz * d);
-            for (int ddy = 0; ddy >= -1; ddy--) {
-                BlockPos bp = new BlockPos(x, y + ddy, z);
-                if (world.getBlockState(bp).getFluidState()
-                        .isIn(net.minecraft.registry.tag.FluidTags.LAVA)) return true;
-            }
-        }
-        return false;
-    }
-
-    /** True if the block at/below {@code (x,y,z)} feet is lava -- a point you must not stand on. */
-    public static boolean isLavaAt(Vec3d pos, WorldView world) {
-        int x = MathHelper.floor(pos.x), y = MathHelper.floor(pos.y), z = MathHelper.floor(pos.z);
-        for (int ddy = 0; ddy >= -1; ddy--) {
-            BlockPos bp = new BlockPos(x, y + ddy, z);
-            if (world.getBlockState(bp).getFluidState()
-                    .isIn(net.minecraft.registry.tag.FluidTags.LAVA)) return true;
-        }
-        return false;
-    }
-
     private static boolean hasGroundAt(int x, int startY, int z, WorldView world, int bottomY) {
         for (int dy = 0; dy <= 2; dy++) {
             int y = startY - dy;
