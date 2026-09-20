@@ -89,6 +89,23 @@ public class PlaceObsidianFloodTask extends Task {
     // to do the placing; the approach is done, so the guard rests (5 blocks).
     private static final double RIM_IN_RANGE_SQ = 25.0;
 
+    // ⛔ THE IN-RANGE RIM NEEDS ITS OWN SHIMMY-PROOF GUARD (G108, 2026-09-21). The approach guard above
+    // closed the FAR rim; it deliberately rests once the body is within range -- and that left the
+    // NEAR rim on the old displacement guard alone. Measured live, three runs at the same lake: the
+    // flood committed to rim (789,21,816) with the body at (789.5,20,818.6) -- 2.7 blocks away, lava
+    // 2.4 blocks away, so "in range" -- InteractWithBlockTask sat in "Getting within reach" (iw 16k
+    // ticks) because the rim's top face cannot be reached from the pocket under the lake, and the
+    // UnstuckChain owned the bot EVERY tick (own 11938 -> 12147 in 15 s, rescues 119 -> 121): its
+    // shimmy jiggled the body in place and reset the displacement guard forever. The exact deadlock
+    // 0.95.24 fixed for the far rim, one radius closer. So the in-range case is guarded by the goal
+    // itself: if the water has not LANDED after RIM_NO_PLACE_LIMIT flood ticks in range, the rim is
+    // unplaceable from any stand the body can take and is blacklisted; the flood re-selects, and with
+    // every reachable-looking rim exhausted it explores for a lake it can flood from solid ground.
+    // Intermittent by which rim the flood happens to pick -- which is why the same lake floods on one
+    // run and freezes the next. Not a timeout on the body: a bound on the goal never being reached.
+    private int _inRangeNoPlaceTicks = 0;
+    private static final int RIM_NO_PLACE_LIMIT = 200;
+
     private BlockPos _rim;           // solid edge block whose TOP face we click
     private BlockPos _waterCell;     // rim.up(): where the water source lands
     private BlockPos _reclaimTarget; // the water source we're currently scooping back
@@ -197,6 +214,7 @@ public class PlaceObsidianFloodTask extends Task {
             _progress.reset();
             _bestApproachSq = Double.MAX_VALUE;
             _noApproachTicks = 0;
+            _inRangeNoPlaceTicks = 0;
         }
 
         // Approach guard (shimmy-proof): blacklist a rim the body never gets closer to. Distance to
@@ -206,6 +224,19 @@ public class PlaceObsidianFloodTask extends Task {
                 _waterCell.getX() + 0.5, _waterCell.getY() + 0.5, _waterCell.getZ() + 0.5);
         if (approachSq <= RIM_IN_RANGE_SQ) {
             _noApproachTicks = 0;                 // close enough; let the interact task place
+            // ...but only for so long: in range with no water landing means the rim's top face is not
+            // reachable from here, and no amount of shimmy will change that. See the field comment.
+            if (++_inRangeNoPlaceTicks > RIM_NO_PLACE_LIMIT) {
+                Nav.cancel();
+                _rimBlacklist.add(_rim);
+                _rim = null;
+                _waterCell = null;
+                _progress.reset();
+                _bestApproachSq = Double.MAX_VALUE;
+                _noApproachTicks = 0;
+                _inRangeNoPlaceTicks = 0;
+                return null;
+            }
         } else if (approachSq < _bestApproachSq - 0.25) {
             _bestApproachSq = approachSq;         // genuine progress toward the rim
             _noApproachTicks = 0;
@@ -217,6 +248,7 @@ public class PlaceObsidianFloodTask extends Task {
             _progress.reset();
             _bestApproachSq = Double.MAX_VALUE;
             _noApproachTicks = 0;
+            _inRangeNoPlaceTicks = 0;
             return null;
         }
 
@@ -229,6 +261,7 @@ public class PlaceObsidianFloodTask extends Task {
             _progress.reset();
             _bestApproachSq = Double.MAX_VALUE;
             _noApproachTicks = 0;
+            _inRangeNoPlaceTicks = 0;
             return null;
         }
 

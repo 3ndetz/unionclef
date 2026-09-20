@@ -122,6 +122,18 @@ lower priority now that the typical path reaches the nether.
     there for 12+ minutes. The revert's "measured regression" claim is reinstated with this evidence.
     The blanket key-release IS the cause: with lava on every side the guard releases every direction.
     The flat-bench "Waiting for lava" stall on v0.95.25 remains a separate, uncharacterised item.
+  - **REFUTED again, and this time with the mechanism (RULE FIVE: n=1 fooled me twice).** The next
+    recorded run on 0.95.27 -- which has NO lava clamp -- froze at the identical spot (789.5,20,818.6),
+    obs 0. So the clamp was not the cause of that freeze. Probed live: position stable; UnstuckChain
+    owning the bot EVERY tick (own 11938 -> 12147 in 15 s, rescues 119 -> 121); InteractWithBlockTask
+    at 16k ticks in "Getting within reach of (789,21,816)"; that rim 2.7 blocks from the body, lava
+    2.4 blocks away. That is IN RANGE (RIM_IN_RANGE_SQ = 25), so v0.95.24's approach guard RESTS, and
+    the only remaining guard is the displacement checker the shimmy resets every tick -- the original
+    deadlock, one radius closer. v0.95.24 closed the far rim and left the near, unplaceable rim open.
+    Intermittent by which rim the flood picks (same lake: flooded on one run, froze on the next two).
+    FIX (0.95.27, second change): an in-range guard on the GOAL -- if the water has not landed after
+    200 flood ticks in range, blacklist the rim and re-select. The v0.95.26 clamp is exonerated for
+    this freeze (its blanket-release risk stands on its own merits; it remains reverted).
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
