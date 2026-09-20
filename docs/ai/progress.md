@@ -77,6 +77,16 @@ lower priority now that the typical path reaches the nether.
     in, faster than 3 s sampling). NEXT: a tick-resolution death instrument (hurtTime / onGround /
     velocity / feet-lava at entry), then knockback-aware positioning near lava -- not another
     movement clamp. Stop patching the wrong layer.
+  - **v0.95.26 REVERTED -- it FROZE the bot at lava (measured regression).** Recorded nether-reach
+    run on the v0.95.26 jar: the bot sat at the flood-stuck spot (789.5,20,818.6) under the lake with
+    position AND inventory identical from t=647s to t=1376s (12+ min), obs=0, hp=20. v0.95.24 left
+    that spot in ~1 min; v0.95.25 reached the nether from nether-reach twice. Cause: the VoidGuard
+    lava clamp releases the movement keys whenever lava is within the lookahead -- and with lava
+    SURROUNDING the bot that is every direction, so it cannot even walk away to run the escape.
+    A blanket key-release turned a death into a permanent freeze on the path that previously reached
+    the nether: strictly worse. Reverted wholesale to v0.95.25 (last version proven to reach the
+    nether). Lesson for the lava pass: any lava guard must be DIRECTION-specific (veto only the step
+    INTO lava, keep the steps away from it) and knockback-aware -- never a blanket release.
 
 ## 2026-09-19 — v0.95.24: the flood stops DEADLOCKING on a lava lake it is stuck under (underground portal)
 
