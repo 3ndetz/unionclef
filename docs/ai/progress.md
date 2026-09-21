@@ -3,7 +3,31 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-21 (latest) — v0.95.27: the builder returns to the frame when strayed VERTICALLY (new stall found on film)
+## 2026-09-21 (latest) — NETHER LAVA DEATH MECHANISM FOUND BY INSTRUMENT: knockback off a narrow ledge, not the bot's own step
+
+RULE ONE, finally done instead of guessed: WorldSurvivalChain now snapshots the body's state on the
+rising edge of `player.isInLava()` (py4j `lavaEntryStats()`). From `nether-fresh`, on the tick the
+bot entered lava: **hurtTime=10** (a hit landed that tick), **onGround=0** (airborne),
+**horizontal speed 0** (falling, not walking), **flee=0**, **combatFwd=0** (NOT pressing forward),
+**stage=NARROW_BATTLE** (fighting on narrow terrain), pos (125,53,148), three entries in the run.
+So the nether death is an Enderman hit KNOCKING the bot off a narrow ledge into the lava below. It is
+not the bot's own movement -- which is exactly why three own-movement clamps (0.95.25 obsidian filter,
+0.95.26 flee veto + VoidGuard key-release) could not stop it: they veto the bot's steps; the bot is
+thrown. The wrong layer was being patched for a day.
+
+THE CORE FIX (next): treat LAVA as VOID in the terrain-safety primitive. `VoidDetector.fallHeight`
+scans down for a collision shape; lava has none, so a 2-block lava pool over stone reads as a 3-block
+fall -- "safe" -- and none of the void machinery engages at a lava edge. If a lava block in the
+column returns MAX_SCAN_DEPTH (lethal), then every existing, tested void behaviour applies to lava
+edges for free: edgeAhead/VoidGuard's DIRECTION-SPECIFIC veto (only steering INTO the drop is
+cancelled -- 0.95.26's blanket-release lesson honoured), sneak at the edge (vanilla edge protection
+against being pushed off), NARROW_BATTLE detection and repositioning away from the edge, "toward-
+island input kept under knockback", and safeFleePoint refusing edge candidates. One check in one
+primitive. Blast radius to verify before shipping: who else calls fallHeight/edgeAhead/voidWithin
+(the flood must still be able to stand beside lava to place water -- it is pathfinder-driven, which
+VoidGuard does not clamp; confirm the planner does not consult VoidDetector).
+
+## 2026-09-21 — v0.95.27: the builder returns to the frame when strayed VERTICALLY (new stall found on film)
 
 The recorded nether-reach run on v0.95.25 (deaths 0, fps 28, GAMER_SMOKE PASS) flooded, mined all 14
 obsidian and STARTED the frame -- then no nether entry. Late frames (t=28..32 min, verified) are

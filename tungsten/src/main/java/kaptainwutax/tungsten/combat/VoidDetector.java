@@ -35,6 +35,19 @@ public final class VoidDetector {
             if (y < bottomY) return MAX_SCAN_DEPTH; // void
             BlockPos bp = new BlockPos(x, y, z);
             BlockState state = world.getBlockState(bp);
+            // ⛔ LAVA BELOW IS AS LETHAL AS THE VOID (G108 nether stage, 2026-09-21). Lava has no
+            // collision shape, so this scan used to fall straight THROUGH a lava pool to the stone
+            // under it: a two-block pool read as a three-block drop -- "safe" -- and not one piece of
+            // the void machinery engaged at a lava edge. Measured with the lava-entry instrument on the
+            // nether stage: the bot entered lava with hurtTime=10, onGround=0, horizontal speed 0,
+            // forward NOT pressed, stage NARROW_BATTLE -- an Enderman hit knocked it off a narrow ledge
+            // into the lava below. Three clamps on the bot's OWN steps could not touch that; what
+            // protects a body from being pushed off an edge is exactly what this primitive already
+            // drives for the void: the direction-specific steering veto, sneak at the edge, NARROW_BATTLE
+            // repositioning, and "toward-island input kept under knockback". Making lava count as the
+            // drop gives lava edges all of it, unchanged. The planner does not consult this class, so
+            // pathfinder-driven work beside lava (the obsidian flood placing water) is unaffected.
+            if (state.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)) return MAX_SCAN_DEPTH;
             if (!state.getCollisionShape(world, bp).isEmpty()) return dy;
         }
         return MAX_SCAN_DEPTH;
