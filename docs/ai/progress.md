@@ -3,7 +3,34 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-21 (latest) — NETHER LAVA DEATH MECHANISM FOUND BY INSTRUMENT: knockback off a narrow ledge, not the bot's own step
+## 2026-09-21 (latest) — SECOND nether death mode, measured while validating 0.95.28: "escape to the surface" under a ROOF
+
+Validating the lava fix from `nether-fresh` found a different death first, 100 s into the run:
+`tester1 was doomed to fall by Ghast`. Chain, from the client log and the server log:
+
+1. On the FIRST tick `TimeoutWanderTask` read `PlannedEscape.enclosed()` = true -- the bot stood in a
+   1x1 netherrack hole (all four neighbours of (108,45,99) queried solid over rcon).
+2. `PlannedEscape.pickGoal` step 2, "the surface above": `getTopY(MOTION_BLOCKING)` -- in the nether
+   that is the bedrock ROOF. Log: `Planned escape (wander enclosed) -> 108.5,128.0,99.5`.
+3. The build engine pillared/dug straight up (`y=79` at t=60 s, `y=117` at t=82 s), a Ghast
+   fireball knocked it off, it fell, respawned EMPTY at world spawn and re-ran the wood ladder.
+
+Two defects, one measured chain. CORE: `PlannedEscape` had no notion of a roofed dimension --
+under `world.getDimension().hasCeiling()` the surface step is skipped and the escape is the nearest
+standable cell (step 3), which the engine digs to sideways. HARNESS: the nether-entry hook in
+`gamer_smoke.py` fired on the first poll that read NETHER, so a run started `--from nether-fresh`
+RE-SAVED nether-fresh over itself a minute in -- the checkpoint drifted from "clean entry" to "bot
+in a hole" (02:55) and then to "bot at y=91 on its pillar" (04:01). Entry is now a TRANSITION
+(overworld -> nether); a run that starts in the nether never re-saves. The drifted checkpoint is
+gone; a clean one is re-captured by a natural run from `nether-reach` with the fixed hook.
+
+Also learned on the way (RULE ZERO, twice): the first two nether-fresh attempts were the stand,
+not the bot -- an rcon `kill` timing out on a server 89 ticks behind right after the restore (the
+harness now says so and carries on instead of aborting the run), and a 9-10 fps reading that the
+same checkpoint gave 21-28 fps for twenty minutes later with nothing changed. And the duel guards
+need `tester2`, which had been OOM-killed (137) 42 h earlier: the pvp suite hung on it for 15 min.
+
+## 2026-09-21 — NETHER LAVA DEATH MECHANISM FOUND BY INSTRUMENT: knockback off a narrow ledge, not the bot's own step
 
 RULE ONE, finally done instead of guessed: WorldSurvivalChain now snapshots the body's state on the
 rising edge of `player.isInLava()` (py4j `lavaEntryStats()`). From `nether-fresh`, on the tick the

@@ -82,12 +82,20 @@ public final class PlannedEscape {
             lastPickWasLiveGoal = true;
             return live;
         }
-        // 2. the surface above
+        // 2. the surface above -- ONLY where the heightmap top is open sky. Under a ceiling (the
+        //    nether) MOTION_BLOCKING's top is the bedrock roof, and "escape to the surface" turns
+        //    into "pillar eighty blocks up through Ghast country to bedrock you cannot pass".
+        //    Measured 2026-09-21 from a nether start enclosed in a 1x1 netherrack hole: this armed
+        //    for y=128 on the first tick, the body was at y=117 ninety seconds later, and the server
+        //    logged "doomed to fall by Ghast". A roofed dimension has no surface to escape to; its
+        //    escape is the nearest standable cell (3.), which the build engine digs to sideways.
         BlockPos feet = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(mod.getPlayer());
-        int top = w.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, feet.getX(), feet.getZ());
-        if (top > feet.getY() + 1) {
-            escapeToSurface++;
-            return new Vec3d(feet.getX() + 0.5, top, feet.getZ() + 0.5);
+        if (!w.getDimension().hasCeiling()) {
+            int top = w.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, feet.getX(), feet.getZ());
+            if (top > feet.getY() + 1) {
+                escapeToSurface++;
+                return new Vec3d(feet.getX() + 0.5, top, feet.getZ() + 0.5);
+            }
         }
         // 3. the nearest standable cell at least three blocks away
         for (int r = 3; r <= 10; r++) {

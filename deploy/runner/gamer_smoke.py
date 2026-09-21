@@ -106,7 +106,15 @@ def py4j(op,t=30,**kw):
     r=sh(["docker","exec",CLIENT,"python3","-c",SNIP,json.dumps({"op":op,"port":PORT,**kw})],t)
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
-def grcon(c,t=20): return sh(["docker","exec",GSERVER,"rcon-cli",c],t).stdout.strip()
+def grcon(c,t=20):
+    # A freshly restored server can sit 80+ ticks behind while nether chunks load ("Running 4458ms or
+    # 89 ticks behind" on the 0.95.28 validation), and rcon-cli then overruns its timeout although the
+    # command itself normally runs. A timed-out SETUP command must not abort a twelve-minute run --
+    # one did, on the fourth of twelve post-restore `kill` lines, and the run measured nothing. Say so
+    # and carry on; the run's own gates judge whatever the setup left undone.
+    try: return sh(["docker","exec",GSERVER,"rcon-cli",c],t).stdout.strip()
+    except subprocess.TimeoutExpired:
+        print(f"  [rcon] timed out after {t}s: {c[:70]} (server lagging; continuing)"); return ""
 
 # WHERE DOES A RUN ACTUALLY GO? Halving the watch window was tried and lost the signal for only
 # a 2x saving, because connect, reset, start-search and teardown are FIXED costs a shorter window
@@ -1066,6 +1074,18 @@ def main():
     # then freeze `nether-fresh`. Clearing at the SAVE instant only, not during the run, so it captures
     # a clean start without turning off the dimension's hazards for the run itself.
     _nether_cp_done = False
+    # ⛔ AN ENTRY IS A TRANSITION, NOT A LEVEL. This used to fire on the first poll that read NETHER,
+    # so a run started `--from nether-fresh` re-saved nether-fresh over itself a minute in -- with the
+    # bot wherever it happened to be by then. Measured 2026-09-21: the "clean nether entry" checkpoint
+    # had drifted to a bot standing in a 1x1 netherrack hole, every later resume began enclosed, and
+    # the runs measured that hole instead of the nether stage. Capture only on overworld -> nether.
+    try:
+        _was_in_nether = "NETHER" in str((py4j("gs").get("self") or {}).get("dimension") or "").upper()
+    except Exception:
+        _was_in_nether = False
+    if _was_in_nether:
+        _nether_cp_done = True
+        print("  run starts in the nether -- nether-fresh is NOT re-saved (it would drift to a mid-run state)")
     while time.time()-t0 < MINUTES*60:
         time.sleep(20)
         if CP_EVERY and time.time() - _cp_last >= CP_EVERY * 60:
