@@ -115,6 +115,16 @@ public class ConstructNetherPortalObsidianTask extends Task {
 
     private BlockPos origin;
 
+    /**
+     * Progress of the walk back to {@link #origin}, and how long it has made none. A reservation the
+     * body cannot get back to is not a reservation -- see the re-siting branch in {@link #onTick()}.
+     * Squared distance, so "closer by a block" is a change of more than 1.0 near the pad.
+     */
+    private double _returnBestDistSq = Double.MAX_VALUE;
+    private int _returnNoProgressTicks;
+    /** ~10 s at 20 tps: long enough for a detour round a wall, far short of the 9-minute freeze. */
+    private static final int RETURN_NO_PROGRESS_LIMIT = 200;
+
     private BlockPos _destroyTarget;
 
     /**
@@ -331,10 +341,65 @@ public class ConstructNetherPortalObsidianTask extends Task {
             // never placed. A frame is five blocks tall and its stands are within a couple of blocks
             // of the origin, so more than six blocks of vertical separation is never "at the build":
             // walk back up (or down) to the origin first, exactly as for a horizontal drift.
-            if (ddx * ddx + ddz * ddz > 100 || Math.abs(ddy) > 6) {   // strayed > 10 blocks horizontally, or > 6 vertically
+            // ⛔ MEASURE THE STRAY AGAINST THE FRAME, NOT THE ORIGIN POINT (G108, 2026-09-21). The
+            // vertical test was |dy| > 6, symmetric about the origin -- but the frame is NOT
+            // symmetric about it: it occupies origin.y-1 (the bottom row on the floor pad) up to
+            // origin.y+3 (the top row), and every stand the build needs is within that band. So the
+            // old bound called a body FOUR BLOCKS BELOW THE FRAME'S FLOOR "at the build". Measured on
+            // a 35-minute nether-reach run (2026-09-21) with the re-siting fix live: frame at
+            // origin (749,14,823), ten of fourteen obsidian placed into a stone wall, body at y=9 --
+            // dy=-5, inside the old bound, so this guard stayed silent -- sealed under the rock in the
+            // cave below, unable to reach the scaffold cell at (750,16,822). It shimmied there for
+            // NINETEEN MINUTES, UnstuckChain firing every ten seconds, and the run ended 10/14.
+            // Bound the band to the frame plus two blocks of slack each way instead.
+            boolean strayedDown = ddy < -3;                      // below the floor pad (origin.y-2)
+            boolean strayedUp = ddy > 5;                         // above the top row (origin.y+3)
+            if (ddx * ddx + ddz * ddz > 100 || strayedDown || strayedUp) {   // > 10 blocks horizontally, or off the frame's band
+                // ⛔ ...AND A PAD THE BODY CANNOT GET BACK TO IS NOT A PAD (G108, 2026-09-21). The two
+                // guards above walk the body back to a RESERVED origin, and they assumed the walk is
+                // always possible. It is not. The site is chosen while the bot stands wherever the
+                // portal task began -- usually the surface -- and the obsidian is then made by
+                // flooding a lava lake, which on natural terrain is tens of blocks DOWN a cave. Then
+                // this guard fires by construction on every tick, for a walk the drive cannot make.
+                // Measured on a 35-minute nether-reach run (2026-09-21): origin (735,68,829), body
+                // (799,4,846) -- 64 blocks down, 64 across, in the water of the cave it had just
+                // flooded -- "Returning to the portal build" -> GetToBlockTask for the LAST NINE
+                // MINUTES of the run, position frozen to the decimetre, 17 obsidian in the pack and
+                // no portal. The run before it lost its last four minutes to the horizontal twin of
+                // the same thing.
+                //
+                // So: keep siting FIRST (that is right, and the reasons are above), but treat the
+                // reservation as provisional. When the return stops getting closer, the pad is
+                // unreachable FROM HERE: drop it and re-site from where the body actually is, which
+                // is beside the pool it just made. Siting there is safe now in a way it was not when
+                // "site first" was introduced -- isDecentBuildSite / isCleanFlatBuildSite both reject
+                // obsidian, lava and water in the footprint, so the search cannot land in the mess
+                // the flood left; it lands on clean ground next to it. A human who carried obsidian
+                // up out of a cave and found the surface pad unreachable would build by the cave
+                // mouth, not spend nine minutes on the climb.
+                double distSq = body.getSquaredDistance(origin);
+                if (distSq < _returnBestDistSq - 1.0) {
+                    _returnBestDistSq = distSq;
+                    _returnNoProgressTicks = 0;
+                } else if (++_returnNoProgressTicks > RETURN_NO_PROGRESS_LIMIT) {
+                    Debug.logMessage(String.format(
+                            "Portal pad %s is unreachable from %s (no progress for %d ticks) — re-siting here",
+                            origin.toShortString(), body.toShortString(), RETURN_NO_PROGRESS_LIMIT));
+                    origin = null;
+                    // The interior-clearing target is origin-relative. Left behind, it would send the
+                    // bot back to the ABANDONED site to break a block the moment the new frame closed.
+                    _destroyTarget = null;
+                    _returnBestDistSq = Double.MAX_VALUE;
+                    _returnNoProgressTicks = 0;
+                    _areaSearchTimer.forceElapse();   // search again on the very next tick
+                    return null;
+                }
                 setDebugState("Returning to the portal build");
                 return new GetToBlockTask(origin, false);
             }
+            // At the build: the next stray starts its progress measurement from scratch.
+            _returnBestDistSq = Double.MAX_VALUE;
+            _returnNoProgressTicks = 0;
         }
 
         // Before placing a TOP-ROW cell (y = origin+3, over the open interior), raise the temporary
