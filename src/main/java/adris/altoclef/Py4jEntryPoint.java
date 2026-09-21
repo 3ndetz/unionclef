@@ -2332,7 +2332,7 @@ public class Py4jEntryPoint {
         return String.format("total=%d click=%d cd=%d reach=%d ready=%d/%d/%d/%d held=%d/%d/%d wait=%d/%d angle=%d los=%d passed=%d"
                         + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d deferred=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
-                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d(pred%.1f/true%.1f/flat%d/fly%.1f/land%d) escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d bowNoDraw=%d drawMove=%d/%d meleeBow=%d/%d fightTicks=%d",
+                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d/lethalWp%d danger=%d(pred%.1f/true%.1f/flat%d/fly%.1f/land%d) escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d bowNoDraw=%d drawMove=%d/%d meleeBow=%d/%d fightTicks=%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
                 kaptainwutax.tungsten.combat.TriggerBot.gClick,
                 kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
@@ -2363,6 +2363,7 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.CombatController.aimBrake,
                 kaptainwutax.tungsten.combat.CombatController.aimReposition,
                 kaptainwutax.tungsten.combat.SafetySystem.rpNarrow,
+                kaptainwutax.tungsten.combat.SafetySystem.rpNarrowLethalWp,
                 kaptainwutax.tungsten.combat.SafetySystem.rpDanger,
                 kaptainwutax.tungsten.combat.SafetySystem.rpDanger == 0 ? 0.0
                         : kaptainwutax.tungsten.combat.SafetySystem.rpDangerPredSum
@@ -2513,6 +2514,7 @@ public class Py4jEntryPoint {
         // A COUNTER WITHOUT A KNOWN ZERO IS NOT A MEASUREMENT — three conclusions died to that
         // tonight. These land here the same day they are born.
         kaptainwutax.tungsten.combat.SafetySystem.rpNarrow = 0;
+        kaptainwutax.tungsten.combat.SafetySystem.rpNarrowLethalWp = 0;
         kaptainwutax.tungsten.combat.SafetySystem.rpDanger = 0;
         kaptainwutax.tungsten.combat.SafetySystem.rpDangerPredSum = 0;
         kaptainwutax.tungsten.combat.SafetySystem.rpDangerTrueSum = 0;

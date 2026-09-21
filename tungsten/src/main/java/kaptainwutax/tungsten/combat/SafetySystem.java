@@ -100,6 +100,12 @@ public class SafetySystem {
      * result settled nothing either way. Count them apart and the branch becomes measurable.
      */
     public static volatile int rpNarrow = 0, rpDanger = 0, rpEscape = 0;
+    /**
+     * Ticks NARROW_BATTLE wanted to advance and the next waypoint was over a lethal drop. Counted
+     * whenever the condition holds, never only when the hold acts, so the control arm of any A/B
+     * can read how often it happens without the behaviour (checklist rule 4u).
+     */
+    public static volatile int rpNarrowLethalWp = 0;
 
     /**
      * Is a DANGER_BATTLE reposition EARNED? Predicted knockback drop against the real drop under
@@ -329,7 +335,33 @@ public class SafetySystem {
                         repositioning = true; // tells CombatController to use brakeYaw for aim
                         rpNarrow++;
 
-                        intent.set(true, false, false, false, false, false, false);
+                        // ⛔ THE SAFETY TEST THE GENERAL MOVEMENT PATH ALREADY MAKES, WHICH THIS
+                        // BRANCH WAS SKIPPING (G108 nether stage, 2026-09-21). Forty lines below,
+                        // the ordinary attack-path follower refuses to step to a waypoint whose fall
+                        // is serious -- "if waypoint is dangerous, don't move -- stay and fight".
+                        // NARROW_BATTLE sets `repositioning`, which is exactly the flag that skips
+                        // that follower, and then presses W along the same path with NO such check.
+                        // So on the one terrain where a misstep is fatal, the guarded walk was
+                        // replaced by an unguarded one.
+                        //
+                        // It shows up in the nether now that lava counts as a drop (0.95.28). The
+                        // lava-entry instrument caught the death twice with the same signature --
+                        // hurtTime>0, onGround=0, own horizontal speed 0, forward NOT pressed,
+                        // stage=NARROW_BATTLE -- i.e. an Enderman knocked the body off a lava ledge.
+                        // Pressing forward along a ledge toward the thing that is hitting you is how
+                        // the body comes to be standing there at all.
+                        //
+                        // Only the forward press is withheld: no strafe is introduced (that is
+                        // NARROW_BATTLE's own rule and it stands -- sideways on a 1-wide bridge is
+                        // instant death), the aim still tracks, and the triggerbot still swings when
+                        // the target crosses the crosshair. The bot holds its ground and fights
+                        // instead of walking onto the lip.
+                        int narrowWpFall = VoidDetector.fallHeight(
+                                Vec3d.ofBottomCenter(nextWp), player.getEntityWorld());
+                        boolean narrowWpLethal = DangerLevel.fromFallHeight(narrowWpFall).isSerious();
+                        if (narrowWpLethal) rpNarrowLethalWp++;
+
+                        intent.set(!narrowWpLethal, false, false, false, false, false, false);
                     }
                 }
                 case DANGER_BATTLE -> {
