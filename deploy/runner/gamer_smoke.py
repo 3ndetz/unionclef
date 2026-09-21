@@ -10,7 +10,7 @@ the full playthrough is nightly-scale. Bring up the server first:
 Exit 0 = the bot started @gamer and made early progress (items gained), stayed
 responsive and not permanently stuck.
 """
-import functools, json, os, pathlib, re, subprocess, sys, time
+import atexit, functools, json, os, pathlib, re, subprocess, sys, time
 from uctest.recording import finish_recording
 import checkpoint as _cp
 print = functools.partial(print, flush=True)
@@ -106,6 +106,20 @@ def py4j(op,t=30,**kw):
     r=sh(["docker","exec",CLIENT,"python3","-c",SNIP,json.dumps({"op":op,"port":PORT,**kw})],t)
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
+def _restore_render_flags(flags):
+    """Give the client its visualisation back, whatever ended the run.
+
+    Registered with atexit so a crash, a StandDown or a Ctrl-C restores it too -- the failure modes
+    are exactly when someone goes and LOOKS at the client, and a blind client is when they most
+    need to see the route. Best effort: a dead gateway must never turn a finished run into an
+    error, so every failure here is swallowed."""
+    for flag in flags:
+        try:
+            py4j("chatcmd", c=f";settings {flag} true", t=10)
+        except Exception:
+            pass
+
+
 def grcon(c,t=20):
     # A freshly restored server can sit 80+ ticks behind while nether chunks load ("Running 4458ms or
     # 89 ticks behind" on the 0.95.28 validation), and rcon-cli then overruns its timeout although the
@@ -813,12 +827,23 @@ def main():
     # looked like the lever the perf notes promise. Two later runs WITH the pins in place read 10.
     # The effect is NOT established -- the first pair was the machine moving under me -- so the
     # pins stay on principle and that number is not to be quoted as fact.
-    for flag in ("renderVisualization", "renderPathMoves", "renderCombat",
-                 "renderBreakPlan", "renderPlacePlan"):
+    # ⛔ AND THEY GET TURNED BACK ON, BECAUSE A RUN THAT CHANGES STATE RESTORES IT (user, 2026-09-21).
+    # This pinned all five off and never restored them, so every bench run left the client BLIND for
+    # whoever looked at it next -- no route, no place plan, no break plan, `renderers=0` and
+    # `renderVisualization=False` read straight off the client. The user watched tester1 and reported
+    # exactly that ("визуализации фаст планнера я вообще не вижу маршрута"), and they were right: the
+    # harness had silently disabled the one instrument a HUMAN can use. That is the checklist's own
+    # RULE SEVEN -- state a run changes, it restores in a finally -- broken by the harness that
+    # carries the rule. Watching the bot is not a nicety here: the benches score OUTCOMES and cannot
+    # see a route that looks insane on the way to a passing one.
+    RENDER_FLAGS = ("renderVisualization", "renderPathMoves", "renderCombat",
+                    "renderBreakPlan", "renderPlacePlan")
+    for flag in RENDER_FLAGS:
         # ChatMessage, not ExecuteCommand: `;settings` is TUNGSTEN's chat command, while
         # ExecuteCommand runs altoclef's `@` commands -- sent the wrong way it silently does
         # nothing, which is what the first attempt did (fps unchanged at 10).
         py4j("chatcmd", c=f";settings {flag} false")
+    atexit.register(_restore_render_flags, RENDER_FLAGS)
     # WHAT THIS CLIENT CAN DO IN THIS WORLD, TODAY, BEFORE THE BOT STARTS.
     # A fixed fps floor cannot work here. The survival world costs about half the frame budget of
     # the flat course arena -- measured tonight: 35-43 fps idle on the flat stand, 17-19 idle in the
