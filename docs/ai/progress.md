@@ -3,7 +3,42 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-21 (latest) — SECOND nether death mode, measured while validating 0.95.28: "escape to the surface" under a ROOF
+## 2026-09-21 (latest) — THE POST-IRON CEILING IS THE PORTAL PAD, AND TWO OF ITS THREE LAYERS WERE MINE
+
+Three consecutive 35-minute runs from the same deterministic checkpoint (`nether-reach`), each one
+peeling a layer off "the bot has obsidian and flint at ~2 minutes and never lights a portal".
+
+**Layer 1 — the pad is reserved where the task STARTED, the obsidian is tens of blocks down a cave.**
+0.95.27's guard walks a strayed body back to the reserved origin and assumed the walk is always
+possible. Measured: origin (735,68,829), body (799,4,846) -- 64 down, 64 across, in the water of its
+own flood -- `Returning to the portal build` -> GetToBlockTask for the LAST NINE MINUTES of the run,
+position frozen to the decimetre, 17 obsidian in the pack. Fix: the reservation is provisional; when
+the drive gives the route up the pad is dropped and re-sited from where the body is. Confirmed by
+its own instrument on the next run.
+
+**Layer 2 — the stray was measured against the origin POINT, and the frame is not symmetric about
+it.** The frame spans origin.y-1 (bottom row on the floor pad) to origin.y+3 (top row). `|dy| > 6`
+therefore called a body FOUR BLOCKS BELOW THE FRAME'S FLOOR "at the build". Measured with layer 1
+live: frame at (749,14,823) built TEN of fourteen into a stone wall -- read straight out of the world
+over py4j, bottom row y=13 z=822..825, both columns y=14..16 -- body at y=9, sealed in the cave
+below, unable to reach its scaffold cell at (750,16,822). Nineteen minutes of UnstuckChain shimmy,
+run ended 10/14. Fix: bound the band to the frame plus two blocks of slack each way.
+
+**Layer 3, and it was a defect I had just shipped — the re-site trigger was a STOPWATCH.** 200 ticks
+without net approach is not "unreachable" on a cave route: the return leg is 35-57 blocks through
+rock, the drive mines its way ("Mining done - passage open" throughout) and net distance does not
+fall while it does. Result: three re-sites in five minutes at 35, 57 and 40 blocks -- every one
+mid-journey on a walk that was going fine -- and each threw away the obsidian already placed at the
+abandoned frame and sent the bot back to gather. A thrash in place of the freeze. Fix: trigger on
+the verdict the drive already publishes (`GetToBlockTask.onWander` -> `requestBlockUnreachable`),
+keep the tick count only as a two-minute backstop, and make the log line say WHICH of the two fired.
+
+What is measured and what is not: the nineteen-minute frozen body is gone (longest repeated position
+110 s), 0 deaths across all three runs, nav 3/3 and the OBS flood PASS (portal lit in 268.4 s) on the
+same jar. The portal is still NOT lit on natural terrain -- the ceiling is real and the next layer
+is the one the 0.95.19 notes already named: the high-cell stand for the top row.
+
+## 2026-09-21 — SECOND nether death mode, measured while validating 0.95.28: "escape to the surface" under a ROOF
 
 Validating the lava fix from `nether-fresh` found a different death first, 100 s into the run:
 `tester1 was doomed to fall by Ghast`. Chain, from the client log and the server log:
