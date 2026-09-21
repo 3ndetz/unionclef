@@ -99,6 +99,13 @@ public class BlockPathWalker {
     /** Ticks the walk stood aside because a block-breaking task owned the aim and the keys. */
     public static volatile int walkerYieldedToMiner = 0;
 
+    /**
+     * Ticks the DIRECT line was refused because a hazard (lava/fire/magma) lay along it. Counted
+     * whenever the condition HOLDS, so a control arm reads how often the old code would have
+     * sprinted into one (checklist rule 4u).
+     */
+    public static volatile int dirHazardAhead = 0;
+
     public static volatile int bfsTicks = 0;
     public static volatile int slimeWpSeen = 0;
     private static int dbgN = 0;
@@ -337,13 +344,56 @@ public class BlockPathWalker {
         boolean groundSafe = !player.isOnGround()
                 || CombatPathfinder.isWalkable(player.getBlockPos(), world);
 
+        // ⛔ A HOLE IS NOT THE ONLY THING ON A STRAIGHT LINE THAT KILLS (G108 nether, 2026-09-21).
+        // DIRECT is the mode this walker STARTS in -- "direct-sprint toward target, BFS path is
+        // fallback" -- so on most legs the body is steered at a point with the route's cells never
+        // consulted. Its safety gate asked two questions: are there HOLES ahead (hasHolesOnPath),
+        // and is the cell I am STANDING IN walkable. Neither sees lava ahead: lava is not a hole,
+        // and the standing test only fires once the feet are already in it.
+        //
+        // Measured with the second-pass lava instrument on the nether stage, two entries, both
+        // unambiguous: onGround=1, constant y=52, the body walking 131.7,52.0,153.5 -> 131.5,52.0,
+        // 151.3 over ten ticks and into lava at (131,52,151), driver `walker1`, task "Going to
+        // biome", and fallHeight at the cell it came from reading 1 -- i.e. flat ground, no drop,
+        // nothing in the terrain model objecting. It simply walked in. (This also corrects the
+        // earlier attribution of these deaths to Enderman knockback: knockback imparts horizontal
+        // velocity and the instrument measured zero, while vgCalls=0 / reposition=0 show the combat
+        // pipeline was not driving at all.)
+        //
+        // CombatPathfinder already owns the hazard predicate and its BFS refuses lava by
+        // construction, which is why the FALLBACK route is safe and the direct line is not. So ask
+        // the same predicate along the line before sprinting down it, and bail to that safe route.
+        // KEPT DELIBERATELY SHORT AND FOOT-LEVEL. The obvious version -- head, feet and floor over
+        // the full four-block look-ahead -- would refuse to approach a lava lake at all, and
+        // approaching one is a JOB THIS BOT HAS: PlaceObsidianFloodTask must stand on the rim and
+        // tip a water bucket into it. So ask only what actually drowns a walking body: is the cell
+        // my feet are about to occupy lava, or the cell I am about to stand ON. Two blocks is a
+        // step or two at sprint speed -- enough to stop, short enough that standing beside a pool
+        // is still allowed. The OBS flood bench is the guard for exactly this and runs on it.
+        double hazardScan = Math.min(horiz, 2.0);
+        boolean hazardAhead = false;
+        if (horiz > 0.01) {
+            int samples = Math.max(2, (int) Math.ceil(hazardScan / 0.5));
+            for (int i = 1; i <= samples && !hazardAhead; i++) {
+                double d = hazardScan * i / samples;
+                BlockPos feet = BlockPos.ofFloored(new Vec3d(
+                        playerPos.x + toX / horiz * d, playerPos.y, playerPos.z + toZ / horiz * d));
+                if (CombatPathfinder.isHazard(feet, world)            // step INTO it
+                        || CombatPathfinder.isHazard(feet.down(), world)) {   // step ONTO it
+                    hazardAhead = true;
+                }
+            }
+        }
+        if (hazardAhead) dirHazardAhead++;
+
         // bail to BFS if: no LOS, stalled, or IMMEDIATE danger
-        if (!hasLOS || stalled || !pathSafe || !groundSafe) {
+        if (!hasLOS || stalled || !pathSafe || !groundSafe || hazardAhead) {
             if (DEBUG) Debug.logMessage(String.format(
-                    "dirBAIL los%d stall%d path%d grnd%d d%.1f", hasLOS ? 1 : 0,
-                    stalled ? 1 : 0, pathSafe ? 1 : 0, groundSafe ? 1 : 0, dist));
+                    "dirBAIL los%d stall%d path%d grnd%d hzd%d d%.1f", hasLOS ? 1 : 0,
+                    stalled ? 1 : 0, pathSafe ? 1 : 0, groundSafe ? 1 : 0, hazardAhead ? 1 : 0, dist));
             if (!hasLOS) Debug.logMessage("Walker: no LOS → BFS");
             else if (stalled) Debug.logMessage("Walker: stalled → BFS");
+            else if (hazardAhead) Debug.logMessage("Walker: hazard ahead → BFS");
             else Debug.logMessage("Walker: danger → BFS");
             stoppedByBail = true;
             switchToBFS();

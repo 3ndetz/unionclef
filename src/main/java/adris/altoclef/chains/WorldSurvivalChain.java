@@ -56,6 +56,27 @@ public class WorldSurvivalChain extends SingleTaskChain {
     public static volatile int lavaEntryHurtTime, lavaEntryOnGround, lavaEntrySpeedCm,
             lavaEntryFlee, lavaEntryPunk, lavaEntryCombatFwd;
     public static volatile String lavaEntryStage = "-", lavaEntryPos = "-";
+
+    /**
+     * ⛔ SECOND PASS, BECAUSE THE FIRST READING WAS OVER-READ (2026-09-21). The signature
+     * {@code hurtTime>0, onGround=0, speed=0, stage=NARROW_BATTLE} was written up as "an Enderman
+     * knocked the body off a ledge". Knockback imparts HORIZONTAL velocity (~0.4, decaying by 0.91
+     * a tick, so still ~16 cm ten ticks later) and the instrument measured ZERO -- the reading
+     * argues against the very mechanism it was used to support. Two further counters settle who was
+     * even driving, and both said it was not the combat pipeline: {@code vgCalls=0} (VoidGuard never
+     * called) and {@code reposition=0} (no stage behaviour ran at all) across the whole run, while
+     * {@code stage} is only {@code CombatController.lastStage} -- a STALE LABEL from whenever the
+     * controller last evaluated, not evidence that it held the legs.
+     *
+     * <p>So these record what the first pass assumed instead of measured: the fall VECTOR (where the
+     * body was 1 and 10 ticks earlier, which separates "stepped/fell straight down" from "was
+     * thrown"), and WHICH driver owned the movement on that tick. Counters only; nothing here
+     * changes behaviour.
+     */
+    public static volatile String lavaEntryPrev1 = "-", lavaEntryPrev10 = "-", lavaEntryDriver = "-";
+    public static volatile String lavaEntryTask = "-";
+    public static volatile int lavaEntryFallBefore;
+    private final java.util.ArrayDeque<net.minecraft.util.math.Vec3d> _recentPos = new java.util.ArrayDeque<>();
     private boolean wasInLavaLastTick = false;
 
     /**
@@ -187,8 +208,48 @@ public class WorldSurvivalChain extends SingleTaskChain {
             lavaEntryStage = String.valueOf(kaptainwutax.tungsten.combat.CombatController.lastStage);
             lavaEntryCombatFwd = kaptainwutax.tungsten.combat.CombatController.lastForwardPressed ? 1 : 0;
             lavaEntryPos = p.getBlockPos().toShortString();
+            // The fall VECTOR: where the body was one tick and ten ticks ago. A body that was thrown
+            // travels horizontally between those samples; a body that stepped or fell into a hole
+            // does not. This is the measurement the first pass inferred instead of taking.
+            Vec3d prev1 = null, prev10 = null;
+            int idx = 0;
+            for (Vec3d q : _recentPos) {          // newest first (addFirst below)
+                if (idx == 0) prev1 = q;
+                if (idx == 9) { prev10 = q; break; }
+                idx++;
+            }
+            lavaEntryPrev1 = prev1 == null ? "-" : String.format("%.1f,%.1f,%.1f", prev1.x, prev1.y, prev1.z);
+            lavaEntryPrev10 = prev10 == null ? "-" : String.format("%.1f,%.1f,%.1f", prev10.x, prev10.y, prev10.z);
+            // WHO OWNED THE LEGS. vgCalls=0 and reposition=0 over a whole nether run said the combat
+            // pipeline did not, while `stage` above is only a stale label -- so name the driver.
+            lavaEntryDriver = String.format("walker%d exec%d nav%d pf%d punk%d flee%d",
+                    kaptainwutax.tungsten.task.BlockPathWalker.isRunning() ? 1 : 0,
+                    kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR != null
+                            && kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.isRunning() ? 1 : 0,
+                    kaptainwutax.tungsten.task.FastNavigator.isActive() ? 1 : 0,
+                    kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get() ? 1 : 0,
+                    lavaEntryPunk, lavaEntryFlee);
+            // How deep did the cell the body just left READ as? If this is small, nothing in the
+            // terrain model saw a drop there at all, which is a different defect from ignoring one.
+            try {
+                lavaEntryFallBefore = prev10 == null ? -1
+                        : kaptainwutax.tungsten.combat.VoidDetector.fallHeight(prev10, mod.getWorld());
+            } catch (Throwable ignored) {
+                lavaEntryFallBefore = -2;          // an instrument never breaks the survival tick
+            }
+            try {
+                lavaEntryTask = mod.getUserTaskChain().getCurrentTask() == null ? "-"
+                        : String.valueOf(mod.getUserTaskChain().getCurrentTask().toString());
+                if (lavaEntryTask.length() > 160) lavaEntryTask = lavaEntryTask.substring(0, 160);
+            } catch (Throwable ignored) {
+                lavaEntryTask = "?";
+            }
         }
         wasInLavaLastTick = inLavaNow;
+        // Rolling position history for the vector above. Kept short and unconditional -- a buffer
+        // that only fills near lava cannot describe the approach that got the body there.
+        _recentPos.addFirst(mod.getPlayer().getPos());
+        while (_recentPos.size() > 12) _recentPos.removeLast();
 
         if (isInLavaOhShit(mod)) {
             lavaCondHazard++;
