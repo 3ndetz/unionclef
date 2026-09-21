@@ -122,8 +122,12 @@ public class ConstructNetherPortalObsidianTask extends Task {
      */
     private double _returnBestDistSq = Double.MAX_VALUE;
     private int _returnNoProgressTicks;
-    /** ~10 s at 20 tps: long enough for a detour round a wall, far short of the 9-minute freeze. */
-    private static final int RETURN_NO_PROGRESS_LIMIT = 200;
+    /**
+     * Backstop only -- the primary trigger is the drive's own "unreachable" verdict. Two minutes at
+     * 20 tps: longer than any dig-through leg measured on a cave return (the 10 s first cut fired on
+     * three of them), far short of the nine-minute freeze this whole branch exists to prevent.
+     */
+    private static final int RETURN_NO_PROGRESS_LIMIT = 2400;
 
     private BlockPos _destroyTarget;
 
@@ -377,14 +381,38 @@ public class ConstructNetherPortalObsidianTask extends Task {
                 // the flood left; it lands on clean ground next to it. A human who carried obsidian
                 // up out of a cave and found the surface pad unreachable would build by the cave
                 // mouth, not spend nine minutes on the climb.
+                // ⛔ ASK THE DRIVE, DO NOT RUN A STOPWATCH (corrected 2026-09-21, same day). The first
+                // cut of this fired on 200 ticks (10 s) without net approach, and that is not what
+                // "unreachable" means on a cave route: the walk back from the lake is 35-57 blocks
+                // through rock, the drive spends long stretches mining a passage ("Mining done —
+                // passage open" throughout), and net distance does not fall while it does. Measured:
+                // THREE re-sites in five minutes, at 35, 57 and 40 blocks from the pad -- every one
+                // of them mid-journey on a walk that was going fine, and each threw away the obsidian
+                // already placed at the abandoned frame and sent the bot back for more. A thrash of
+                // my own making, in place of the freeze it replaced.
+                //
+                // GetToBlockTask already publishes the honest verdict: when its walk gives up it
+                // calls BlockScanner.requestBlockUnreachable(target), which is the same judgement
+                // every other consumer of reachability uses, and it takes several failed attempts
+                // rather than one slow stretch. Re-site on THAT. The tick count stays only as a
+                // backstop against a freeze the scanner never notices, and at two minutes it can no
+                // longer fire on an ordinary dig-through leg.
                 double distSq = body.getSquaredDistance(origin);
+                boolean driveGaveUp = mod.getBlockScanner().isUnreachable(origin);
                 if (distSq < _returnBestDistSq - 1.0) {
                     _returnBestDistSq = distSq;
                     _returnNoProgressTicks = 0;
-                } else if (++_returnNoProgressTicks > RETURN_NO_PROGRESS_LIMIT) {
+                }
+                if (driveGaveUp || ++_returnNoProgressTicks > RETURN_NO_PROGRESS_LIMIT) {
                     Debug.logMessage(String.format(
-                            "Portal pad %s is unreachable from %s (no progress for %d ticks) — re-siting here",
-                            origin.toShortString(), body.toShortString(), RETURN_NO_PROGRESS_LIMIT));
+                            // NAME THE TRIGGER. Two conditions reach this line and they mean different
+                            // things -- "the drive gave up on the route" against "nothing moved for two
+                            // minutes and nobody noticed" -- and a message that reports one while the
+                            // other fired is how the 10-second thrash above read as a real verdict.
+                            "Portal pad %s is unreachable from %s (%s) — re-siting here",
+                            origin.toShortString(), body.toShortString(),
+                            driveGaveUp ? "the drive gave the route up"
+                                        : "no net approach for " + RETURN_NO_PROGRESS_LIMIT + " ticks"));
                     origin = null;
                     // The interior-clearing target is origin-relative. Left behind, it would send the
                     // bot back to the ABANDONED site to break a block the moment the new frame closed.
