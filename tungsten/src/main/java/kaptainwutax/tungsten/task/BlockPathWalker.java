@@ -264,32 +264,6 @@ public class BlockPathWalker {
         return Vec3d.ofBottomCenter(path.get(path.size() - 1));
     }
 
-    /**
-     * Along the next two blocks from {@code from} toward {@code to}, does any column the body
-     * would occupy end in LAVA before it reaches a solid block? Scans the feet cell and down to
-     * 32 blocks. See the gate in tickBFS for why only lava, and not the void, is refused here.
-     */
-    private static boolean lavaColumnAhead(Vec3d from, Vec3d to, WorldView world) {
-        double dx = to.x - from.x, dz = to.z - from.z;
-        double h = Math.sqrt(dx * dx + dz * dz);
-        if (h < 0.05) return false;
-        double reach = Math.min(h, 2.0);
-        int bottom = world.getBottomY();
-        for (int i = 1; i <= 4; i++) {
-            double d = reach * i / 4.0;
-            int x = net.minecraft.util.math.MathHelper.floor(from.x + dx / h * d);
-            int z = net.minecraft.util.math.MathHelper.floor(from.z + dz / h * d);
-            int y0 = net.minecraft.util.math.MathHelper.floor(from.y);
-            for (int y = y0; y >= Math.max(bottom, y0 - 32); y--) {
-                scratch2.set(x, y, z);
-                var st = world.getBlockState(scratch2);
-                if (st.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)) return true;
-                if (!st.getCollisionShape(world, scratch2).isEmpty()) break;
-            }
-        }
-        return false;
-    }
-
     // ── tick ─────────────────────────────────────────────────────────────────
 
     public static void tick(ClientPlayerEntity player) {
@@ -416,27 +390,12 @@ public class BlockPathWalker {
         // CombatPathfinder already owns the hazard predicate and its BFS refuses lava by
         // construction, which is why the FALLBACK route is safe and the direct line is not. So ask
         // the same predicate along the line before sprinting down it, and bail to that safe route.
-        // KEPT DELIBERATELY SHORT AND FOOT-LEVEL. The obvious version -- head, feet and floor over
-        // the full four-block look-ahead -- would refuse to approach a lava lake at all, and
-        // approaching one is a JOB THIS BOT HAS: PlaceObsidianFloodTask must stand on the rim and
-        // tip a water bucket into it. So ask only what actually drowns a walking body: is the cell
-        // my feet are about to occupy lava, or the cell I am about to stand ON. Two blocks is a
-        // step or two at sprint speed -- enough to stop, short enough that standing beside a pool
-        // is still allowed. The OBS flood bench is the guard for exactly this and runs on it.
+        // Lethal ahead? The shared baritone-shaped check (RouteHazards), over the next two blocks
+        // toward the target -- the stretch the body will cover before it could stop.
         double hazardScan = Math.min(horiz, 2.0);
-        boolean hazardAhead = false;
-        if (horiz > 0.01) {
-            int samples = Math.max(2, (int) Math.ceil(hazardScan / 0.5));
-            for (int i = 1; i <= samples && !hazardAhead; i++) {
-                double d = hazardScan * i / samples;
-                BlockPos feet = BlockPos.ofFloored(new Vec3d(
-                        playerPos.x + toX / horiz * d, playerPos.y, playerPos.z + toZ / horiz * d));
-                if (CombatPathfinder.isHazard(feet, world)            // step INTO it
-                        || CombatPathfinder.isHazard(feet.down(), world)) {   // step ONTO it
-                    hazardAhead = true;
-                }
-            }
-        }
+        boolean hazardAhead = horiz > 0.01 && kaptainwutax.tungsten.path.RouteHazards.segmentLethal(
+                world, playerPos, new Vec3d(playerPos.x + toX / horiz * hazardScan, playerPos.y,
+                        playerPos.z + toZ / horiz * hazardScan));
         if (hazardAhead) dirHazardAhead++;
 
         // bail to BFS if: no LOS, stalled, or IMMEDIATE danger
@@ -811,25 +770,30 @@ public class BlockPathWalker {
             move = false;
             walkerHoleHeld++;
         }
-        // ⛔ NO STEP, AND NO JUMP, INTO A COLUMN THAT ENDS IN LAVA (G108 nether, 2026-09-23).
-        // The hole gate above is deliberately narrow -- a planned descent is a route -- and it looks
-        // for HOLES. Nothing in this method ever asked about LAVA, and the nether-stage deaths were
-        // both this method. Measured with the route-relative lava snapshot and the void-takeoff
-        // recorder over four nether stints: the body either WALKED into lava on level ground
-        // (onGround=1, y constant at 52, driver walker1), or JUMPED off a ledge at y=58.2 with
-        // vel=(0,+0.083,-0.158) and walker=true over a lake it then fell 28 blocks into.
-        //
-        // The rule that keeps every legitimate case: a descent is a route, a descent INTO LAVA is
-        // not, and neither is a step into a lava cell at feet or floor level. So along the next two
-        // blocks toward the waypoint, scan each column down to the first solid block; if lava comes
-        // first, the column is lethal and the body stands instead. Void columns are NOT refused
-        // here -- gap jumps over the void are real routes (nav_gaps) and have their own gates.
-        // Standing is this file's measured preference over falling (see the hole gate above); the
-        // navigator replans from a bot on the ground.
-        boolean lavaAhead = lavaColumnAhead(playerPos, wpPos, player.getEntityWorld());
+        // ⛔ BARITONE'S PER-TICK CHECK, NOT A GATE OF OUR OWN (G108 nether, 2026-09-23). Both nether
+        // lava deaths this method caused -- walking into lava on level ground, and jumping off a
+        // ledge over a lake -- were routes nothing re-checked once they were being walked. Baritone
+        // re-costs the movement it is on and the next few every tick and cancels the moment one is
+        // impossible (PathExecutor.java:196-210). Here: the stretch from the body to this waypoint
+        // and on to the next one, against the same predicate the planner uses. Lethal means stand,
+        // do not jump, and hand the route back (stop) so the caller plans a new one from the
+        // ground -- standing is this file's measured preference over falling.
+        Vec3d nextWpPos = waypointIdx + 1 < path.size()
+                ? Vec3d.ofBottomCenter(path.get(waypointIdx + 1)) : null;
+        boolean lavaAhead = onGround && (
+                kaptainwutax.tungsten.path.RouteHazards.segmentLethal(player.getEntityWorld(), playerPos, wpPos)
+                || (nextWpPos != null && dist < 1.5 && kaptainwutax.tungsten.path.RouteHazards
+                        .segmentLethal(player.getEntityWorld(), wpPos, nextWpPos)));
         if (lavaAhead) {
+            kaptainwutax.tungsten.path.RouteHazards.refusedWalker++;
             walkerLavaHeld++;
-            if (onGround) move = false;
+            MinecraftClient hmc = MinecraftClient.getInstance();
+            hmc.options.forwardKey.setPressed(false);
+            hmc.options.sprintKey.setPressed(false);
+            hmc.options.jumpKey.setPressed(false);
+            Debug.logMessage("Walker: route ahead is lethal (hazard) -> stop, replan");
+            stop();
+            return;
         }
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
@@ -879,7 +843,7 @@ public class BlockPathWalker {
                 && onGround && !droppingTo && !intoHole
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
-        mc.options.jumpKey.setPressed(canJump && !lavaAhead);
+        mc.options.jumpKey.setPressed(canJump);
 
         if (DEBUG && (dbgN++ % 3 == 0)) {
             Vec3d v = player.getVelocity();

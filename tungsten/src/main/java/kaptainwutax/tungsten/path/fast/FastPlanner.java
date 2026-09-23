@@ -821,6 +821,14 @@ public final class FastPlanner {
                 // no corner cutting: both orthogonal cells must be passable too
                 if (!sideClear(world, from, d[0], 0, support, scratch)) continue;
                 if (!sideClear(world, from, 0, d[1], support, scratch)) continue;
+                // ...AND NOT OVER LAVA. sideClear asks only for COLLISION, and lava, fire and magma have
+                // none, so a diagonal happily shaved a lava corner. Baritone refuses exactly this in
+                // MovementDiagonal (:158/162 the lava or magma under each corner cell, :188/189 the
+                // corner cells themselves); the body is 0.6 wide and does brush both corners.
+                if (hazardAt(world, from.x + d[0], from.y, from.z, scratch)
+                        || hazardAt(world, from.x + d[0], from.y - 1, from.z, scratch)
+                        || hazardAt(world, from.x, from.y, from.z + d[1], scratch)
+                        || hazardAt(world, from.x, from.y - 1, from.z + d[1], scratch)) continue;
                 step(world, from, support, d[0], d[1], goal, map, open, scratch,
                         ActionCosts.WALK_ONE_BLOCK_COST * SQRT2);
             }
@@ -1884,18 +1892,9 @@ public final class FastPlanner {
      * this class called neither.
      */
     private static boolean hazardAt(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
-        var state = cachedState(w, x, y, z, s);
-        if (kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyLava(state)) return true;
-        var b = state.getBlock();
-        return b == net.minecraft.block.Blocks.MAGMA_BLOCK
-                || b == net.minecraft.block.Blocks.CACTUS
-                || b == net.minecraft.block.Blocks.SWEET_BERRY_BUSH
-                || b instanceof net.minecraft.block.AbstractFireBlock
-                || b instanceof net.minecraft.block.EndPortalFrameBlock
-                || b == net.minecraft.block.Blocks.END_PORTAL
-                || b == net.minecraft.block.Blocks.COBWEB
-                || b == net.minecraft.block.Blocks.POWDER_SNOW
-                || b instanceof net.minecraft.block.BubbleColumnBlock;
+        // One definition, shared with the executors' per-tick check (RouteHazards) -- a planner and
+        // an executor that disagree about what is lethal is how a "safe" route kills the body.
+        return kaptainwutax.tungsten.path.RouteHazards.hazard(cachedState(w, x, y, z, s));
     }
 
     /**

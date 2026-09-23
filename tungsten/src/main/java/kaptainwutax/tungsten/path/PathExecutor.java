@@ -203,6 +203,20 @@ public class PathExecutor {
 	}
 	private boolean armed = false;
 
+	/** Body to the current node, then node to node, for the next ten ticks of the replay. */
+	private boolean replayAheadLethal(ClientPlayerEntity player) {
+		List<Node> p = this.path;
+		if (p == null) return false;
+		var w = player.getEntityWorld();
+		net.minecraft.util.math.Vec3d prev = player.getEntityPos();
+		for (int i = this.tick; i < Math.min(p.size(), this.tick + 10); i++) {
+			net.minecraft.util.math.Vec3d next = p.get(i).agent.getPos();
+			if (kaptainwutax.tungsten.path.RouteHazards.segmentLethal(w, prev, next)) return true;
+			prev = next;
+		}
+		return false;
+	}
+
 	public void setPath(List<Node> path) {
 		// NOTE: the completion callback is deliberately PRESERVED. This used to do
 		// `this.cb = null`, which destroyed the ;goto retry callback the moment the very
@@ -507,6 +521,25 @@ public class PathExecutor {
 		    	cb = null;
 		    }
 	    } else {
+		    // ⛔ BARITONE'S costVerificationLookahead, FOR A REPLAY (G108 nether, 2026-09-23). The
+		    // physics search prunes lava states (Node.java), so the PLAN is lava-free -- but this
+		    // executor REPLAYS recorded inputs, and a body that has drifted from the simulated
+		    // trajectory is not where the plan was checked. Measured: after the walker was gated,
+		    // the next nether lava entry came under this executor (driver exec1). Baritone's
+		    // PathExecutor re-costs the current and next movements every tick and cancels on an
+		    // impossible one (PathExecutor.java:196-210); here the next half-second of the replay
+		    // -- body to node, node to node -- is checked against the same RouteHazards the planners
+		    // use. Only while on the ground: that is when a cancel can still change where the body
+		    // goes (baritone's safeToCancel), and mid-arc it would only drop the keys.
+		    if (player.isOnGround() && replayAheadLethal(player)) {
+		        kaptainwutax.tungsten.path.RouteHazards.refusedExecutor++;
+		        Debug.logMessage("Path stopped: the next steps of the replay are lethal (hazard) -- replanning");
+		        stop = true;
+		        options.forwardKey.setPressed(false);
+		        options.sprintKey.setPressed(false);
+		        options.jumpKey.setPressed(false);
+		        return;
+		    }
 		    Node node = this.path.get(this.tick);
 
 		    // Drift detection is handled post-tick in MixinClientPlayerEntity.end()
