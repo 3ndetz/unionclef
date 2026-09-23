@@ -262,7 +262,24 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 				|| kaptainwutax.tungsten.task.BowShooter.isActive()
 				|| kaptainwutax.tungsten.task.ProjectileDodge.isActive())
 				&& !tungsten$movementOwnsTick) {
-			kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
+			// ⛔ AND NOT WHILE THE WALKER FOLLOWS A PLANNED ROUTE (2026-09-23). The note above says
+			// the movementOwnsTick exemption "keeps the guard off BridgeTask, PillarTask and the
+			// walker". For the walker that was a checkable claim and it was false: movementOwnsTick is
+			// MovementQueue.isRunning() and nothing else. So under PunkPlayerTask this guard ran after
+			// the walker on every tick and did to it exactly what the paragraph above records it doing
+			// to MovementFall -- read the forward the walker pressed toward a PLANNED three-block
+			// drop, measured fallHeight 4 against its maxSafeFall of 3, released forward and forced
+			// sneak, and vanilla ledge protection pinned the body on the lip. Measured on chase_terrain
+			// (gamer world, fixed start at -288,117,289): route (-289,117,289) -> (-290,114,290),
+			// body facing it to 0.2 degrees, walkerHeldAbove 3541 of 3542 BFS ticks, position frozen
+			// for the whole 180 s while the runner left, on 0.95.29 and 0.95.34 alike. The walker in
+			// BFS mode is a PLANNED route, whose descents are deliberate and whose hazards
+			// RouteHazards re-checks every tick; DIRECT (free-form steering at a point) keeps the guard.
+			if (kaptainwutax.tungsten.task.BlockPathWalker.isFollowingRoute()) {
+				kaptainwutax.tungsten.task.BlockPathWalker.guardYieldedToRoute++;
+			} else {
+				kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
+			}
 		}
 
 		// Keys AFTER the guard: the state the player ticks with, not the state the drive asked for.

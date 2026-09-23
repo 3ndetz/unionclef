@@ -235,6 +235,18 @@ public class BlockPathWalker {
         return String.format("%s wp%d/%d nearest#%d d%.1f maxHop%d", mode, waypointIdx, p.size(), bestI, best, maxHop);
     }
 
+    /**
+     * True while the walker follows a PLANNED route (BFS mode), as opposed to steering free-form at
+     * a point (DIRECT). A planned route may descend on purpose -- G53's hold walks the body off the
+     * lip of a drop the planner chose -- so a guard for free-form movement must not veto it.
+     */
+    public static boolean isFollowingRoute() {
+        return active && mode == Mode.BFS && path != null && !path.isEmpty();
+    }
+
+    /** Ticks the free-form VoidGuard stood aside because the walker was following a planned route. */
+    public static volatile int guardYieldedToRoute = 0;
+
     public static boolean isRunning() {
         return active;
     }
