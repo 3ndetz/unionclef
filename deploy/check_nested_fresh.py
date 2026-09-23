@@ -116,6 +116,15 @@ if bad:
     for b in bad:
         print("  " + b)
     print("Fix: gradlew :tungsten:remapJar :1.21.11:build")
+    # A deliberate replay of an OLDER jar (a released build, for an A/B against it) is by definition
+    # not the jar just built, so this check cannot tell it from the accident it exists to stop.
+    # deploy_jar.sh already takes UCTEST_ALLOW_STALE=1 for exactly that case at its own stale check;
+    # without the same escape here the second check silently refused every A/B arm -- measured
+    # 2026-09-23, an arm labelled 0.95.29 ran the whole course on 0.95.34 and nearly settled a
+    # regression question with the wrong binary. Say it loudly and continue.
+    if os.environ.get("UCTEST_ALLOW_STALE") == "1":
+        print("  UCTEST_ALLOW_STALE=1 -- deploying the older jar DELIBERATELY (A/B replay)")
+        sys.exit(0)
     sys.exit(1)
 # RECORD WHAT WAS BLESSED, so a later mtime-only bump can be recognised as harmless.
 for name, rel in MODULES.items():
