@@ -389,6 +389,43 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
      *
      * @return The next task to be executed.
      */
+    /** Targets refused because breaking them would drop the body over an unsafe landing. */
+    public static volatile int underfootRefused = 0;
+
+    /** In the own column below the feet, and the landing after breaking it is not a safe one. */
+    private static boolean unsafeToMineUnderfoot(AltoClef mod, BlockPos target) {
+        BlockPos feet = mod.getPlayer().getBlockPos();
+        if (target.getX() != feet.getX() || target.getZ() != feet.getZ() || target.getY() >= feet.getY()) {
+            return false;
+        }
+        var w = mod.getWorld();
+        for (int y = target.getY() - 1; y >= target.getY() - 4; y--) {
+            BlockPos c = new BlockPos(target.getX(), y, target.getZ());
+            var st = w.getBlockState(c);
+            if (kaptainwutax.tungsten.path.RouteHazards.hazard(st)) return true;    // lava / magma below
+            if (!st.getCollisionShape(w, c).isEmpty()) {
+                return feet.getY() - (y + 1) > 3;                                    // fall height
+            }
+        }
+        return true;                                                                 // no floor within 4
+    }
+
+    /** A cardinal neighbour of the feet the body can stand on, from which the target is in reach. */
+    private static BlockPos sideStandReaching(AltoClef mod, BlockPos target) {
+        BlockPos feet = mod.getPlayer().getBlockPos();
+        var w = mod.getWorld();
+        for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
+            BlockPos n = feet.offset(d);
+            if (!kaptainwutax.tungsten.combat.CombatPathfinder.isWalkable(n, w)) continue;
+            if (kaptainwutax.tungsten.path.RouteHazards.lethalColumn(w, n.getX(), n.getY(), n.getZ(),
+                    new BlockPos.Mutable())) continue;
+            if (net.minecraft.util.math.Vec3d.ofCenter(n).add(0, 0.62, 0)
+                    .squaredDistanceTo(net.minecraft.util.math.Vec3d.ofCenter(target)) > 4.5 * 4.5) continue;
+            return n;
+        }
+        return null;
+    }
+
     @Override
     protected Task onTick() {
         dbTick++;
@@ -737,6 +774,29 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             }
         }
         if (reach.isPresent() && (mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround()) && !mod.getFoodChain().needsToEat() && !WorldHelper.isInNetherPortal() && Nav.isSafeToCancel()) {
+            // ⛔ NEVER DIG THE FLOOR OUT FROM UNDER YOURSELF OVER A DROP (G108 nether, 2026-09-24).
+            // Baritone's MineProcess, digging in the player's own column, only ever breaks blocks at
+            // or ABOVE the feet (`pos.getY() >= ctx.playerFeet().getY()`, MineProcess.java:126);
+            // anything below is reached by a MOVEMENT whose cost checks where the body lands
+            // (MovementDownward / MovementDescend, max unprotected fall 3). This task had no such
+            // rule: a target under the feet was mined like any other. Measured by the death snapshot
+            // on the nether stage: takeoff at (151.5,90.9,238.7), wasOnGround TRUE, velocity
+            // (0,-0.155,0) -- straight down from standing -- with no movement driver at all, and a
+            // death 23 blocks lower, "fell from a high place". The ground went, not the body. Now a
+            // target in the own column below the feet is mined from here only if the landing under
+            // it is solid, hazard-free and at most three blocks down; otherwise the bot steps to a
+            // neighbouring stand that still reaches it, or gives the block up.
+            if (unsafeToMineUnderfoot(mod, pos)) {
+                underfootRefused++;
+                BlockPos side = sideStandReaching(mod, pos);
+                if (side != null) {
+                    setDebugState("Target is my floor over a drop -- stepping aside to mine it");
+                    return new adris.altoclef.tasks.movement.GetToBlockTask(side, false);
+                }
+                setDebugState("Target is my floor over a drop, no side stand -- giving it up");
+                mod.getBlockScanner().requestBlockUnreachable(pos);
+                return null;
+            }
             setDebugState("Block in range, mining...");
             stuckCheck.reset();
             isMining = true;
