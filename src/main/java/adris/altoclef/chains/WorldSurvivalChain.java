@@ -228,7 +228,9 @@ public class WorldSurvivalChain extends SingleTaskChain {
                             && kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.isRunning() ? 1 : 0,
                     kaptainwutax.tungsten.task.FastNavigator.isActive() ? 1 : 0,
                     kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get() ? 1 : 0,
-                    lavaEntryPunk, lavaEntryFlee);
+                    lavaEntryPunk, lavaEntryFlee)
+                    // ON the route (the planner handed us lava) or BETWEEN waypoints (a cut corner)?
+                    + " | " + kaptainwutax.tungsten.task.BlockPathWalker.describeAgainstRoute(p.getBlockPos());
             // How deep did the cell the body just left READ as? If this is small, nothing in the
             // terrain model saw a drop there at all, which is a different defect from ignoring one.
             try {

@@ -208,6 +208,31 @@ public class BlockPathWalker {
         liveStuckTicks = 0;
     }
 
+    /**
+     * Instrument read-out for the lava-entry snapshot (WorldSurvivalChain): the walker's mode, and
+     * whether {@code cell} is ON the route it is following -- or how far the nearest waypoint is.
+     * "On the route" means the planner handed us lava; "off it" means the body cut a corner between
+     * two safe waypoints. Different defects, different layers, so the snapshot must say which.
+     */
+    public static String describeAgainstRoute(BlockPos cell) {
+        List<BlockPos> p = path;
+        if (!active) return "idle";
+        if (p == null || p.isEmpty()) return mode + " noRoute";
+        double best = Double.MAX_VALUE; int bestI = -1;
+        for (int i = 0; i < p.size(); i++) {
+            BlockPos w = p.get(i);
+            double dx = w.getX() - cell.getX(), dz = w.getZ() - cell.getZ(), dy = w.getY() - cell.getY();
+            double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (d < best) { best = d; bestI = i; }
+        }
+        int maxHop = 0;
+        for (int i = 1; i < p.size(); i++) {
+            BlockPos a = p.get(i - 1), b = p.get(i);
+            maxHop = Math.max(maxHop, Math.max(Math.abs(a.getX() - b.getX()), Math.abs(a.getZ() - b.getZ())));
+        }
+        return String.format("%s wp%d/%d nearest#%d d%.1f maxHop%d", mode, waypointIdx, p.size(), bestI, best, maxHop);
+    }
+
     public static boolean isRunning() {
         return active;
     }

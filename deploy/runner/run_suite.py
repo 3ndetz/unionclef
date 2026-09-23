@@ -380,8 +380,21 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     except Exception as e:  # noqa: BLE001 - report, classify, maybe retry
         art.write_json("verdict.json", {"error": str(e)})
         art.close()
+        # ⛔ A SERVER THAT NEVER CAME BACK IS STILL NOT A FAILING COURSE (2026-09-23). The restart
+        # above rescues a TRANSIENT rcon stall; when the restart does not bring it back either, the
+        # exception landed here and was scored as an ordinary gate failure with no criterion
+        # named -- "gate failure ()" -- for every remaining course. Measured: a full nav sweep on
+        # 0.95.31 read 1/14 with 13 "failures", all of them `uctest-server rcon: timed out after
+        # 300s`, and it looked exactly like a catastrophic regression. RULE ZERO: that run measured
+        # the machine. Setup errors that are about the STAND are INVALID, which the summary keeps
+        # apart from bot failures and the gates refuse to count either way.
+        err = str(e)
+        stand = any(s in err for s in ("rcon", "is not running", "timed out after",
+                                       "Error response from daemon"))
         return {"id": scn.id, "tier": scn.tier, "passed": False,
-                "error": str(e), "flake_suspect": is_flake(e), "criteria": []}
+                "error": err, "flake_suspect": is_flake(e), "criteria": [],
+                "invalid": stand,
+                "invalid_reason": ("stand: " + err[:80]) if stand else None}
     finally:
         for b in (bot, victim):
             try:
