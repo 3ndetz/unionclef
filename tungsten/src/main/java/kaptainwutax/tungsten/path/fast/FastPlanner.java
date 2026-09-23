@@ -1914,6 +1914,25 @@ public final class FastPlanner {
         WorldView w = SEARCH_WORLD.get();
         if (w == null) return 0.0;
         BlockPos.Mutable s = new BlockPos.Mutable();
+        // ⛔ LAVA IS PRICED FOR WHAT A DRIFT INTO IT COSTS, NOT LIKE MAGMA (G108 nether, 2026-09-24).
+        // One margin price for every hazard assumed the drift it prices costs the same everywhere.
+        // It does not: a foot into magma is 1-2 health, a foot into lava in the nether is the run.
+        // Measured over the nether stints after the executors gained RouteHazards: the plan held no
+        // lava cell, and the entries that remained were the body ending ONE BLOCK OFF its route --
+        // route-relative snapshot d1.0, d1.4, d1.0 from the nearest waypoint, under the walker and
+        // the queue alike, and one of them burned to death after escaping. So a cell with lava in
+        // any of its eight neighbours (feet or floor level -- the body drifts diagonally too) costs
+        // what it is worth: the search takes the lane one or two blocks out whenever there is one,
+        // and still crosses a lava-bound strip when nothing else reaches the goal. Other hazards
+        // keep the old price, which nav_hazard measured as enough for magma.
+        for (int[] d : CARDINALS) {
+            if (lavaAt(w, x + d[0], y, z + d[1], s) || lavaAt(w, x + d[0], y - 1, z + d[1], s))
+                return ActionCosts.WALK_ONE_BLOCK_COST * LAVA_MARGIN_MULT;
+        }
+        for (int[] d : DIAGONALS) {
+            if (lavaAt(w, x + d[0], y, z + d[1], s) || lavaAt(w, x + d[0], y - 1, z + d[1], s))
+                return ActionCosts.WALK_ONE_BLOCK_COST * LAVA_MARGIN_MULT;
+        }
         for (int[] d : CARDINALS) {
             int ax = x + d[0], az = z + d[1];
             if (hazardAt(w, ax, y, az, s) || hazardAt(w, ax, y - 1, az, s)) {
@@ -1921,6 +1940,13 @@ public final class FastPlanner {
             }
         }
         return 0.0;
+    }
+
+    /** How many blocks' walk a cell next to lava is worth avoiding. See hazardProximityPenalty. */
+    private static final double LAVA_MARGIN_MULT = 12.0;
+
+    private static boolean lavaAt(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        return kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyLava(cachedState(w, x, y, z, s));
     }
 
     /** Body cell, head cell, or the surface we would stand on. */

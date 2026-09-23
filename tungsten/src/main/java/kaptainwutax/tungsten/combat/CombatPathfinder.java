@@ -262,6 +262,7 @@ public class CombatPathfinder {
             for (BlockPos neighbor : getWalkableNeighbors(current, world, allowParkour, swimming, cardinalOnly)) {
                 if (cameFrom.containsKey(neighbor)) continue;
                 if (!start.isWithinDistance(neighbor, MAX_RADIUS)) continue;
+                if (LAVA_MARGIN.get() && !neighbor.isWithinDistance(goal, 1.5) && lavaAdjacent(neighbor, world)) continue;
                 cameFrom.put(neighbor, current);
                 queue.add(neighbor);
             }
@@ -584,8 +585,55 @@ public class CombatPathfinder {
      * Instant BFS path on block grid. Used by FollowEntityTask for
      * immediate movement while physics A* computes.
      */
+    /** Set only for the first pass of {@link #findPath}: close lava-adjacent cells. */
+    private static final ThreadLocal<Boolean> LAVA_MARGIN = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    /** Routes found WITH the lava margin / routes that needed the bare fallback. */
+    public static volatile int cpLavaMarginKept = 0, cpLavaMarginDropped = 0;
+
+    /** Lava in any of the eight neighbours at feet or floor level (the body drifts diagonally). */
+    private static boolean lavaAdjacent(BlockPos feet, WorldView world) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                if (world.getBlockState(feet.add(dx, 0, dz)).getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)
+                        || world.getBlockState(feet.add(dx, -1, dz)).getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static List<BlockPos> findPath(BlockPos start, BlockPos goal, WorldView world) {
-        List<BlockPos> route = bfsPath(start, goal, world, true, false);
+        // ⛔ A ONE-BLOCK MARGIN FROM LAVA FIRST, THE BARE ROUTE ONLY IF THERE IS NO OTHER (G108 nether,
+        // 2026-09-24). This BFS is the walker's main route source in the altoclef drive, and a BFS
+        // has no cost to price a cell with -- so the lava-adjacent lane FastPlanner now prices, this
+        // search took as readily as any other. Measured over the nether stints: the plan never held a
+        // lava cell and the entries that remained were the body ending ONE BLOCK OFF its route
+        // (route-relative snapshot d1.0, d1.4, d1.0), one of them burning to death after it got out.
+        // The BFS form of "priced, not forbidden": search once with lava-adjacent cells closed, and
+        // only when that reaches nothing fall back to the unrestricted search, so a lava-bound strip
+        // is still crossed when it is the only way.
+        LAVA_MARGIN.set(Boolean.TRUE);
+        List<BlockPos> route;
+        try {
+            route = bfsPath(start, goal, world, true, false);
+        } finally {
+            LAVA_MARGIN.set(Boolean.FALSE);
+        }
+        // Fall back ONLY when the margin left the search nowhere to go. This BFS runs on the client
+        // tick, often toward goals it cannot reach in its 800-node budget, so re-running it whenever
+        // the goal was not reached would double its cost on most calls. A PARTIAL route that keeps
+        // the margin is the one wanted anyway; and where a lava-bound strip is the only way on, the
+        // bot walks to its edge, the margin search from there comes back empty, and the bare search
+        // takes it across.
+        boolean usable = route != null && route.size() >= 2;
+        if (usable) {
+            cpLavaMarginKept++;
+        } else {
+            cpLavaMarginDropped++;
+            route = bfsPath(start, goal, world, true, false);
+        }
         return kaptainwutax.tungsten.TungstenConfig.get().gridRouteMatchesQueueMoves
                 ? expandDiagonals(route, world) : route;
     }
