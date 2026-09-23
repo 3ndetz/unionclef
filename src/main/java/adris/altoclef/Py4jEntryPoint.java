@@ -1305,6 +1305,8 @@ public class Py4jEntryPoint {
         out.put("fallBefore", adris.altoclef.chains.WorldSurvivalChain.lavaEntryFallBefore);
         out.put("task", adris.altoclef.chains.WorldSurvivalChain.lavaEntryTask);
         out.put("takeoff", adris.altoclef.chains.WorldSurvivalChain.lavaEntryTakeoff);
+        out.put("deaths", adris.altoclef.chains.WorldSurvivalChain.deaths);
+        out.put("deathTakeoff", adris.altoclef.chains.WorldSurvivalChain.deathTakeoff);
         return out;
     }
 

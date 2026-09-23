@@ -890,6 +890,40 @@ def main():
                 print(f"  warmed to {fps_ref:.0f} fps")
                 break
     if fps_ref is not None and fps_ref < SANE_REF_FPS:
+        # ⛔ A WORN CLIENT IS NOT A STARVED MACHINE EITHER, AND IT HAS THE SAME CURE AS IN run_suite
+        # (2026-09-24). Two series in a row went N1 valid at 30 fps, then N2-N4 INVALID at 9-10 fps,
+        # the host at 44-60% and nothing else changed: the client degrades over one nether stint
+        # (checkpoint restore + chunk reload), and a recreated one read 29 fps at once. run_suite has
+        # refreshed worn clients for weeks (refresh_clients); this bench stood down instead and threw
+        # three twelve-minute stints away. So: recreate the client ONCE and start the whole run again
+        # on it (re-exec, so every phase -- connect, restore, heal -- runs on the fresh client). A
+        # machine that is really starved fails the second attempt too, and then the stand-down is
+        # honest.
+        if os.environ.get("UCTEST_CLIENT_REFRESHED") != "1":
+            print(f"  fps {fps_ref:.0f} after warm-up -- recreating the client once and restarting the run")
+            import shutil
+            script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                  "deploy_jar.sh")
+            bash = shutil.which("bash") or shutil.which("bash.exe")
+            for cand in (os.path.join("C:", os.sep, "Program Files", "Git", "bin", "bash.exe"),
+                         os.path.join("C:", os.sep, "Program Files", "Git", "usr", "bin", "bash.exe")):
+                if not bash and os.path.exists(cand):
+                    bash = cand
+            if bash:
+                env = dict(os.environ, UCTEST_GPU=os.environ.get("UCTEST_GPU", "0"))
+                rc = subprocess.call([bash, script, CLIENT],
+                                     cwd=os.path.dirname(os.path.dirname(script)), env=env,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                if rc == 0:
+                    time.sleep(60)
+                    # A CHILD, NOT os.execv: on Windows execv starts a NEW process and exits this one,
+                    # so whatever waits on this pid (the chain scripts do) would see the run "end" and
+                    # start the next one on top of it. The parent waits and returns the child's code.
+                    sys.stdout.flush()
+                    rc2 = subprocess.call([sys.executable] + sys.argv,
+                                          env=dict(os.environ, UCTEST_CLIENT_REFRESHED="1"))
+                    sys.exit(rc2)
+                print(f"  client refresh FAILED (deploy_jar.sh exit {rc}) -- standing down")
         raise StandDown(f"client at {fps_ref:.0f} fps before the run even starts"
                         f" (< {SANE_REF_FPS}) — the machine cannot answer today")
     # ⛔ THE PLAYTHROUGH COULD NOT MEASURE A FLAG, WHICH IS WHY FLAGS GOT MEASURED IN THE WRONG

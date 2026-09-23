@@ -83,6 +83,15 @@ public class WorldSurvivalChain extends SingleTaskChain {
      * 0.95.34, a 31-block fall into lava whose takeoff was gone by the time it was queried.
      */
     public static volatile String lavaEntryTakeoff = "-";
+    /**
+     * The same takeoff record, copied on the tick the player DIES (health reaching 0), with the
+     * driver and the fall distance. On 0.95.34/0.95.35 the nether deaths moved from lava to FALLS
+     * ("fell from a high place", "doomed to fall"), and a fall death overwrites the live record
+     * with the respawn's before anything reads it.
+     */
+    public static volatile String deathTakeoff = "-";
+    public static volatile int deaths;
+    private boolean wasDead = false;
     private final java.util.ArrayDeque<net.minecraft.util.math.Vec3d> _recentPos = new java.util.ArrayDeque<>();
     private boolean wasInLavaLastTick = false;
 
@@ -258,6 +267,22 @@ public class WorldSurvivalChain extends SingleTaskChain {
         wasInLavaLastTick = inLavaNow;
         // Rolling position history for the vector above. Kept short and unconditional -- a buffer
         // that only fills near lava cannot describe the approach that got the body there.
+        boolean deadNow = mod.getPlayer().getHealth() <= 0.0f;
+        if (deadNow && !wasDead) {
+            deaths++;
+            var dp = mod.getPlayer();
+            deathTakeoff = String.format("at=%s fallDist=%.1f hurt=%d | %s | driver: walker%d exec%d nav%d pf%d punk%d flee%d",
+                    dp.getBlockPos().toShortString(), dp.fallDistance, dp.hurtTime,
+                    kaptainwutax.tungsten.combat.DamageWatch.lastFall,
+                    kaptainwutax.tungsten.task.BlockPathWalker.isRunning() ? 1 : 0,
+                    kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR != null
+                            && kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.isRunning() ? 1 : 0,
+                    kaptainwutax.tungsten.task.FastNavigator.isActive() ? 1 : 0,
+                    kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get() ? 1 : 0,
+                    kaptainwutax.tungsten.task.PunkPlayerTask.isActive() ? 1 : 0,
+                    kaptainwutax.tungsten.task.RunAwayTask.isActive() ? 1 : 0);
+        }
+        wasDead = deadNow;
         _recentPos.addFirst(mod.getPlayer().getPos());
         while (_recentPos.size() > 12) _recentPos.removeLast();
 
