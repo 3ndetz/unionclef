@@ -3,7 +3,22 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-23 (latest) — v0.95.34: lava safety PORTED FROM BARITONE after three per-driver patches failed
+## 2026-09-23 (latest, late) — v0.95.35: chase_terrain 0/4 -> 4/4; full pvp 11/12 ok, the best sweep on record
+
+chase_terrain failed identically on the 0.95.29 release and 0.95.34 (verified A/B), and was about to
+be filed as pre-existing. Instrumented instead: the punk chase WAS on (target in hand), the walker
+WAS driving in BFS mode, held over a planned 3-block diagonal drop for 3541 of 3542 ticks, facing it
+to 0.2 degrees with nothing in the way. The player mixin already described the mechanism for
+MovementFall: VoidGuard vetoes forward at the lip of a planned 3-drop (fallHeight 4 > its hardcoded
+3) and forces sneak. The exemption `!movementOwnsTick` was claimed to cover the walker and did not
+(it is MovementQueue.isRunning() only). The free-form guard now stands aside while the walker
+follows a PLANNED route (BFS); DIRECT keeps it. Result: chase_terrain 4/4, freezes 0; full pvp 11/12
+ok, 0 invalid (only allround, on margin 7:8 of a mirror duel; bow_flee pair info-fail, self-falls
+0); nav baselines 4/4. Released v0.95.35.
+
+Lesson, again rule FOUR: a comment asserting "X is also covered" is a test owed, not a fact.
+
+## 2026-09-23 — v0.95.34: lava safety PORTED FROM BARITONE after three per-driver patches failed
 
 **The rule that was broken, three times running: checklist 1b, read upstream first.** The nether
 lava deaths were patched one DRIVER at a time -- walker DIRECT (0.95.31: measured dirHzd=0, the
