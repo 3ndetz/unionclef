@@ -3,7 +3,46 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-21 (latest) — THE POST-IRON CEILING IS THE PORTAL PAD, AND TWO OF ITS THREE LAYERS WERE MINE
+## 2026-09-23 (latest) — v0.95.34: lava safety PORTED FROM BARITONE after three per-driver patches failed
+
+**The rule that was broken, three times running: checklist 1b, read upstream first.** The nether
+lava deaths were patched one DRIVER at a time -- walker DIRECT (0.95.31: measured dirHzd=0, the
+playthrough drive starts the walker with startBFS and never enters DIRECT), walker BFS (0.95.32:
+fired 106+ times, and the next deaths came under the physics replay executor `exec1` and under the
+MovementQueue `nav1`). Every unpatched driver was the next way in. The user pointed at baritone.
+
+Baritone's shape, now ported (tungsten/path/RouteHazards.java): ONE predicate (avoidWalkingInto,
+minus water); every movement COST refuses it incl. a column ending in lava and a diagonal's corner
+cells (MovementDiagonal :158/162 -- tungsten's diagonal checked only collision, lava has none); and
+the EXECUTOR re-checks the next movements every tick and cancels (PathExecutor :196-210) -- now in
+the walker (both modes), PathExecutor (replay) and MovementQueue (its port had copied :193-197 and
+stopped short of :198-210).
+
+Measured, same nether-fresh start, 12-min stints: 0.95.32 2/2 stints died in lava; 0.95.34 0
+route-driven lava entries in 3 stints (+1 more alive stint on the release). Guards: nav 14/14, OBS
+2/2, chase_flat / narrow_bridge PASS. Released v0.95.34.
+
+**Three measurement lessons from the same day, each one nearly a wrong conclusion:**
+- A full nav sweep read 1/14 -- all 13 "failures" were `uctest-server rcon: timed out`. run_suite
+  now scores stand errors in setup as INVALID. Re-run: 14/14.
+- An A/B arm labelled 0.95.29 ran on 0.95.34: check_nested_fresh.py refused the old jar silently
+  (no UCTEST_ALLOW_STALE escape) and the harness grep hid it. Escape added; the A/B harness now
+  verifies the jar INSIDE each container per arm. With the real binary: chase_terrain fails
+  identically on the release (freezes 23/24/26, contact None, bot never leaves its start) --
+  pre-existing, not a regression.
+- The nether deaths were first written up as Enderman knockback from `hurtTime>0, onGround=0,
+  speed=0`. Zero horizontal speed argues AGAINST knockback, and `stage` is a stale label. The
+  extended instrument (fall vector + driver) showed the executors walking the body in.
+
+**Open:** (1) two nether deaths on 0.95.34 are FALLS -- one "doomed to fall" after damage (combat),
+one near-vertical 31-block fall into lava under nav1 whose takeoff the snapshot now records
+(`lavaEntryStats().takeoff`); not a planned drop (FastPlanner MAX_FALL=3, MovementFall's nether
+water-bucket clause is ported verbatim, breakDown needs solid floor below). (2) chase_terrain: the
+bot never moves on the gamer world, on both builds. (3) 2026-09-23 evening: the host could not run
+the playthrough at all (client 9-10 fps; host 93% CPU, of which two long-running TLauncher javaw
+clients ~185% + ~100%) -- four stints INVALID in a row, correctly refused.
+
+## 2026-09-21 — THE POST-IRON CEILING IS THE PORTAL PAD, AND TWO OF ITS THREE LAYERS WERE MINE
 
 Three consecutive 35-minute runs from the same deterministic checkpoint (`nether-reach`), each one
 peeling a layer off "the bot has obsidian and flint at ~2 minutes and never lights a portal".
