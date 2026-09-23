@@ -170,6 +170,19 @@ public final class MovementQueue {
     private static final int MAX_TICKS_AWAY = 200;
 
     private static final List<Movement> movements = new ArrayList<>();
+
+    /** Body to the current movement's destination, then on through the next three (baritone lookahead). */
+    private static boolean queueAheadLethal(ClientPlayerEntity player, int index) {
+        var w = player.getEntityWorld();
+        net.minecraft.util.math.Vec3d prev = player.getEntityPos();
+        for (int i = index; i < Math.min(movements.size(), index + 4); i++) {
+            var d = movements.get(i).getDest();
+            net.minecraft.util.math.Vec3d next = new net.minecraft.util.math.Vec3d(d.getX() + 0.5, d.getY(), d.getZ() + 0.5);
+            if (kaptainwutax.tungsten.path.RouteHazards.segmentLethal(w, prev, next)) return true;
+            prev = next;
+        }
+        return false;
+    }
     private static volatile boolean running = false;
     private static int index = 0;
     /** Where the body stood when the current chain began; the yardstick for qBurnedInPlace. */
@@ -1233,6 +1246,23 @@ public final class MovementQueue {
                     cost = MAX_COST_ESTIMATE;
                 }
                 currentCostEstimate = Math.min(Math.max(cost, 0.0), MAX_COST_ESTIMATE);
+            }
+
+            // ⛔ THE HALF OF baritone's PathExecutor THIS PORT HAD LEFT OUT (G108 nether, 2026-09-23).
+            // The cost estimate above is PathExecutor.java:193-197; the lines right after it upstream
+            // (:198-210) re-cost the current movement and the next costVerificationLookahead ones
+            // every tick and cancel the moment one is impossible. That half was never ported, and the
+            // queue then drove the body into lava in the nether with nothing re-checking: lava entry
+            // measured under nav1 with walker0 exec0, i.e. this queue, once the walker and the replay
+            // executor carried the check. Same primitive as theirs (RouteHazards), same response as
+            // this file's own lost-path branch above: stop, and re-plan from where the body stands.
+            // Only on the ground, baritone's safeToCancel -- mid-arc a cancel only drops the keys.
+            if (player.isOnGround() && queueAheadLethal(player, index)) {
+                kaptainwutax.tungsten.path.RouteHazards.refusedQueue++;
+                kaptainwutax.tungsten.Debug.logMessage("MovementQueue: next movements are lethal (hazard) -- replanning");
+                stop();
+                kaptainwutax.tungsten.task.FastNavigator.replanFromHere();
+                return;
             }
 
             MovementStatus status;

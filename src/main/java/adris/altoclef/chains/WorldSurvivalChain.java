@@ -76,6 +76,13 @@ public class WorldSurvivalChain extends SingleTaskChain {
     public static volatile String lavaEntryPrev1 = "-", lavaEntryPrev10 = "-", lavaEntryDriver = "-";
     public static volatile String lavaEntryTask = "-";
     public static volatile int lavaEntryFallBefore;
+    /**
+     * DamageWatch's void-TAKEOFF record, copied at the moment of lava entry. A long fall into lava
+     * leaves the body airborne for more than the ten ticks the vector above covers, and the live
+     * record is overwritten by the next fall (the respawn's) before anyone reads it -- measured
+     * 0.95.34, a 31-block fall into lava whose takeoff was gone by the time it was queried.
+     */
+    public static volatile String lavaEntryTakeoff = "-";
     private final java.util.ArrayDeque<net.minecraft.util.math.Vec3d> _recentPos = new java.util.ArrayDeque<>();
     private boolean wasInLavaLastTick = false;
 
@@ -208,6 +215,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
             lavaEntryStage = String.valueOf(kaptainwutax.tungsten.combat.CombatController.lastStage);
             lavaEntryCombatFwd = kaptainwutax.tungsten.combat.CombatController.lastForwardPressed ? 1 : 0;
             lavaEntryPos = p.getBlockPos().toShortString();
+            lavaEntryTakeoff = String.valueOf(kaptainwutax.tungsten.combat.DamageWatch.lastFall);
             // The fall VECTOR: where the body was one tick and ten ticks ago. A body that was thrown
             // travels horizontally between those samples; a body that stepped or fell into a hole
             // does not. This is the measurement the first pass inferred instead of taking.

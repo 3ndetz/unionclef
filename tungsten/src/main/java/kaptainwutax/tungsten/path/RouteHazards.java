@@ -44,7 +44,14 @@ public final class RouteHazards {
     public static final int LAVA_COLUMN_DEPTH = 32;
 
     /** Counters: segments refused, by caller. Counted whenever the verdict is "lethal". */
-    public static volatile int refusedWalker = 0, refusedExecutor = 0;
+    public static volatile int refusedWalker = 0, refusedExecutor = 0, refusedQueue = 0;
+    /**
+     * Every call of {@link #segmentLethal}. A refusal count of zero is ambiguous until this says the
+     * check RAN (checklist RULE ONE's mirror image): measured 0.95.33, three lava entries under the
+     * executors and every refusal counter at 0, which by itself cannot tell "checked and found
+     * nothing" from "never asked".
+     */
+    public static volatile int segmentsChecked = 0;
 
     /**
      * baritone {@code avoidWalkingInto}, minus water. A body must never occupy, or stand on, a cell
@@ -93,6 +100,7 @@ public final class RouteHazards {
      * route between two safe waypoints is exactly where a cut corner puts the feet in lava.
      */
     public static boolean segmentLethal(WorldView w, Vec3d a, Vec3d b) {
+        segmentsChecked++;
         BlockPos.Mutable s = new BlockPos.Mutable();
         double dx = b.x - a.x, dz = b.z - a.z;
         double len = Math.sqrt(dx * dx + dz * dz);
