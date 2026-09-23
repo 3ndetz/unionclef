@@ -105,6 +105,8 @@ public class BlockPathWalker {
      * sprinted into one (checklist rule 4u).
      */
     public static volatile int dirHazardAhead = 0;
+    /** Ticks the BFS walk stood (and did not jump) because a column ahead ends in lava. */
+    public static volatile int walkerLavaHeld = 0;
 
     public static volatile int bfsTicks = 0;
     public static volatile int slimeWpSeen = 0;
@@ -260,6 +262,32 @@ public class BlockPathWalker {
     public static Vec3d getEndpoint() {
         if (path == null || path.isEmpty()) return null;
         return Vec3d.ofBottomCenter(path.get(path.size() - 1));
+    }
+
+    /**
+     * Along the next two blocks from {@code from} toward {@code to}, does any column the body
+     * would occupy end in LAVA before it reaches a solid block? Scans the feet cell and down to
+     * 32 blocks. See the gate in tickBFS for why only lava, and not the void, is refused here.
+     */
+    private static boolean lavaColumnAhead(Vec3d from, Vec3d to, WorldView world) {
+        double dx = to.x - from.x, dz = to.z - from.z;
+        double h = Math.sqrt(dx * dx + dz * dz);
+        if (h < 0.05) return false;
+        double reach = Math.min(h, 2.0);
+        int bottom = world.getBottomY();
+        for (int i = 1; i <= 4; i++) {
+            double d = reach * i / 4.0;
+            int x = net.minecraft.util.math.MathHelper.floor(from.x + dx / h * d);
+            int z = net.minecraft.util.math.MathHelper.floor(from.z + dz / h * d);
+            int y0 = net.minecraft.util.math.MathHelper.floor(from.y);
+            for (int y = y0; y >= Math.max(bottom, y0 - 32); y--) {
+                scratch2.set(x, y, z);
+                var st = world.getBlockState(scratch2);
+                if (st.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)) return true;
+                if (!st.getCollisionShape(world, scratch2).isEmpty()) break;
+            }
+        }
+        return false;
     }
 
     // ── tick ─────────────────────────────────────────────────────────────────
@@ -783,6 +811,26 @@ public class BlockPathWalker {
             move = false;
             walkerHoleHeld++;
         }
+        // ⛔ NO STEP, AND NO JUMP, INTO A COLUMN THAT ENDS IN LAVA (G108 nether, 2026-09-23).
+        // The hole gate above is deliberately narrow -- a planned descent is a route -- and it looks
+        // for HOLES. Nothing in this method ever asked about LAVA, and the nether-stage deaths were
+        // both this method. Measured with the route-relative lava snapshot and the void-takeoff
+        // recorder over four nether stints: the body either WALKED into lava on level ground
+        // (onGround=1, y constant at 52, driver walker1), or JUMPED off a ledge at y=58.2 with
+        // vel=(0,+0.083,-0.158) and walker=true over a lake it then fell 28 blocks into.
+        //
+        // The rule that keeps every legitimate case: a descent is a route, a descent INTO LAVA is
+        // not, and neither is a step into a lava cell at feet or floor level. So along the next two
+        // blocks toward the waypoint, scan each column down to the first solid block; if lava comes
+        // first, the column is lethal and the body stands instead. Void columns are NOT refused
+        // here -- gap jumps over the void are real routes (nav_gaps) and have their own gates.
+        // Standing is this file's measured preference over falling (see the hole gate above); the
+        // navigator replans from a bot on the ground.
+        boolean lavaAhead = lavaColumnAhead(playerPos, wpPos, player.getEntityWorld());
+        if (lavaAhead) {
+            walkerLavaHeld++;
+            if (onGround) move = false;
+        }
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
         // WHY IS THE BOT STANDING? Measured: on three runs of four it never leaves the pad's
@@ -831,7 +879,7 @@ public class BlockPathWalker {
                 && onGround && !droppingTo && !intoHole
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
-        mc.options.jumpKey.setPressed(canJump);
+        mc.options.jumpKey.setPressed(canJump && !lavaAhead);
 
         if (DEBUG && (dbgN++ % 3 == 0)) {
             Vec3d v = player.getVelocity();
