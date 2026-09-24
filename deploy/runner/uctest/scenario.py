@@ -164,27 +164,28 @@ class Ctx:
             self._last_move_pos = bp
             self._last_move_t = now
         elif now - self._last_move_t > 6 and not caught and not arrived:
-            self._last_move_t = now
             # DIGGING IS NOT FREEZING. A stone broken by hand takes 7.5 s standing still, and the
             # planner chooses that on purpose (weighted A*, baritone's costHeuristic): nav_cliff
-            # booked every such dig as a freeze and failed runs that reached the goal clean. A
-            # window where a block break is in progress is counted as a dig instead. An endless
-            # dig still fails the course, on "reached goal".
+            # booked every such dig as a freeze and failed runs that reached the goal clean. The
+            # clock is therefore "last movement OR last break progress": six seconds with neither
+            # is a freeze. An endless dig still fails the course, on "reached goal".
             okg, gs = self.bot.py.try_call("getGameState")
-            prog = None
-            if okg and isinstance(gs, dict):
-                prog = (gs.get("self") or {}).get("breakingProgress")
-            if prog is not None:
+            me = (gs.get("self") or {}) if okg and isinstance(gs, dict) else {}
+            ms = me.get("msSinceBreakProgress")
+            last_dig = now - float(ms) / 1000.0 if ms is not None else None
+            if last_dig is not None and now - last_dig <= 6:
+                self._last_move_t = max(self._last_move_t, last_dig)
                 self.dig_windows = getattr(self, "dig_windows", 0) + 1
-                self.log(f"  dig window at {bp} (break progress {prog})")
+                self.log(f"  dig at {bp} (break progress {int(float(ms))} ms ago)")
             else:
+                self._last_move_t = now
                 self.freeze_windows += 1
-            # WHAT WAS THE BOT DOING WHILE IT STOOD THERE? A position alone cannot tell a
-            # "the search found nothing" stall from a "the executor is mid-manoeuvre" one, and
-            # those need opposite fixes. execState reports the engines in one string.
-            ok, st = self.bot.py.try_call("execState")
-            self.log(f"  WARNING freeze window #{self.freeze_windows} at {bp}"
-                     + (f" | {st}" if ok else ""))
+                # WHAT WAS THE BOT DOING WHILE IT STOOD THERE? A position alone cannot tell a
+                # "the search found nothing" stall from a "the executor is mid-manoeuvre" one, and
+                # those need opposite fixes. execState reports the engines in one string.
+                ok, st = self.bot.py.try_call("execState")
+                self.log(f"  WARNING freeze window #{self.freeze_windows} at {bp}"
+                         + (f" | {st}" if ok else ""))
         # stand-still near target (RW-1): ~no displacement for 4 consecutive
         # samples while the target is within 4 blocks -> one window (then the
         # counter re-arms, so windows are non-overlapping)

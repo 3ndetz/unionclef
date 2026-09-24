@@ -387,6 +387,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         return null;
     }
 
+    /** isFinished calls that had the feet in the goal while nothing held the body (mid-jump). */
+    public static volatile int airborneAtGoal = 0;
+
     @Override
     public boolean isFinished() {
         AltoGoal g = goal(AltoClef.getInstance());
@@ -404,6 +407,20 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         net.minecraft.util.math.BlockPos at =
                 kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(AltoClef.getInstance().getPlayer());
         boolean done = reachedAt(AltoClef.getInstance(), g, at, true);
+        // ⛔ PASSING THROUGH THE GOAL IN MID-AIR IS NOT ARRIVING. baritone reports AT_GOAL only when
+        // the current path has finished (PathingBehavior.java:154-157), and its movements finish
+        // with the body on a block. This test was feet-in-goal alone, so a sprint-jumping executor
+        // "finished" while flying over the goal cell, every key was released in the air, and the
+        // body coasted on: air drag keeps 91% of horizontal speed a tick, so 0.28 b/t carries about
+        // three blocks. Measured on nav_powder_pit: FINISHED at x=13 in the air, at rest on x=15.9,
+        // the course never saw the goal. Arrive only when something holds the body.
+        if (done) {
+            var p = AltoClef.getInstance().getPlayer();
+            if (!p.isOnGround() && !p.isTouchingWater() && !p.isClimbing() && !p.getAbilities().flying) {
+                airborneAtGoal++;
+                done = false;
+            }
+        }
         if (done) {
             kaptainwutax.tungsten.Debug.logMessage("[nav] goal task reports FINISHED at "
                     + at.getX() + "," + at.getY() + "," + at.getZ() + " goal=" + g);

@@ -5724,6 +5724,10 @@ public class Py4jEntryPoint {
                 int p = client.interactionManager.getBlockBreakingProgress();
                 self.put("breakingProgress", p < 0 ? 0.0 : p / 10.0);
             }
+            // Milliseconds since a block break last made progress (the signal UnstuckChain uses to
+            // tell digging from being stuck); absent if nothing was ever mined.
+            long lb = adris.altoclef.control.PlayerExtraController.lastBreakProgressMs;
+            if (lb > 0) self.put("msSinceBreakProgress", System.currentTimeMillis() - lb);
             self.put("food", me.getHungerManager().getFoodLevel());
             self.put("saturation", me.getHungerManager().getSaturationLevel());
             self.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
