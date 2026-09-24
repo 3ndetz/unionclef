@@ -825,7 +825,7 @@ public class Py4jEntryPoint {
     public Rotation getGoalRotation() {
         Rotation result = null;
         if (AltoClef.inGame()) {
-            Vec3d goal = getCurrentGoal();
+            Vec3d goal = currentGoalVec();
             if (goal != null) {
                 Rotation targetrot = LookHelper.getLookRotation(_mod, goal);
                 result = LookHelper.getLookRotation().subtract(targetrot);
@@ -857,21 +857,202 @@ public class Py4jEntryPoint {
         return Nav.hasGoal();
     }
 
-    public Vec3d getCurrentGoal() {
-        Vec3d result = null;
-        if (AltoClef.inGame()) {
-            // BARITONE WAS ASKED FIRST HERE, which was the wrong order and survived only because
-            // it never had an answer: pdLegacy is 0 on every measured run. Tungsten is the engine;
-            // it is now asked directly. (G-1.58: sample pdLegacy, then delete the fallback.)
-            if (isTungstenActive()) {
-                result = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.TARGET;
-            }
+    /**
+     * Where the bot is navigating to right now, and which part of tungsten is taking it there.
+     *
+     * <p>Call it to learn the bot's current movement target: after issuing a goto/follow/task, to
+     * check it is heading where you meant, or before deciding whether to interrupt it. Cheap and
+     * read-only; it never starts or stops anything.
+     *
+     * <p>Returns a map, always (never null):
+     * <ul>
+     *   <li>{@code active} (bool) — false when nothing is navigating; then only {@code active}
+     *       (and possibly {@code error}) is present.</li>
+     *   <li>{@code source} (str) — which engine owns the target, in priority order:
+     *       {@code "follow"} (chasing an entity), {@code "task"} (the altoclef movement drive's goal,
+     *       i.e. the target of the running task), {@code "fastNavigator"} (the block planner's goal),
+     *       {@code "pathfinder"} (the physics A* target), {@code "walker"} (end of the block route
+     *       being walked), {@code "movementQueue"} (end of the queued movements),
+     *       {@code "followPlayer"} (following a named player whose entity is not loaded).</li>
+     *   <li>{@code x, y, z} (float) and {@code distance} (float, from the player's feet) — present
+     *       when the target has a position; absent for e.g. a followed player out of range.</li>
+     *   <li>{@code entity} (map: {@code id}, {@code name}, {@code type}) — only for
+     *       {@code "follow"}, only when the entity is still alive and in the world.</li>
+     *   <li>{@code targetName} (str) — the player name for {@code "followPlayer"}.</li>
+     *   <li>{@code engines} (map of bool) — every engine that is running, so a target reported by
+     *       one engine can be seen alongside the others that are moving the body.</li>
+     *   <li>{@code error} (str) — only if reading the state failed; {@code active} is then false.</li>
+     * </ul>
+     *
+     * <p>Replaces the old baritone goal read: baritone is no longer compiled, tungsten is the only
+     * pathfinder. The previous version returned a raw Vec3d, or null when idle.
+     */
+    public Map<String, Object> getCurrentGoal() {
+        Map<String, Object> idle = new LinkedHashMap<>();
+        idle.put("active", false);
+        if (!AltoClef.inGame()) return idle;
+        // Already on the client thread (an in-process caller): read directly, never queue onto
+        // ourselves and wait.
+        MinecraftClient mcNow = MinecraftClient.getInstance();
+        Map<String, Object> out = mcNow != null && mcNow.isOnThread()
+                ? describeNavTarget()
+                : onClientThread(this::describeNavTarget, null);
+        if (out == null) {
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("active", false);
+            err.put("error", "client thread did not answer");
+            return err;
         }
-        return result;
+        return out;
     }
 
+    /** Fresh window for the altoclef drive's published goal: it is re-stamped every drive tick,
+     *  and never cleared when a task simply ends, so an old stamp means nobody is driving. */
+    private static final long DRIVE_GOAL_FRESH_MS = 1500;
+
+    /** Body of {@link #getCurrentGoal()}; runs on the client thread. Never throws. */
+    private Map<String, Object> describeNavTarget() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        try {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            net.minecraft.client.network.ClientPlayerEntity player = mc == null ? null : mc.player;
+            net.minecraft.client.world.ClientWorld world = mc == null ? null : mc.world;
+            if (player == null || world == null) {
+                out.put("active", false);
+                return out;
+            }
+
+            boolean followOn = kaptainwutax.tungsten.task.FollowEntityTask.isActive();
+            boolean followPlayerOn = kaptainwutax.tungsten.task.FollowPlayerTask.isActive();
+            Vec3d fnGoal = kaptainwutax.tungsten.task.FastNavigator.currentGoal();
+            boolean pathfinderOn = isTungstenActive();
+            List<net.minecraft.util.math.BlockPos> route = kaptainwutax.tungsten.task.BlockPathWalker.routeForOverlay();
+            boolean walkerOn = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+            boolean queueOn = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+            Vec3d driveGoal = adris.altoclef.tasks.movement.CustomBaritoneGoalTask.lastGoalVec;
+            long driveAt = adris.altoclef.tasks.movement.CustomBaritoneGoalTask.lastGoalAtMs;
+            boolean driveFresh = driveGoal != null
+                    && System.currentTimeMillis() - driveAt <= DRIVE_GOAL_FRESH_MS;
+
+            Map<String, Object> engines = new LinkedHashMap<>();
+            engines.put("follow", followOn);
+            engines.put("followPlayer", followPlayerOn);
+            engines.put("task", driveFresh);
+            engines.put("fastNavigator", fnGoal != null);
+            engines.put("pathfinder", pathfinderOn);
+            engines.put("walker", walkerOn);
+            engines.put("movementQueue", queueOn);
+
+            String source = null;
+            Vec3d target = null;
+
+            // 1. Entity chase: the entity itself is the target, but only while it is really there.
+            if (followOn) {
+                net.minecraft.entity.Entity ent = kaptainwutax.tungsten.task.FollowEntityTask.getTarget();
+                if (ent != null && !ent.isRemoved() && ent.isAlive()
+                        && world.getEntityById(ent.getId()) == ent) {
+                    source = "follow";
+                    target = new Vec3d(ent.getX(), ent.getY(), ent.getZ());
+                    Map<String, Object> e = new LinkedHashMap<>();
+                    e.put("id", ent.getId());
+                    e.put("name", ent.getName() == null ? "" : ent.getName().getString());
+                    e.put("type", net.minecraft.registry.Registries.ENTITY_TYPE.getId(ent.getType()).toString());
+                    out.put("entity", e);
+                }
+                // Entity gone: the chase heads for the last sighting through the engines below.
+            }
+            // 2. The running task's movement goal (what the bot is trying to reach).
+            if (source == null && driveFresh && finite(driveGoal)) {
+                source = "task";
+                target = driveGoal;
+            }
+            // 3. Block planner goal.
+            if (source == null && finite(fnGoal)) {
+                source = "fastNavigator";
+                target = fnGoal;
+            }
+            // 4. Physics A* target (a stale value is left in the field when idle, so gate on active).
+            if (source == null && pathfinderOn) {
+                Vec3d t = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.TARGET;
+                if (finite(t)) {
+                    source = "pathfinder";
+                    target = t;
+                }
+            }
+            // 5. End of the block route being walked.
+            if (source == null && walkerOn && route != null && !route.isEmpty()) {
+                net.minecraft.util.math.BlockPos end = route.get(route.size() - 1);
+                if (end != null) {
+                    source = "walker";
+                    target = new Vec3d(end.getX() + 0.5, end.getY(), end.getZ() + 0.5);
+                }
+            }
+            // 6. End of the queued movements.
+            if (source == null && queueOn) {
+                List<kaptainwutax.tungsten.path.movements.Movement> rem =
+                        kaptainwutax.tungsten.path.movements.MovementQueue.remainingForOverlay();
+                if (rem != null && !rem.isEmpty()) {
+                    kaptainwutax.tungsten.path.movements.Movement last = rem.get(rem.size() - 1);
+                    net.minecraft.util.math.BlockPos end = last == null ? null : last.getDest();
+                    if (end != null) {
+                        source = "movementQueue";
+                        target = new Vec3d(end.getX() + 0.5, end.getY(), end.getZ() + 0.5);
+                    }
+                }
+            }
+            // 7. Following a named player whose entity is not loaded: no position, but a target.
+            if (source == null && followPlayerOn) {
+                source = "followPlayer";
+                String n = kaptainwutax.tungsten.task.FollowPlayerTask.getTargetName();
+                out.put("targetName", n == null ? "" : n);
+            }
+            if (source != null && followPlayerOn && !out.containsKey("targetName")) {
+                String n = kaptainwutax.tungsten.task.FollowPlayerTask.getTargetName();
+                if (n != null) out.put("targetName", n);
+            }
+
+            if (source == null) {
+                Map<String, Object> idle = new LinkedHashMap<>();
+                idle.put("active", false);
+                idle.put("engines", engines);
+                return idle;
+            }
+            out.put("active", true);
+            out.put("source", source);
+            if (target != null) {
+                out.put("x", target.x);
+                out.put("y", target.y);
+                out.put("z", target.z);
+                double dx = target.x - player.getX(), dy = target.y - player.getY(), dz = target.z - player.getZ();
+                out.put("distance", Math.sqrt(dx * dx + dy * dy + dz * dz));
+            }
+            out.put("engines", engines);
+            return out;
+        } catch (Throwable t) {
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("active", false);
+            err.put("error", t.getClass().getSimpleName() + ": " + t.getMessage());
+            return err;
+        }
+    }
+
+    private static boolean finite(Vec3d v) {
+        return v != null && Double.isFinite(v.x) && Double.isFinite(v.y) && Double.isFinite(v.z);
+    }
+
+    /** The current target as a vector for in-process callers, null when idle. */
+    private Vec3d currentGoalVec() {
+        Map<String, Object> g = getCurrentGoal();
+        if (!Boolean.TRUE.equals(g.get("active"))) return null;
+        Object x = g.get("x"), y = g.get("y"), z = g.get("z");
+        if (!(x instanceof Double) || !(y instanceof Double) || !(z instanceof Double)) return null;
+        return new Vec3d((Double) x, (Double) y, (Double) z);
+    }
+
+    /** The current navigation target as "x y z" (one decimal), or "" when there is none.
+     *  Same source as {@link #getCurrentGoal()}. */
     public String getCurrentGoalString() {
-        Vec3d goal = getCurrentGoal();
+        Vec3d goal = currentGoalVec();
         if (goal == null) return "";
         return String.format("%.1f %.1f %.1f", goal.x, goal.y, goal.z);
     }
