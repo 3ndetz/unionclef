@@ -648,18 +648,29 @@ public class CombatPathfinder {
         } finally {
             LAVA_MARGIN.set(Boolean.FALSE);
         }
-        // Fall back ONLY when the margin left the search nowhere to go. This BFS runs on the client
-        // tick, often toward goals it cannot reach in its 800-node budget, so re-running it whenever
-        // the goal was not reached would double its cost on most calls. A PARTIAL route that keeps
-        // the margin is the one wanted anyway; and where a lava-bound strip is the only way on, the
-        // bot walks to its edge, the margin search from there comes back empty, and the bare search
-        // takes it across.
-        boolean usable = route != null && route.size() >= 2;
-        if (usable) {
+        // WHEN THE MARGIN ROUTE DOES NOT REACH THE GOAL, ASK THE BARE SEARCH WHETHER IT DOES (corrected
+        // 2026-09-24, same day). The first cut kept any margin route with two or more cells, to spare
+        // this client-tick search a second pass toward the many goals it cannot reach in 800 nodes.
+        // That traded a pass for a stand: nav_cliff reached its goal with no fall and FAILED on a
+        // freeze -- the margin pass handed back a partial route ending short of the lip, the bot
+        // walked into that dead end and stood there until the next replan. So: a margin route that
+        // reaches the goal is taken; otherwise the bare search runs, and it is taken if IT reaches
+        // the goal (the margin was what stood in the way); if neither reaches -- a far goal -- the
+        // margin's partial route is the better heading. nav keeps its fps either way (29-30).
+        boolean reachedWithMargin = route != null && !route.isEmpty()
+                && route.get(route.size() - 1).isWithinDistance(goal, 1.5);
+        if (reachedWithMargin) {
             cpLavaMarginKept++;
         } else {
-            cpLavaMarginDropped++;
-            route = bfsPath(start, goal, world, true, false);
+            List<BlockPos> bare = bfsPath(start, goal, world, true, false);
+            boolean bareReached = bare != null && !bare.isEmpty()
+                    && bare.get(bare.size() - 1).isWithinDistance(goal, 1.5);
+            if (bareReached || route == null || route.size() < 2) {
+                cpLavaMarginDropped++;
+                route = bare;
+            } else {
+                cpLavaMarginKept++;
+            }
         }
         return kaptainwutax.tungsten.TungstenConfig.get().gridRouteMatchesQueueMoves
                 ? expandDiagonals(route, world) : route;
