@@ -60,11 +60,21 @@ def send(path, caption):
     body += open(path, "rb").read() + b"\r\n" + f"--{boundary}--\r\n".encode("utf-8")
     req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendVideo", data=body,
                                  headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
-    try:
-        d = json.load(urllib.request.urlopen(req, timeout=300))
-        return bool(d.get("ok")), (d.get("result") or {}).get("message_id")
-    except urllib.error.HTTPError as e:
-        return False, "HTTP %d %s" % (e.code, e.read().decode()[:200])
+    # The TLS handshake to api.telegram.org drops now and then from this host (SSLEOFError on the
+    # first try, fine on the second -- seen three times on 2026-09-24), so a lost video was one
+    # transient away. Retry transport errors; an HTTP error is an answer and is returned as-is.
+    import time as _t
+    for attempt in range(4):
+        try:
+            d = json.load(urllib.request.urlopen(req, timeout=300))
+            return bool(d.get("ok")), (d.get("result") or {}).get("message_id")
+        except urllib.error.HTTPError as e:
+            return False, "HTTP %d %s" % (e.code, e.read().decode()[:200])
+        except (urllib.error.URLError, OSError) as e:
+            if attempt == 3:
+                raise
+            print(f"  send failed ({str(e)[:60]}), retrying")
+            _t.sleep(5 * (attempt + 1))
 
 
 if __name__ == "__main__":
