@@ -292,8 +292,12 @@ public interface WorldHelper {
         // left the list with NO READER, so 'do not break this' silently stopped meaning anything.
         // Craft fell from 22/22 to 15/22 after that change, with mine_coal, mine_diamond,
         // pickup_flat and wander_recovery among the failures.
+        // Not a block holding lava back (baritone's avoidAdjacentBreaking, via MineProcess's target
+        // filter): the same rule the tungsten planners now apply in BreakRules.canBreak, so resource
+        // mining cannot open a lava pool onto the bot either. See BreakRules.holdsLavaBack.
         boolean okAvoid = !altoClef.getExtraBaritoneSettings().shouldAvoidBreaking(pos)
-                && !altoClef.shouldAvoidBreaking(altoClef.getWorld().getBlockState(pos).getBlock());
+                && !altoClef.shouldAvoidBreaking(altoClef.getWorld().getBlockState(pos).getBlock())
+                && !kaptainwutax.tungsten.path.BreakRules.holdsLavaBack(altoClef.getWorld(), pos);
         boolean okPlausible = okHardness && okAvoid && plausibleToBreak(altoClef.getWorld(), pos);
         boolean okReach = okPlausible && canReach(pos);
         if (!okHardness) {
