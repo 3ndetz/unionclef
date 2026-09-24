@@ -244,6 +244,16 @@ public class BlockPathWalker {
         return active && mode == Mode.BFS && path != null && !path.isEmpty();
     }
 
+    /** The route being followed and the waypoint the body is heading for, for the overlay. Null when
+     *  idle. The list is the walker's own (never mutated in place), so reading it off-thread is safe. */
+    public static List<BlockPos> routeForOverlay() {
+        return active ? path : null;
+    }
+
+    public static int waypointForOverlay() {
+        return waypointIdx;
+    }
+
     /** Ticks the free-form VoidGuard stood aside because the walker was following a planned route. */
     public static volatile int guardYieldedToRoute = 0;
 

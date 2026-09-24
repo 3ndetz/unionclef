@@ -39,8 +39,8 @@ public class Line extends Renderer {
         // every route/break/place overlay a flat full-alpha smear that ignored the world; a single
         // depth-tested pass would vanish behind terrain. Every box (Cuboid = 12 Lines) and the
         // route line inherit this, so break outlines (red) and place outlines (green) get it too.
-        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(255));
-        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(128)).ignoreOcclusion();
+        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(255), 3.0f);
+        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(128), 2.0f).ignoreOcclusion();
         //#endif
     }
 

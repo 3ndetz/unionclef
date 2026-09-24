@@ -150,6 +150,12 @@
 		    if (cfg.renderBreakPlan) renderAll(TungstenModRenderContainer.BREAK_PLAN);
 		    if (cfg.renderPlacePlan) renderAll(TungstenModRenderContainer.PLACE_PLAN);
 		    renderAll(TungstenModRenderContainer.SELECTION);
+		    // The drivers a playthrough actually runs (walker route, baritone queue, digging).
+		    if (cfg.renderPathMoves) {
+		        try { kaptainwutax.tungsten.render.RouteOverlay.draw(); } catch (Exception e) {
+		            TungstenMod.LOG.debug("Error rendering route overlay: " + e.getMessage());
+		        }
+		    }
 		}
 		
 		private static void renderAll(Collection<Renderer> renderers) {

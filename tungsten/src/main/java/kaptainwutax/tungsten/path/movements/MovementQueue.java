@@ -366,6 +366,15 @@ public final class MovementQueue {
         return running;
     }
 
+    /** A copy of the queued movements from the current one on, for the overlay; empty when idle. */
+    public static List<Movement> remainingForOverlay() {
+        if (!running) return java.util.Collections.emptyList();
+        synchronized (movements) {
+            int from = Math.max(0, Math.min(index, movements.size()));
+            return new ArrayList<>(movements.subList(from, movements.size()));
+        }
+    }
+
     /** Whether releasing this leg's inputs preserves the current movement's footing.
      * A backplace over air must finish its support before the navigator ends the route.
      * Mirrors PathExecutor's use of Movement.safeToCancel in the upstream driver.

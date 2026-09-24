@@ -444,6 +444,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     protected Task onTick() {
         dbTick++;
         AltoClef mod = AltoClef.getInstance();
+        kaptainwutax.tungsten.render.RouteOverlay.noteTarget(pos);
         // IS THE BLOCK STILL THERE? The reach ray was measured hitting NOTHING (MISS) 5142 times
         // in one run, which is what aiming at an empty cell looks like. If the log has already
         // been felled, every downstream symptom follows: no reach, no swing, no movement, the

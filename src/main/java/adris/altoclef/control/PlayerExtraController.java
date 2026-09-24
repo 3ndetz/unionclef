@@ -36,11 +36,13 @@ public class PlayerExtraController {
         lastBreakProgressMs = System.currentTimeMillis();
         blockBreakPos = pos;
         blockBreakProgress = progress;
+        kaptainwutax.tungsten.render.RouteOverlay.noteMining(pos, progress);
     }
 
     private void onBlockStopBreaking() {
         blockBreakPos = null;
         blockBreakProgress = 0;
+        kaptainwutax.tungsten.render.RouteOverlay.noteMining(null, 0);
     }
 
     public BlockPos getBreakingBlockPos() {

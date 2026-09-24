@@ -836,14 +836,19 @@ def main():
     # RULE SEVEN -- state a run changes, it restores in a finally -- broken by the harness that
     # carries the rule. Watching the bot is not a nicety here: the benches score OUTCOMES and cannot
     # see a route that looks insane on the way to a passing one.
+    # ⛔⛔ AND NOW THEY ARE NOT TURNED OFF AT ALL (user, 2026-09-24). Restoring at exit was not
+    # enough: the RECORDED playthroughs -- the videos sent to the user -- ran with every overlay off
+    # for their whole length, so not one clip ever showed a route, a break box or a place box, and
+    # the user asked for exactly those three things twice. The fps effect was never established
+    # (see above). The run now ASSERTS them on, the way it asserts tungsten-primary: a client that
+    # a previous killed run left blind is fixed here instead of being measured blind.
     RENDER_FLAGS = ("renderVisualization", "renderPathMoves", "renderCombat",
                     "renderBreakPlan", "renderPlacePlan")
     for flag in RENDER_FLAGS:
         # ChatMessage, not ExecuteCommand: `;settings` is TUNGSTEN's chat command, while
         # ExecuteCommand runs altoclef's `@` commands -- sent the wrong way it silently does
         # nothing, which is what the first attempt did (fps unchanged at 10).
-        py4j("chatcmd", c=f";settings {flag} false")
-    atexit.register(_restore_render_flags, RENDER_FLAGS)
+        py4j("chatcmd", c=f";settings {flag} true")
     # WHAT THIS CLIENT CAN DO IN THIS WORLD, TODAY, BEFORE THE BOT STARTS.
     # A fixed fps floor cannot work here. The survival world costs about half the frame budget of
     # the flat course arena -- measured tonight: 35-43 fps idle on the flat stand, 17-19 idle in the
