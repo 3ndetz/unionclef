@@ -805,15 +805,22 @@ def main():
         # force day, clear nearby hostiles, and top up health/food right after the restore, so the run
         # reliably lands alive with the checkpoint's kit. (Survival-at-a-bad-spawn is its own track,
         # G101; it must not decide whether a portal/nether resume even starts.)
-        grcon("time set day")
-        for _mob in ("zombie", "skeleton", "creeper", "spider", "enderman", "witch", "phantom",
-                     "drowned", "husk", "stray", "cave_spider", "zombie_villager"):
-            grcon(f"kill @e[type=minecraft:{_mob},distance=..64]")
-        grcon(f"effect give {BOT} minecraft:instant_health 1 20 true")
-        grcon(f"effect give {BOT} minecraft:regeneration 15 4 true")
-        grcon(f"data merge entity {BOT} {{Health:20.0f,foodLevel:20,foodSaturationLevel:20.0f}}")
-        time.sleep(2)
-        print("  post-restore safety: forced day, cleared hostiles (r<=64), healed + fed")
+        # ⛔ EXCEPT WHEN THE BUG IS THE STATE ITSELF (2026-09-24). A stall at 4.5 hearts, at night,
+        # with skeletons around (MobDefense fleeing to an unreachable point for ten minutes) cannot
+        # be reproduced from a checkpoint that this block then heals, lights and empties. --raw-resume
+        # resumes the world exactly as frozen.
+        if "--raw-resume" in sys.argv:
+            print("  post-restore: RAW (no day, no clearing, no healing) -- the frozen state as is")
+        else:
+            grcon("time set day")
+            for _mob in ("zombie", "skeleton", "creeper", "spider", "enderman", "witch", "phantom",
+                         "drowned", "husk", "stray", "cave_spider", "zombie_villager"):
+                grcon(f"kill @e[type=minecraft:{_mob},distance=..64]")
+            grcon(f"effect give {BOT} minecraft:instant_health 1 20 true")
+            grcon(f"effect give {BOT} minecraft:regeneration 15 4 true")
+            grcon(f"data merge entity {BOT} {{Health:20.0f,foodLevel:20,foodSaturationLevel:20.0f}}")
+            time.sleep(2)
+            print("  post-restore safety: forced day, cleared hostiles (r<=64), healed + fed")
     if DAYLOCK:
         grcon("gamerule doDaylightCycle false")
         grcon("gamerule doWeatherCycle false")

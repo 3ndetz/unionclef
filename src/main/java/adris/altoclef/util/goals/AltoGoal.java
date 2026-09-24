@@ -406,6 +406,26 @@ public interface AltoGoal {
             return at -> safeAt(at, snapshot, separation);
         }
 
+        /**
+         * baritone GoalRunAway's heuristic, shaped for a search that must also STOP: blocks still
+         * missing to the separation from the nearest danger (0 once clear of all of them). A search
+         * guided by it heads away from the threats, and its partial, when the budget runs out,
+         * ends farther from them than it started -- which is the whole point of fleeing.
+         */
+        public kaptainwutax.tungsten.path.fast.FastPlanner.CellHeuristic snapshotRunAway(double margin) {
+            var live = dangers.get();
+            var snapshot = live == null ? java.util.List.<Vec3d>of() : java.util.List.copyOf(live);
+            double separation = distance + margin;
+            return (x, y, z) -> {
+                double best = Double.MAX_VALUE;
+                for (Vec3d d : snapshot) {
+                    double dx = x + 0.5 - d.x, dz = z + 0.5 - d.z;
+                    best = Math.min(best, Math.sqrt(dx * dx + dz * dz));
+                }
+                return best == Double.MAX_VALUE ? 0.0 : Math.max(0.0, separation - best);
+            };
+        }
+
         private static boolean safeAt(BlockPos at, java.util.List<Vec3d> from, double separation) {
             if (from == null) return true;
             for (Vec3d danger : from) {

@@ -528,6 +528,32 @@ public final class FastPlanner {
         return planInternal(world, start, null, budgetMs, null, false, condition);
     }
 
+    /** Remaining-cost estimate for a condition search, in blocks (what octile returns for a point). */
+    @FunctionalInterface
+    public interface CellHeuristic {
+        double h(int x, int y, int z);
+    }
+
+    private static final ThreadLocal<CellHeuristic> CELL_HEURISTIC = new ThreadLocal<>();
+
+    /**
+     * A condition search WITH a heuristic -- baritone's GoalRunAway (GoalRunAway.java: heuristic grows
+     * with distance from the danger). The heuristic guides the search toward the region and, when
+     * the budget runs out first, makes the partial pick a cell that got CLOSER to it, which a plain
+     * Dijkstra cannot: its only heuristic is zero, so every partial is the start itself.
+     */
+    public static Result planToCondition(WorldView world, BlockPos start,
+                                         java.util.function.Predicate<BlockPos> condition,
+                                         CellHeuristic heuristic, long budgetMs) {
+        java.util.Objects.requireNonNull(condition, "condition");
+        CELL_HEURISTIC.set(heuristic);
+        try {
+            return planInternal(world, start, null, budgetMs, null, false, condition);
+        } finally {
+            CELL_HEURISTIC.remove();
+        }
+    }
+
     private static Result planInternal(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
                                        BlockPos reachBlock, boolean exactGoal,
                                        java.util.function.Predicate<BlockPos> condition) {
@@ -2005,7 +2031,8 @@ public final class FastPlanner {
                 if (keys[i] == k) return vals[i];
                 i = (i + 1) & mask;
             }
-            Node n = new Node(x, y, z, octile(x, y, z, goal));
+            CellHeuristic ch = CELL_HEURISTIC.get();
+            Node n = new Node(x, y, z, ch != null ? ch.h(x, y, z) : octile(x, y, z, goal));
             keys[i] = k;
             vals[i] = n;
             if (++size * 2 > keys.length) grow();

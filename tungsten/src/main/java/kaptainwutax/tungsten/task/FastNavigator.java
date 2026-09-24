@@ -410,10 +410,31 @@ public final class FastNavigator {
 
     /** Navigate to a reachable cell satisfying a condition, without guessing a point behind a wall. */
     public static void startNearest(java.util.function.Predicate<BlockPos> reached) {
+        startNearest(reached, null);
+    }
+
+    /**
+     * Nearest cell satisfying {@code reached}, searched with {@code heuristic} (blocks still to go).
+     * With a heuristic, a search that runs out of budget before the region still moves the body:
+     * the partial route is walked when it ends closer to the region than the start (baritone runs
+     * its bestSoFar partial the same way). Without one, only a complete route is walked.
+     */
+    public static void startNearest(java.util.function.Predicate<BlockPos> reached,
+                                    FastPlanner.CellHeuristic heuristic) {
         if (TungstenMod.mc.player == null) return;
         java.util.Objects.requireNonNull(reached, "reached");
+        nearestHeuristic = heuristic;
         startWithGoal(TungstenMod.mc.player.getEntityPos(), null, null, reached, false, true);
     }
+
+    private static volatile FastPlanner.CellHeuristic nearestHeuristic;
+
+    /** True while the navigator serves a condition ("nearest cell that...") search, not a point. */
+    public static boolean isNearestSearch() {
+        return active && searchForArrival;
+    }
+    /** Condition searches that ran out of budget and walked a partial route toward the region. */
+    public static volatile int nearestPartialWalked, nearestPartialNoProgress;
 
     private static volatile boolean searchForArrival;
 
@@ -428,6 +449,8 @@ public final class FastNavigator {
                                       boolean fromDrive, boolean nearest) {
         stop();
         searchForArrival = nearest;
+        // stop() must not drop the heuristic startNearest just set; a point search has none.
+        if (!nearest) nearestHeuristic = null;
         // planAhead captures these values immediately. Initialize the complete goal
         // before launching its first search, not after the default start returns.
         reachBlock = reach;
@@ -1405,6 +1428,7 @@ public final class FastNavigator {
         // one-block height tolerance is for "go over there" goals only).
         final boolean exact = exactCell != null;
         final var condition = searchForArrival ? arrivalTest : null;
+        final var heuristic = searchForArrival ? nearestHeuristic : null;
         // G58: one search per route may run with four times the budget (see the dead-end branch).
         final boolean boost = budgetBoostNext;
         if (boost) { budgetBoostNext = false; budgetBoostedThisRoute = true; }
@@ -1416,7 +1440,9 @@ public final class FastNavigator {
         Thread t = new Thread(() -> {
             try {
                 FastPlanner.Result result = condition != null
-                        ? FastPlanner.planToCondition(world, start, condition, budgetMs)
+                        ? (heuristic != null
+                            ? FastPlanner.planToCondition(world, start, condition, heuristic, budgetMs)
+                            : FastPlanner.planToCondition(world, start, condition, budgetMs))
                         : FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact);
                 // Applying a result can stop the walker and change its input ownership.
                 // Serialize that transition with game ticks; the worker must only calculate.
@@ -1432,9 +1458,24 @@ public final class FastNavigator {
                         if (condition != null) {
                             // A partial path has not found a satisfying destination. Do not
                             // hand it to physics as if the placeholder start were the goal.
-                            if (!result.complete || result.isEmpty()) {
+                            if (result.isEmpty()) {
                                 stop();
                                 return;
+                            }
+                            if (!result.complete) {
+                                // baritone walks its bestSoFar partial. Do the same when a heuristic
+                                // says the partial's end is closer to the region than the start;
+                                // otherwise nothing established that walking it helps.
+                                BlockPos endCell = result.path.get(result.path.size() - 1).pos;
+                                boolean progress = heuristic != null && result.path.size() > 1
+                                        && heuristic.h(endCell.getX(), endCell.getY(), endCell.getZ())
+                                           < heuristic.h(start.getX(), start.getY(), start.getZ()) - 0.5;
+                                if (!progress) {
+                                    if (heuristic != null) nearestPartialNoProgress++;
+                                    stop();
+                                    return;
+                                }
+                                nearestPartialWalked++;
                             }
                             resolvedGoal = result.path.get(result.path.size() - 1).pos;
                             goal = new Vec3d(resolvedGoal.getX() + 0.5,

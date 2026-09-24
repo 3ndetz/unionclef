@@ -387,6 +387,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         return null;
     }
 
+    /** Flee drives that found the navigator serving another goal and took it over. */
+    public static volatile int fleeTookNavigator = 0;
+
     /** isFinished calls that had the feet in the goal while nothing held the body (mid-jump). */
     public static volatile int airborneAtGoal = 0;
 
@@ -711,8 +714,18 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // Fleeing is an exclusion region. Find a reachable safe cell rather than
             // snapping an averaged threat position to arbitrary nearby terrain.
             // The snapshot is immutable and therefore safe for the planner worker.
-            if (!kaptainwutax.tungsten.task.FastNavigator.isActive()) {
-                kaptainwutax.tungsten.task.FastNavigator.startNearest(flee.snapshotSafety(2.0));
+            // ⛔ A NAVIGATOR BUSY WITH SOMEONE ELSE'S POINT IS NOT FLEEING. This only started the
+            // safety search when the navigator was idle, and it rarely is: the task the danger
+            // interrupted left its route running. Measured on a playthrough (0.95.41, checkpoint
+            // cp0924-1537-t680, reproduced exactly with --raw-resume): ten minutes of "Routing to
+            // reachable safety" at 4.5 hearts while the navigator replanned, four times a second,
+            // toward the interrupted task's cell (141,24,12) seventy blocks below -- "1 wp,
+            // partial" every time, the body never moved. Take the navigator over unless it is
+            // already running a nearest-safety search.
+            if (!kaptainwutax.tungsten.task.FastNavigator.isNearestSearch()) {
+                if (kaptainwutax.tungsten.task.FastNavigator.isActive()) fleeTookNavigator++;
+                kaptainwutax.tungsten.task.FastNavigator.startNearest(flee.snapshotSafety(2.0),
+                        flee.snapshotRunAway(2.0));
             }
             checker.reset();
             setDebugState("Routing to reachable safety");
