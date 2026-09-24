@@ -1351,8 +1351,16 @@ def main():
     # is the finding: falls outnumber any single mob, and a fall is a movement failure.
     _elapsed = max(1, int(time.time() - log_since) + 5)
     all_lines = sh(["docker", "logs", "--since", f"{_elapsed}s", GSERVER]).stdout.splitlines()
+    # ⛔ VANILLA HAS MORE DEATH WORDS THAN "was/died/fell". "tried to swim in lava", "drowned",
+    # "froze to death", "burned to death", "hit the ground too hard"... were all invisible here, so
+    # three runs on 2026-09-24 printed "deaths this run: 0" over a lava death and a freeze.
+    _DEATH_WORDS = (" was ", " died", " fell ", " tried to swim", " drowned", " froze ",
+                    " burned", " starved", " suffocated", " hit the ground", " experienced kinetic",
+                    " went up in flames", " walked into", " blew up", " discovered the floor",
+                    " withered", " went off with a bang", " left the confines")
     raw = [ln for ln in all_lines
-           if BOT in ln and (" was " in ln or " died" in ln or " fell " in ln)]
+           if BOT + " " in ln and "[Server thread/INFO]" in ln and any(w in ln for w in _DEATH_WORDS)
+           and " joined" not in ln and " left the game" not in ln]
     deaths = [ln for ln in raw if "was killed" not in ln or " by " in ln]
     causes = {}
     for ln in deaths:
