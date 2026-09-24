@@ -395,9 +395,19 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     /** In the own column below the feet, and the landing after breaking it is not a safe one. */
     private static boolean unsafeToMineUnderfoot(AltoClef mod, BlockPos target) {
         BlockPos feet = mod.getPlayer().getBlockPos();
-        if (target.getX() != feet.getX() || target.getZ() != feet.getZ() || target.getY() >= feet.getY()) {
+        // ⛔ THE FLOOR IS THE BLOCK THE BODY STANDS ON, NOT feet.down() (2026-09-24). On a block lower
+        // than a full cube -- soul sand is 0.875, the nether is full of it -- the body stands at y+0.875
+        // and getBlockPos() is the SOUL SAND ITSELF, so "below the feet" skipped the one block that was
+        // holding the body up. Measured: two nether deaths falling straight down from standing at
+        // heights 32.9 and 58.9 (soul sand tops), no movement driver, 30 blocks into lava, and this rule
+        // reading underfoot=0 in every stint. The support is floor(y - 0.2), vanilla's own stepping-pos
+        // offset: the soul sand at 58.875, the stone under a body standing at 59.0.
+        net.minecraft.util.math.Vec3d bp = mod.getPlayer().getPos();
+        int supportY = net.minecraft.util.math.MathHelper.floor(bp.y - 0.2);
+        if (target.getX() != feet.getX() || target.getZ() != feet.getZ() || target.getY() > supportY) {
             return false;
         }
+        feet = new BlockPos(feet.getX(), supportY + 1, feet.getZ());   // fall height is measured from here
         var w = mod.getWorld();
         for (int y = target.getY() - 1; y >= target.getY() - 4; y--) {
             BlockPos c = new BlockPos(target.getX(), y, target.getZ());
@@ -412,7 +422,11 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
     /** A cardinal neighbour of the feet the body can stand on, from which the target is in reach. */
     private static BlockPos sideStandReaching(AltoClef mod, BlockPos target) {
-        BlockPos feet = mod.getPlayer().getBlockPos();
+        // stand level = one above the support block (see unsafeToMineUnderfoot: not getBlockPos(),
+        // which on soul sand is the soul sand itself)
+        BlockPos raw = mod.getPlayer().getBlockPos();
+        BlockPos feet = new BlockPos(raw.getX(),
+                net.minecraft.util.math.MathHelper.floor(mod.getPlayer().getPos().y - 0.2) + 1, raw.getZ());
         var w = mod.getWorld();
         for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
             BlockPos n = feet.offset(d);
