@@ -523,6 +523,85 @@ class NavNotch(NavCourse):
         return (23, STAND_Y, 0)
 
 
+class NavLava(NavCourse):
+    """A ONE-WIDE LANE BETWEEN TWO LAVA GUTTERS, WITH A JOG IN IT (2026-09-24).
+
+    Built because the nether deaths could not be measured any other way that answers in a minute.
+    Twelve-minute stints from a checkpoint gave 40-60% survival with a spread wider than any fix
+    chased through them, and by 0.95.37 every remaining death had a different shape. The one shape
+    the stints kept showing, and the one this course isolates, is EXECUTOR DRIFT beside lava: the
+    plan holds no lava cell and the body still ends one block off it (route-relative snapshot d1.0,
+    d1.4, d1.0 from the nearest waypoint) -- under the walker, the queue and the replay executor.
+
+    The layout leaves no margin to take: the only way to the goal is a 1-wide stone lane with lava
+    on both sides at floor level (a block of stone under the lava, so it stays put). Halfway the lane
+    jogs sideways by two, so a route that cuts the corner puts the feet in lava. Nothing else
+    reaches the goal, so the planners' margins (0.95.36/37) fall back to the bare route by design and
+    what is measured is whether the EXECUTORS keep the body on the lane.
+
+    Gates: reach the goal, NO LAVA ENTRY (lavaEntryStats, before vs after -- the instrument that
+    found the nether mechanism), and no damage.
+
+    ⛔ WHAT THIS COURSE DOES NOT DO, MEASURED THE DAY IT WAS BUILT (checklist RULE SIX). It does not
+    reproduce the nether drift: the 0.95.29 release -- no executor-side lava checks at all -- passes it
+    3/3 under BOTH drives (tungsten gotoXYZ, 10.2 s; the altoclef @goto the playthrough uses, 6.6-10.2
+    s), exactly as 0.95.37 does (6.6 s). A flat, straight 1-wide lane does not make the executors
+    drift. The deaths it was meant to catch come with height changes -- a sprint jump up a step next
+    to a drop, a straight-down drop on a non-full floor block, executor hand-offs -- and none is here.
+    So it is kept as a GUARD, not a discriminator: it fails if a safety check ever stops the bot
+    walking a lane beside lava (the flood and the nether both require that), and it says nothing
+    about whether a fix reduced drift. Do not quote a pass here as evidence of one.
+    """
+    id = "nav_lava"
+    duration = 120
+    settings = {"verboseDebugLogging": "true"}
+
+    def course(self, arena, ctx):
+        # a solid bed one below the floor, so the lava placed at floor level cannot flow away
+        arena._fill(7, FLOOR_Y - 1, -4, 26, FLOOR_Y - 1, 4, "stone")
+        arena.floor(7, -4, 26, 4, "stone")
+        # first leg: lane z=0 from x=8 to x=16, lava at z=-1 and z=+1
+        arena._fill(8, FLOOR_Y, -1, 16, FLOOR_Y, -1, "lava")
+        arena._fill(8, FLOOR_Y, 1, 16, FLOOR_Y, 1, "lava")
+        # the jog: at x=16 the lane turns to z=2 and runs on at z=2 from x=16 to x=24
+        arena._fill(16, FLOOR_Y, 1, 16, FLOOR_Y, 1, "stone")
+        arena._fill(17, FLOOR_Y, 0, 17, FLOOR_Y, 1, "lava")      # the corner a diagonal would cut
+        arena._fill(17, FLOOR_Y, 1, 24, FLOOR_Y, 1, "lava")
+        arena._fill(16, FLOOR_Y, 3, 24, FLOOR_Y, 3, "lava")
+        # everything else beside the lanes is out of bounds: barriers at head height
+        arena._fill(7, STAND_Y, -4, 26, STAND_Y + 3, -4, "barrier")
+        arena._fill(7, STAND_Y, 4, 26, STAND_Y + 3, 4, "barrier")
+        arena._fill(8, STAND_Y, -3, 26, STAND_Y + 3, -2, "barrier")
+        arena._fill(8, STAND_Y, -1, 15, STAND_Y + 3, -1, "air")
+        return (24, STAND_Y, 2)
+
+    def drive_start(self, ctx):
+        ok, st = ctx.bot.py.try_call("lavaEntryStats")
+        ctx.geo["lava0"] = int((st or {}).get("entries", 0)) if ok and isinstance(st, dict) else None
+        gx, gy, gz = ctx.geo["goal"]
+        ctx.geo["fps"] = []
+        # ⛔ THE PLAYTHROUGH'S DRIVE, NOT TUNGSTEN'S ;goto. The first version drove with gotoXYZ like
+        # every other nav course, and it passed 3/3 on BOTH 0.95.37 and the 0.95.29 release -- which
+        # had no executor-side lava checks at all -- so it could not see the defect it was built for.
+        # The nether deaths happen under the altoclef drive (CustomBaritoneGoalTask: CombatPathfinder
+        # BFS, the walker, the queue and the executor handing off between them), so that is the drive
+        # this course uses: @goto, exactly what the chase course's runner uses.
+        ctx.bot.cmd(f"@goto {gx} {gy} {gz}")
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        ok, st = ctx.bot.py.try_call("lavaEntryStats")
+        n1 = int(st.get("entries", 0)) if ok and isinstance(st, dict) else None
+        n0 = ctx.geo.get("lava0")
+        entered = None if n0 is None or n1 is None else n1 - n0
+        yield Criterion("never entered lava", entered == 0,
+                        f"lava entries={entered} (driver at last entry: "
+                        f"{(st or {}).get('driver') if ok and isinstance(st, dict) else '?'})")
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+        yield Criterion("took no damage", low is not None and low >= 19.5, f"min_hp={low}")
+
+
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend, NavCliff,
              NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
-             NavNotch]
+             NavNotch, NavLava]
