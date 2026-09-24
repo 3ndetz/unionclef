@@ -3,7 +3,33 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-24 (latest) — v0.95.36/37: route margins + never dig your own floor; guards green, survival effect NOT measurable yet
+## 2026-09-24 (evening, latest) — v0.95.41 released: visible routes, checkpoints by default, four baritone ports; nav 17/17
+
+Operator's three demands this day, all closed: (1) route/break/place visualisation -- the drivers
+@gamer actually runs drew nothing and the bench switched overlays off even on recorded runs; now a
+pulled RouteOverlay, checked on clips and on playthrough video; (2) checkpoints -- dense by default
+(every 5 min, rolling 4, plus rung-<rung>), rule on top of AGENTS.md / CHECKLIST 0a, --raw-resume for
+state bugs; (3) port baritone's handling instead of inventing -- each fix below cites its source.
+
+Found on playthroughs/checkpoints, reproduced, fixed:
+- Powder snow death (froze, minute 2): freeze damage read as an attack (MobDefense fled from nothing),
+  escape broke the wrong snow; then the planners treated powder snow as lethal so a pit had no exit.
+  Ported canWalkThroughBlockState (obstacle, not floor); planner corners follow the executors' rule.
+- nav_cliff 1/3 (control 0/3): vanilla 1.21.11 continues a break on the same pos without START after
+  a server rejection; baritone BlockBreakHelper starts fresh. Found with a raw break-event ring.
+- Arrival in mid-air (nav_powder_pit): baritone AT_GOAL only after the path ends on a block.
+- Ten-minute flee stall at 4.5 hearts: the flee only started its search when the navigator was idle,
+  and the interrupted task's route kept it busy. Take-over + GoalRunAway-style heuristic.
+- Bench: death counter missed lava/drowning/freezing; freeze clock counted digs.
+
+Validation: nav 17/17; pvp chases/assault PASS, narrow_bridge_duel 1/4 on 0.95.41 AND 1/4 on the
+0.95.37 release (not a regression). Nether: 30 min from nether-reach, 0 deaths, pearl at 21 min;
+12 min from rung-ender, 0 deaths, pearls 2 -> 6 of 14 (slow enderman hunt). Released v0.95.41.
+
+Open: mob_unarmed arena too small for a 30-block flee; ;goto's post-dig retry latency (bench path
+only); nether lava death seen once 3 min after a resume, not reproduced; pearl rate.
+
+## 2026-09-24 — v0.95.36/37: route margins + never dig your own floor; guards green, survival effect NOT measurable yet
 
 - 0.95.36: FastPlanner prices lava-adjacent cells at 12 steps; CombatPathfinder (the walker's main
   route source, a BFS) searches with lava-adjacent cells closed first.
