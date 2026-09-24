@@ -219,6 +219,33 @@ public class PathExecutor {
 		return false;
 	}
 
+	/**
+	 * Is the body, by its ACTUAL motion, about to step into a lethal column? replayAheadLethal checks
+	 * the planned nodes; the replay drifts off them, and a drift over a lip is not in the plan.
+	 * Measured: a nether death reproduced from rung-ender with the replay driving (exec=true,
+	 * walker=false, wasOnGround=true) -- takeoff at (162.7,52.9,109.2), 23 blocks down into lava at
+	 * y=30. Look ahead along the velocity, or the pressed heading when barely moving, by at least
+	 * 1.4 blocks (sprint scales it), with the same column rule RouteHazards gives every executor.
+	 */
+	private boolean motionAheadLethal(ClientPlayerEntity player) {
+		var w = player.getEntityWorld();
+		net.minecraft.util.math.Vec3d pos = player.getEntityPos();
+		net.minecraft.util.math.Vec3d v = player.getVelocity();
+		double hx = v.x, hz = v.z;
+		double speed = Math.sqrt(hx * hx + hz * hz);
+		if (speed < 0.03) {
+			double yaw = Math.toRadians(player.getYaw());
+			if (!TungstenMod.mc.options.forwardKey.isPressed()) return false;
+			hx = -Math.sin(yaw); hz = Math.cos(yaw); speed = 1;
+		}
+		double look = Math.max(1.4, Math.sqrt(v.x * v.x + v.z * v.z) * 8.0);
+		net.minecraft.util.math.Vec3d ahead = pos.add(hx / speed * look, 0, hz / speed * look);
+		return kaptainwutax.tungsten.path.RouteHazards.segmentLethal(w, pos, ahead);
+	}
+
+	/** Replay ticks stopped because the body's own motion headed into a lethal column. */
+	public static volatile int execMotionLethal = 0;
+
 	public void setPath(List<Node> path) {
 		// NOTE: the completion callback is deliberately PRESERVED. This used to do
 		// `this.cb = null`, which destroyed the ;goto retry callback the moment the very
@@ -533,6 +560,16 @@ public class PathExecutor {
 		    // -- body to node, node to node -- is checked against the same RouteHazards the planners
 		    // use. Only while on the ground: that is when a cancel can still change where the body
 		    // goes (baritone's safeToCancel), and mid-arc it would only drop the keys.
+		    if (player.isOnGround() && motionAheadLethal(player)) {
+		        execMotionLethal++;
+		        kaptainwutax.tungsten.path.RouteHazards.refusedExecutor++;
+		        Debug.logMessage("Path stopped: the body is heading into a lethal column (off the plan) -- replanning");
+		        stop = true;
+		        options.forwardKey.setPressed(false);
+		        options.sprintKey.setPressed(false);
+		        options.jumpKey.setPressed(false);
+		        return;
+		    }
 		    if (player.isOnGround() && replayAheadLethal(player)) {
 		        kaptainwutax.tungsten.path.RouteHazards.refusedExecutor++;
 		        Debug.logMessage("Path stopped: the next steps of the replay are lethal (hazard) -- replanning");
