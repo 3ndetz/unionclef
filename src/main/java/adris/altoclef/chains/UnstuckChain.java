@@ -132,18 +132,27 @@ public class UnstuckChain extends SingleTaskChain {
 
         if (PlayerVer.inPowderedSnow(player)) {
             isProbablyStuck = true;
+            // ⛔ ONLY THE SNOW THE BODY IS IN. This used to start from the block scanner's NEAREST
+            // powder snow and only override it when the eye or feet block happened to be snow. In a
+            // snowy grove the nearest is as often the block beside you as the one you are in, so the
+            // escape walked -- at powder-snow speed -- to break its neighbour, and the target moved
+            // each time one broke. Measured on a full playthrough (0.95.41): fifty seconds of
+            // "DestroyBlock 381,154,-48 / 382,154,-48" while freezing, then "froze to death".
+            // The blocks that freeze you are exactly the ones your box overlaps; break those, the
+            // one at eye height first so the head is clear, and there is never anything to walk to.
             BlockPos destroyPos = null;
-
-            Optional<BlockPos> nearest = mod.getBlockScanner().getNearestBlock(Blocks.POWDER_SNOW);
-            if (nearest.isPresent()) {
-                destroyPos = nearest.get();
-            }
-
-            BlockPos headPos = WorldHelper.toBlockPos(player.getEyePos()).down();
-            if (world.getBlockState(headPos).getBlock() == Blocks.POWDER_SNOW) {
-                destroyPos = headPos;
-            } else if (world.getBlockState(player.getBlockPos()).getBlock() == Blocks.POWDER_SNOW) {
-                destroyPos = player.getBlockPos();
+            net.minecraft.util.math.Box box = player.getBoundingBox();
+            BlockPos eye = WorldHelper.toBlockPos(player.getEyePos());
+            double bestSq = Double.POSITIVE_INFINITY;
+            for (BlockPos p : BlockPos.iterate(
+                    BlockPos.ofFloored(box.minX, box.minY, box.minZ),
+                    BlockPos.ofFloored(box.maxX - 1.0E-4, box.maxY - 1.0E-4, box.maxZ - 1.0E-4))) {
+                if (world.getBlockState(p).getBlock() != Blocks.POWDER_SNOW) continue;
+                double sq = p.getSquaredDistance(eye);
+                if (sq < bestSq) {
+                    bestSq = sq;
+                    destroyPos = p.toImmutable();
+                }
             }
 
             if (destroyPos != null) {

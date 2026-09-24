@@ -603,11 +603,31 @@ public class MobDefenseChain extends SingleTaskChain {
             cachedLastPriority = 0;
         }
         float nowHealth = AltoClef.getInstance().getPlayer().getHealth();
-        if (nowHealth < prevHealth) {
+        if (nowHealth < prevHealth && damageHadAnAttacker(AltoClef.getInstance().getPlayer())) {
             lastDamageMs = System.currentTimeMillis();
         }
         prevHealth = nowHealth;
         return cachedLastPriority;
+    }
+
+    /**
+     * Did the health we just lost come from SOMETHING -- a mob, a player, a projectile?
+     *
+     * <p>⛔ FREEZING IS NOT AN ATTACK. A full playthrough (0.95.41, 2026-09-24) died "froze to death"
+     * two minutes in: chasing a rabbit it dropped into powder snow, the cold took health under ten,
+     * and the "low and still being hit" rule read the freeze ticks as a fight. The chain then bid 70
+     * and ran RunAwayFromHostilesTask away from no hostiles at all, out-bidding the powder-snow
+     * escape at 55, for fifty seconds, until the bot was dead. Fire ticks, falls, drowning and
+     * starving have the same shape: nothing to run from, and running stops the one thing that helps.
+     *
+     * <p>The client keeps the source of the last hit ({@code EntityDamageS2CPacket} carries the
+     * attacker and direct-source ids). An unknown source counts as an attack, so where the client
+     * cannot tell this falls back to what the rule always did.
+     */
+    private static boolean damageHadAnAttacker(net.minecraft.entity.LivingEntity self) {
+        if (self == null) return true;
+        net.minecraft.entity.damage.DamageSource src = self.getRecentDamageSource();
+        return src == null || src.getAttacker() != null || src.getSource() != null;
     }
 
     private void stopShielding(AltoClef mod) {

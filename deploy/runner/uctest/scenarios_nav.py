@@ -602,6 +602,79 @@ class NavLava(NavCourse):
         yield Criterion("took no damage", low is not None and low >= 19.5, f"min_hp={low}")
 
 
+class NavPowder(NavCourse):
+    """A POWDER SNOW PATCH ACROSS THE CORRIDOR, WITH A CLEAN WALKWAY PAST IT (2026-09-24).
+
+    From a full playthrough on 0.95.41: two minutes in, chasing a rabbit through a snowy grove, the
+    bot dropped into powder snow and "froze to death" fifty seconds later. Powder snow looks like a
+    snow block and has no collision for a player without leather boots, so it is a floor that is not
+    there. Laid two deep here (stone under), the way groves have it, so a body that walks on it sinks.
+
+    Same shape as nav_hazard, driven by the playthrough's own @goto. Gates: reach the goal, take no
+    damage, and never sink below the floor (min feet Y), which catches a step in and out that the cold
+    had no time to punish.
+    """
+    id = "nav_powder"
+    duration = 120
+    settings = {"verboseDebugLogging": "true"}
+
+    def course(self, arena, ctx):
+        arena._fill(7, FLOOR_Y - 2, -3, 26, FLOOR_Y - 1, 3, "stone")
+        arena.floor(7, -3, 26, 3, "stone")
+        arena._fill(14, FLOOR_Y - 1, -3, 16, FLOOR_Y, 1, "powder_snow")
+        arena._fill(7, STAND_Y, -4, 26, STAND_Y + 3, -4, "barrier")
+        arena._fill(7, STAND_Y, 4, 26, STAND_Y + 3, 4, "barrier")
+        return (23, STAND_Y, 0)
+
+    def drive_start(self, ctx):
+        gx, gy, gz = ctx.geo["goal"]
+        ctx.geo["fps"] = []
+        ctx.bot.cmd(f"@goto {gx} {gy} {gz}")
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+        yield Criterion("took no damage", low is not None and low >= 19.5, f"min_hp={low}")
+        ys = [s["bot"][1] for s in ctx.samples if s.get("bot")]
+        miny = min(ys) if ys else None
+        yield Criterion("never sank into the snow", miny is not None and miny >= STAND_Y - 0.3,
+                        f"min_y={None if miny is None else round(miny, 2)} floor={STAND_Y}")
+
+
+class NavPowderPit(NavCourse):
+    """START INSIDE A POWDER SNOW PIT AND GET OUT ALIVE (2026-09-24).
+
+    The other half of the same death: once in, the bot must break out before the cold wins. On the
+    playthrough the escape broke the scanner's NEAREST powder snow -- often a neighbour it then walked
+    to -- while MobDefense read freeze damage as an attack and fled from nothing at a higher bid.
+
+    The start pad's middle 3x3 is powder snow two deep, and the bot spawns on top of it, so it sinks
+    as the course starts. The goal is plain floor beyond the pad. Gates: reach it, and lose at most one
+    heart -- the cold starts biting seven seconds in, so a bot that breaks straight out takes nothing.
+    """
+    id = "nav_powder_pit"
+    duration = 120
+    settings = {"verboseDebugLogging": "true"}
+
+    def course(self, arena, ctx):
+        arena._fill(-3, FLOOR_Y - 2, -3, 6, FLOOR_Y - 1, 3, "stone")
+        arena._fill(-1, FLOOR_Y - 1, -1, 1, FLOOR_Y, 1, "powder_snow")
+        arena.floor(7, -3, 16, 3, "stone")
+        return (13, STAND_Y, 0)
+
+    def drive_start(self, ctx):
+        gx, gy, gz = ctx.geo["goal"]
+        ctx.geo["fps"] = []
+        ctx.bot.cmd(f"@goto {gx} {gy} {gz}")
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+        yield Criterion("lost at most a heart", low is not None and low >= 18.0, f"min_hp={low}")
+
+
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend, NavCliff,
              NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
-             NavNotch, NavLava]
+             NavNotch, NavLava, NavPowder, NavPowderPit]
