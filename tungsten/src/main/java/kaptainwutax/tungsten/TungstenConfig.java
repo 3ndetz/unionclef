@@ -4965,8 +4965,15 @@ public class TungstenConfig {
      * low in a fix arm, or the pair measured nothing.
      *
      * <p>Default false until a paired A/B on stall time says otherwise.
+     *
+     * <p>⛔ ON BY DEFAULT FROM 0.95.40 (2026-09-24), on a full playthrough rather than an A/B. A recorded
+     * run from scratch stood TWENTY MINUTES on a five-block patch of the spawn mountain (y~117)
+     * inside "Collect 140 units of food -> Wander for Infinity blocks", and the mechanism counter
+     * read wanderTargetUnstandable=825 of wanderTung=829: every pick was a point at the mountain's
+     * height out over the valley, i.e. in the air. The fix cannot make a pick worse than the
+     * unmodified one (it falls back to it), and the cost of leaving it off is now measured.
      */
-    public boolean wanderTargetFollowsTheGround = false;
+    public boolean wanderTargetFollowsTheGround = true;
 
     /**
      * Advance the wander's spiral only when a leg actually STARTS.
