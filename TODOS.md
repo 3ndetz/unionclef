@@ -16,6 +16,12 @@
   threshold 14). Reproduce from a checkpoint before it; compare FoodChain thresholds.
 - [ ] **After a planned dig the navigator stands ~3 s replanning** ("Mining done -- passage open",
   "Retrying (1/10)") before walking on (nav_cliff, bench log "break progress 3198 ms ago").
+- [ ] **Nether: fighting at 2 hearts with no food (death, nether40 run on 0.95.41).** Pearls 2 -> 10/14 in
+  20 min, then hp 16 -> 4 in enderman fights and no regeneration for 45 s (only rotten flesh left);
+  the hunt kept going, pillared to y=98 after an enderman on a warped-fungus crown, and fell. An
+  enderman hits for 7: at 4 hp every exchange is lethal. Needs: do not start/continue a fight whose
+  one hit kills; get food before the food total runs out in the nether. gamer_smoke now logs
+  hunger/saturation/food items on every sample.
 - [ ] **Food: "Collect 140 units of food" on a food-less mountain start** sent the bot chasing a rabbit
   into a powder-snow grove at minute 2 (full2, 0.95.41). getGameState now reports food/saturation.
 

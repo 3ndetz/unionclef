@@ -71,7 +71,7 @@ elif op=="gs":
     gs=mc.getGameState()
     out={"inGame":gs.get("inGame"),"self":dict(gs.get("self") or {})}
 elif op=="inv":
-    f=mc.getInventoryFull(); n=0; items=0; ids=[]
+    f=mc.getInventoryFull(); n=0; items=0; ids=[]; food={}
     try:
         for s in f.get("slots") or []:
             sd=dict(s)
@@ -79,8 +79,10 @@ elif op=="inv":
                 n+=1; items+=int(sd.get("count",0) or 0)
                 nm=str(sd.get("item") or sd.get("name") or "")
                 if nm: ids.append(nm)
+                if any(k in nm for k in ("beef","pork","mutton","chicken","bread","apple","potato","carrot","cod","salmon","rabbit","berries","melon","stew","cookie","pie","rotten")):
+                    food[nm.replace("minecraft:","")]=food.get(nm.replace("minecraft:",""),0)+int(sd.get("count",0) or 0)
     except Exception: pass
-    out={"nonEmpty":n,"items":items,"ids":ids}
+    out={"nonEmpty":n,"items":items,"ids":ids,"food":food}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="guide": out={"r": str(mc.guideDump() or "")}
 elif op=="guidehop": out={"r": str(mc.guideHopShapes() or "")}
@@ -1344,7 +1346,11 @@ def main():
                         print(f"  FROZEN: thread dump failed: {str(e)[:60]}")
             else:
                 froze[0] = 0
-            print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
+            # HUNGER AND FOOD ON EVERY LINE: a nether death at 2 hearts (2026-09-24) turned out to be
+            # a bot that had run out of food and kept fighting; the log could not show it.
+            _me = gs.get('self') or {}
+            _fd = ",".join(f"{k}:{v}" for k, v in (inv.get('food') or {}).items()) or "-"
+            print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} food={_me.get('food')}/{_me.get('saturation')} eat={_fd} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
     # WHAT DID IT ACTUALLY END UP HOLDING? "Ten items gathered" and "no materials to craft"
