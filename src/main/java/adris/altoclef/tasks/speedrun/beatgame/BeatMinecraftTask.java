@@ -513,6 +513,15 @@ public class BeatMinecraftTask extends Task {
         //  return mod.getCraftingRecipeTracker().getFirstRecipeTarget(item, 1);
     }
 
+    private static boolean hasMeleeWeapon(AltoClef mod) {
+        for (Item w : new Item[]{Items.WOODEN_SWORD, Items.STONE_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
+                Items.DIAMOND_SWORD, Items.NETHERITE_SWORD, Items.WOODEN_AXE, Items.STONE_AXE, Items.IRON_AXE,
+                Items.DIAMOND_AXE, Items.NETHERITE_AXE}) {
+            if (mod.getItemStorage().hasItem(w)) return true;
+        }
+        return false;
+    }
+
     private void addPickupImportantItemsTask(AltoClef mod) {
         List<Item> importantItems = List.of(Items.IRON_PICKAXE, Items.DIAMOND_PICKAXE, Items.GOLDEN_HELMET, Items.DIAMOND_SWORD,
                 Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS, Items.DIAMOND_BOOTS, Items.FLINT_AND_STEEL);
@@ -525,7 +534,21 @@ public class BeatMinecraftTask extends Task {
 
                 if (!mod1.getItemStorage().hasItem(item) && mod1.getEntityTracker().itemDropped(item)) {
                     pair.setLeft(new PickupDroppedItemTask(item, 1));
-                    pair.setRight(8000d);
+                    // ⛔ NOT UNARMED INTO THE DARK WHERE IT JUST DIED (2026-09-24, full playthrough).
+                    // The dropped gear lies where the body died, and that is where whatever killed it
+                    // still is. At 8000 this run outranked everything, weapons included, so the bot
+                    // respawned empty and walked straight back: measured on a recorded run from
+                    // scratch -- killed underground at y~-2 carrying diamond gear, respawned at the
+                    // spawn, "Pickup Dropped Items: diamond_pickaxe" at 8000, back down the cave with
+                    // nothing in hand (y 125 -> 69 -> 39), "slain by Spider"; respawn, same again,
+                    // "slain by Spider". Earlier frontier runs looped the same way on zombies. So at
+                    // NIGHT with NO WEAPON the recovery waits below the wooden tools (400), which
+                    // include a sword; by day, or armed, it still goes at once -- drops despawn in five
+                    // minutes and the gear is worth the walk when the walk is survivable.
+                    boolean armed = hasMeleeWeapon(mod1);
+                    long tod = mod1.getWorld().getTimeOfDay() % 24000L;
+                    boolean night = tod >= 13000L && tod <= 23000L;
+                    pair.setRight(!armed && night ? 300d : 8000d);
 
                     return pair;
                 }
