@@ -38,6 +38,17 @@ The ONLY two valid final stops remain the ones in rule 8: hardware failure, or e
 written for those two reasons only. It was written once for "context exhausted", which was
 wrong, and this section exists so it never is again.
 
+> ⛔⛔ **CHECKPOINTS, ALWAYS (operator 2026-09-24).** Never reproduce or test a problem from an empty
+> inventory when a checkpoint before it exists. Playthroughs checkpoint densely by default (every 5 min
+> + `rung-<rung>` per ladder rung); resume with `gamer_smoke.py N --from NAME`. The rule and the
+> commands: **[docs/CHECKLIST.md, section 0a](docs/CHECKLIST.md#0a--checkpoints-never-test-a-late-game-problem-from-an-empty-inventory-operator-2026-09-16-and-2026-09-24)**.
+>
+> ⛔⛔ **PORT BARITONE'S LOGIC, DO NOT RE-INVENT IT (operator 2026-09-24).** baritone already hit the same
+> problems (hazards, powder snow, lava, falls, mining under yourself, mob danger). Before writing a
+> fix, find how baritone handles that case (`baritone/src/main/java`, source reference) and port that
+> behaviour into the matching tungsten/altoclef place, citing file:line in the comment. A fix that
+> contradicts baritone's handling needs a measured reason written next to it.
+
 > ⛔ **WORK ONLY BY THE CHECKLIST → [docs/CHECKLIST.md](docs/CHECKLIST.md).** It is the
 > mandatory autonomous-work process (phases: formulate → pick → decompose in your OWN
 > TODO tool → implement → **thorough battle TEST of your + adjacent functions** → audit

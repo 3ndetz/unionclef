@@ -98,6 +98,13 @@ def save(name, note=""):
     return meta
 
 
+def drop(name):
+    """Delete a checkpoint from disk (used by the rolling periodic series)."""
+    d = ROOT / name
+    if d.exists():
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def restore(name):
     src = ROOT / name / "world"
     if not src.exists():

@@ -32,7 +32,15 @@ MINUTES=float(sys.argv[1]) if len(sys.argv)>1 and not sys.argv[1].startswith("--
 # MIN minutes of the watch (cpMMDD-HHMM-tSECONDS); the end of every run is frozen as `last`
 # unless --no-save-end, or under --save-end NAME. See checkpoint.py.
 FROM_CP = sys.argv[sys.argv.index("--from") + 1] if "--from" in sys.argv else None
-CP_EVERY = float(sys.argv[sys.argv.index("--checkpoint-every") + 1]) if "--checkpoint-every" in sys.argv else 0.0
+# ⛔⛔ DENSE BY DEFAULT (operator, 2026-09-24: "почему ты не юзаешь чекпоинты ... должен быть крайне
+# плотный пайплайн чекпоинтов"). This used to default to 0 -- no periodic checkpoints unless asked --
+# and the session that owned the rule ran two playthroughs from zero in a row, the second dying of
+# cold at minute two with nothing frozen to test the fix from. Now every run freezes the world every
+# 5 minutes (the last CP_KEEP of them kept per run, older ones deleted: a world is ~2 GB) AND at every
+# new ladder rung as `rung-<rung>` (overwritten by the newest run, so `--from rung-bucket` is always
+# the freshest "has a bucket" state). `--checkpoint-every 0` turns the periodic series off.
+CP_EVERY = float(sys.argv[sys.argv.index("--checkpoint-every") + 1]) if "--checkpoint-every" in sys.argv else 5.0
+CP_KEEP = 4
 SAVE_END = (sys.argv[sys.argv.index("--save-end") + 1] if "--save-end" in sys.argv
             else ("" if "--no-save-end" in sys.argv else "last"))
 # --daylock: freeze the RESTORED world at day (no cycle, no weather) and clear standing
@@ -1129,7 +1137,7 @@ def main():
         rec_start(MINUTES * 60)
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     fps_samples = []
-    _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M")
+    _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M"); _cp_series = []
     # CAPTURE THE NETHER ENTRY THE MOMENT IT HAPPENS. The one-run underground->nether entry is proven
     # (v0.95.24 + v0.95.25), but the bot dies within ~30 s of arriving (Enderman knockback off a ledge)
     # -- faster than a 2 GB checkpoint copy -- so no periodic checkpoint ever caught it ALIVE in the
@@ -1155,8 +1163,11 @@ def main():
         if CP_EVERY and time.time() - _cp_last >= CP_EVERY * 60:
             # a checkpoint must never end the run it is describing
             try:
-                _cp.save(f"{_cp_prefix}-t{int(time.time() - t0)}",
-                         note=f"periodic, {int((time.time() - t0) / 60)} min into run {RUN_SEQ[0]}")
+                _name = f"{_cp_prefix}-t{int(time.time() - t0)}"
+                _cp.save(_name, note=f"periodic, {int((time.time() - t0) / 60)} min into run {RUN_SEQ[0]}")
+                _cp_series.append(_name)
+                while len(_cp_series) > CP_KEEP:
+                    _cp.drop(_cp_series.pop(0))
             except Exception as _ce:                  # noqa: BLE001
                 print(f"  checkpoint failed: {str(_ce)[:120]}")
             _cp_last = time.time()
@@ -1207,12 +1218,22 @@ def main():
                         print(f"  target probe failed: {str(e)[:80]}")
             if okc and tcj.get("runner"):
                 print(f"  RUNNER {tcj.get('runner')}")
+            _new_rungs = []
             for rung, needles in LADDER:
                 if rung in reached or rung in preexisting: continue
                 if any(any(nd in i for nd in needles) for i in inv.get("ids") or []):
                     reached[rung] = round(time.time()-t0, 1)
                     stall[3] = time.time()
                     print(f"  RUNG '{rung}' at {reached[rung]}s")
+                    _new_rungs.append(rung)
+            if _new_rungs:
+                # One freeze per poll, named after the last rung reached in it: an entry point for
+                # the next stage that is never older than the newest run to get this far.
+                _rn = "rung-" + re.sub(r"[^a-z0-9]+", "-", _new_rungs[-1].lower()).strip("-")
+                try:
+                    _cp.save(_rn, note=f"rung {', '.join(_new_rungs)} at {int(time.time() - t0)}s, run {RUN_SEQ[0]}")
+                except Exception as _re:              # noqa: BLE001
+                    print(f"  rung checkpoint failed: {str(_re)[:120]}")
             responsive+=1
             # HOW FAST WAS THE CLIENT WHILE IT TRIED? The nav suite has asked this since the day a
             # starved host was read as a code regression; this bench never has, so its verdicts

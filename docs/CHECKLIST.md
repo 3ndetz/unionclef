@@ -30,6 +30,30 @@ The score IS "how far we got".
 
 ---
 
+## 0a. ⛔⛔ CHECKPOINTS: NEVER TEST A LATE-GAME PROBLEM FROM AN EMPTY INVENTORY (operator, 2026-09-16 and 2026-09-24)
+
+The playthrough is the test, and a playthrough from zero costs minutes-to-hours to reach the stage
+where the trouble is. So:
+
+1. **Every `gamer_smoke.py` run checkpoints densely by default** -- the world every 5 minutes (last 4
+   kept per run) and `rung-<rung>` at every new ladder rung (`rung-iron`, `rung-bucket`,
+   `rung-diamond-pick`, ... always the newest run to get there), plus `nether-fresh` on the first
+   overworld->nether transition and `last` at the end. Do not pass `--checkpoint-every 0` on a
+   playthrough.
+2. **A bug seen at minute N is reproduced from the checkpoint just before N**, not from zero:
+   `python deploy/runner/checkpoint.py list`, then `python deploy/runner/gamer_smoke.py 15 --from NAME
+   --record`. The fix is tested from the same checkpoint, and the A/B is the same checkpoint twice.
+3. **A fresh run from zero is for measuring the early game itself** (first craft .. iron tools) or for
+   producing new rung checkpoints -- nothing else.
+4. When a stage has no checkpoint yet, the run that first reaches it creates one automatically; if a
+   stage needs a hand-made entry (e.g. "just inside a fortress"), save it with
+   `checkpoint.py save NAME --note "..."` the moment the run is there.
+
+Machinery: `deploy/runner/checkpoint.py` (save / restore / list / drop), `gamer_smoke.py --from`.
+Full history of the rule: section 4 item 7 ("Freeze the run where the trouble starts").
+
+---
+
 ## 1. AUDIT — every iteration, before a single line of code
 
 ⛔ **RULE FIVE: A COUNTER FROM ONE RUN IS A SAMPLE, NOT A MECHANISM.**
