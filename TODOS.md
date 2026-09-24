@@ -4,16 +4,18 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
-- [ ] **nav_cliff 1/3 (control without the powder-snow changes 0/3 -- pre-existing).** Freeze on the
+- [x] **FIXED 2026-09-24 (baritone BlockBreakHelper fresh clickBlock; nav_cliff 3/3). nav_cliff 1/3 (control without the powder-snow changes 0/3 -- pre-existing).** Freeze on the
   first step of the detour descent, feet (10.5,-50,15.6), `breakQ=1` with 230 break ticks: the
   executor digs instead of stepping down two blocks. Reproduce live with the overlay (the red/orange
   box shows WHICH block), compare with baritone MovementDescend, fix in the planner/executor.
-- [ ] **Arrival overshoot (nav_powder_pit).** The nav task reports FINISHED at the goal (13,-60,0)
+- [x] **FIXED 2026-09-24 (arrive only when the body is held -- baritone AT_GOAL; nav_powder_pit PASS). Arrival overshoot (nav_powder_pit).** The nav task reports FINISHED at the goal (13,-60,0)
   after 18 s, then the body ends 2.9 blocks past it at the floor edge. Find what moves it after the
   goal (sprint momentum vs a second driver).
 - [ ] **Cave fight at low health (full1, 0.95.39).** Died to a spider with a diamond sword while
   MobDefense "routed to safety" through a lush cave; hp had sat at 16 for minutes (hunger < 18, eat
   threshold 14). Reproduce from a checkpoint before it; compare FoodChain thresholds.
+- [ ] **After a planned dig the navigator stands ~3 s replanning** ("Mining done -- passage open",
+  "Retrying (1/10)") before walking on (nav_cliff, bench log "break progress 3198 ms ago").
 - [ ] **Food: "Collect 140 units of food" on a food-less mountain start** sent the bot chasing a rabbit
   into a powder-snow grove at minute 2 (full2, 0.95.41). getGameState now reports food/saturation.
 
