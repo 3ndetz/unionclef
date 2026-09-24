@@ -657,9 +657,14 @@ class NavPowderPit(NavCourse):
     duration = 120
     settings = {"verboseDebugLogging": "true"}
 
+    def build(self, arena, ctx):
+        super().build(arena, ctx)
+        # AFTER the base build: its start marker replaces the block under the spawn, which left the
+        # first version of this course standing on a one-block pillar in the middle of the snow.
+        arena._fill(-1, FLOOR_Y - 1, -1, 1, FLOOR_Y, 1, "powder_snow")
+
     def course(self, arena, ctx):
         arena._fill(-3, FLOOR_Y - 2, -3, 6, FLOOR_Y - 1, 3, "stone")
-        arena._fill(-1, FLOOR_Y - 1, -1, 1, FLOOR_Y, 1, "powder_snow")
         arena.floor(7, -3, 16, 3, "stone")
         return (13, STAND_Y, 0)
 

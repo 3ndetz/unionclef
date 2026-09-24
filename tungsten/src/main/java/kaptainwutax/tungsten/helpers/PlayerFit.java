@@ -53,7 +53,9 @@ public final class PlayerFit {
      * or a plain full cube, and both answers are exact without touching a
      * VoxelShape operation. Only genuinely partial blocks (slabs, stairs, fences,
      * trapdoors, carpets, snow) fall through to the precise path.
-     * 0 = empty, 1 = full cube, 2 = partial (must be measured).
+     * 0 = empty, 1 = full cube, 2 = partial (must be measured),
+     * 3 = no collision yet blocks the body and is no floor (powder snow; baritone
+     *     canWalkThroughBlockState NO and canWalkOn false).
      */
     // ── PER-SEARCH MEMO ────────────────────────────────────────────────────────────
     // EVERY world read the block-space search makes funnels through classify(), and there
@@ -128,6 +130,11 @@ public final class PlayerFit {
     private static int classifyUncached(WorldView world, BlockPos pos) {
         net.minecraft.block.BlockState state = world.getBlockState(pos);
         if (state.isAir()) return 0;
+        // baritone canWalkThroughBlockState: POWDER_SNOW -> NO (MovementHelper.java:193). No collision
+        // box, so the shape test below would call it air; the body sinks in and freezes. A full block
+        // to the body (routes break it -- RouteHazards.blocksBody -- or go round), but NOT a floor:
+        // standing on it sinks you into it, so supportTop must not see a full cube here.
+        if (state.getBlock() == net.minecraft.block.Blocks.POWDER_SNOW) return 3;
         VoxelShape shape = state.getCollisionShape(world, pos);
         if (shape.isEmpty()) return 0;
         if (shape == net.minecraft.util.shape.VoxelShapes.fullCube()) return 1;
@@ -161,7 +168,7 @@ public final class PlayerFit {
                     p.set(bx, by, bz);
                     int kind = classify(world, p);
                     if (kind == 0) continue;             // air: cheap, exact
-                    if (kind == 1) return false;         // full cube overlapping the body
+                    if (kind == 1 || kind == 3) return false; // full cube / powder snow in the body
                     // partial block: measure it properly
                     if (VoxelShapes.matchesAnywhere(shapeAt(world, p), boxShape,
                             BooleanBiFunction.AND)) {
@@ -219,7 +226,7 @@ public final class PlayerFit {
         }
         BlockPos below = cell.down();
         int under = classify(world, below);
-        if (under == 0) return Double.NaN;
+        if (under == 0 || under == 3) return Double.NaN;   // air, or powder snow: nothing holds you
         if (under == 1) return below.getY() + 1.0;          // full cube: exact, no shape math
         return below.getY() + world.getBlockState(below).getCollisionShape(world, below)
                 .getMax(Direction.Axis.Y);

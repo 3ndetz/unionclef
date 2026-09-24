@@ -67,8 +67,25 @@ public final class RouteHazards {
                 || b instanceof net.minecraft.block.EndPortalFrameBlock
                 || b == net.minecraft.block.Blocks.END_PORTAL
                 || b == net.minecraft.block.Blocks.COBWEB
-                || b == net.minecraft.block.Blocks.POWDER_SNOW
                 || b instanceof net.minecraft.block.BubbleColumnBlock;
+    }
+
+    /**
+     * Does this block stop a body passing through it, so a route must break it first? baritone
+     * {@code MovementHelper.canWalkThroughBlockState} (MovementHelper.java:182-230): anything with a
+     * collision box, plus POWDER_SNOW (:193), which has none for a player without leather boots and
+     * so reads as air to a collision test -- a floor that is not there, and a cell that freezes.
+     *
+     * <p>⛔ POWDER SNOW USED TO BE IN {@link #hazard} (lethal), which baritone never did (it is not in
+     * avoidWalkingInto). Measured 2026-09-24: a bot that fell into a two-deep patch broke its own
+     * column free and then stood at the bottom for good -- every way out ran through powder snow, the
+     * planners refused all of it as lethal, and none would plan the cheap break (hardness 0.25) that
+     * baritone plans. Now it is what baritone says: an obstacle to break, never a floor (no collision,
+     * so supportTop finds none -- baritone canWalkOn is false for it too).
+     */
+    public static boolean blocksBody(BlockState st, WorldView w, BlockPos p) {
+        return st.getBlock() == net.minecraft.block.Blocks.POWDER_SNOW
+                || !st.getCollisionShape(w, p).isEmpty();
     }
 
     public static boolean hazard(WorldView w, BlockPos p) {
@@ -88,6 +105,9 @@ public final class RouteHazards {
         for (int y = feetY - 1; y >= Math.max(bottom, feetY - LAVA_COLUMN_DEPTH); y--) {
             BlockState st = w.getBlockState(s.set(x, y, z));
             if (hazard(st)) return true;                              // magma floor, or lava below
+            // Walking ONTO powder snow sinks the body into it (no collision): a free-form driver
+            // stepping onto a snow field is exactly how the 0.95.41 playthrough froze to death.
+            if (st.getBlock() == net.minecraft.block.Blocks.POWDER_SNOW) return true;
             if (!st.getCollisionShape(w, s).isEmpty()) return false;  // solid ground first: safe
         }
         return false;                                                 // void or deep: not ours

@@ -361,6 +361,9 @@ public class CombatPathfinder {
 
     // ── neighbors + block checks ─────────────────────────────────────────────
 
+    /** Diagonal steps refused because a corner column is lethal (RouteHazards, the executors' rule). */
+    public static volatile int gridCornerLethal = 0;
+
     /** Diagonal steps refused because the body would have to squeeze past a solid corner. */
     public static volatile int gridCornerRefused = 0;
 
@@ -458,6 +461,19 @@ public class CombatPathfinder {
                     gridCornerRefused++;
                     continue;
                 }
+                // ⛔ THE SAME CORNER RULE THE EXECUTORS APPLY. RouteHazards.segmentLethal (walker,
+                // replay, queue) refuses a diagonal whose corner COLUMN is lethal -- the 0.6-wide body
+                // brushes it -- but this search only asked whether the corner cells were passable. So
+                // it offered diagonals the walker then refused ("route ahead is lethal -> stop,
+                // replan") and got the same route back: measured on nav_powder, 12 freeze windows at
+                // the edge of a powder snow patch. baritone MovementDiagonal refuses the corner in the
+                // planner (:158/162); the planner and the executor must agree on one rule.
+                BlockPos.Mutable sc = new BlockPos.Mutable();
+                if (kaptainwutax.tungsten.path.RouteHazards.lethalColumn(world, sideA.getX(), pos.getY(), sideA.getZ(), sc)
+                        || kaptainwutax.tungsten.path.RouteHazards.lethalColumn(world, sideB.getX(), pos.getY(), sideB.getZ(), sc)) {
+                    gridCornerLethal++;
+                    continue;
+                }
             }
             BlockPos candidate = pos.add(off[0], 0, off[1]);
             boolean flatWalk = isWalkable(candidate, world);
@@ -490,6 +506,10 @@ public class CombatPathfinder {
             for (int s = 1; s < dist; s++) {
                 BlockPos mid = pos.add(dir[0] * s, 0, dir[1] * s);
                 if (!canPassThrough(mid, world) || !canPassThrough(mid.up(), world)) { flightClear = false; break; }
+                // A gap over lava or powder snow is one the executors refuse (RouteHazards) --
+                // baritone MovementParkour refuses a lava gap floor too. Do not offer the jump.
+                if (kaptainwutax.tungsten.path.RouteHazards.lethalColumn(world, mid.getX(), mid.getY(), mid.getZ(),
+                        new BlockPos.Mutable())) { flightClear = false; break; }
             }
             if (!flightClear) break;
             BlockPos flat = pos.add(dir[0] * dist, 0, dir[1] * dist);
@@ -527,7 +547,8 @@ public class CombatPathfinder {
     }
 
     public static boolean canPassThrough(BlockPos pos, WorldView world) {
-        return world.getBlockState(pos).getCollisionShape(world, pos).isEmpty();
+        // RouteHazards.blocksBody: baritone canWalkThroughBlockState, powder snow included.
+        return !kaptainwutax.tungsten.path.RouteHazards.blocksBody(world.getBlockState(pos), world, pos);
     }
 
     /** Blocks that deal damage — never walk here. */

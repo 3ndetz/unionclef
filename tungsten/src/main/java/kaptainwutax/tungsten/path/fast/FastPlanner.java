@@ -1376,7 +1376,7 @@ public final class FastPlanner {
             // bot ended up falling out of the world at x=9.5. Destroying your own way up is
             // never the cheaper route — leave climbables to special().
             if (isLadder(world, cell.getX(), cell.getY(), cell.getZ(), scratch)) return;
-            if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
+            if (!kaptainwutax.tungsten.path.RouteHazards.blocksBody(world.getBlockState(cell), world, cell)) continue;
             net.minecraft.block.BlockState st = world.getBlockState(cell);
             if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
             // ⛔ SUPERSEDED 2026-09-15 (docs/BARITONE-GAPS.md G8) — this comment used to say
@@ -1497,7 +1497,7 @@ public final class FastPlanner {
         double ticks = 0;
         for (BlockPos cell : cells) {
             if (isLadder(world, cell.getX(), cell.getY(), cell.getZ(), scratch)) return;
-            if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
+            if (!kaptainwutax.tungsten.path.RouteHazards.blocksBody(world.getBlockState(cell), world, cell)) continue;
             net.minecraft.block.BlockState st = world.getBlockState(cell);
             if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
             double t = kaptainwutax.tungsten.path.movements.MovementHelperB
