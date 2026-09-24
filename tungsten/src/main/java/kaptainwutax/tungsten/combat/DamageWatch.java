@@ -357,11 +357,35 @@ public final class DamageWatch {
                         kaptainwutax.tungsten.task.RunAwayTask.isActive(),
                         kaptainwutax.tungsten.task.BowShooter.isActive(),
                         kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning(),
-                        kaptainwutax.tungsten.task.BlockPathWalker.isRunning());
+                        kaptainwutax.tungsten.task.BlockPathWalker.isRunning())
+                        + walkerContext(player);
             }
         }
         overVoid = bottomless;
         wasOnGround = player.isOnGround();
+    }
+
+    /**
+     * Where the walker's route stood when the body left the ground: the body against the route,
+     * the waypoint it was heading for and what that waypoint stands on. A nether lava death
+     * reproduced 4 times from rung-ender with the walker driving and the body stepping off a
+     * ledge over a lava lake; the record said "walker=true" and nothing about the route.
+     */
+    private static String walkerContext(ClientPlayerEntity player) {
+        try {
+            var route = kaptainwutax.tungsten.task.BlockPathWalker.routeForOverlay();
+            if (route == null || route.isEmpty()) return " route=-";
+            int i = Math.max(0, Math.min(kaptainwutax.tungsten.task.BlockPathWalker.waypointForOverlay(), route.size() - 1));
+            net.minecraft.util.math.BlockPos wp = route.get(i);
+            var w = player.getEntityWorld();
+            String under = w.getBlockState(wp.down()).getBlock().getTranslationKey()
+                    .replace("block.minecraft.", "");
+            String prev = i > 0 ? route.get(i - 1).toShortString().replace(", ", ",") : "-";
+            return " route=[" + kaptainwutax.tungsten.task.BlockPathWalker.describeAgainstRoute(player.getBlockPos())
+                    + " wp=" + wp.toShortString().replace(", ", ",") + " under=" + under + " prevWp=" + prev + "]";
+        } catch (Exception e) {
+            return " route=?";
+        }
     }
 
     /** Distance to the closest other living entity, or -1 when there is none to blame. */

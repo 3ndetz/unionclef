@@ -78,8 +78,36 @@ public class KillEndermanTask extends ResourceTask {
             }
         }
 
+        // ⛔ DO NOT PICK A FIGHT THAT TWO HITS END. An enderman hits for 7 on normal (4.5 easy, 10.5
+        // hard). A 40-minute nether run on 0.95.41 went 2 -> 10 of 14 pearls, then kept provoking
+        // endermen at 4 hp with nothing but rotten flesh to eat -- 45 s without regeneration -- and
+        // died. An angry one is fought above regardless (it teleports to you; running does not
+        // help); a NEW one is only provoked when the body can take two of its hits. Otherwise heal
+        // first: stand if hunger allows regeneration, let FoodChain eat if there is food, and fetch
+        // a little food if there is none.
+        float hp = mod.getPlayer().getHealth();
+        if (hp <= 2 * endermanHit(mod) + 1) {
+            int hunger = mod.getPlayer().getHungerManager().getFoodLevel();
+            if (hunger >= 18 || mod.getFoodChain().hasFood()) {
+                setDebugState("Healing before provoking the next enderman (hp " + (int) hp + ")");
+                return null;
+            }
+            setDebugState("No food and too hurt to provoke an enderman: getting food first");
+            return new adris.altoclef.tasks.resources.CollectFoodTask(40);
+        }
+
         // Attack the closest one
         return new KillEntitiesTask(belowNetherRoof, EndermanEntity.class);
+    }
+
+    /** An enderman's melee damage at the world's difficulty (vanilla: 7 on normal, x1.5 hard, easy 4.5). */
+    private static float endermanHit(AltoClef mod) {
+        return switch (mod.getWorld().getDifficulty()) {
+            case PEACEFUL -> 0f;
+            case EASY -> 4.5f;
+            case NORMAL -> 7f;
+            case HARD -> 10.5f;
+        };
     }
 
     @Override

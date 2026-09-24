@@ -344,6 +344,14 @@ public class StorageHelper {
 
             final int totalFoodScore = calcTotalFoodScore;
 
+            // ⛔ FOOD GOES LAST. This picked food like any other "unused" item whenever the inventory
+            // filled -- in the nether, where it cannot be replaced. A 30-minute run on 0.95.41 lost
+            // 26 sweet berries and 4 rotten flesh in one minute, hunger then fell to 8, health sat at
+            // 7.5 and the pearl hunt stalled. Keep food whenever anything else can go.
+            if (possibleSlots.stream().anyMatch(sl -> !ItemVer.isFood(StorageHelper.getItemStackInSlot(sl)))) {
+                possibleSlots.removeIf(sl -> ItemVer.isFood(StorageHelper.getItemStackInSlot(sl)));
+            }
+
             if (!possibleSlots.isEmpty()) {
                 return possibleSlots.stream().min((leftSlot, rightSlot) -> {
                     ItemStack left = StorageHelper.getItemStackInSlot(leftSlot),
@@ -398,13 +406,14 @@ public class StorageHelper {
                             return 1;
                         }
                     }
-                    // If both are food, pick the better cost.
+                    // If both are food, discard the one worth LESS. min() picks the smaller element, and
+                    // this used to negate the difference -- so it threw away the MOST valuable stack.
                     if (leftIsFood && rightIsFood) {
                         assert ItemVer.getFoodComponent(left.getItem()) != null;
                         assert ItemVer.getFoodComponent(right.getItem()) != null;
                         int leftCost = ItemVer.getFoodComponent(left.getItem()).getHunger() * left.getCount(),
                                 rightCost = ItemVer.getFoodComponent(right.getItem()).getHunger() * right.getCount();
-                        return -1 * (leftCost - rightCost);
+                        return leftCost - rightCost;
                     }
 
                     // Just discard the one with the smallest quantity, but this doesn't really matter.
