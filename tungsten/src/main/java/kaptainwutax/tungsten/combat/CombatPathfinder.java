@@ -590,19 +590,46 @@ public class CombatPathfinder {
     /** Routes found WITH the lava margin / routes that needed the bare fallback. */
     public static volatile int cpLavaMarginKept = 0, cpLavaMarginDropped = 0;
 
-    /** Lava in any of the eight neighbours at feet or floor level (the body drifts diagonally). */
+    /**
+     * Lava in any of the eight neighbours at feet or floor level (the body drifts diagonally), OR a
+     * neighbour that is the lip of a LETHAL drop.
+     *
+     * <p>⛔ THE CLIFF IS THE SAME DEFECT AS THE LAVA (2026-09-24). With the lava margin live, the next
+     * nether death was the walker leaving a ledge at y=74 at walking pace (takeoff vel -0.07,-0.075,
+     * 0.108, walker=true) and falling 44 blocks into a lava lake. The lava was far below, not beside
+     * the route, and RouteHazards deliberately calls a column deeper than 32 blocks "not ours" so a
+     * gap jump over the void stays a route. So the same one-block drift that put the body into
+     * adjacent lava put it over an adjacent cliff. A neighbour whose feet and floor cells are both
+     * open and whose column falls 20 or more (VoidDetector.fallHeight -- which also reads a lava
+     * column as the void) closes the cell in the margin pass exactly like lava does; the bare pass
+     * still crosses when nothing else reaches the goal. Only true lips are scanned, so ordinary
+     * ground costs two block reads per neighbour.
+     */
     private static boolean lavaAdjacent(BlockPos feet, WorldView world) {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
-                if (world.getBlockState(feet.add(dx, 0, dz)).getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)
-                        || world.getBlockState(feet.add(dx, -1, dz)).getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)) {
+                BlockPos n = feet.add(dx, 0, dz), nd = n.down();
+                var sn = world.getBlockState(n);
+                var sd = world.getBlockState(nd);
+                if (sn.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)
+                        || sd.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA)) {
+                    return true;
+                }
+                if (sn.getCollisionShape(world, n).isEmpty() && sd.getCollisionShape(world, nd).isEmpty()
+                        && VoidDetector.fallHeight(Vec3d.ofBottomCenter(n), world) >= LETHAL_DROP) {
+                    cpCliffMargin++;
                     return true;
                 }
             }
         }
         return false;
     }
+
+    /** A fall this deep kills a full-health body; its lip gets the same margin as lava. */
+    private static final int LETHAL_DROP = 20;
+    /** Cells closed in the margin pass because a neighbour is the lip of a lethal drop. */
+    public static volatile int cpCliffMargin = 0;
 
     public static List<BlockPos> findPath(BlockPos start, BlockPos goal, WorldView world) {
         // ⛔ A ONE-BLOCK MARGIN FROM LAVA FIRST, THE BARE ROUTE ONLY IF THERE IS NO OTHER (G108 nether,
