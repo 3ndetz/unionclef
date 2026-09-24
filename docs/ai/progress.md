@@ -3,7 +3,29 @@
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 
-## 2026-09-23 (latest, late) — v0.95.35: chase_terrain 0/4 -> 4/4; full pvp 11/12 ok, the best sweep on record
+## 2026-09-24 (latest) — v0.95.36/37: route margins + never dig your own floor; guards green, survival effect NOT measurable yet
+
+- 0.95.36: FastPlanner prices lava-adjacent cells at 12 steps; CombatPathfinder (the walker's main
+  route source, a BFS) searches with lava-adjacent cells closed first.
+- 0.95.37: the margin also covers the lip of a 20+ drop (a death: walker off a ledge at y=74, 44
+  blocks into lava); DestroyBlockTask never digs its own floor over an unsafe landing (baritone
+  MineProcess.java:126; a death recorded standing, velocity straight down, no driver). First cut of
+  the margin fallback kept partial routes and froze nav_cliff at the lip -- corrected to "if the
+  margin route does not reach the goal, take the bare one when IT does".
+- Guards all first-try: nav 14/14, pvp edge/chase 5/5 (self-falls 0), OBS PASS. Released v0.95.37.
+- Survival: 0.95.32 control 0/2 stints without death; 0.95.34/35 3/6; 0.95.36 0/2; 0.95.37 1/4 (+1
+  that died seconds after its window). Far above the control; not distinguishable among 0.95.34-37
+  at this n (checklist 4b). Remaining death shapes differ from each other: executor straight-down
+  drop on a non-full floor block (soul sand -- getBlockPos() is inside the block), a walker sprint
+  jump UP next to a cliff (canJump skips the landing check when the waypoint is higher), falls whose
+  takeoff is under the 20-block void threshold of DamageWatch's recorder.
+- nav_lava (1-wide lane between lava gutters, with a jog) built as the fast deterministic course --
+  and measured NOT to discriminate: the 0.95.29 release passes it 3/3 under both tungsten ;goto and
+  altoclef @goto. Kept as a guard; the non-result is in its docstring.
+- Harness: gamer_smoke's "deaths this run" misses lava deaths (server log is the truth); gamer_smoke
+  now recreates a worn client once (fired 3/3 when needed, 10 -> 23-29 fps).
+
+## 2026-09-23 (late) — v0.95.35: chase_terrain 0/4 -> 4/4; full pvp 11/12 ok, the best sweep on record
 
 chase_terrain failed identically on the 0.95.29 release and 0.95.34 (verified A/B), and was about to
 be filed as pre-existing. Instrumented instead: the punk chase WAS on (target in hand), the walker
