@@ -52,6 +52,8 @@ public class PathExecutor {
      *  See tickBreaking's target-change check for why this exists. */
     private net.minecraft.util.math.BlockPos breakBudgetTarget = null;
     private int breakBudgetTicks = 300;
+    /** The planner-side estimate the current budget was sized from, for the abort line. */
+    private double breakBudgetEstimate = 0;
     public static volatile int breakBudgetSized = 0;
 
     /**
@@ -735,6 +737,7 @@ public class PathExecutor {
             // formula was written to give. Raised to 12000 (10 minutes) so the case this fix
             // exists for actually gets the intended margin, not just barely enough to scrape by.
             breakBudgetTicks = (int) Math.max(300, Math.min(12000, estimate * 2 + 100));
+            breakBudgetEstimate = estimate;
             breakBudgetSized++;
         }
         Vec3d eye = player.getEyePos();
@@ -798,9 +801,12 @@ public class PathExecutor {
                         target.toShortString().replace(", ", ","));
             }
             Debug.logMessage(String.format(
-                    "Mining aborted: ticks=%d dist=%.2f target=%s eye=(%.2f,%.2f,%.2f)",
+                    "Mining aborted: ticks=%d dist=%.2f target=%s eye=(%.2f,%.2f,%.2f) est=%.0f budget=%d"
+                            + " ground=%b held=%s progress=%.2f",
                     breakingTicks, Math.sqrt(eye.squaredDistanceTo(center)),
-                    target.toShortString(), eye.x, eye.y, eye.z));
+                    target.toShortString(), eye.x, eye.y, eye.z, breakBudgetEstimate, breakBudgetTicks,
+                    player.isOnGround(), player.getMainHandStack().getItem().toString(),
+                    mc.interactionManager.getBlockBreakingProgress() / 10.0));
             options.attackKey.setPressed(false);
             mc.interactionManager.cancelBlockBreaking();
             TungstenModRenderContainer.BREAK_PLAN.clear();

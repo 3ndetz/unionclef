@@ -5668,6 +5668,30 @@ public class Py4jEntryPoint {
                 + " other=" + kaptainwutax.tungsten.path.movements.MovementQueue.edgeOther;
     }
 
+    /**
+     * Where block breaks with real progress were thrown away, and how often: "resets=N site=count ...".
+     * A site is the first frame of mod code on the stack ("cancel@" = cancelBlockBreaking, "retarget@"
+     * = the break switched blocks). Call after a dig that never finishes; pass clear=true to reset.
+     */
+    /** The last 80 raw block-break events (update/ATTACK/BREAK/CANCEL with vanilla's break state). */
+    public String breakEvents() {
+        // Keep the transitions (ATTACK/BREAK/CANCEL) and the update right before each one.
+        String[] ev = adris.altoclef.control.BreakResetTrace.events().split(java.util.regex.Pattern.quote(" | "));
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ev.length; i++) {
+            boolean key = !ev[i].contains(" update ");
+            boolean beforeKey = i + 1 < ev.length && !ev[i + 1].contains(" update ");
+            if (key || beforeKey) sb.append(ev[i]).append(" | ");
+        }
+        return sb.toString();
+    }
+
+    public String breakResetStats(boolean clear) {
+        String s = adris.altoclef.control.BreakResetTrace.summary();
+        if (clear) adris.altoclef.control.BreakResetTrace.clear();
+        return s;
+    }
+
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */
     public Map<String, Object> buildQueueClear() {
         kaptainwutax.tungsten.helpers.BlockPlaceHelper.clearQueue();
@@ -5694,6 +5718,12 @@ public class Py4jEntryPoint {
             // Hunger and saturation: below 18 food health does not regenerate, which a full
             // playthrough showed as hp frozen at 16.2 for five minutes of diamond mining -- and
             // there was no way to see why from outside.
+            // The block being broken right now and how far along (0..1), or absent when not mining.
+            // Lets an observer tell "standing still, digging" from "standing still, stuck".
+            if (client.interactionManager != null && client.interactionManager.isBreakingBlock()) {
+                int p = client.interactionManager.getBlockBreakingProgress();
+                self.put("breakingProgress", p < 0 ? 0.0 : p / 10.0);
+            }
             self.put("food", me.getHungerManager().getFoodLevel());
             self.put("saturation", me.getHungerManager().getSaturationLevel());
             self.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));

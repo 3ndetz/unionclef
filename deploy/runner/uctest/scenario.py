@@ -164,8 +164,21 @@ class Ctx:
             self._last_move_pos = bp
             self._last_move_t = now
         elif now - self._last_move_t > 6 and not caught and not arrived:
-            self.freeze_windows += 1
             self._last_move_t = now
+            # DIGGING IS NOT FREEZING. A stone broken by hand takes 7.5 s standing still, and the
+            # planner chooses that on purpose (weighted A*, baritone's costHeuristic): nav_cliff
+            # booked every such dig as a freeze and failed runs that reached the goal clean. A
+            # window where a block break is in progress is counted as a dig instead. An endless
+            # dig still fails the course, on "reached goal".
+            okg, gs = self.bot.py.try_call("getGameState")
+            prog = None
+            if okg and isinstance(gs, dict):
+                prog = (gs.get("self") or {}).get("breakingProgress")
+            if prog is not None:
+                self.dig_windows = getattr(self, "dig_windows", 0) + 1
+                self.log(f"  dig window at {bp} (break progress {prog})")
+            else:
+                self.freeze_windows += 1
             # WHAT WAS THE BOT DOING WHILE IT STOOD THERE? A position alone cannot tell a
             # "the search found nothing" stall from a "the executor is mid-manoeuvre" one, and
             # those need opposite fixes. execState reports the engines in one string.
