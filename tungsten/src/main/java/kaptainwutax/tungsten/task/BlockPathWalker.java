@@ -276,6 +276,27 @@ public class BlockPathWalker {
         return Vec3d.ofBottomCenter(path.get(path.size() - 1));
     }
 
+    /** Ticks sprint was withheld because the cell one past the waypoint is dangerous. */
+    public static volatile int walkerNoSprintOvershoot = 0;
+
+    /**
+     * Is the cell one past {@code wp}, continuing the direction from the body to it, safe to be
+     * carried into? Not a hazard/lava column (RouteHazards) and not the lip of a drop deeper than 3.
+     */
+    private static boolean overshootSafe(WorldView world, Vec3d body, BlockPos wp) {
+        double dx = wp.getX() + 0.5 - body.x, dz = wp.getZ() + 0.5 - body.z;
+        double h = Math.sqrt(dx * dx + dz * dz);
+        if (h < 0.3) return true;
+        int ix = wp.getX() + (int) Math.signum(Math.round(dx / h));
+        int iz = wp.getZ() + (int) Math.signum(Math.round(dz / h));
+        if (ix == wp.getX() && iz == wp.getZ()) return true;
+        BlockPos.Mutable s = new BlockPos.Mutable();
+        if (kaptainwutax.tungsten.path.RouteHazards.lethalColumn(world, ix, wp.getY(), iz, s)) return false;
+        int fall = kaptainwutax.tungsten.combat.VoidDetector.fallHeight(
+                new Vec3d(ix + 0.5, wp.getY(), iz + 0.5), world);
+        return fall <= 3;
+    }
+
     // ── tick ─────────────────────────────────────────────────────────────────
 
     public static void tick(ClientPlayerEntity player) {
@@ -826,7 +847,18 @@ public class BlockPathWalker {
         // same tick and the last writer wins — the placer clears it on its exit paths. That is
         // the "exactly one per-tick writer of keys" point from docs/BARITONE-PORT-SPEC.md,
         // measured rather than argued: the fix is unit 2, one movement owning the manoeuvre.
-        mc.options.sprintKey.setPressed(move && !climbing && !intoHole);   // sprint-jump overshoots a ledge, and a hole
+        // ⛔ NO SPRINT WHEN AN OVERSHOOT WOULD LAND IN DANGER -- baritone MovementTraverse :274-277
+        // (G108 nether, 2026-09-24). Baritone sprints a traverse only if the cell ONE PAST the
+        // destination, in the direction of travel (`into = dest + (dest - src)`), is not something to
+        // avoid walking into: a sprinting body carries past its target, and if that carry ends in
+        // lava it is not worth the speed. This walker sprinted unconditionally. The nether measured
+        // what that costs: a sprint jump by the walker (takeoff vel 0.037,+0.165,-0.171, walker=true)
+        // off the top of a step and 20 blocks down into lava. Tungsten's executor also drifts where
+        // baritone's does not, so the overshoot cell must be neither lethal (RouteHazards) nor the lip
+        // of a drop deeper than 3.
+        boolean overshootSafe = overshootSafe(player.getEntityWorld(), playerPos, wp);
+        if (!overshootSafe && move) walkerNoSprintOvershoot++;
+        mc.options.sprintKey.setPressed(move && !climbing && !intoHole && overshootSafe);   // sprint-jump overshoots a ledge, and a hole
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
