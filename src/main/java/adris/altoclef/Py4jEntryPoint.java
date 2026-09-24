@@ -5510,6 +5510,11 @@ public class Py4jEntryPoint {
             self.put("hp", me.getHealth());
             self.put("maxHp", me.getMaxHealth());
             self.put("armor", me.getArmor());
+            // Hunger and saturation: below 18 food health does not regenerate, which a full
+            // playthrough showed as hp frozen at 16.2 for five minutes of diamond mining -- and
+            // there was no way to see why from outside.
+            self.put("food", me.getHungerManager().getFoodLevel());
+            self.put("saturation", me.getHungerManager().getSaturationLevel());
             self.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
             self.put("onGround", me.isOnGround());
             // WHICH WORLD AM I IN? There was no way to ask over py4j at all, which a playthrough
