@@ -1061,4 +1061,62 @@ class MobWeaponFromPack(MobMelee):
 
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack]
+class MobUnarmedCrowd(Scenario):
+    """THE RESPAWN: empty-handed, full health, three zombies around, at night (2026-09-24).
+
+    Every other mob course hands the bot a sword (checklist RULE SIX), so none can see what the
+    frontier stints showed twice in a row: after a death the bot respawns EMPTY at the world spawn,
+    zombies are waiting, and it dies again -- "slain by Zombie" three times in 80 seconds, twice. Each
+    loop throws away a whole ladder climb. An unarmed, unarmoured body cannot win that fight
+    (MobDefenseChain's own canDealWith is 0 for it), so the only right answer is to leave.
+
+    The bot is given an ordinary errand (@get oak_log -- an idle bot runs no chains, rule TWO) rather
+    than a kill order, which is the respawn situation: a task in hand and hostiles around.
+
+    Gates: three zombies were there, and the bot did NOT DIE in the window (the survival chain's own
+    death counter, before vs after). Health lost is recorded, not gated -- a flight that takes a hit
+    or two and lives is the success this course is for.
+    """
+    id = "mob_unarmed"
+    tier = "gate"
+    needs_victim = False
+    duration = 60
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=zombie]")
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:instant_health 1 10 true")
+        time.sleep(1)
+        ok, st = ctx.bot.py.try_call("lavaEntryStats")
+        ctx.geo["deaths0"] = int(st.get("deaths", 0)) if ok and isinstance(st, dict) else None
+        ctx.bot.py.try_call("resetRunCounters")
+        for x, z in ((4.5, 0.5), (-3.5, 3.5), (0.5, -4.5)):
+            ctx.rcon.cmd(f"summon zombie {x} {STAND_Y} {z}")
+        ctx.geo["spawned"] = _zombie_count(ctx)
+        time.sleep(1)
+        ctx.bot.cmd("@get oak_log 3")
+
+    def judge(self, ctx):
+        ok, st = ctx.bot.py.try_call("lavaEntryStats")
+        d1 = int(st.get("deaths", 0)) if ok and isinstance(st, dict) else None
+        d0 = ctx.geo.get("deaths0")
+        died = None if d0 is None or d1 is None else d1 - d0
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+        yield Criterion("three zombies were spawned", ctx.geo.get("spawned") == 3,
+                        f"count_at_spawn={ctx.geo.get('spawned')}")
+        yield Criterion("did not die", died == 0,
+                        f"deaths={died} min_hp={low} mdFlee={_stat(ctx, 'mdFlee')} "
+                        f"mdFleeStuck={_stat(ctx, 'mdFleeStuck')} mdFight={_stat(ctx, 'mdFight')}")
+        yield Criterion("health lost (recorded, not gated)", True, f"min_hp={low}")
+
+
+SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd]
