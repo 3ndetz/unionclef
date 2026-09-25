@@ -22,6 +22,14 @@
   enderman hits for 7: at 4 hp every exchange is lethal. Needs: do not start/continue a fight whose
   one hit kills; get food before the food total runs out in the nether. gamer_smoke now logs
   hunger/saturation/food items on every sample.
+- [ ] **Nether: standing lava death (melee_n2, 2026-09-25).** Body on the ground, velocity ~0, no
+  movement driver (only a physics search running), 5 lava entries in 30 s, then "tried to swim in
+  lava" at (125,53,149). Either lava flowed onto it or a break released lava -- the live LAVA/DEATH
+  line now captures the next one; add the active task / break target to the snapshot.
+- [ ] **mob_trio (zero damage) and mob_skeleton (at most one arrow) fail on the control too**
+  (0/4 without the melee guard, 2026-09-25) -- pre-existing combat quality, not regressions.
+- [ ] **Water escape without tools** (flooded ravine after a death: drift stops "Path stopped: drift
+  4.2 blocks" in water, no pickaxe).
 - [ ] **Food: "Collect 140 units of food" on a food-less mountain start** sent the bot chasing a rabbit
   into a powder-snow grove at minute 2 (full2, 0.95.41). getGameState now reports food/saturation.
 

@@ -93,6 +93,18 @@ public final class VoidGuard {
     private static boolean wasAirborneOverVoid = false;
     private static boolean sawEdgeLastTick = false;
 
+    /**
+     * When the bot last swung at a mob (set by altoclef's attack). A melee exchange keeps the guard
+     * armed for {@link #MELEE_GUARD_MS} after the swing: knockback is movement too, and vanilla's
+     * sneak edge-clamp stops it at a rim exactly as it stops a step.
+     */
+    public static volatile long meleeAtMs = 0L;
+    public static final long MELEE_GUARD_MS = 3000L;
+
+    public static boolean meleeEngaged() {
+        return System.currentTimeMillis() - meleeAtMs < MELEE_GUARD_MS;
+    }
+
     public static void protect(ClientPlayerEntity player, Vec3d pos, Vec3d vel, WorldView world) {
         // IS THE GUARD EVEN ON DUTY? Two thirds of the bot's real deaths are "fell from a high
         // place" -- six of nine in every run of a clean sweep. Either this never runs, or it runs

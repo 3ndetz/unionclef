@@ -257,10 +257,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// protection at all. It had not bitten only because the mob arenas are flat -- luck, not
 		// design. The exemption on movementOwnsTick is kept exactly as it was, which is what keeps
 		// the guard off BridgeTask, PillarTask and the walker; those stand at a rim on purpose.
+		// ⛔ AND IN A MELEE WITH A MOB (2026-09-25). None of the four above is running while altoclef
+		// fights a mob, so the guard slept through every such fight. A nether run on 0.95.41 went 21
+		// minutes and 10 of 14 pearls, then "was doomed to fall by Enderman": knocked off a rim 22
+		// blocks up with no movement driver at all. VoidGuard.meleeEngaged() is 3 s after the last swing.
 		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()
 				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
 				|| kaptainwutax.tungsten.task.BowShooter.isActive()
-				|| kaptainwutax.tungsten.task.ProjectileDodge.isActive())
+				|| kaptainwutax.tungsten.task.ProjectileDodge.isActive()
+				|| kaptainwutax.tungsten.combat.VoidGuard.meleeEngaged())
 				&& !tungsten$movementOwnsTick) {
 			// ⛔ AND NOT WHILE THE WALKER FOLLOWS A PLANNED ROUTE (2026-09-23). The note above says
 			// the movementOwnsTick exemption "keeps the guard off BridgeTask, PillarTask and the

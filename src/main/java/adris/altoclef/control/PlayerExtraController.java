@@ -83,6 +83,7 @@ public class PlayerExtraController {
             }
             mod.getInputControls().tryPress(Input.CLICK_LEFT);
             mod.getDamageTracker().onClientMeleeAttack(entity);
+            kaptainwutax.tungsten.combat.VoidGuard.meleeAtMs = System.currentTimeMillis();
             _succesfulHit = true;
         }
         return _succesfulHit;
