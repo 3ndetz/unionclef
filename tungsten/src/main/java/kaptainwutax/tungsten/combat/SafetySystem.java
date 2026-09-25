@@ -705,6 +705,8 @@ public class SafetySystem {
      * Scans blocks 1-4 ahead in velocity direction for serious drops.
      * If any landing spot has fall 4+, don't jump.
      */
+    private static final net.minecraft.util.math.BlockPos.Mutable scratch = new net.minecraft.util.math.BlockPos.Mutable();
+
     public static boolean isJumpLandingSafe(Vec3d pos, Vec3d vel, net.minecraft.world.WorldView world) {
         double horizSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
         if (horizSpeed < 0.01) return true; // standing still, jump is safe
@@ -719,6 +721,12 @@ public class SafetySystem {
             int z = net.minecraft.util.math.MathHelper.floor(pos.z + nz * dist);
             int fall = VoidDetector.fallHeight(new Vec3d(x + 0.5, y, z + 0.5), world);
             if (fall >= 4) return false;
+            // ⛔ A SHALLOW LAVA POOL IS NOT A SAFE LANDING. fallHeight measures to the first solid
+            // block, and lava has no collision: over a pool with stone a block or two under it the
+            // "fall" reads 2 and the hop was allowed. Measured in the nether (rung-ender, 2026-09-24):
+            // a walker hop on a straight lane carried the body a block past its last waypoint and
+            // into lava. Every column of the carry answers to the rule every executor uses.
+            if (kaptainwutax.tungsten.path.RouteHazards.lethalColumn(world, x, y, z, scratch)) return false;
         }
         return true;
     }

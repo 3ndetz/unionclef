@@ -232,7 +232,17 @@ public class BlockPathWalker {
             BlockPos a = p.get(i - 1), b = p.get(i);
             maxHop = Math.max(maxHop, Math.max(Math.abs(a.getX() - b.getX()), Math.abs(a.getZ() - b.getZ())));
         }
-        return String.format("%s wp%d/%d nearest#%d d%.1f maxHop%d", mode, waypointIdx, p.size(), bestI, best, maxHop);
+        // The geometry, not just the distance: where the body was, and the three waypoints around the
+        // one it was heading for. "d1.4 from the nearest waypoint" cannot say whether the body cut a
+        // corner, overshot a turn or drifted sideways on a straight -- and those are different fixes.
+        int cur = Math.max(0, Math.min(waypointIdx, p.size() - 1));
+        StringBuilder g = new StringBuilder();
+        for (int k = Math.max(0, cur - 1); k <= Math.min(p.size() - 1, cur + 1); k++) {
+            BlockPos w = p.get(k);
+            g.append(k == cur ? " >" : " ").append(w.getX()).append(',').append(w.getY()).append(',').append(w.getZ());
+        }
+        return String.format("%s wp%d/%d nearest#%d d%.1f maxHop%d cell=%d,%d,%d route[%s ]", mode, waypointIdx, p.size(),
+                bestI, best, maxHop, cell.getX(), cell.getY(), cell.getZ(), g);
     }
 
     /**

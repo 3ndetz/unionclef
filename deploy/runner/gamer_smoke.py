@@ -1482,6 +1482,15 @@ def main():
         print(f"  client fps (median): {med_fps:.1f} over {len(fps_samples)} samples")
     phase_report()
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
+    # ⛔ THE BOT STOPS WHEN THE WINDOW ENDS (2026-09-25). It used to keep playing after the verdict,
+    # in a world the next run was about to replace, and a death there was booked to nothing: a
+    # "nether lava death" chased for a day turned out to happen between two runs -- the next run's
+    # reconnect found the bot still digging down its own pillar over lava. Watching a live bot after
+    # a run is what --record and the checkpoints are for.
+    try:
+        py4j("cmd", c="@stop")
+    except Exception:
+        pass
     return ok
 
 # ONE RUN OF THIS IS A COIN, NOT A CRITERION.
