@@ -49,7 +49,16 @@ where the trouble is. So:
    stage needs a hand-made entry (e.g. "just inside a fortress"), save it with
    `checkpoint.py save NAME --note "..."` the moment the run is there.
 
-Machinery: `deploy/runner/checkpoint.py` (save / restore / list / drop), `gamer_smoke.py --from`.
+5. **⛔ DISK HYGIENE (operator, 2026-09-25: checkpoints filled ~190 GB and took the host disk to 98%).**
+   A checkpoint is LIGHT: seed and time (level.dat), the player (position, inventory, health, hunger),
+   stats/advancements/data, the nether when small, and only the 3x3 region files around the bot --
+   the rest regenerates from the seed. ~20-120 MB, never the 2 GB world. The folder is capped at
+   15 GB (`checkpoint.py` drops the oldest periodic ones first after every save; `last`,
+   `nether-fresh`, `rung-ender` are protected), and no save happens with under 40 GB free on the disk.
+   Check `python deploy/runner/checkpoint.py list` (prints folder size and free disk) at the start of a
+   session and after long runs; clean up recordings and artifacts you no longer need as well.
+
+Machinery: `deploy/runner/checkpoint.py` (save / restore / list / budget / drop), `gamer_smoke.py --from`.
 Full history of the rule: section 4 item 7 ("Freeze the run where the trouble starts").
 
 ---

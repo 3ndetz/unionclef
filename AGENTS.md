@@ -43,6 +43,10 @@ wrong, and this section exists so it never is again.
 > + `rung-<rung>` per ladder rung); resume with `gamer_smoke.py N --from NAME`. The rule and the
 > commands: **[docs/CHECKLIST.md, section 0a](docs/CHECKLIST.md#0a--checkpoints-never-test-a-late-game-problem-from-an-empty-inventory-operator-2026-09-16-and-2026-09-24)**.
 >
+> ⛔⛔ **DISK HYGIENE (operator 2026-09-25).** Checkpoints once filled ~190 GB. They are light now
+> (seed + player + nearby regions, capped at 15 GB total, no save under 40 GB free) -- keep it that
+> way, run `checkpoint.py list` to see the budget, and delete what you no longer need (videos, logs).
+>
 > ⛔⛔ **PORT BARITONE'S LOGIC, DO NOT RE-INVENT IT (operator 2026-09-24).** baritone already hit the same
 > problems (hazards, powder snow, lava, falls, mining under yourself, mob danger). Before writing a
 > fix, find how baritone handles that case (`baritone/src/main/java`, source reference) and port that
