@@ -246,6 +246,17 @@ public class FoodChain extends SingleTaskChain {
         if (health <= 10) {
             return true;
         }
+
+        // ⛔ KEEP REGENERATION RUNNING. Natural regeneration needs a food level of 18 or more; below
+        // that, health lost stays lost. The thresholds below let the bot walk around at 16 health and
+        // 15 food indefinitely, and it met every nether fight that way: two endermen took it from 12
+        // to 0 in twenty seconds, twice in three runs (2026-09-25, rung-ender resumes), in full armour
+        // and with a diamond sword. Hurt and under 18 food means eat now -- FoodChain only acts when
+        // no enemy is near (areEnemiesNearby), so this is the lull between fights, which is exactly
+        // when a player eats.
+        if (health < player.getMaxHealth() && foodLevel < 18) {
+            return true;
+        }
         //Debug.logMessage("FOOD: " + foodLevel + " -- HEALTH: " + health);
 
         // Eat if we're desperate/need to heal ASAP

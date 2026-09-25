@@ -26,6 +26,12 @@
   movement driver (only a physics search running), 5 lava entries in 30 s, then "tried to swim in
   lava" at (125,53,149). Either lava flowed onto it or a break released lava -- the live LAVA/DEATH
   line now captures the next one; add the active task / break target to the snapshot.
+- [ ] **Enderman fights are the nether killer now (2026-09-25).** 7 of the last 10 nether deaths from
+  rung-ender were endermen (slain, or knocked off a rim), in full armour with a diamond sword, often
+  two endermen at once in a warped forest; hp 12 -> 0 in about twenty seconds. MobDefense's
+  canDealWith ignores current health, and fleeing does not work against teleporters. Next: a real
+  enderman tactic (fight under a 2-block ceiling they cannot reach, or in water), or pearls by piglin
+  bartering instead of hunting.
 - [ ] **mob_trio (zero damage) and mob_skeleton (at most one arrow) fail on the control too**
   (0/4 without the melee guard, 2026-09-25) -- pre-existing combat quality, not regressions.
 - [ ] **Water escape without tools** (flooded ravine after a death: drift stops "Path stopped: drift
