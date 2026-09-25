@@ -38,7 +38,7 @@ FROM_CP = sys.argv[sys.argv.index("--from") + 1] if "--from" in sys.argv else No
 # cold at minute two with nothing frozen to test the fix from. Now every run freezes the world every
 # 5 minutes (the last CP_KEEP of them kept per run, older ones deleted: a world is ~2 GB) AND at every
 # new ladder rung as `rung-<rung>` (overwritten by the newest run, so `--from rung-bucket` is always
-# the freshest "has a bucket" state). `--checkpoint-every 0` turns the periodic series off.
+# the freshest "has a bucket" state; never after the run has died, when a rung is a bare respawn). `--checkpoint-every 0` turns the periodic series off.
 CP_EVERY = float(sys.argv[sys.argv.index("--checkpoint-every") + 1]) if "--checkpoint-every" in sys.argv else 5.0
 CP_KEEP = 4
 SAVE_END = (sys.argv[sys.argv.index("--save-end") + 1] if "--save-end" in sys.argv
@@ -1162,6 +1162,7 @@ def main():
     fps_samples = []
     _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M"); _cp_series = []
     _lava_last = [None]
+    _lava_died = [False]
     # CAPTURE THE NETHER ENTRY THE MOMENT IT HAPPENS. The one-run underground->nether entry is proven
     # (v0.95.24 + v0.95.25), but the bot dies within ~30 s of arriving (Enderman knockback off a ledge)
     # -- faster than a 2 GB checkpoint copy -- so no periodic checkpoint ever caught it ALIVE in the
@@ -1250,7 +1251,13 @@ def main():
                     stall[3] = time.time()
                     print(f"  RUNG '{rung}' at {reached[rung]}s")
                     _new_rungs.append(rung)
-            if _new_rungs:
+            if _new_rungs and _lava_died[0]:
+                # A rung climbed again after a death is a respawn with an empty inventory, not an
+                # entry point for the stage. Measured 2026-09-25: a nether death at 39 min re-climbed
+                # crafting/wood tools/iron/iron tools and overwrote the clean rung-iron-tools and
+                # rung-wood-tools with a bare respawn on a mountain.
+                print(f"  rung checkpoint skipped: the run has died ({', '.join(_new_rungs)})")
+            elif _new_rungs:
                 # One freeze per poll, named after the last rung reached in it: an entry point for
                 # the next stage that is never older than the newest run to get this far.
                 _rn = "rung-" + re.sub(r"[^a-z0-9]+", "-", _new_rungs[-1].lower()).strip("-")
@@ -1265,6 +1272,8 @@ def main():
                 _lv = py4j("lava")
                 _sig = (_lv.get("entries"), _lv.get("deaths"))
                 if _sig != _lava_last[0]:
+                    if _lava_last[0] is not None and _sig[1] != _lava_last[0][1]:
+                        _lava_died[0] = True
                     if _lava_last[0] is not None:
                         print(f"  LAVA/DEATH t={int(time.time()-t0)}s entries={_lv.get('entries')} deaths={_lv.get('deaths')}"
                               f" | driver={_lv.get('driver')[:200]} | takeoff={_lv.get('takeoff')[:300]}"

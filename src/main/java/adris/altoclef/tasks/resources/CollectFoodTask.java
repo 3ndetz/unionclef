@@ -9,6 +9,7 @@ import adris.altoclef.tasks.DoToClosestBlockTask;
 import adris.altoclef.tasks.construction.DestroyBlockTask;
 import adris.altoclef.tasks.container.CraftInTableTask;
 import adris.altoclef.tasks.container.SmeltInSmokerTask;
+import adris.altoclef.tasks.movement.DefaultGoToDimensionTask;
 import adris.altoclef.tasks.movement.GetToBlockTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
@@ -27,6 +28,7 @@ import net.minecraft.block.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.mob.HoglinEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.SlimeEntity;
 import net.minecraft.entity.passive.*;
@@ -53,7 +55,10 @@ public class CollectFoodTask extends Task {
             new CookableFoodTarget("porkchop", PigEntity.class),
             new CookableFoodTarget("chicken", ChickenEntity.class),
             new CookableFoodTarget("mutton", SheepEntity.class),
-            new CookableFoodTarget("rabbit", RabbitEntity.class)
+            new CookableFoodTarget("rabbit", RabbitEntity.class),
+            // The Nether's only meat. Listed after the pig so the shared raw item still resolves
+            // to the same porkchop everywhere this table is read.
+            new CookableFoodTarget("porkchop", HoglinEntity.class)
     };
 
     public static final Item[] ITEMS_TO_PICK_UP = new Item[]{
@@ -85,12 +90,22 @@ public class CollectFoodTask extends Task {
         this.unitsNeeded = unitsNeeded;
     }
 
+    /**
+     * Raw meat is worth its cooked value only where it can be cooked. The smoker needs a crafting
+     * table, logs and a furnace, which this task only gathers in the Overworld; in the Nether the
+     * meat is eaten raw, so crediting it as cooked would declare the target met while the real
+     * inventory score (what {@link #isFinished()} reads) stays short, and the task would never end.
+     */
+    private static boolean canCookHere() {
+        return WorldHelper.getCurrentDimension() == Dimension.OVERWORLD;
+    }
+
     private static double getFoodPotential(ItemStack food) {
         if (food == null) return 0;
         int count = food.getCount();
         if (count <= 0) return 0;
         for (CookableFoodTarget cookable : COOKABLE_FOODS) {
-            if (food.getItem() == cookable.getRaw()) {
+            if (food.getItem() == cookable.getRaw() && canCookHere()) {
                 assert ItemVer.getFoodComponent(cookable.getCooked()) != null;
                 return count * ItemVer.getFoodComponent(cookable.getCooked()).getHunger();
             }
@@ -214,6 +229,7 @@ public class CollectFoodTask extends Task {
             // through to `return new TimeoutWanderTask()`) nor finish. Restored to match the
             // sibling CollectMeatTask.java's working implementation of the identical pattern.
             for (CookableFoodTarget cookable : COOKABLE_FOODS) {
+                if (!canCookHere()) break;
                 int rawCount = mod.getItemStorage().getItemCount(cookable.getRaw());
                 if (rawCount > 0) {
                     //Debug.logMessage("STARTING COOK OF " + cookable.getRaw().getTranslationKey());
@@ -341,6 +357,14 @@ public class CollectFoodTask extends Task {
             }
         }
         surfaceSearchTask = null;
+        // The Nether has no food to find by wandering: no animals, no crops, and hoglins only in
+        // crimson forests, which the checks above already take when one is in sight. Wandering
+        // there hungry is how a run once stood at 4 hearts and 6 food for as long as it lasted,
+        // unable to regenerate or to fight. Food lives in the Overworld, so go back for it.
+        if (WorldHelper.getCurrentDimension() == Dimension.NETHER) {
+            setDebugState("No food in sight in the Nether: going to the Overworld for it");
+            return new DefaultGoToDimensionTask(Dimension.OVERWORLD);
+        }
         // Already exposed, outside the Overworld, or no loaded dry surface nearby.
         setDebugState("Searching...");
         return new TimeoutWanderTask();
