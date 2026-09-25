@@ -1972,7 +1972,7 @@ public final class FastPlanner {
     }
 
     /** How many blocks' walk a cell next to lava is worth avoiding. See hazardProximityPenalty. */
-    private static final double LAVA_MARGIN_MULT = 12.0;
+    private static final double LAVA_MARGIN_MULT = kaptainwutax.tungsten.path.RouteHazards.LAVA_MARGIN_MULT;
 
     private static boolean lavaAt(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
         return kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyLava(cachedState(w, x, y, z, s));

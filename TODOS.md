@@ -16,13 +16,23 @@
   threshold 14). Reproduce from a checkpoint before it; compare FoodChain thresholds.
 - [ ] **After a planned dig the navigator stands ~3 s replanning** ("Mining done -- passage open",
   "Retrying (1/10)") before walking on (nav_cliff, bench log "break progress 3198 ms ago").
-- [ ] **Nether: fighting at 2 hearts with no food (death, nether40 run on 0.95.41).** Pearls 2 -> 10/14 in
+- [ ] **Nether: fighting at 2 hearts with no food (death, nether40 run on 0.95.41).** FOOD HALF FIXED
+  2026-09-25: CollectFoodTask in the Nether hunts hoglins, credits raw meat at raw value there, and
+  goes back to the Overworld when no food is in sight (n42: 13/14 pearls, then 20 min at 4 hearts
+  with no food, death; nether-nofood resume: two hoglins, food 20, hp regenerating). Pearls 2 -> 10/14 in
   20 min, then hp 16 -> 4 in enderman fights and no regeneration for 45 s (only rotten flesh left);
   the hunt kept going, pillared to y=98 after an enderman on a warped-fungus crown, and fell. An
   enderman hits for 7: at 4 hp every exchange is lethal. Needs: do not start/continue a fight whose
   one hit kills; get food before the food total runs out in the nether. gamer_smoke now logs
   hunger/saturation/food items on every sample.
-- [ ] **Nether: standing lava death (melee_n2, 2026-09-25).** Body on the ground, velocity ~0, no
+- [x] **FIXED 2026-09-25 (lava escape swims -- baritone canSwimThroughLava ported back; escape_lava_pool
+  0/2 -> 3/3, escape_lava 0/2 -> 3/3; nav 17/17). Reproduced on checkpoint nether-nofood: in lava,
+  "Escaping (lava)" with only a physics search running (10.97 s to answer), body still, death.
+  Three defects: every planner refused lava while escaping, the escape goal was the air over the
+  bot's head (no floor test), and with nothing to place the place branch took every tick.
+  The ENTRY that time was the physics executor's route hugging a lava pool (its block guide had
+  no lava margin; FastPlanner and the grid BFS did) -- margin added to BlockSpacePathFinder.
+  Nether: standing lava death (melee_n2, 2026-09-25).** Body on the ground, velocity ~0, no
   movement driver (only a physics search running), 5 lava entries in 30 s, then "tried to swim in
   lava" at (125,53,149). Either lava flowed onto it or a break released lava -- the live LAVA/DEATH
   line now captures the next one; add the active task / break target to the snapshot.

@@ -107,6 +107,27 @@ public final class RouteHazards {
      */
     public static volatile boolean lavaSwim = false;
 
+    /**
+     * How many blocks' walk a cell with lava beside it is worth avoiding. One price for every
+     * planner that steers the body: FastPlanner, and the physics search's block guide.
+     */
+    public static final double LAVA_MARGIN_MULT = 12.0;
+
+    /**
+     * Lava in any of the eight columns around (x, z), at feet or floor level: a cell a 0.6-wide
+     * body steered at its centre can drift into lava from. See FastPlanner.hazardProximityPenalty.
+     */
+    public static boolean lavaBeside(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                if (w.getBlockState(s.set(x + dx, y, z + dz)).getFluidState().isIn(FluidTags.LAVA)) return true;
+                if (w.getBlockState(s.set(x + dx, y - 1, z + dz)).getFluidState().isIn(FluidTags.LAVA)) return true;
+            }
+        }
+        return false;
+    }
+
     /** Is (x, y, z) lava that the escape may swim through right now? */
     public static boolean swimmableLava(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
         if (!lavaSwim) return false;

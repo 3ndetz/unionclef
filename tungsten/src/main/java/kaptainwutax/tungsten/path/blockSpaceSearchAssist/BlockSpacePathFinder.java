@@ -623,6 +623,18 @@ public class BlockSpacePathFinder {
 
 //	    cost += BlockStateChecker.isAnyWater(TungstenMod.mc.world.getBlockState(child.getBlockPos())) ? 50 : 0;
 
+		// ⛔ THE LAVA MARGIN THE OTHER PLANNERS ALREADY PAY (2026-09-25). FastPlanner prices a cell
+		// with lava beside it at twelve walks and the grid BFS runs a lava-margin pass first; this
+		// guide -- the one the physics executor follows -- priced it like any other cell, and that
+		// executor tolerates 2.6 blocks of drift before it stops. On the nether playthrough
+		// (checkpoint nether-nofood) its route ran along a lava pool, the body left the plan, the
+		// motion check stopped it one step too late and it went in. Same price, same definition.
+		BlockPos cp = child.getBlockPos();
+		if (kaptainwutax.tungsten.path.RouteHazards.lavaBeside(world, cp.getX(), cp.getY(), cp.getZ(),
+				new BlockPos.Mutable())) {
+			cost += kaptainwutax.tungsten.path.RouteHazards.LAVA_MARGIN_MULT * ActionCosts.WALK_ONE_BLOCK_COST;
+		}
+
 	    return cost;
 	}
 
