@@ -335,11 +335,14 @@ public class EndermanShelterTask extends Task {
         // Ground on every side, at most two blocks down: stepping off the pillar must be a short
         // drop, never a cliff (n48: a pillar by a drop, the body stepped off its top and fell 29
         // blocks into lava). This also keeps the top of a pillar from passing as a site.
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
+        // Two blocks out, not one: n50 pillared on a warped fungus crown at y 82 whose first ring
+        // was solid wart and whose second was a thirty-block drop, was hit on top and fell.
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
                 if (dx == 0 && dz == 0) continue;
                 BlockPos n = b.add(dx, 0, dz);
-                if (!solid(world, n) && !solid(world, n.down()) && !solid(world, n.down(2))) return false;
+                if (!solid(world, n) && !solid(world, n.down()) && !solid(world, n.down(2))
+                        && !solid(world, n.down(3))) return false;
                 if (RouteHazards.lethalColumn(world, n.getX(), n.getY(), n.getZ(), s) && !solid(world, n)) return false;
             }
         }
