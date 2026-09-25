@@ -108,6 +108,10 @@ public class BeatMinecraftTask extends Task {
     private final TimerGame timer2 = new TimerGame(35);
     private final TimerGame timer3 = new TimerGame(60);
     private final List<PriorityTask> gatherResources = new LinkedList<>();
+    /** Food fetched from inside the Nether (see the NETHER branch). */
+    private Task netherFoodTask;
+    private static final int NETHER_MIN_FOOD_UNITS = 16;
+    private static final int NETHER_FOOD_UNITS = 40;
     private final TimerGame changedTaskTimer = new TimerGame(3);
     private final TimerGame forcedTaskTimer = new TimerGame(10);
     private final List<BlockPos> blacklistedChests = new LinkedList<>();
@@ -1528,29 +1532,33 @@ public class BeatMinecraftTask extends Task {
         }
 
         //armor quipping logic
+        // ⛔ ONLY WHAT IS NOT ALREADY WORN (2026-09-26). hasItem counts the armour slots, so a bot
+        // wearing diamond boots got a fresh EquipArmorTask every tick, finished at once, and never
+        // reached the dimension logic below: n53/n54 stood five minutes at 0.6 health by the lava
+        // sea, leaf "Equipping armor {[diamond_boots]}".
         if (WorldHelper.getCurrentDimension() != Dimension.END && itemStorage.hasItem(Items.SHIELD) && !itemStorage.hasItemInOffhand(Items.SHIELD)) {
             return new EquipArmorTask(Items.SHIELD);
         }
 
         if (WorldHelper.getCurrentDimension() == Dimension.NETHER) {
-            if (itemStorage.hasItem(Items.GOLDEN_HELMET)) {
+            if (itemStorage.hasItem(Items.GOLDEN_HELMET) && !StorageHelper.isArmorEquipped(Items.GOLDEN_HELMET)) {
                 return new EquipArmorTask(Items.GOLDEN_HELMET);
-            } else if (itemStorage.hasItem(Items.DIAMOND_HELMET) && !hasItem(mod, Items.GOLDEN_HELMET)) {
+            } else if (itemStorage.hasItem(Items.DIAMOND_HELMET) && !StorageHelper.isArmorEquipped(Items.DIAMOND_HELMET) && !hasItem(mod, Items.GOLDEN_HELMET)) {
                 return new EquipArmorTask(Items.DIAMOND_HELMET);
             }
         } else {
-            if (itemStorage.hasItem(Items.DIAMOND_HELMET)) {
+            if (itemStorage.hasItem(Items.DIAMOND_HELMET) && !StorageHelper.isArmorEquipped(Items.DIAMOND_HELMET)) {
                 return new EquipArmorTask(Items.DIAMOND_HELMET);
             }
         }
 
-        if (itemStorage.hasItem(Items.DIAMOND_CHESTPLATE)) {
+        if (itemStorage.hasItem(Items.DIAMOND_CHESTPLATE) && !StorageHelper.isArmorEquipped(Items.DIAMOND_CHESTPLATE)) {
             return new EquipArmorTask(Items.DIAMOND_CHESTPLATE);
         }
-        if (itemStorage.hasItem(Items.DIAMOND_LEGGINGS)) {
+        if (itemStorage.hasItem(Items.DIAMOND_LEGGINGS) && !StorageHelper.isArmorEquipped(Items.DIAMOND_LEGGINGS)) {
             return new EquipArmorTask(Items.DIAMOND_LEGGINGS);
         }
-        if (itemStorage.hasItem(Items.DIAMOND_BOOTS)) {
+        if (itemStorage.hasItem(Items.DIAMOND_BOOTS) && !StorageHelper.isArmorEquipped(Items.DIAMOND_BOOTS)) {
             return new EquipArmorTask(Items.DIAMOND_BOOTS);
         }
 
@@ -2486,6 +2494,22 @@ public class BeatMinecraftTask extends Task {
                 if (!escaped) {
                     escaped = true;
                     mod.getInputControls().release(Input.CLICK_LEFT);
+                }
+
+                // ⛔ FOOD IN THE NETHER (2026-09-26). The food priority task lives in the Overworld
+                // gather list; this branch never asked. n51 ended 30 minutes with 9 pearls, no food
+                // and health falling; resumed, it wandered "Searching for fortress" at 0.6 health by
+                // the lava sea and died. CollectFoodTask in the Nether hunts hoglins, or goes back to
+                // the Overworld when there is no food in sight. Held until it finishes.
+                if (isTaskRunning(mod, netherFoodTask)) {
+                    setDebugState("Getting food: the Nether stock ran out");
+                    return netherFoodTask;
+                }
+                if (CollectFoodPriorityCalculator.needsEmergencyFood(mod)
+                        || StorageHelper.calculateInventoryFoodScore() < NETHER_MIN_FOOD_UNITS) {
+                    netherFoodTask = new CollectFoodTask(NETHER_FOOD_UNITS);
+                    setDebugState("Getting food: the Nether stock ran out");
+                    return netherFoodTask;
                 }
 
 
