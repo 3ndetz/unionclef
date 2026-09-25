@@ -25,7 +25,22 @@
 - [ ] **Food: "Collect 140 units of food" on a food-less mountain start** sent the bot chasing a rabbit
   into a powder-snow grove at minute 2 (full2, 0.95.41). getGameState now reports food/saturation.
 
-## `VoidGuard`'s new lava clamp (G108, 2026-09-19) is only on `protect()`, not on `apply()` -- the combat-strafe death it names stays unfixed as staged
+## [RESOLVED 2026-09-21, differently than expected] `VoidGuard`'s new lava clamp (G108, 2026-09-19) is only on `protect()`, not on `apply()` -- the combat-strafe death it names stays unfixed as staged
+
+> RESOLVED, but not by the route this note expected. `VoidGuard.apply(CombatMoveIntent, ...)`
+> still has no explicit `lavaByKey`/`lavaByVel` fields mirroring `protect()`'s own -- confirmed by
+> reading the current source directly (2026-09-25). What changed instead is one layer down:
+> `apply()`'s existing `edgeAhead`/`voidWithin` calls both run entirely on `VoidDetector.fallHeight`,
+> and `fallHeight` itself was fixed on 2026-09-21 (`a4ce4614`, "lava below is as lethal as the void")
+> to return the same lethal-depth reading for a lava-containing column as for a true void. So
+> `apply()` inherited real lava protection through the shared primitive its own checks already
+> called, without ever needing the parallel explicit fields this note asked for -- a better outcome
+> than the one requested, since it is now handled once rather than duplicated. Separately, the
+> diagnostic question this note left open (does the death happen mid-combat-approach or mid-
+> knockback) was answered by neither: the second-pass instrument built afterward found the actual
+> death was a plain block-path-walker straight-line walk into lava during an ordinary "Going to
+> biome" task, unrelated to combat at all, later closed by a direct fix in `BlockPathWalker`'s own
+> lava lookahead. Kept below for the record; nothing here is still open.
 
 Found while reading the in-progress, still-uncommitted G108 lava-avoidance diff live (session
 `unionclef`, 2026-09-20). The docs entry for this fix (`docs/ai/progress.md`, "nether stage WORKS
