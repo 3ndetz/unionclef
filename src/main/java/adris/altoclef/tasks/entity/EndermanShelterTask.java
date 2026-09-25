@@ -78,6 +78,10 @@ public class EndermanShelterTask extends Task {
     private long lastReachableMs = System.currentTimeMillis();
     /** Where the next site is searched from: the enderman that could not reach the last pillar. */
     private BlockPos searchFrom;
+    /** When the pillar at {@code base} was last started, and how many times it has been. */
+    private long pillarStartMs;
+    private int pillarStarts;
+    private static final long PILLAR_STALL_MS = 6_000;
     private static final long UNREACHED_MS = 15_000;
     /** Set when a pillar went unused: walk towards the endermen before building the next one. */
     private boolean relocate;
@@ -141,6 +145,7 @@ public class EndermanShelterTask extends Task {
 
         if (base != null && onTop(mod, base) && !relocate) {
             holding = true;
+            pillarStarts = 0;
             return fight(mod);
         }
         if (relocate) {
@@ -158,6 +163,19 @@ public class EndermanShelterTask extends Task {
             base = null;
             lastBase = null;
             lastInRangeMs = System.currentTimeMillis();
+        }
+        if (base != null && (PillarTask.isActive() || pillarStarts > 0)
+                && feet.getY() <= base.getY() && System.currentTimeMillis() - pillarStartMs > PILLAR_STALL_MS
+                || pillarStarts > 3) {
+            // A pillar that does not rise: the same site twice (n47, n49) had the body bobbing on
+            // the spot for ten minutes, the pillar restarted every few ticks. Give the site up.
+            Debug.logMessage("Enderman pillar: " + base.toShortString() + " does not rise, giving it up");
+            if (PillarTask.isActive()) PillarTask.stop();
+            rejected.add(base);
+            base = null;
+            lastBase = null;
+            pillarStarts = 0;
+            return null;
         }
         if (base != null && PillarTask.isActive()) {
             holding = true;
@@ -187,10 +205,22 @@ public class EndermanShelterTask extends Task {
             setDebugState("Going to the pillar site " + base.toShortString());
             return new GetToBlockTask(base);
         }
+        // A plant in the feet cell (warped fungus, roots) has no collision but catches the pillar's
+        // placement ray: n47 and n49 bobbed on a fungus for ten minutes each. FastPlanner breaks
+        // these before its own pillar legs (RealPlacement.obstructsPillarRay); do the same.
+        if (kaptainwutax.tungsten.helpers.RealPlacement.obstructsPillarRay(world, base)) {
+            setDebugState("Clearing the plant off the pillar site");
+            return new adris.altoclef.tasks.construction.DestroyBlockTask(base);
+        }
         if (!mod.getSlotHandler().forceEquipItem(buildItems(mod))) {
             setDebugState("No blocks for a pillar");
             return null;
         }
+        if (pillarStarts == 0 || !base.equals(lastBase)) {
+            pillarStartMs = System.currentTimeMillis();
+            pillarStarts = 0;
+        }
+        pillarStarts++;
         PillarTask.startTo(base.getY() + HEIGHT, null, base.getX(), base.getZ());
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.claimRoute();
         lastBase = base;
