@@ -36,7 +36,9 @@
   movement driver (only a physics search running), 5 lava entries in 30 s, then "tried to swim in
   lava" at (125,53,149). Either lava flowed onto it or a break released lava -- the live LAVA/DEATH
   line now captures the next one; add the active task / break target to the snapshot.
-- [ ] **Enderman fights are the nether killer now (2026-09-25).** 7 of the last 10 nether deaths from
+- [x] **FIXED 2026-09-26 (fight from a 3-block pillar: EndermanShelterTask; n51 30 min 0 deaths, 9/14
+  pearls; mob_endermen_shelter 4/4). Open: pearl rate (strict sites in warped forests).**
+  - [ ] **Enderman fights are the nether killer now (2026-09-25).** 7 of the last 10 nether deaths from
   rung-ender were endermen (slain, or knocked off a rim), in full armour with a diamond sword, often
   two endermen at once in a warped forest; hp 12 -> 0 in about twenty seconds. MobDefense's
   canDealWith ignores current health, and fleeing does not work against teleporters. Next: a real
