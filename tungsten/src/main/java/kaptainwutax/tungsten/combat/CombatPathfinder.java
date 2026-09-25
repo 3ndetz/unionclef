@@ -537,9 +537,12 @@ public class CombatPathfinder {
             {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}
     };
 
-    /** Is this cell liquid we can move through? Lava is a hazard, not a route. */
+    /** Is this cell liquid we can move through? Lava is a hazard, not a route -- except surface lava
+     *  while the lava escape swims (RouteHazards.lavaSwim, baritone canSwimThroughLava). */
     public static boolean isLiquid(BlockPos pos, WorldView world) {
-        return world.getBlockState(pos).getBlock() == Blocks.WATER;
+        return world.getBlockState(pos).getBlock() == Blocks.WATER
+                || kaptainwutax.tungsten.path.RouteHazards.swimmableLava(
+                        world, pos.getX(), pos.getY(), pos.getZ(), new BlockPos.Mutable());
     }
 
     public static boolean isSolid(BlockPos pos, WorldView world) {
@@ -555,6 +558,8 @@ public class CombatPathfinder {
     public static boolean isHazard(BlockPos pos, WorldView world) {
         BlockState state = world.getBlockState(pos);
         Block block = state.getBlock();
+        if (block == Blocks.LAVA && kaptainwutax.tungsten.path.RouteHazards.swimmableLava(
+                world, pos.getX(), pos.getY(), pos.getZ(), new BlockPos.Mutable())) return false;
         return block == Blocks.LAVA
                 || block instanceof FireBlock
                 || block == Blocks.MAGMA_BLOCK

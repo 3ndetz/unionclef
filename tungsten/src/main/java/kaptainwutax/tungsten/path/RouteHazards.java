@@ -89,7 +89,35 @@ public final class RouteHazards {
     }
 
     public static boolean hazard(WorldView w, BlockPos p) {
-        return hazard(w.getBlockState(p));
+        return hazardAt(w, p.getX(), p.getY(), p.getZ(), new BlockPos.Mutable());
+    }
+
+    /**
+     * baritone {@code AltoClefSettings.canSwimThroughLava} (baritone MovementHelper.java:166): while
+     * set, a LAVA cell with no fluid above it is walked through like water. Only the lava escape
+     * sets it -- a body that is already burning is better off crossing two blocks of lava surface
+     * to the shore than standing still.
+     *
+     * <p>⛔ WHY THIS CAME BACK (2026-09-25). The port dropped the clause (MovementHelperB
+     * canWalkThrough: "no tungsten equivalent"), so while escaping every planner refused every
+     * lava cell, the block-space searches found no route out of a pool, and the escape fell through
+     * to the physics search -- which took 10.97 s to answer with the body in lava at 5 hearts, on a
+     * nether playthrough (checkpoint nether-nofood). The bot burned to death two blocks from dry
+     * ground.
+     */
+    public static volatile boolean lavaSwim = false;
+
+    /** Is (x, y, z) lava that the escape may swim through right now? */
+    public static boolean swimmableLava(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        if (!lavaSwim) return false;
+        if (!w.getBlockState(s.set(x, y, z)).getFluidState().isIn(FluidTags.LAVA)) return false;
+        return w.getBlockState(s.set(x, y + 1, z)).getFluidState().isEmpty();
+    }
+
+    /** {@link #hazard(BlockState)} at a position, minus {@link #swimmableLava} while escaping. */
+    public static boolean hazardAt(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        if (!hazard(w.getBlockState(s.set(x, y, z)))) return false;
+        return !swimmableLava(w, x, y, z, s);
     }
 
     /**
@@ -99,12 +127,12 @@ public final class RouteHazards {
      * landing rule with allowFallIntoLava=false, and Parkour's refusal of a lava gap floor).
      */
     public static boolean lethalColumn(WorldView w, int x, int feetY, int z, BlockPos.Mutable s) {
-        if (hazard(w.getBlockState(s.set(x, feetY, z)))) return true;
-        if (hazard(w.getBlockState(s.set(x, feetY + 1, z)))) return true;
+        if (hazardAt(w, x, feetY, z, s)) return true;
+        if (hazardAt(w, x, feetY + 1, z, s)) return true;
         int bottom = w.getBottomY();
         for (int y = feetY - 1; y >= Math.max(bottom, feetY - LAVA_COLUMN_DEPTH); y--) {
+            if (hazardAt(w, x, y, z, s)) return true;                 // magma floor, or lava below
             BlockState st = w.getBlockState(s.set(x, y, z));
-            if (hazard(st)) return true;                              // magma floor, or lava below
             // Walking ONTO powder snow sinks the body into it (no collision): a free-form driver
             // stepping onto a snow field is exactly how the 0.95.41 playthrough froze to death.
             if (st.getBlock() == net.minecraft.block.Blocks.POWDER_SNOW) return true;

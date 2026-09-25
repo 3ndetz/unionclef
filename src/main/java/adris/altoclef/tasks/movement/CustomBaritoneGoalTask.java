@@ -1379,7 +1379,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     twNearStillSinceMs = nowMs;
                 }
                 boolean stillTooLong = nowMs - twNearStillSinceMs > 2500;
-                if (goalUnwalkable || stillTooLong) {
+                // A body burning in lava cannot spend 2.5 s letting the physics approach try: that
+                // search is what took 10.97 s on the nether playthrough while the bot burned two
+                // blocks from the shore. The block planner answers in milliseconds and, while the
+                // escape swims (RouteHazards.lavaSwim), plans across the lava surface.
+                boolean burning = kaptainwutax.tungsten.path.RouteHazards.lavaSwim && mod.getPlayer().isInLava();
+                if (goalUnwalkable || stillTooLong || burning) {
                     kaptainwutax.tungsten.task.BlockPathWalker.stop();
                     kaptainwutax.tungsten.path.movements.MovementQueue.stop();
                     if (ex != null) ex.stop = false;

@@ -1252,7 +1252,9 @@ public final class FastPlanner {
     }
 
     private static boolean isWater(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
-        return kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyWater(cachedState(w, x, y, z, s));
+        // Surface lava swims like water while the lava escape has asked for it (RouteHazards.lavaSwim).
+        return kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyWater(cachedState(w, x, y, z, s))
+                || kaptainwutax.tungsten.path.RouteHazards.swimmableLava(w, x, y, z, s);
     }
 
     private static boolean isSlime(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
@@ -1920,7 +1922,8 @@ public final class FastPlanner {
     private static boolean hazardAt(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
         // One definition, shared with the executors' per-tick check (RouteHazards) -- a planner and
         // an executor that disagree about what is lethal is how a "safe" route kills the body.
-        return kaptainwutax.tungsten.path.RouteHazards.hazard(cachedState(w, x, y, z, s));
+        if (!kaptainwutax.tungsten.path.RouteHazards.hazard(cachedState(w, x, y, z, s))) return false;
+        return !kaptainwutax.tungsten.path.RouteHazards.swimmableLava(w, x, y, z, s);
     }
 
     /**

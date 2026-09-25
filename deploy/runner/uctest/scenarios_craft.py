@@ -1351,6 +1351,45 @@ class EscapeLava(CraftTable):
                         f"{went} at={ctx.geo.get('escaped_at')}s pos=({ex},{ez})", gate=False)
 
 
+class EscapeLavaPool(EscapeLava):
+    """escape_lava with the shore three and a half blocks away instead of one step.
+
+    WHY (2026-09-25, checkpoint nether-nofood). A nether playthrough burned to death standing on the
+    floor of shallow lava, two to three blocks from dry ground: the escape's planners all refused
+    lava cells, found no route out, and the physics search spent 10.97 s answering while the body
+    burned. escape_lava could not see it -- one lava block with dry ground one step away needs no
+    route through lava at all. Here every way out crosses lava: a 7x7 sheet on the floor (feet level,
+    solid ground under it), the bot in the middle. baritone escaped this with canSwimThroughLava.
+    """
+    id = "escape_lava_pool"
+    HALF = 3
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        ctx.rcon.cmd(f"spawnpoint {ctx.bot.name} 10 {STAND_Y} 10", allow_reject=True)
+        h = self.HALF
+        ctx.rcon.cmd(f"fill {-h} {STAND_Y} {-h} {h} {STAND_Y} {h} minecraft:lava", allow_reject=True)
+        ctx.geo["fps"] = []
+        ctx.geo["min_hp"] = 20.0
+        ctx.geo["entered"] = False
+        time.sleep(1)
+        ctx.bot.py.try_call("resetRunCounters")
+        ctx.bot.cmd("@get oak_log 1")
+        time.sleep(2)
+        ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
+        # Same window as escape_lava (see there): resistance keeps the trigger live and buys time.
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:resistance 120 4 true",
+                     allow_reject=True)
+
+    def _escaped(self, ctx):
+        """Past the sheet's edge (3.5 from the centre) and still nearby, which a respawn is not."""
+        x, z = self._pos(ctx)
+        d = ((x - 0.5) ** 2 + (z - 0.5) ** 2) ** 0.5
+        return self.HALF + 0.3 < d < 9.0
+
+
 class PickupDrop(CraftTable):
     """Walk to ONE dropped item and touch it. Nothing else -- no ore, no crafting, no tools.
 
@@ -1576,6 +1615,6 @@ class PickupDropPit(PickupDrop):
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava,
+             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
              PickupMinableDrop, PickupAfterGoto]

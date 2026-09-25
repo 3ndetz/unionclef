@@ -642,6 +642,8 @@ public class BotBehaviour {
 
             sa.setFlowingWaterPass(_allowWalkThroughFlowingWater);
             sa.allowSwimThroughLava(swimThroughLava);
+            // The planners read the tungsten copy (baritone read this setting inside MovementHelper).
+            kaptainwutax.tungsten.path.RouteHazards.lavaSwim = swimThroughLava;
 
             // Extra / hard coded.
             // Mirrored into tungsten: LookHelper's reach tests and isLookingAt() now raytrace

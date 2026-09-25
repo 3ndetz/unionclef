@@ -98,6 +98,17 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
                 return super.onTick();
             }
 
+            // NOTHING TO PLACE, NOTHING TO AIM FOR. The block search below turns the head and
+            // returns null on every tick it finds a face, which takes the tick from the drive; with
+            // no block to put there that is a bot staring at the floor of a lava pool for good.
+            // Measured on escape_lava_pool (empty kit): 90 s in the middle of the pool, the drive
+            // never moved the body. Without a block, swim for the shore instead.
+            if (!mod.getItemStorage().hasItem(Items.NETHERRACK)
+                    && !mod.getItemStorage().hasItem(mod.getThrowawayItems().toArray(new Item[0]))) {
+                setDebugState("run away from lava (nothing to place)");
+                return super.onTick();
+            }
+
             if (mod.getPlayer().isBlocking()) {
                 mod.log("want to place block, trying to stop shielding...");
                 mod.getInputControls().release(Input.CLICK_RIGHT);
@@ -246,9 +257,16 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
         if (water.target() != null) {
             return water;
         }
+        // SOMEWHERE TO STAND, NOT MERELY SOMEWHERE WITHOUT LAVA. "Not lava and not next to lava" is
+        // true of the air right above a lava pool, which is the nearest such cell to a body in the
+        // middle of one: measured on escape_lava_pool, the goal was the cell over the bot's head,
+        // the navigator's sphere called that arrived, the goal's own test refused it (5 times), and
+        // the bot bobbed in the lava for the whole run. baritone's EscapeFromLavaGoal was a
+        // heuristic over walkable nodes, so its answer always had a floor.
         return new adris.altoclef.util.goals.AltoGoal.NearestSatisfying(
                 pos -> !EscapeFromLavaGoal.isLava(pos.getX(), pos.getY(), pos.getZ())
-                        && !EscapeFromLavaGoal.isLavaAdjacent(pos.getX(), pos.getY(), pos.getZ()),
+                        && !EscapeFromLavaGoal.isLavaAdjacent(pos.getX(), pos.getY(), pos.getZ())
+                        && EscapeFromLavaGoal.canStand(pos),
                 feet, 16);
     }
 
@@ -280,6 +298,15 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
             return isLava(x + 1, y, z) || isLava(x - 1, y, z) || isLava(x, y, z + 1) || isLava(x, y, z - 1)
                     || isLava(x + 1, y, z - 1) || isLava(x + 1, y, z + 1) || isLava(x - 1, y, z - 1)
                     || isLava(x - 1, y, z + 1);
+        }
+
+        /** Solid support directly under the feet cell and room for the body above it. */
+        private static boolean canStand(BlockPos pos) {
+            var world = MinecraftClient.getInstance().world;
+            if (world == null) return false;
+            double top = kaptainwutax.tungsten.helpers.PlayerFit.supportTop(world, pos);
+            if (Double.isNaN(top) || top < pos.getY() - 0.01 || top >= pos.getY() + 1) return false;
+            return kaptainwutax.tungsten.helpers.PlayerFit.bodyFits(world, pos.getX() + 0.5, top, pos.getZ() + 0.5);
         }
 
         private static boolean isWater(int x, int y, int z) {
