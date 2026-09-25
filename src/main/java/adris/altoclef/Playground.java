@@ -322,6 +322,12 @@ public class Playground {
             // running the defence chain is never ticked either. Measured on mob_skeleton -- every
             // mdRet slot at zero for the whole fight while the bot stood there and was shot from
             // 16 health down to 4. The course was invalid, not the bot.
+            // THE NETHER PEARL HUNT'S OWN FIGHT: KillEndermanTask ends in exactly this call once an
+            // enderman is in sight, so a course driven by it measures the path the deaths come from.
+            case "killender":
+                mod.runUserTask(new adris.altoclef.tasks.entity.KillEntitiesTask(
+                        e -> true, net.minecraft.entity.mob.EndermanEntity.class));
+                break;
             case "killhostile": {
                 // ASK FOR THE HOSTILES LIST, NOT FOR A SUPERCLASS.
                 // getTrackedEntities indexes by CONCRETE class, so asking it for HostileEntity

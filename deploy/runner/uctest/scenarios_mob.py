@@ -1119,4 +1119,86 @@ class MobUnarmedCrowd(Scenario):
         yield Criterion("health lost (recorded, not gated)", True, f"min_hp={low}")
 
 
-SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd]
+def _count(ctx, etype):
+    r = ctx.rcon.cmd(f"execute if entity @e[type={etype}]", allow_reject=True)
+    if "Count:" not in r:
+        return 0
+    try:
+        return int(r.split("Count:")[1].strip().split()[0])
+    except (IndexError, ValueError):
+        return -1
+
+
+class MobEndermen(MobMelee):
+    """TWO ENDERMEN, THE NETHER'S KILLER, ON FLAT GROUND (2026-09-25).
+
+    7 of the last 10 nether deaths on the rung-ender resumes were endermen -- slain outright or
+    knocked off a rim -- in full armour with a diamond sword, often two at once; health 12 -> 0 in
+    about twenty seconds. No course had ever put the bot in front of one.
+
+    The kit is the nether kit: diamond sword, full iron armour. The fight is started the way the pearl
+    hunt starts it (KillEndermanTask -> KillEntitiesTask on endermen, `@test killender`). Flat ground,
+    so a fall cannot be the verdict. Gates: both endermen dead and the bot alive. Damage taken and
+    fight length are recorded, not gated.
+    """
+    id = "mob_endermen"
+    tier = "gate"
+    duration = 150
+    bot_kit = ["item replace entity {name} weapon.mainhand with diamond_sword",
+               "item replace entity {name} armor.head with iron_helmet",
+               "item replace entity {name} armor.chest with iron_chestplate",
+               "item replace entity {name} armor.legs with iron_leggings",
+               "item replace entity {name} armor.feet with iron_boots"]
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=enderman]")
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:instant_health 1 10 true")
+        time.sleep(0.5)
+        ok, st = ctx.bot.py.try_call("lavaEntryStats")
+        ctx.geo["deaths0"] = int(st.get("deaths", 0)) if ok and isinstance(st, dict) else None
+        ctx.bot.py.try_call("resetRunCounters")
+        for x, z in ((6.5, 0.5), (-5.5, 3.5)):
+            ctx.rcon.cmd(f"summon enderman {x} {STAND_Y} {z}")
+        ctx.geo["spawned"] = _count(ctx, "enderman")
+        time.sleep(2)
+        ctx.bot.cmd("@test killender")
+
+    def early_stop(self, ctx):
+        return _count(ctx, "enderman") == 0
+
+    def judge(self, ctx):
+        left = _count(ctx, "enderman")
+        ok, st = ctx.bot.py.try_call("lavaEntryStats")
+        d1 = int(st.get("deaths", 0)) if ok and isinstance(st, dict) else None
+        d0 = ctx.geo.get("deaths0")
+        died = None if d0 is None or d1 is None else d1 - d0
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+        yield Criterion("two endermen were spawned", ctx.geo.get("spawned") == 2,
+                        f"count_at_spawn={ctx.geo.get('spawned')}")
+        yield Criterion("both endermen are dead", left == 0, f"remaining={left}")
+        yield Criterion("the bot did not die", died == 0,
+                        f"deaths={died} min_hp={low} dmgTaken={_stat(ctx, 'dmgTaken')} "
+                        f"dealt={_stat(ctx, 'dealt')} swingHits={_stat(ctx, 'swingHits')} "
+                        f"ctl={_stat(ctx, 'ctl')} mdTung={_stat(ctx, 'mdTung')} hits={_stat(ctx, 'hits')}")
+
+
+class MobEndermenHurt(MobEndermen):
+    """THE SAME TWO ENDERMEN, MET HALF HEALED (2026-09-25).
+
+    mob_endermen at full health passed 4/4 on the day it was built (damage 0-11, min hp 8.7): two
+    endermen on flat ground are not what kills the bot. In the nether it met them half healed --
+    health 12-16 after the previous fight and no regeneration under 18 food. This starts the same
+    fight at 10 health with 20 food, so what the bot does about its own health is part of the test.
+    """
+    id = "mob_endermen_hurt"
+
+    def drive_start(self, ctx):
+        super().drive_start(ctx)
+        ctx.rcon.cmd(f"data merge entity {ctx.bot.name} {{Health:10.0f}}", allow_reject=True)
+
+
+SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt]
