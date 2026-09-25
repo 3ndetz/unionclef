@@ -101,6 +101,7 @@ elif op=="logs": out={"n": int(mc.countLogsNear(int(req.get("r",40))))}
 elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
 elif op=="respawn": out={"r": str(mc.respawnPlayer())}
 elif op=="resetcfg": out={"r": str(dict(mc.resetTungstenConfig()))}
+elif op=="tset": out={"r": str(mc.tungstenSetting(req["k"], req["v"]))}
 elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
@@ -873,6 +874,13 @@ def main():
         print("  tungsten config reset to shipped defaults:", str(py4j("resetcfg").get("r"))[:120])
     except Exception as _rc:
         print(f"  tungsten config reset FAILED: {str(_rc)[:100]}")
+    # ⛔ THE IDLE THROTTLE (2026-09-25): vanilla caps an unfocused, quiet client at 10 fps, and every
+    # playthrough so far ran there -- median 10.0 on n42..n46 -- while run_suite pins it off
+    # (BENCH_PINS). Two runs were then declared INVALID for "client starved". Same pin here.
+    try:
+        print("  botFpsNoIdleThrottle:", str(py4j("tset", k="botFpsNoIdleThrottle", v="true").get("r"))[:80])
+    except Exception as _tp:
+        print(f"  botFpsNoIdleThrottle pin FAILED: {str(_tp)[:100]}")
     RENDER_FLAGS = ("renderVisualization", "renderPathMoves", "renderCombat",
                     "renderBreakPlan", "renderPlacePlan")
     for flag in RENDER_FLAGS:

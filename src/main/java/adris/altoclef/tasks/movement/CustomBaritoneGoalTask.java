@@ -521,6 +521,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     /** G52: when the drive last had the tick. A route is an orphan once this is stale. */
     public static volatile long lastDriveTickMs = 0L;
+
+    /**
+     * A task that starts a tungsten route itself (a pillar, a bridge) and is not a drive: say so
+     * each tick, or {@link #stopOrphanRoute} takes it for an orphan and stops it. Measured
+     * 2026-09-25: the enderman pillar was restarted every 0.7 s for ten minutes and never rose.
+     */
+    public static void claimRoute() {
+        lastDriveTickMs = System.currentTimeMillis();
+    }
     private static final long ORPHAN_ROUTE_MS = 300L;
 
     /**

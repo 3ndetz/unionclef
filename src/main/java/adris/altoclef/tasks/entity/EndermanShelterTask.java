@@ -74,6 +74,11 @@ public class EndermanShelterTask extends Task {
     /** A failed site search is thousands of block reads; do not repeat it every tick. */
     private long noSiteUntilMs;
     private long lastInRangeMs = System.currentTimeMillis();
+    /** Last time an angry enderman was in reach, or none was angry. */
+    private long lastReachableMs = System.currentTimeMillis();
+    /** Where the next site is searched from: the enderman that could not reach the last pillar. */
+    private BlockPos searchFrom;
+    private static final long UNREACHED_MS = 15_000;
     /** Set when a pillar went unused: walk towards the endermen before building the next one. */
     private boolean relocate;
 
@@ -122,6 +127,7 @@ public class EndermanShelterTask extends Task {
         base = b != null && feet.getX() == b.getX() && feet.getZ() == b.getZ()
                 && feet.getY() >= b.getY() && feet.getY() <= b.getY() + HEIGHT ? b : null;
         lastInRangeMs = System.currentTimeMillis();
+        lastReachableMs = System.currentTimeMillis();
         relocate = false;
         holding = false;
     }
@@ -155,6 +161,7 @@ public class EndermanShelterTask extends Task {
         }
         if (base != null && PillarTask.isActive()) {
             holding = true;
+            adris.altoclef.tasks.movement.CustomBaritoneGoalTask.claimRoute();
             setDebugState("Pillaring up to fight endermen");
             return null;
         }
@@ -163,7 +170,8 @@ public class EndermanShelterTask extends Task {
             base = null;
         }
         if (base == null && System.currentTimeMillis() >= noSiteUntilMs) {
-            base = pickSite(world, feet);
+            base = pickSite(world, searchFrom != null ? searchFrom : feet);
+            searchFrom = null;
             if (base == null) {
                 noSiteUntilMs = System.currentTimeMillis() + 5000;
             } else {
@@ -184,6 +192,7 @@ public class EndermanShelterTask extends Task {
             return null;
         }
         PillarTask.startTo(base.getY() + HEIGHT, null, base.getX(), base.getZ());
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.claimRoute();
         lastBase = base;
         holding = true;
         setDebugState("Pillaring up to fight endermen");
@@ -217,6 +226,19 @@ public class EndermanShelterTask extends Task {
             }
         }
         if (angry != null || calm != null) lastInRangeMs = System.currentTimeMillis();
+        if (angry == null || LookHelper.canHitEntity(mod, angry)) lastReachableMs = System.currentTimeMillis();
+        if (System.currentTimeMillis() - lastReachableMs > UNREACHED_MS) {
+            // An angry enderman that cannot path to the pillar's foot stands where it is for good
+            // (n46: nine minutes "waiting for it to come in reach"). Build the next pillar where it
+            // can: next to it. Fighting it on the ground instead was tried and is what put n48 in
+            // the lava sea, knocked off a rim in the melee.
+            searchFrom = angry.getBlockPos();
+            rejected.add(base);
+            lastReachableMs = System.currentTimeMillis();
+            base = null;
+            lastBase = null;
+            return null;
+        }
         if (angry != null) {
             // ⛔ NEVER STARE AT AN ANGRY ONE THAT IS NOT IN REACH. Vanilla's ChasePlayerGoal stops
             // the enderman's navigation while its target looks at its head: measured on
@@ -280,11 +302,17 @@ public class EndermanShelterTask extends Task {
         for (int dy = 1; dy <= HEIGHT + 2; dy++) {
             if (solid(world, b.up(dy))) return false;
         }
-        boolean supported = false;
-        for (BlockPos n : List.of(b.east(), b.west(), b.south(), b.north())) {
-            if (solid(world, n.down()) || solid(world, n)) supported = true;
+        // Ground on every side, at most two blocks down: stepping off the pillar must be a short
+        // drop, never a cliff (n48: a pillar by a drop, the body stepped off its top and fell 29
+        // blocks into lava). This also keeps the top of a pillar from passing as a site.
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                BlockPos n = b.add(dx, 0, dz);
+                if (!solid(world, n) && !solid(world, n.down()) && !solid(world, n.down(2))) return false;
+                if (RouteHazards.lethalColumn(world, n.getX(), n.getY(), n.getZ(), s) && !solid(world, n)) return false;
+            }
         }
-        if (!supported) return false;
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 if (dx == 0 && dz == 0) continue;
