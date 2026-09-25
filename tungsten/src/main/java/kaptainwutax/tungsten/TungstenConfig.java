@@ -37,7 +37,10 @@ public class TungstenConfig {
     public int configVersion = CURRENT_CONFIG_VERSION;
 
     /** Raise this when new shipped defaults must override existing tungsten.json files. */
-    private static final int CURRENT_CONFIG_VERSION = 1;
+    // 2 (2026-09-25): the file became SPARSE -- only values that differ from the shipped defaults are
+    // written. Version-1 files are full dumps in which every old default shadows its replacement, so
+    // they are discarded once (see load()).
+    private static final int CURRENT_CONFIG_VERSION = 2;
 
     /** If true: on position mismatch > driftThreshold, setPosition() to simulation value.
      *  If false: stop executor and let path recalculate from real position. */
@@ -4297,7 +4300,12 @@ public class TungstenConfig {
      * <p>Mechanism counter {@code lockDroppedIdle}: locks released for idleness. Zero in a
      * control arm by construction, because the release is what the flag gates.
      */
-    public boolean idleLockIsNotALock = false;
+    // ⛔ ON BY DEFAULT FROM 2026-09-25, on a playthrough measurement: a 45-minute run from rung-ender
+    // stood twenty minutes at (110,62,14) with 4 hp in "Collect 140 units of food -> Wander", and
+    // the stall source read stallWhy lock=22180 of 22180 while the lock anatomy read 20871 of 22981
+    // locked ticks IDLE (no search, executor, walker or queue behind it) and lockDroppedIdle=0 --
+    // this release, written for exactly that, had never been switched on.
+    public boolean idleLockIsNotALock = true;
 
     /**
      * Whether a converged aim that is blocked by a solid block MINES THAT BLOCK instead of waiting.
@@ -5262,9 +5270,28 @@ public class TungstenConfig {
         }
     }
 
+    /**
+     * Write only what differs from the shipped defaults (plus the version).
+     *
+     * <p>⛔ A FULL DUMP FREEZES EVERY DEFAULT FOREVER. This wrote the whole object, so one
+     * {@code ;settings x y} persisted every other field too, and from then on a changed default in
+     * the code never reached that machine. Measured 2026-09-25 on the test client: a 20-minute
+     * playthrough stall whose fix -- idleLockIsNotALock, switched on in the code that day -- was
+     * still read as {@code false} from a tungsten.json written weeks earlier. Gson fills the fields
+     * absent from the file with the constructor's defaults, so a sparse file loads as
+     * "defaults + what the user actually changed".
+     */
     public static void save() {
         try (FileWriter w = new FileWriter(CONFIG_FILE.toFile())) {
-            GSON.toJson(INSTANCE, w);
+            com.google.gson.JsonObject cur = GSON.toJsonTree(INSTANCE).getAsJsonObject();
+            com.google.gson.JsonObject def = GSON.toJsonTree(new TungstenConfig()).getAsJsonObject();
+            com.google.gson.JsonObject out = new com.google.gson.JsonObject();
+            out.addProperty("configVersion", CURRENT_CONFIG_VERSION);
+            for (var e : cur.entrySet()) {
+                if (e.getKey().equals("configVersion")) continue;
+                if (!e.getValue().equals(def.get(e.getKey()))) out.add(e.getKey(), e.getValue());
+            }
+            GSON.toJson(out, w);
         } catch (Exception e) {
             TungstenMod.LOG.warn("Failed to save tungsten.json: " + e.getMessage());
         }

@@ -95,6 +95,7 @@ elif op=="tdump": out={"d": str(mc.threadDump(str(req.get("f",""))))[:4000]}
 elif op=="logs": out={"n": int(mc.countLogsNear(int(req.get("r",40))))}
 elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
 elif op=="respawn": out={"r": str(mc.respawnPlayer())}
+elif op=="resetcfg": out={"r": str(dict(mc.resetTungstenConfig()))}
 elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
@@ -859,6 +860,14 @@ def main():
     # the user asked for exactly those three things twice. The fps effect was never established
     # (see above). The run now ASSERTS them on, the way it asserts tungsten-primary: a client that
     # a previous killed run left blind is fixed here instead of being measured blind.
+    # ⛔ MEASURE WHAT SHIPS, PART TWO (2026-09-25): run_suite resets the client's tungsten.json to the
+    # shipped defaults before every course (actors.py); this bench never did, so every playthrough
+    # ran on whatever an old `;settings` had frozen into the file. A 20-minute stall's fix, switched
+    # on in the code, was read as off from a weeks-old file. Reset first, then pin what the run needs.
+    try:
+        print("  tungsten config reset to shipped defaults:", str(py4j("resetcfg").get("r"))[:120])
+    except Exception as _rc:
+        print(f"  tungsten config reset FAILED: {str(_rc)[:100]}")
     RENDER_FLAGS = ("renderVisualization", "renderPathMoves", "renderCombat",
                     "renderBreakPlan", "renderPlacePlan")
     for flag in RENDER_FLAGS:
