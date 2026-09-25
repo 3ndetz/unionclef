@@ -83,6 +83,9 @@ public class EndermanShelterTask extends Task {
     private int pillarStarts;
     private static final long PILLAR_STALL_MS = 6_000;
     private static final long UNREACHED_MS = 15_000;
+    /** The angry enderman being watched, and its health when last seen to drop. */
+    private int watchedId = -1;
+    private float watchedHealth = Float.MAX_VALUE;
     /** Set when a pillar went unused: walk towards the endermen before building the next one. */
     private boolean relocate;
 
@@ -256,7 +259,21 @@ public class EndermanShelterTask extends Task {
             }
         }
         if (angry != null || calm != null) lastInRangeMs = System.currentTimeMillis();
-        if (angry == null || LookHelper.canHitEntity(mod, angry)) lastReachableMs = System.currentTimeMillis();
+        // Reachable means it is actually being hurt. canHitEntity alone said yes for ten minutes on
+        // n57 while every swing met the pillar's own edge and the enderman stood at full health.
+        if (angry == null) {
+            lastReachableMs = System.currentTimeMillis();
+            watchedId = -1;
+        } else {
+            if (angry.getId() != watchedId) {
+                watchedId = angry.getId();
+                watchedHealth = angry.getHealth();
+                lastReachableMs = System.currentTimeMillis();
+            } else if (angry.getHealth() < watchedHealth) {
+                watchedHealth = angry.getHealth();
+                lastReachableMs = System.currentTimeMillis();
+            }
+        }
         if (System.currentTimeMillis() - lastReachableMs > UNREACHED_MS) {
             // An angry enderman that cannot path to the pillar's foot stands where it is for good
             // (n46: nine minutes "waiting for it to come in reach"). Build the next pillar where it
@@ -275,7 +292,9 @@ public class EndermanShelterTask extends Task {
             // mob_endermen_shelter, a bot that stared had the enderman stand twelve blocks off for
             // the whole run. Look at its feet and it walks up; aim at the top of the body to swing.
             if (LookHelper.canHitEntity(mod, angry)) {
-                LookHelper.lookAt(mod, angry.getPos().add(0, angry.getHeight() * 0.75, 0));
+                // Its head: from the top of the pillar the rest of an enderman at the foot hides
+                // behind the pillar's own edge. Staring freezes it, which is welcome once in reach.
+                LookHelper.lookAt(mod, angry.getEyePos());
                 if (mod.getPlayer().getAttackCooldownProgress(0) >= 1) {
                     mod.getControllerExtras().attack(angry);
                 }
