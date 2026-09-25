@@ -86,7 +86,9 @@ elif op=="inv":
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="lava":
     d=dict(mc.lavaEntryStats())
-    out={k: str(d.get(k)) for k in ("entries","deaths","deathTakeoff","takeoff","driver","pos")}
+    out={k: str(d.get(k)) for k in ("entries","deaths","deathTakeoff","takeoff","driver","pos","task","prev1")}
+    try: out["brk"]=str(mc.breakResetStats(False))
+    except Exception: out["brk"]="-"
 elif op=="guide": out={"r": str(mc.guideDump() or "")}
 elif op=="guidehop": out={"r": str(mc.guideHopShapes() or "")}
 elif op=="stealers": out={"r": str(mc.forwardStealers() or "")}
@@ -1266,7 +1268,9 @@ def main():
                     if _lava_last[0] is not None:
                         print(f"  LAVA/DEATH t={int(time.time()-t0)}s entries={_lv.get('entries')} deaths={_lv.get('deaths')}"
                               f" | driver={_lv.get('driver')[:200]} | takeoff={_lv.get('takeoff')[:300]}"
-                              f" | deathTakeoff={_lv.get('deathTakeoff')[:400]}")
+                              f" | deathTakeoff={_lv.get('deathTakeoff')[:400]}"
+                              f" | at={_lv.get('pos')} prev1={_lv.get('prev1')} task={_lv.get('task')[:160]}"
+                              f" | breaks={_lv.get('brk')[:200]}")
                     _lava_last[0] = _sig
             except Exception:
                 pass
