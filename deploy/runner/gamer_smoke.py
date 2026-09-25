@@ -84,6 +84,9 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids,"food":food}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
+elif op=="lava":
+    d=dict(mc.lavaEntryStats())
+    out={k: str(d.get(k)) for k in ("entries","deaths","deathTakeoff","takeoff","driver","pos")}
 elif op=="guide": out={"r": str(mc.guideDump() or "")}
 elif op=="guidehop": out={"r": str(mc.guideHopShapes() or "")}
 elif op=="stealers": out={"r": str(mc.forwardStealers() or "")}
@@ -1156,6 +1159,7 @@ def main():
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     fps_samples = []
     _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M"); _cp_series = []
+    _lava_last = [None]
     # CAPTURE THE NETHER ENTRY THE MOMENT IT HAPPENS. The one-run underground->nether entry is proven
     # (v0.95.24 + v0.95.25), but the bot dies within ~30 s of arriving (Enderman knockback off a ledge)
     # -- faster than a 2 GB checkpoint copy -- so no periodic checkpoint ever caught it ALIVE in the
@@ -1252,6 +1256,20 @@ def main():
                     _cp.save(_rn, note=f"rung {', '.join(_new_rungs)} at {int(time.time() - t0)}s, run {RUN_SEQ[0]}")
                 except Exception as _re:              # noqa: BLE001
                     print(f"  rung checkpoint failed: {str(_re)[:120]}")
+            # EVERY LAVA ENTRY AND DEATH, WITH ITS SNAPSHOT, AS IT HAPPENS (2026-09-25). The client's
+            # counters are gone by the end of a run, and a death chased through video and server
+            # logs for an hour had its whole route geometry sitting in lavaEntryStats all along.
+            try:
+                _lv = py4j("lava")
+                _sig = (_lv.get("entries"), _lv.get("deaths"))
+                if _sig != _lava_last[0]:
+                    if _lava_last[0] is not None:
+                        print(f"  LAVA/DEATH t={int(time.time()-t0)}s entries={_lv.get('entries')} deaths={_lv.get('deaths')}"
+                              f" | driver={_lv.get('driver')[:200]} | takeoff={_lv.get('takeoff')[:300]}"
+                              f" | deathTakeoff={_lv.get('deathTakeoff')[:400]}")
+                    _lava_last[0] = _sig
+            except Exception:
+                pass
             responsive+=1
             # HOW FAST WAS THE CLIENT WHILE IT TRIED? The nav suite has asked this since the day a
             # starved host was read as a code regression; this bench never has, so its verdicts
