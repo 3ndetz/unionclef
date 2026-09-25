@@ -112,7 +112,12 @@ public final class BlockPlaceHelper {
                 gatedThrough++;
                 return true;
             }
-            if (!mc.player.getStackInHand(hand).isEmpty()
+            // ⛔ ONLY A BUCKET IS "PLACED" BY USING THE ITEM (2026-09-26). Baritone falls back to
+            // interactItem for whatever is in the hand; with anything but a bucket that is not a
+            // placement but a throw. Measured on a nether run: a pillar click with an ender pearl
+            // in the main hand (the combat code had swapped it) threw it -- the body jumped 27 blocks
+            // ("body MOVED ... not walked") and the pearl was gone.
+            if (mc.player.getStackInHand(hand).getItem() instanceof net.minecraft.item.BucketItem
                     && mc.interactionManager.interactItem(mc.player, hand) == ActionResult.SUCCESS) {
                 return true;
             }
