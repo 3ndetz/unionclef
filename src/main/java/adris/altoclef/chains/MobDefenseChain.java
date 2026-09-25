@@ -1002,6 +1002,12 @@ public class MobDefenseChain extends SingleTaskChain {
                         }
                         continue;
                     }
+                    // Under a finished enderman shelter the shelter task fights endermen from where it
+                    // stands; chasing one here would walk the body out from under the roof.
+                    if (hostile instanceof EndermanEntity
+                            && adris.altoclef.tasks.entity.EndermanShelterTask.holding()) {
+                        continue;
+                    }
                     boolean isRangedOrPoisonous = (hostile instanceof SkeletonEntity
                             || hostile instanceof WitchEntity || hostile instanceof PillagerEntity
                             || hostile instanceof PiglinEntity || hostile instanceof StrayEntity

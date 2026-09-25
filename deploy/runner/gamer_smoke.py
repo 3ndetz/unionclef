@@ -1251,6 +1251,16 @@ def main():
                     stall[3] = time.time()
                     print(f"  RUNG '{rung}' at {reached[rung]}s")
                     _new_rungs.append(rung)
+            _order = [r for r, _ in LADDER]
+            _behind = [r for r in _new_rungs
+                       if any(_order.index(p) > _order.index(r) for p in preexisting)]
+            if _behind and not _lava_died[0]:
+                # A rung BEHIND where the run started is not a stage entry either: a bot resumed in
+                # the nether with a diamond pickaxe that crafts its first table is not "has just
+                # reached crafting". Measured 2026-09-25: nether-nofood wrote rung-crafting,
+                # rung-furnace and rung-food from the Overworld at 7 hp with a full nether kit.
+                print(f"  rung checkpoint skipped: behind the starting rungs ({', '.join(_behind)})")
+                _new_rungs = [r for r in _new_rungs if r not in _behind]
             if _new_rungs and _lava_died[0]:
                 # A rung climbed again after a death is a respawn with an empty inventory, not an
                 # entry point for the stage. Measured 2026-09-25: a nether death at 39 min re-climbed

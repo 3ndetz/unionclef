@@ -1201,4 +1201,42 @@ class MobEndermenHurt(MobEndermen):
         ctx.rcon.cmd(f"data merge entity {ctx.bot.name} {{Health:10.0f}}", allow_reject=True)
 
 
-SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt]
+class MobEndermenShelter(MobEndermenHurt):
+    """THE HURT FIGHT WITH BLOCKS IN THE PACK: THE SHELTER TACTIC (2026-09-25).
+
+    The pearl hunt fights from under a 3x3 roof at feet + 2 when it carries blocks for one
+    (EndermanShelterTask): an enderman is 2.9 tall and must be within ~1.43 blocks to hit, and every
+    such cell is under the roof. The nether kit carries netherrack, so this gives it 32. Endermen are
+    summoned further out and calm, so the bot has to build, provoke and let them come. The
+    fight is the pearl hunt itself (`@test huntender` = KillEndermanTask), not a bare kill task. Same gates as
+    mob_endermen; min_hp and damage are the numbers to compare with mob_endermen_hurt.
+    """
+    id = "mob_endermen_shelter"
+    duration = 180
+    bot_kit = MobEndermen.bot_kit + ["give {name} netherrack 32"]
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=enderman]")
+        # Another course leaves natural regeneration off, and the hunt heals by standing still:
+        # measured, 2 minutes "healing" at 8 hp. The nether has it on.
+        ctx.rcon.cmd("gamerule minecraft:natural_health_regeneration true", allow_reject=True)
+        # The previous run's pillars stay in the arena otherwise, and an enderman standing on one
+        # is level with the next pillar's top (measured: "placed 2", hit from the side).
+        ctx.rcon.cmd(f"fill -16 {STAND_Y} -16 16 {STAND_Y + 8} 16 air", allow_reject=True)
+        time.sleep(0.5)
+        ok, st = ctx.bot.py.try_call("lavaEntryStats")
+        ctx.geo["deaths0"] = int(st.get("deaths", 0)) if ok and isinstance(st, dict) else None
+        ctx.bot.py.try_call("resetRunCounters")
+        for x, z in ((12.5, 0.5), (-10.5, 6.5)):
+            ctx.rcon.cmd(f"summon enderman {x} {STAND_Y} {z}")
+        ctx.geo["spawned"] = _count(ctx, "enderman")
+        ctx.rcon.cmd(f"data merge entity {ctx.bot.name} {{Health:10.0f}}", allow_reject=True)
+        time.sleep(2)
+        ctx.bot.cmd("@test huntender")
+
+
+SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
+             MobEndermenShelter]

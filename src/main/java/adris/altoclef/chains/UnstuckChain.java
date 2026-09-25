@@ -386,6 +386,13 @@ public class UnstuckChain extends SingleTaskChain {
             return;
         }
 
+        // Standing still on purpose: under a finished enderman shelter the body must not move, and
+        // the shimmy walked it out from under the roof every ten seconds (mob_endermen_shelter).
+        if (adris.altoclef.tasks.entity.EndermanShelterTask.holding()) {
+            posHistory.clear();
+            return;
+        }
+
         // ⛔ EVASIVE MOVEMENT LOOKS LIKE BEING STUCK. See TungstenConfig.
         // unstuckSkipsDuringMobDefenseAcrobatics: fleeing a fusing creeper or dodging a
         // projectile can hold the bot inside this check's own radius/window while it is

@@ -324,6 +324,13 @@ public class Playground {
             // 16 health down to 4. The course was invalid, not the bot.
             // THE NETHER PEARL HUNT'S OWN FIGHT: KillEndermanTask ends in exactly this call once an
             // enderman is in sight, so a course driven by it measures the path the deaths come from.
+            case "huntender": {
+                // The pearl hunt itself (KillEndermanTask, shelter included), wherever the bot is:
+                // two more pearls than it holds.
+                int have = mod.getItemStorage().getItemCount(net.minecraft.item.Items.ENDER_PEARL);
+                mod.runUserTask(new adris.altoclef.tasks.resources.KillEndermanTask(have + 2, true));
+                break;
+            }
             case "killender":
                 mod.runUserTask(new adris.altoclef.tasks.entity.KillEntitiesTask(
                         e -> true, net.minecraft.entity.mob.EndermanEntity.class));

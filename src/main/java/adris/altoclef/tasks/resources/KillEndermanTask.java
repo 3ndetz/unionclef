@@ -26,10 +26,18 @@ public class KillEndermanTask extends ResourceTask {
 
     private final TimerGame _lookDelay = new TimerGame(0.2);
 
+    private final boolean _anyDimension;
+
     public KillEndermanTask(int count) {
+        this(count, false);
+    }
+
+    /** {@code anyDimension}: hunt where the bot is (the bench arenas are in the Overworld). */
+    public KillEndermanTask(int count, boolean anyDimension) {
         super(new ItemTarget(Items.ENDER_PEARL, count));
         _count = count;
-        forceDimension(Dimension.NETHER);
+        _anyDimension = anyDimension;
+        if (!anyDimension) forceDimension(Dimension.NETHER);
     }
 
     @Override
@@ -47,6 +55,10 @@ public class KillEndermanTask extends ResourceTask {
         // Dimension
         if (!mod.getEntityTracker().entityFound(EndermanEntity.class)) {
             if (WorldHelper.getCurrentDimension() != Dimension.NETHER) {
+                if (_anyDimension) {
+                    setDebugState("Waiting for endermen");
+                    return null;
+                }
                 return getToCorrectDimensionTask(mod);
             }
             //nearest warped forest related block
@@ -69,6 +81,22 @@ public class KillEndermanTask extends ResourceTask {
         Predicate<Entity> belowNetherRoof = (entity) -> WorldHelper.getCurrentDimension() != Dimension.NETHER || entity.getY() < 125;
         final int TOO_FAR_AWAY = WorldHelper.getCurrentDimension() == Dimension.NETHER ? 10 : 256;
 
+
+        // ⛔ FIGHT FROM UNDER A ROOF WHEN THERE ARE BLOCKS FOR ONE (2026-09-25). Chasing an enderman in
+        // the open lost 12 health in 23 s on the n43 run -- pillaring after one on a ledge while it
+        // hit -- and endermen are most of the nether deaths. See EndermanShelterTask for the reach
+        // geometry. Healing still comes first: the shelter is where the next fight starts.
+        boolean shelter = adris.altoclef.tasks.entity.EndermanShelterTask.hasBlocks(mod);
+        boolean anyAngry = false;
+        for (EndermanEntity entity : mod.getEntityTracker().getTrackedEntities(EndermanEntity.class)) {
+            if (belowNetherRoof.test(entity) && entity.isAngry() && entity.getPos().isInRange(mod.getPlayer().getPos(), TOO_FAR_AWAY)) {
+                anyAngry = true;
+            }
+        }
+        if (shelter && (anyAngry || adris.altoclef.tasks.entity.EndermanShelterTask.healthyEnoughToProvoke(mod)
+                || adris.altoclef.tasks.entity.EndermanShelterTask.onPillar(mod))) {
+            return new adris.altoclef.tasks.entity.EndermanShelterTask(belowNetherRoof);
+        }
 
         // Kill the angry one
         for (EndermanEntity entity : mod.getEntityTracker().getTrackedEntities(EndermanEntity.class)) {
