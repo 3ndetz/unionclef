@@ -44,6 +44,15 @@
   canDealWith ignores current health, and fleeing does not work against teleporters. Next: a real
   enderman tactic (fight under a 2-block ceiling they cannot reach, or in water), or pearls by piglin
   bartering instead of hunting.
+- [ ] **Overworld death at 15:30 of a run from zero (full46, 0.95.46).** hp 19 -> 0 in 23 s near
+  (96,77,-405), "Mine And Collect oak_log"; the run was cut by the Docker hang before the death
+  messages were read. Recording lost with the stand; reproduce from a checkpoint of a new run.
+- [ ] **Portal builder re-sites its pad repeatedly on rough ground** (n59/n61: "Portal pad ... is
+  unreachable ... re-siting here" three times, the frame dismantled and rebuilt). Also: a resumed
+  checkpoint forgets the portal it came through (MiscBlockTracker is in memory only).
+- [ ] **Fall damage at very low health.** n55 at 0.64 hp "hit the ground too hard": drops of 4+
+  blocks are planned regardless of health. Planners should refuse any drop that costs health >= hp.
+- [ ] **Pearl rate from the pillar** is lower than the open fight's (9/14 in 30-45 min).
 - [ ] **mob_trio (zero damage) and mob_skeleton (at most one arrow) fail on the control too**
   (0/4 without the melee guard, 2026-09-25) -- pre-existing combat quality, not regressions.
 - [ ] **Water escape without tools** (flooded ravine after a death: drift stops "Path stopped: drift
