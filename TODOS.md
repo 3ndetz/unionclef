@@ -51,7 +51,8 @@
   unreachable ... re-siting here" three times, the frame dismantled and rebuilt). Also: a resumed
   checkpoint forgets the portal it came through (MiscBlockTracker is in memory only).
 - [ ] **Fall damage at very low health.** n55 at 0.64 hp "hit the ground too hard": drops of 4+
-  blocks are planned regardless of health. Planners should refuse any drop that costs health >= hp.
+  blocks happened although every planner caps drops at 3 (damage-free: FastPlanner/SmartMoves/
+  MovementQueue MAX_FALL=3) -- the fall came from outside a plan (knockback, a free walk). Unread.
 - [ ] **Pearl rate from the pillar** is lower than the open fight's (9/14 in 30-45 min).
 - [ ] **mob_trio (zero damage) and mob_skeleton (at most one arrow) fail on the control too**
   (0/4 without the melee guard, 2026-09-25) -- pre-existing combat quality, not regressions.
