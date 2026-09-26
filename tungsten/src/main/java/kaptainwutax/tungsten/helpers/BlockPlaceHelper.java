@@ -561,6 +561,45 @@ public final class BlockPlaceHelper {
         if (idleTicks <= WALK_AFTER_TICKS) return;   // the aim may still be arriving
         BlockPos stand = placementStand(mc.world, head, wantedState(player, headCell.blockName()));
         if (stand == null) {
+            // ⛔ BUILD THE STAND (2026-09-26). The comment below hands the cell back to "the agent,
+            // which can put a block under itself or come at it from a scaffold" -- and no agent did.
+            // Measured: a portal frame's top cell with leaves above it (so it cannot be pillared
+            // into) and no floor beside it at the support's level; the frame builder re-queued it
+            // for ten minutes while the bot stood on a frozen lake below. The stand the top face
+            // needs is a neighbouring column at head.y-1: pillar up to it with a throwaway from the
+            // ground, then this very scan finds it standable and places from there.
+            BlockPos base = scaffoldBase(mc.world, head);
+            if (base != null) {
+                if (player.getBlockPos().equals(base)) {
+                    stopWalking();
+                    if (walkDebug.length() < 700) walkDebug += "SCAFFOLD(" + base.toShortString() + ") ";
+                    scaffoldsStarted++;
+                    kaptainwutax.tungsten.task.PillarTask.startTo(head.getY() - 1, null, base.getX(), base.getZ());
+                    idleTicks = 0;
+                    return;
+                }
+                if (walkingFor == null || !walkingFor.equals(base)) {
+                    if (lastWalkCell != null && lastWalkCell.equals(base) && walkAttempts >= MAX_WALK_ATTEMPTS) {
+                        base = null;   // fall through to NOSTAND below
+                    } else {
+                        if (lastWalkCell == null || !lastWalkCell.equals(base)) walkAttempts = 0;
+                        walkingFor = base;
+                        walkTicks = 0;
+                        walkStarted++;
+                        lastWalkCell = base;
+                        walkAttempts++;
+                        kaptainwutax.tungsten.task.FastNavigator.startExact(base);
+                        return;
+                    }
+                }
+                if (base != null) {
+                    walkTicks++;
+                    if (!kaptainwutax.tungsten.task.FastNavigator.isActive() || walkTicks > WALK_TIMEOUT_TICKS) {
+                        stopWalking();   // re-walk next tick, counted against MAX_WALK_ATTEMPTS
+                    }
+                    return;
+                }
+            }
             // Nowhere to stand that we can reach. That is this CELL's problem, not the batch's:
             // hand it back and carry on with the rest, which is what deferRest() used to prevent
             // by throwing the whole remaining queue away over one awkward cell.
@@ -744,6 +783,37 @@ public final class BlockPlaceHelper {
         // that belong to whoever owns the build, not to the queue draining it.
         BlockPos above = target.up();
         return standable(world, above) ? above : null;
+    }
+
+    /** Scaffolds started for a cell with no reachable stand (see drainQueue). */
+    public static volatile int scaffoldsStarted;
+
+    /**
+     * The ground cell of a neighbouring column from which a pillar reaches a stand for
+     * {@code target}'s top face: the stand is beside the support (the block under the target) at
+     * target.y-1, with room for the body, and the column under it is air down to ground no more
+     * than 6 blocks below. Null when no such column exists.
+     */
+    private static BlockPos scaffoldBase(net.minecraft.world.WorldView world, BlockPos target) {
+        BlockPos support = target.down();
+        if (!RealPlacement.canPlaceAgainst(world, support)) return null;
+        for (Direction d : Direction.Type.HORIZONTAL) {
+            BlockPos stand = target.offset(d).down();
+            if (!world.getBlockState(stand).isReplaceable() || !world.getBlockState(stand.up()).isReplaceable()) continue;
+            if (!world.getBlockState(stand.up(2)).getCollisionShape(world, stand.up(2)).isEmpty()) continue;
+            if (kaptainwutax.tungsten.path.RouteHazards.hazard(world, stand)) continue;
+            for (int depth = 1; depth <= 6; depth++) {
+                BlockPos cell = stand.down(depth);
+                if (!world.getBlockState(cell).isReplaceable()) {
+                    BlockPos base = cell.up();
+                    if (base.equals(stand)) break;
+                    if (standable(world, base)) return base;
+                    break;
+                }
+                if (!world.getFluidState(cell).isEmpty()) break;
+            }
+        }
+        return null;
     }
 
     /** The {@code GoalAdjacent.isInGoal} predicate (BuilderProcess.java:1092-1106), evaluated
