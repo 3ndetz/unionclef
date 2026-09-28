@@ -402,6 +402,16 @@ public class MobDefenseChain extends SingleTaskChain {
     private float prevHealth = 20;
     private boolean needsChangeOnAttack = false;
     private Entity lockedOnEntity = null;
+    /** Blocks beyond a mob's take-on range at which a fight with it is dropped. */
+    private static final double LOCK_RANGE_MARGIN = 6;
+
+    /** The range at which the annoying-hostile branch takes this mob on (see it for the values). */
+    private static double annoyingRangeOf(AltoClef mod, Entity e) {
+        boolean ranged = e instanceof SkeletonEntity || e instanceof WitchEntity || e instanceof PillagerEntity
+                || e instanceof PiglinEntity || e instanceof StrayEntity || e instanceof CaveSpiderEntity;
+        if (!ranged) return 10;
+        return hasShield(mod) ? 20 : 35;
+    }
     // Player threat tracking (ported from autoclef)
     public Task _killTask = null;
     private final TimerGame _runAwayTimer = new TimerGame(2);
@@ -1203,9 +1213,18 @@ public class MobDefenseChain extends SingleTaskChain {
             runAwayTask = null;
         }
 
-        if (needsChangeOnAttack && lockedOnEntity != null && lockedOnEntity.isAlive()) {
+        // ⛔ A FIGHT IS WITH ONE MOB, AND ONLY WHILE IT IS IN THE RANGE THAT STARTED IT (2026-09-28).
+        // This kept the lock for as long as the first target lived and handed out a kill task for
+        // its CLASS: any zombie anywhere, at priority 65. On the rung-bucket replay that was a "long
+        // haul to entity zombie" across a mountainside at dawn, 20 -> 10 health on the way. The lock
+        // now lasts while that mob is within the range the chain takes mobs on at (plus a margin),
+        // and the kill task is for that mob only.
+        if (needsChangeOnAttack && lockedOnEntity != null && lockedOnEntity.isAlive()
+                && lockedOnEntity.squaredDistanceTo(mod.getPlayer())
+                   < Math.pow(annoyingRangeOf(mod, lockedOnEntity) + LOCK_RANGE_MARGIN, 2)) {
             mdRet9++;
-            setTask(new KillEntitiesTask(lockedOnEntity.getClass()));
+            final Entity locked = lockedOnEntity;
+            setTask(new KillEntitiesTask(e -> e == locked, locked.getClass()));
             return 65;
         } else {
             needsChangeOnAttack = false;

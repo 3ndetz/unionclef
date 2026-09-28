@@ -213,6 +213,26 @@ public class BeatMinecraftTask extends Task {
                 new DistanceItemPriorityCalculator(25_000, 25_000, 5, getTargetBeds(mod), getTargetBeds(mod))
         ));
 
+        // ⛔ A BED BY DAY WHEN SHEEP ARE AROUND (2026-09-28). Without one, the night is either
+        // worked through on the surface (where the rung-bucket replays lost 20 -> 1.7 health and
+        // full47 died) or waited out underground, which full48 measured at about nine minutes of
+        // every twenty. Sleeping skips it in seconds. Beds used to come only from villages
+        // (MineBlockPriorityTask above); three sheep are usually closer. By day only -- chasing
+        // sheep at night is the surface work the shelter exists to avoid.
+        gatherResources.add(new ActionPriorityTask(a -> {
+            Pair<Task, Double> pair = new Pair<>(null, Double.NEGATIVE_INFINITY);
+            if (!config.sleepThroughNight || WorldHelper.getCurrentDimension() != Dimension.OVERWORLD) return pair;
+            if (a.getItemStorage().hasItem(ItemHelper.BED) || WorldHelper.canSleep()) return pair;
+            int wool = a.getItemStorage().getItemCount(ItemHelper.WOOL);
+            boolean sheepNear = a.getEntityTracker().getClosestEntity(a.getPlayer().getPos(),
+                    net.minecraft.entity.passive.SheepEntity.class)
+                    .map(e -> e.squaredDistanceTo(a.getPlayer()) < 48 * 48).orElse(false);
+            if (wool < 3 && !sheepNear) return pair;
+            pair.setLeft(getOneBedTask);
+            pair.setRight(wool >= 3 ? 350d : 180d);
+            return pair;
+        }));
+
         gatherResources.add(new CraftItemPriorityTask(200, getRecipeTarget(Items.SHIELD),
                 a -> itemStorage.hasItem(Items.IRON_INGOT)
         ));
