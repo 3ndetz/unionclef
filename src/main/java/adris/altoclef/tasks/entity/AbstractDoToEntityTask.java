@@ -233,7 +233,12 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                 // This is the same defect the drop pursuit had, and the same medicine: a ceiling on
                 // what ONE target may cost, independent of whether the walk is progressing. The
                 // drop version fired and shipped today (dropBudget=1).
-                if (kaptainwutax.tungsten.TungstenConfig.get().entityPursuitHasBudget) {
+                // Animals are hunted for what they drop, so one that cannot be reached is simply
+                // the wrong one: the budget always applies to them (the flag still gates it for
+                // fights, where a long chase can be the right call). Measured on full49: five
+                // minutes on a rabbit on a ledge in a ravine, "no route within 500 ms" every try.
+                if (kaptainwutax.tungsten.TungstenConfig.get().entityPursuitHasBudget
+                        || entity instanceof net.minecraft.entity.passive.AnimalEntity) {
                     if (entity != pursuitEntity) {
                         pursuitEntity = entity;
                         pursuitStartMs = System.currentTimeMillis();
