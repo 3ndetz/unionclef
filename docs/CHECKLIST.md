@@ -1127,6 +1127,11 @@ python deploy/runner/tg_send.py --text-file report.txt clip.mp4
 
 Send one per meaningful iteration. The clip is the evidence; a text verdict is not.
 
+**Releases and visible milestones get an EDITED report** (operator 2026-09-28): before/after on
+one checkpoint, each clip naming its event, stat cards, rendered with HyperFrames and sent for the
+operator to forward -- `python reports/build_report.py reports/stories/<ver>.json --send`. Rules and
+steps: [VIDEO_REPORTS.md](VIDEO_REPORTS.md). Keep the recordings you will cut (`reports/footage/`).
+
 ## 6. ASSESS — mandatory, never skipped
 
 Right after the test, answer in writing:

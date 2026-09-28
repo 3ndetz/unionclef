@@ -53,6 +53,10 @@ wrong, and this section exists so it never is again.
 > behaviour into the matching tungsten/altoclef place, citing file:line in the comment. A fix that
 > contradicts baritone's handling needs a measured reason written next to it.
 
+> ⛔⛔ **VIDEO REPORTS (operator 2026-09-28).** Every release and every visible milestone gets an
+> edited video report (HyperFrames, sent to Telegram) the operator can forward: before/after on one
+> checkpoint, every clip naming its event, the good-looking things shown. How: **[docs/VIDEO_REPORTS.md](docs/VIDEO_REPORTS.md)**.
+
 > ⛔ **WORK ONLY BY THE CHECKLIST → [docs/CHECKLIST.md](docs/CHECKLIST.md).** It is the
 > mandatory autonomous-work process (phases: formulate → pick → decompose in your OWN
 > TODO tool → implement → **thorough battle TEST of your + adjacent functions** → audit
