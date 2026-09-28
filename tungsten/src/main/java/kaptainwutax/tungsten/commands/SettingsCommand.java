@@ -19,7 +19,10 @@ import java.util.List;
 /**
  * Auto-generated settings commands from TungstenConfig public fields.
  *
- * ;settings           — list all values
+ * ;settings                        — groups and how to use them
+ * ;settings list                   — every value, flat
+ * ;settings <group>                — that group: short name, on/off, what it does
+ * ;settings <group> <name> [value] — show / set one (value: 0/1, on/off, true/false, or a number)
  * ;settings reload    — reload from tungsten.json
  * ;settings <name>    — show current value
  * ;settings <name> <value> — set value + save
@@ -36,8 +39,19 @@ public class SettingsCommand extends Command {
     public void build(LiteralArgumentBuilder<CommandSource> builder) {
         List<Field> fields = getConfigFields();
 
-        // ;settings — show all
+        // ;settings — the groups, and where the rest lives
         builder.executes(context -> {
+            Debug.logMessage("§e--- Tungsten settings ---");
+            for (String g : groups(fields)) {
+                long n = fields.stream().filter(f -> group(f) != null && group(f).group().equals(g)).count();
+                Debug.logMessage("§b;settings " + g + " §7(" + n + ")");
+            }
+            Debug.logMessage("§7;settings list §8— every value; §7;settings reset §8— shipped defaults");
+            return SINGLE_SUCCESS;
+        });
+
+        // ;settings list — every value, flat
+        builder.then(literal("list").executes(context -> {
             TungstenConfig c = TungstenConfig.get();
             Debug.logMessage("§e--- Tungsten Settings ---");
             Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
@@ -47,7 +61,11 @@ public class SettingsCommand extends Command {
                 } catch (Exception ignored) {}
             }
             return SINGLE_SUCCESS;
-        });
+        }));
+
+        for (String g : groups(fields)) {
+            registerGroup(builder, g, fields);
+        }
 
         // ;settings reload
         builder.then(literal("reload").executes(context -> {
@@ -117,6 +135,77 @@ public class SettingsCommand extends Command {
         }
 
         builder.then(sub);
+    }
+
+    private static TungstenConfig.Grouped group(Field f) {
+        return f.getAnnotation(TungstenConfig.Grouped.class);
+    }
+
+    private static List<String> groups(List<Field> fields) {
+        List<String> out = new ArrayList<>();
+        for (Field f : fields) {
+            TungstenConfig.Grouped g = group(f);
+            if (g != null && !out.contains(g.group())) out.add(g.group());
+        }
+        return out;
+    }
+
+    /** One line of a group listing: [on]/[off] (or the value), the short name, what it does. */
+    private static String describe(Field f) {
+        TungstenConfig.Grouped g = group(f);
+        Object v;
+        try { v = f.get(TungstenConfig.get()); } catch (Exception e) { v = "?"; }
+        String state = v instanceof Boolean b ? (b ? "§a[on] " : "§c[off]") : "§f[" + v + "]";
+        return state + " §f" + g.name() + " §8— §7" + g.desc();
+    }
+
+    private void registerGroup(LiteralArgumentBuilder<CommandSource> builder, String groupName, List<Field> fields) {
+        var groupNode = literal(groupName).executes(context -> {
+            Debug.logMessage("§e--- " + groupName + " §7(;settings " + groupName + " <name> <0|1>) §e---");
+            for (Field f : fields) {
+                TungstenConfig.Grouped g = group(f);
+                if (g != null && g.group().equals(groupName)) Debug.logMessage(describe(f));
+            }
+            return SINGLE_SUCCESS;
+        });
+        for (Field f : fields) {
+            TungstenConfig.Grouped g = group(f);
+            if (g == null || !g.group().equals(groupName)) continue;
+            groupNode.then(literal(g.name())
+                    .executes(context -> {
+                        Debug.logMessage(describe(f));
+                        return SINGLE_SUCCESS;
+                    })
+                    .then(argument("value", StringArgumentType.word()).executes(context -> {
+                        String raw = StringArgumentType.getString(context, "value");
+                        try {
+                            f.set(TungstenConfig.get(), parse(raw, f.getType()));
+                            TungstenConfig.save();
+                            Debug.logMessage(describe(f));
+                        } catch (Exception e) {
+                            Debug.logMessage("§c" + groupName + " " + g.name() + ": cannot use '" + raw + "'");
+                        }
+                        return SINGLE_SUCCESS;
+                    })));
+        }
+        builder.then(groupNode);
+    }
+
+    /** 0/1, on/off, true/false, yes/no for switches; a plain number otherwise. */
+    private static Object parse(String raw, Class<?> type) {
+        String v = raw.trim().toLowerCase(java.util.Locale.ROOT);
+        if (type == boolean.class) {
+            switch (v) {
+                case "1": case "on": case "true": case "yes": return true;
+                case "0": case "off": case "false": case "no": return false;
+                default: throw new IllegalArgumentException(raw);
+            }
+        }
+        if (type == int.class) return Integer.parseInt(v);
+        if (type == long.class) return Long.parseLong(v);
+        if (type == double.class) return Double.parseDouble(v);
+        if (type == float.class) return Float.parseFloat(v);
+        throw new IllegalArgumentException(raw);
     }
 
     private static RequiredArgumentBuilder<CommandSource, ?> createArgument(Class<?> type) {

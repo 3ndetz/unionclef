@@ -15,6 +15,20 @@ import java.nio.file.Path;
  */
 public class TungstenConfig {
 
+    /**
+     * Puts a field into a named group of {@code ;settings}: {@code ;settings <group>} lists the
+     * group with each setting's short name, state and description, and
+     * {@code ;settings <group> <name> <value>} sets one. The field's own name keeps working as
+     * before ({@code ;settings renderPathMoves false}).
+     */
+    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+    @java.lang.annotation.Target(java.lang.annotation.ElementType.FIELD)
+    public @interface Grouped {
+        String group();
+        String name();
+        String desc();
+    }
+
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG_FILE =
             FabricLoader.getInstance().getConfigDir().resolve("tungsten.json");
@@ -126,20 +140,34 @@ public class TungstenConfig {
     /** Master render toggle. false = draw NOTHING from tungsten (paths, goal,
      *  parkour moves, combat trajectory, break plan). Turn off to keep the view
      *  clean or shave render cost. Toggle live: ;settings renderVisualization false */
+    @Grouped(group = "visuals", name = "all", desc = "everything tungsten draws (master switch)")
     public boolean renderVisualization = true;
 
     /** Draw the path / parkour-move renderers (block path, running path, node
      *  search). false hides parkour-move visualization while keeping combat/
      *  break overlays. Toggle: ;settings renderPathMoves false */
+    @Grouped(group = "visuals", name = "movement_lines", desc = "physics paths, search nodes, goal box")
     public boolean renderPathMoves = true;
 
+    /** The block route the drivers are walking: the walker's waypoints (cyan) and the movement
+     *  queue's legs (blue). */
+    @Grouped(group = "visuals", name = "route", desc = "walker route (cyan) and movement queue (blue)")
+    public boolean renderRoute = true;
+
+    /** The block being mined with its progress (orange) and the current dig target (yellow). */
+    @Grouped(group = "visuals", name = "mining", desc = "block being mined with progress, dig target")
+    public boolean renderMining = true;
+
     /** Draw the mining break plan (queued=orange, current=red). */
+    @Grouped(group = "visuals", name = "blocks_break", desc = "blocks planned to break (red)")
     public boolean renderBreakPlan = true;
 
     /** Draw the placing plan (cells about to be placed — bridge/fill/build). */
+    @Grouped(group = "visuals", name = "blocks_place", desc = "blocks planned to place (green)")
     public boolean renderPlacePlan = true;
 
     /** Draw combat aim/trajectory overlays. */
+    @Grouped(group = "visuals", name = "combat", desc = "aim and arrow trajectories")
     public boolean renderCombat = true;
 
     /** Max time (ms) for A* input search before emitting bestSoFar.

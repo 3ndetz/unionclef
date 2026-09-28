@@ -67,9 +67,10 @@ public final class RouteOverlay {
     public static void draw() {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) return;
-        drawWalkerRoute();
-        drawMovementQueue(mc);
-        drawMining();
+        kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        if (cfg.renderRoute) drawWalkerRoute();
+        drawMovementQueue(mc, cfg);
+        if (cfg.renderMining) drawMining();
     }
 
     private static void drawWalkerRoute() {
@@ -92,20 +93,22 @@ public final class RouteOverlay {
                 end.getX() + 1, end.getY() + 2, end.getZ() + 1), ROUTE, 40);
     }
 
-    private static void drawMovementQueue(MinecraftClient mc) {
+    private static void drawMovementQueue(MinecraftClient mc, kaptainwutax.tungsten.TungstenConfig cfg) {
         List<Movement> ms = MovementQueue.remainingForOverlay();
         if (ms.isEmpty()) return;
         int n = Math.min(ms.size(), MAX_MOVEMENTS);
         for (int i = 0; i < n; i++) {
             Movement m = ms.get(i);
             BlockPos s = m.getSrc(), d = m.getDest();
-            line(new Vec3d(s.getX() + 0.5, s.getY() + 0.15, s.getZ() + 0.5),
-                    new Vec3d(d.getX() + 0.5, d.getY() + 0.15, d.getZ() + 0.5), QUEUE, 5.0f);
+            if (cfg.renderRoute) {
+                line(new Vec3d(s.getX() + 0.5, s.getY() + 0.15, s.getZ() + 0.5),
+                        new Vec3d(d.getX() + 0.5, d.getY() + 0.15, d.getZ() + 0.5), QUEUE, 5.0f);
+            }
             try {
                 List<BlockPos> br = m.toBreakCached != null ? m.toBreakCached : m.toBreak(mc.world);
-                for (BlockPos b : br) box(b, BREAK, 0.02, 70);
+                if (cfg.renderBreakPlan) for (BlockPos b : br) box(b, BREAK, 0.02, 70);
                 List<BlockPos> pl = m.toPlaceCached != null ? m.toPlaceCached : m.toPlace(mc.world);
-                for (BlockPos b : pl) box(b, PLACE, 0.02, 70);
+                if (cfg.renderPlacePlan) for (BlockPos b : pl) box(b, PLACE, 0.02, 70);
             } catch (Exception ignored) {
                 // a movement whose cells cannot be computed this frame simply draws no boxes
             }
