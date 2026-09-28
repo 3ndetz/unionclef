@@ -1292,6 +1292,18 @@ def main():
                 if _sig != _lava_last[0]:
                     if _lava_last[0] is not None and _sig[1] != _lava_last[0][1]:
                         _lava_died[0] = True
+                        # ⛔ KEEP THE CHECKPOINTS BEFORE A DEATH (2026-09-28). The periodic series
+                        # rotates (CP_KEEP), so by the end of a 90-minute run the save from before a
+                        # death at minute 30 was gone and the nearest entry point was 17 minutes
+                        # earlier (full47). Pin the last two: out of the rotation, renamed death-*.
+                        for _pin in _cp_series[-2:]:
+                            try:
+                                _dst = _pin.replace("cp", f"death{int(time.time() - t0)}-", 1)
+                                os.rename(os.path.join(_cp.ROOT, _pin), os.path.join(_cp.ROOT, _dst))
+                                _cp_series.remove(_pin)
+                                print(f"  [checkpoint] pinned {_pin} -> {_dst} (before a death)")
+                            except Exception as _pe:
+                                print(f"  [checkpoint] pin failed: {str(_pe)[:100]}")
                     if _lava_last[0] is not None:
                         print(f"  LAVA/DEATH t={int(time.time()-t0)}s entries={_lv.get('entries')} deaths={_lv.get('deaths')}"
                               f" | driver={_lv.get('driver')[:200]} | takeoff={_lv.get('takeoff')[:300]}"
