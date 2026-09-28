@@ -1171,6 +1171,14 @@ def main():
     _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M"); _cp_series = []
     _lava_last = [None]
     _lava_died = [False]
+    # THE SERVER COUNTS DEATHS; THE CLIENT ONLY SOMETIMES DOES (2026-09-28). WorldSurvivalChain
+    # counts a death on a tick that sees health 0, and the chains do not tick on the death screen:
+    # bedfix1 died to a zombie with deaths unchanged, so no LAVA/DEATH line and no pinned save.
+    grcon("scoreboard objectives add ucDeaths deathCount")
+
+    def _server_deaths():
+        m = re.search(r"has (\d+) \[", grcon(f"scoreboard players get {BOT} ucDeaths"))
+        return int(m.group(1)) if m else 0
     # CAPTURE THE NETHER ENTRY THE MOMENT IT HAPPENS. The one-run underground->nether entry is proven
     # (v0.95.24 + v0.95.25), but the bot dies within ~30 s of arriving (Enderman knockback off a ledge)
     # -- faster than a 2 GB checkpoint copy -- so no periodic checkpoint ever caught it ALIVE in the
@@ -1288,7 +1296,7 @@ def main():
             # logs for an hour had its whole route geometry sitting in lavaEntryStats all along.
             try:
                 _lv = py4j("lava")
-                _sig = (_lv.get("entries"), _lv.get("deaths"))
+                _sig = (_lv.get("entries"), (_lv.get("deaths") or 0) + 1000 * _server_deaths())
                 if _sig != _lava_last[0]:
                     if _lava_last[0] is not None and _sig[1] != _lava_last[0][1]:
                         _lava_died[0] = True
