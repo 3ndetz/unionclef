@@ -390,6 +390,9 @@ public class MobDefenseChain extends SingleTaskChain {
     private net.minecraft.util.math.BlockPos fleeAnchor = null;
     private int fleeStuckTicks = 0;
     private int fleeSuppressedTicks = 0;
+    /** When the current spell of danger-flight began, and when it last bid (see the flee branch). */
+    private long fleeSinceMs = 0L, lastFleeTickMs = 0L;
+    private static final long FLEE_CONTACT_MS = 3000L;
     /**
      * Times flight was abandoned because it was going nowhere. Read over py4j as mdFleeStuck.
      *
@@ -926,12 +929,33 @@ public class MobDefenseChain extends SingleTaskChain {
                 // we decline to flee HERE and let the branches below decide: the fight branch takes
                 // it at 65 if it judges the mob beatable, and if it does not, its own retreat at 80
                 // still fires. The safety valve is kept; only the reflex is removed.
-                if (!endangeredByShooter(mod)) {
+                // ⛔ FLIGHT THAT DOES NOT BREAK CONTACT IS NOT FLIGHT (2026-09-28). The stuck valve
+                // of the low-health branch above only notices a body that stays on one block; a
+                // body that moves and is still hit got no answer at all. Measured on the bedfix1
+                // replay: two zombies in a cave, no armour, so isVulnerable() from 18 health down;
+                // this branch fled at 70, the zombies walked along and kept hitting, the fight
+                // branch below never got one tick, 20 -> 0 in 45 s with a sword in the pack. Being
+                // hit again after FLEE_CONTACT_MS of running is the measure: stand the flight down
+                // for the same 5 s the stuck valve uses and let the fight branch take the tick.
+                // Only with a weapon: bare-handed against three zombies (mob_unarmed) a fight is
+                // no better than a bad flight, and a first version without this check turned that
+                // course's flights into fist fights (mdFleeStuck=2, still dead). 3 s, not less: in
+                // the open a sprint needs a couple of seconds to shake off the first hits.
+                long nowFlee = System.currentTimeMillis();
+                if (nowFlee - lastFleeTickMs > FLEE_CONTACT_MS) fleeSinceMs = nowFlee;
+                lastFleeTickMs = nowFlee;
+                if (fleeSuppressedTicks == 0 && lastDamageMs - fleeSinceMs > FLEE_CONTACT_MS
+                        && getBestSword(mod) != null) {
+                    mdFleeStuck++;
+                    fleeSuppressedTicks = 100;
+                    runAwayTask = null;
+                }
+                if (!endangeredByShooter(mod) && fleeSuppressedTicks == 0) {
                     runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
                     setTask(runAwayTask);
                     mdRet3++; return 70;
                 }
-                mdFleeShooter++;
+                if (fleeSuppressedTicks == 0) mdFleeShooter++;
             }
         }
 
@@ -1099,7 +1123,9 @@ public class MobDefenseChain extends SingleTaskChain {
 
                 int canDealWith = (int) Math.ceil((armor * 3.6 / 20.0) + (damage * 0.8) + (shield));
 
-                if (canDealWith >= getDangerousnessScore(toDealWithList) || needsChangeOnAttack) {
+                // With flight stood down for not breaking contact, running is off the table: fight.
+                if (canDealWith >= getDangerousnessScore(toDealWithList) || needsChangeOnAttack
+                        || fleeSuppressedTicks > 0) {
                     // we just decided to attack, so we should either get it, or hit something before running away again
                     if (!(mainTask instanceof KillEntitiesTask)) {
                         needsChangeOnAttack = true;
