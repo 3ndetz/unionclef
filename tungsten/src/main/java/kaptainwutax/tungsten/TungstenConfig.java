@@ -137,13 +137,14 @@ public class TungstenConfig {
      *  returns its best chain, so this is a latency knob, not a quality cliff. */
     public long fastPlanBudgetMs = 250;
 
+    /** Without a bed, wait out the night in a capped hole instead of working on the surface
+     *  (NightShelterTask). Underground the night is not affected. */
+    @Grouped(group = "survival", name = "night_shelter", desc = "no bed at night on the surface: dig in and wait for the morning")
+    public boolean nightShelterOnSurface = true;
+
     /** Master render toggle. false = draw NOTHING from tungsten (paths, goal,
      *  parkour moves, combat trajectory, break plan). Turn off to keep the view
      *  clean or shave render cost. Toggle live: ;settings renderVisualization false */
-    /** Without a bed, wait out the night in a capped hole instead of working on the surface
-     *  (NightShelterTask). Underground the night is not affected. */
-    public boolean nightShelterOnSurface = true;
-
     @Grouped(group = "visuals", name = "all", desc = "everything tungsten draws (master switch)")
     public boolean renderVisualization = true;
 
