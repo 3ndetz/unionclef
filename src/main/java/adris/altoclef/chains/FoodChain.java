@@ -13,6 +13,7 @@ import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.HostileEntity;
@@ -40,7 +41,7 @@ public class FoodChain extends SingleTaskChain {
     private boolean needsFood = false;
     private Optional<Item> cachedPerfectFood = Optional.empty();
     private boolean shouldStop = false;
-    /** Bites started and bites broken off with food still needed (read over py4j: foodStats). */
+    /** Bites started, and bites broken off because an enemy came close (read over py4j: foodStats). */
     public static volatile int eatStarts, eatAborts;
 
     public FoodChain(TaskRunner runner) {
@@ -158,9 +159,10 @@ public class FoodChain extends SingleTaskChain {
             requestFillup = false;
         }
 
-        if (hasFood && (needsToEat() || requestFillup) && cachedPerfectFood.isPresent() &&
-                !mod.getMLGBucketChain().isChorusFruiting() && !mod.getPlayer().isBlocking() &&
-                !areEnemiesNearby(mod)) {
+        boolean wantsBite = hasFood && (needsToEat() || requestFillup) && cachedPerfectFood.isPresent() &&
+                !mod.getMLGBucketChain().isChorusFruiting() && !mod.getPlayer().isBlocking();
+        boolean enemyStops = wantsBite && areEnemiesNearby(mod);
+        if (wantsBite && !enemyStops) {
 
             Item toUse = cachedPerfectFood.get();
 
@@ -170,7 +172,7 @@ public class FoodChain extends SingleTaskChain {
             }
             startEat(mod, toUse);
         } else {
-            if (isTryingToEat && hasFood && (needsToEat() || requestFillup)) eatAborts++;
+            if (isTryingToEat && enemyStops) eatAborts++;
             stopEat();
         }
 
@@ -204,26 +206,41 @@ public class FoodChain extends SingleTaskChain {
      * is under way HARDER to stop, not easier.
      */
     private static final double EAT_START_CLEAR = 7, EAT_ABORT_RANGE = 3.5;
+    /**
+     * A mob that sees us within MobDefenseChain's melee take-on range (10) is one the defence is
+     * about to go and fight; a bite begun then is broken off when it arrives.
+     */
+    private static final double EAT_START_CLEAR_SEEN = 10;
 
+    /**
+     * ⛔ THE RANGES ABOVE USED TO BE DEAD CODE (2026-09-28). This walked getCloseEntities(), which is
+     * "entities within our interact range" (EntityTracker: inRange(entity), about 3.5 blocks), so a
+     * mob further than a sword's reach did not exist here at all, whatever the range said. Traced on
+     * mob_hungry: every bite began with the nearest hostile "not found" and was broken off with it at
+     * 3.4-3.5 blocks -- bite, zombie steps into reach, stop, fight, bite again. The whole tracked
+     * list is walked now: getHostiles() for mobs, getTrackedEntities for players.
+     */
     private boolean areEnemiesNearby(AltoClef mod) {
         double dangerRange = isTryingToEat ? EAT_ABORT_RANGE : EAT_START_CLEAR;
-        for (Entity entity : mod.getEntityTracker().getCloseEntities()) {
-            // Hostile mobs nearby — too dangerous to eat
-            if (entity instanceof HostileEntity hostile && hostile.distanceTo(mod.getPlayer()) < dangerRange) {
+        for (LivingEntity hostile : mod.getEntityTracker().getHostiles()) {
+            double d = hostile.distanceTo(mod.getPlayer());
+            if (d < dangerRange) return true;
+            if (!isTryingToEat && d < EAT_START_CLEAR_SEEN
+                    && EntityHelper.isAngryAtPlayer(mod, hostile)
+                    && LookHelper.seesPlayer(hostile, mod.getPlayer(), EAT_START_CLEAR_SEEN)) {
                 return true;
             }
-            // Threatening players nearby (PvP) — too dangerous to eat
-            if (entity instanceof PlayerEntity player && player != mod.getPlayer()
-                    && player.distanceTo(mod.getPlayer()) < dangerRange
-                    && entity.getName() != null) {
-                String name = entity.getName().getString();
-                if (mod.getDamageTracker().getThreatTable().shouldAttack(name)
-                        || mod.getDamageTracker().getThreatTable().shouldAvoid(name)) {
-                    return true;
-                }
+        }
+        // Threatening players nearby (PvP) -- too dangerous to eat
+        for (PlayerEntity player : mod.getEntityTracker().getTrackedEntities(PlayerEntity.class)) {
+            if (player == mod.getPlayer() || player.distanceTo(mod.getPlayer()) >= dangerRange
+                    || player.getName() == null) continue;
+            String name = player.getName().getString();
+            if (mod.getDamageTracker().getThreatTable().shouldAttack(name)
+                    || mod.getDamageTracker().getThreatTable().shouldAvoid(name)) {
+                return true;
             }
         }
-
         return false;
     }
 

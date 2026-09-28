@@ -1287,8 +1287,10 @@ public class Py4jEntryPoint {
     }
 
     /**
-     * NON-PLAYER entities near the bot (mobs + dropped items), nearest first. Players are in
-     * getPlayersInfo. Pure data exposure over the existing EntityTracker.getCloseEntities() —
+     * NON-PLAYER entities around the bot (mobs + dropped items, everything loaded), nearest first.
+     * Players are in getPlayersInfo. Pure data exposure over EntityTracker.getAllTrackedEntities()
+     * (it read getCloseEntities() until 2026-09-28, which is only what a sword can reach, so the
+     * agent saw no mob or drop further than about 3.5 blocks) —
      * closes the TARGET.md Level-0/1 gap "знать ГДЕ мобы/дропы рядом" (agent decides what to do).
      * py4j auto-converts List<Map> to a Python list of dicts. limit<=0 = no cap.
      */
@@ -1300,7 +1302,7 @@ public class Py4jEntryPoint {
         if (selfPos == null) return list;
         List<net.minecraft.entity.Entity> close;
         try {
-            close = _mod.getEntityTracker().getCloseEntities();
+            close = _mod.getEntityTracker().getAllTrackedEntities();
         } catch (Exception e) {
             return list;
         }

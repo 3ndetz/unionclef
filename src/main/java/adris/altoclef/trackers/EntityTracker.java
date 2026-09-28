@@ -356,7 +356,22 @@ public class EntityTracker extends Tracker {
     }
 
     /**
-     * Gets all entities that are within our interact range
+     * Every entity the tracker knows about (all loaded, alive, other than us), as a copy.
+     * Use this for "what is around"; {@link #getCloseEntities()} is only what a swing can reach.
+     */
+    public List<Entity> getAllTrackedEntities() {
+        ensureUpdated();
+        synchronized (BaritoneHelper.MINECRAFT_LOCK) {
+            List<Entity> all = new ArrayList<>();
+            for (List<Entity> l : entityMap.values()) all.addAll(l);
+            return all;
+        }
+    }
+
+    /**
+     * Gets all entities that are within our interact range (a sword's reach, about 3.5 blocks --
+     * NOT "nearby": FoodChain read it as nearby for its 7-14 block danger check and never saw a
+     * mob further than a swing).
      */
     public List<Entity> getCloseEntities() {
         ensureUpdated();

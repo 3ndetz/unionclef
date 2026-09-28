@@ -1138,7 +1138,7 @@ class MobHungry(Scenario):
     tier = "gate"
     needs_victim = False
     duration = 90
-    MAX_EAT_STARTS = 4
+    MAX_EAT_STARTS = 2
 
     def build(self, arena, ctx):
         arena.flat_field(half=14, grass=False)
