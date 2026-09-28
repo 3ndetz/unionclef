@@ -1,0 +1,103 @@
+{
+ "name": "digest-0928",
+ "title": "unionclef: незер, лава, ночь",
+ "subtitle": "что изменилось в релизах 0.95.43–0.95.46 и после",
+ "caption": "unionclef, релизы 0.95.43–0.95.46 и текущая работа: эндермены со столба, побег из лавы, ночь в укрытии, визуализация маршрутов. github.com/3ndetz/unionclef/releases",
+ "segments": [
+  {
+   "kind": "text",
+   "title": "В этом выпуске",
+   "lines": [
+    "эндермены: бой со столба в три блока",
+    "побег из лавы: портировано правило baritone",
+    "ночь без кровати: укрытие вместо боёв на склоне",
+    "визуал маршрута и настройки ;settings visuals"
+   ]
+  },
+  {
+   "kind": "clip",
+   "src": "C:/Repos/pet/unionclef/reports/footage/rec_mob_endermen_shelter.mp4",
+   "from": 2,
+   "to": 32,
+   "speed": 1.5,
+   "title": "Эндермен со столба",
+   "caption": "его удар не достаёт на три блока вверх, бот бьёт сверху"
+  },
+  {
+   "kind": "stat",
+   "title": "30 минут в незере, rung-ender",
+   "before": "1–7 смертей",
+   "after": "0 смертей",
+   "note": "прогоны n57 и n58, 45 минут каждый"
+  },
+  {
+   "kind": "clip",
+   "src": "C:/Repos/pet/unionclef/reports/footage/rec_escape_lava_pool.mp4",
+   "from": 6,
+   "to": 46,
+   "speed": 4,
+   "title": "Было: побег из лавы",
+   "caption": "планировщики запрещали лаву, бот стоял в пруду"
+  },
+  {
+   "kind": "clip",
+   "src": "C:/Repos/pet/unionclef/reports/footage/lava_after.mp4",
+   "from": 3,
+   "to": 16,
+   "speed": 1,
+   "title": "Стало: плывёт к берегу",
+   "caption": "правило canSwimThroughLava из baritone вернули в ядро"
+  },
+  {
+   "kind": "stat",
+   "title": "Курсы побега из лавы",
+   "before": "0 из 4",
+   "after": "5 из 5",
+   "note": "escape_lava и escape_lava_pool"
+  },
+  {
+   "kind": "clip",
+   "src": "C:/Repos/pet/unionclef/reports/footage/night_before.mp4",
+   "from": 285,
+   "to": 345,
+   "speed": 4,
+   "title": "Было: бой на склоне",
+   "caption": "мобы на поверхности, здоровье 20 → 1.7 за четыре минуты"
+  },
+  {
+   "kind": "clip",
+   "src": "C:/Repos/pet/unionclef/reports/footage/full48.mp4",
+   "from": 688,
+   "to": 728,
+   "speed": 2,
+   "title": "Стало: укрытие на ночь",
+   "caption": "без кровати в темноте закапывается на два блока и закрывает голову"
+  },
+  {
+   "kind": "clip",
+   "src": "C:/Repos/pet/unionclef/reports/footage/full48.mp4",
+   "from": 1180,
+   "to": 1236,
+   "speed": 2,
+   "title": "Утро: снова за работу",
+   "caption": "красным — что сломать, оранжевым — что копает сейчас"
+  },
+  {
+   "kind": "stat",
+   "title": "Первые 38 минут с нуля",
+   "before": "смерть на 30-й",
+   "after": "0 смертей",
+   "note": "full47 против full48"
+  },
+  {
+   "kind": "text",
+   "title": "Ещё",
+   "lines": [
+    ";settings visuals route 0 — каждый слой визуала отдельно",
+    "еда в незере: хоглины или поход в обычный мир",
+    "установка блока больше не бросает жемчуг",
+    "подпорка для блоков, которые не поставить с земли"
+   ]
+  }
+ ]
+}

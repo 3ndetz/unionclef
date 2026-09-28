@@ -191,10 +191,15 @@ def main() -> int:
         print("render failed")
         return 1
     print(f"rendered: {out} ({out.stat().st_size // 1024} KB)")
+    # Telegram's bot API takes 50 MB; the render is ~1 MB a second. Keep a smaller copy to send.
+    tg = OUT / f"{story.get('name', 'report')}-tg.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(out), "-c:v", "libx264", "-preset", "slow",
+                    "-crf", "30", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(tg)], check=True)
+    print(f"for telegram: {tg} ({tg.stat().st_size // 1024} KB)")
     if "--send" in sys.argv:
         sys.path.insert(0, str(ROOT.parent / "deploy" / "runner"))
         from tg_speedup import send
-        ok, info = send(str(out), story.get("caption", story["title"]))
+        ok, info = send(str(tg), story.get("caption", story["title"]))
         print("TG:", ok, info)
     return 0
 
