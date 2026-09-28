@@ -947,7 +947,10 @@ public class MobDefenseChain extends SingleTaskChain {
             _killTask = null;
         }
 
-        if (mod.getModSettings().shouldDealWithAnnoyingHostiles()) {
+        // In a closed night shelter nothing can reach the body; walking out to fight is the one
+        // way to change that (NightShelterTask).
+        if (mod.getModSettings().shouldDealWithAnnoyingHostiles()
+                && !adris.altoclef.tasks.movement.NightShelterTask.holding()) {
             // Deal with hostiles because they are annoying.
             List<LivingEntity> hostiles = mod.getEntityTracker().getHostiles();
 

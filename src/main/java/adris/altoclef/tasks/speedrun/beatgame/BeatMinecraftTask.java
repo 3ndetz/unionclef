@@ -110,6 +110,8 @@ public class BeatMinecraftTask extends Task {
     private final List<PriorityTask> gatherResources = new LinkedList<>();
     /** Food fetched from inside the Nether (see the NETHER branch). */
     private Task netherFoodTask;
+    /** The night's shelter when there is no bed (see the sleep branch). */
+    private adris.altoclef.tasks.movement.NightShelterTask nightShelterTask;
     private static final int NETHER_MIN_FOOD_UNITS = 16;
     private static final int NETHER_FOOD_UNITS = 40;
     private final TimerGame changedTaskTimer = new TimerGame(3);
@@ -1757,6 +1759,13 @@ public class BeatMinecraftTask extends Task {
         pickupSmoker = false;
         pickupCrafting = false;
 
+        // A night shelter is held until the sun is up, not just until the night ends (the
+        // sleep branch below only runs at night): the undead outside burn a little after dawn.
+        if (isTaskRunning(mod, nightShelterTask)) {
+            setDebugState("No bed: waiting out the night underground");
+            return nightShelterTask;
+        }
+
         // Sleep through night.
         if (config.sleepThroughNight && !endPortalOpened && WorldHelper.getCurrentDimension() == Dimension.OVERWORLD) {
             if (WorldHelper.canSleep()) {
@@ -1792,6 +1801,24 @@ public class BeatMinecraftTask extends Task {
                                 blockPos -> WorldHelper.canBreak(blockPos),
                                 ItemHelper.itemsToBlocks(ItemHelper.BED))) {
                     sleepDeclined++;
+                    // ⛔ NOT ON THE SURFACE (2026-09-28). "Working through the night" on the surface
+                    // is where the night's damage came from on the rung-bucket checkpoint: skeletons
+                    // shot the bot on a long haul, a food search wandered the slopes, 20 -> 1.7
+                    // health in four minutes, and full47 died there. Underground the night changes
+                    // nothing; on the surface, dig in and wait for the morning (NightShelterTask).
+                    BlockPos head = mod.getPlayer().getBlockPos().up();
+                    if (kaptainwutax.tungsten.TungstenConfig.get().nightShelterOnSurface
+                            && mod.getWorld().isSkyVisible(head)
+                            && adris.altoclef.tasks.movement.NightShelterTask.hasBlock(mod)) {
+                        if (nightShelterTask == null || nightShelterTask.isFinished()) {
+                            nightShelterTask = new adris.altoclef.tasks.movement.NightShelterTask();
+                        }
+                        setDebugState("No bed: waiting out the night underground");
+                        return nightShelterTask;
+                    }
+                    if (isTaskRunning(mod, nightShelterTask)) {
+                        return nightShelterTask;
+                    }
                     setDebugState("No bed and none in sight -- working through the night");
                 } else {
                     setDebugState("Sleeping through night");

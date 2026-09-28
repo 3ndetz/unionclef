@@ -140,6 +140,10 @@ public class TungstenConfig {
     /** Master render toggle. false = draw NOTHING from tungsten (paths, goal,
      *  parkour moves, combat trajectory, break plan). Turn off to keep the view
      *  clean or shave render cost. Toggle live: ;settings renderVisualization false */
+    /** Without a bed, wait out the night in a capped hole instead of working on the surface
+     *  (NightShelterTask). Underground the night is not affected. */
+    public boolean nightShelterOnSurface = true;
+
     @Grouped(group = "visuals", name = "all", desc = "everything tungsten draws (master switch)")
     public boolean renderVisualization = true;
 

@@ -388,7 +388,8 @@ public class UnstuckChain extends SingleTaskChain {
 
         // Standing still on purpose: under a finished enderman shelter the body must not move, and
         // the shimmy walked it out from under the roof every ten seconds (mob_endermen_shelter).
-        if (adris.altoclef.tasks.entity.EndermanShelterTask.holding()) {
+        if (adris.altoclef.tasks.entity.EndermanShelterTask.holding()
+                || adris.altoclef.tasks.movement.NightShelterTask.holding()) {
             posHistory.clear();
             return;
         }
