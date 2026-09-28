@@ -61,6 +61,30 @@
 - [ ] **Food: "Collect 140 units of food" on a food-less mountain start** sent the bot chasing a rabbit
   into a powder-snow grove at minute 2 (full2, 0.95.41). getGameState now reports food/saturation.
 
+<!-- NIGHTSHELTER-CEILING-FACE-UNCHECKED-2026-09-28 -->
+- [ ] **`NightShelterTask` (2026-09-28, still uncommitted as of this note) may have no face to seal
+  its own roof with.** The task digs `mid = top.down()` and `bottom = top.down(2)`, drops the bot
+  into `bottom`, then tries `PlaceBlockTask(top, ...)` to close the entrance. `siteHolds()` requires
+  every horizontal NEIGHBOUR OF `mid` AND `bottom` to be solid (the walls of the shaft), but never
+  checks `top`'s OWN horizontal neighbours -- and `top.up()` must be open (site selection needs
+  `PlayerFit.standable(top)`, which requires clearance at `top` and `top.up()` both), so once the
+  bot is standing in `bottom` with its head at `mid`, the only solid faces `canPlaceAgainst` could
+  possibly find near `top` are `top`'s own horizontal neighbours -- unvalidated, and on open surface
+  ground at the entrance point they may well be open air, not wall. If they are, `placementStand`
+  (BlockPlaceHelper.java:736) falls through every candidate direction to its last resort, standing
+  ON `top.up()` and placing down -- which needs `top.up()` to have a floor, i.e. `top` itself solid,
+  which it is not (that is the hole). If this reads right, the bot reaches "Closing the shelter" and
+  never actually closes it, on any surface site whose entrance happens to sit in the open rather
+  than against a wall. Not confirmed live -- this is a read of `siteHolds`/`placementStand`/
+  `BlockPlaceHelper.drainQueue`'s face-search only, the same class of gap (a placement geometry
+  question invisible to a static read) that took several live-bench rounds to find in
+  `EndermanShelterTask`'s own roof attempt earlier this session. Worth a direct check (does
+  `;settings visuals blocks_place`-style overlay, or a plain "Closing the shelter" debug string
+  stuck for a long time on an open-ground site, show up) before or right after this lands. A fix, if
+  needed, likely wants `siteHolds` to also require ONE solid horizontal neighbour of `top` itself
+  (to guarantee a real face), the same shape as the wall requirement already applied one and two
+  levels down.
+
 ## [RESOLVED 2026-09-21, differently than expected] `VoidGuard`'s new lava clamp (G108, 2026-09-19) is only on `protect()`, not on `apply()` -- the combat-strafe death it names stays unfixed as staged
 
 > RESOLVED, but not by the route this note expected. `VoidGuard.apply(CombatMoveIntent, ...)`
