@@ -1801,7 +1801,10 @@ public class BeatMinecraftTask extends Task {
 
         // A night shelter is held until the sun is up, not just until the night ends (the
         // sleep branch below only runs at night): the undead outside burn a little after dawn.
-        if (isTaskRunning(mod, nightShelterTask)) {
+        // ...but not while a bed is at hand at night: sleeping ends the night, the shelter only
+        // waits it out. full51 placed its bed two blocks from where it then dug in, and spent
+        // the whole night in the hole next to it.
+        if (isTaskRunning(mod, nightShelterTask) && !(WorldHelper.canSleep() && bedAtHand(mod))) {
             setDebugState("No bed: waiting out the night underground");
             return nightShelterTask;
         }
@@ -1836,10 +1839,7 @@ public class BeatMinecraftTask extends Task {
                 // VISIBLE and breakable. Ask it here too: skipping the night is not worth spending
                 // the night failing to build the thing that would skip it.
                 if (kaptainwutax.tungsten.TungstenConfig.get().sleepNeedsAnObtainableBed
-                        && !itemStorage.hasItem(ItemHelper.BED)
-                        && !mod.getBlockScanner().anyFound(
-                                blockPos -> WorldHelper.canBreak(blockPos),
-                                ItemHelper.itemsToBlocks(ItemHelper.BED))) {
+                        && !bedAtHand(mod)) {
                     sleepDeclined++;
                     // ⛔ NOT ON THE SURFACE (2026-09-28). "Working through the night" on the surface
                     // is where the night's damage came from on the rung-bucket checkpoint: skeletons
@@ -2225,6 +2225,29 @@ public class BeatMinecraftTask extends Task {
         Debug.logInternal("Getting beds.");
         return TaskCatalogue.getItemTask("bed", targetBeds);
     }
+
+    /**
+     * A bed in the inventory, a known breakable bed block, or a bed block right next to the player.
+     *
+     * <p>The last check reads the world directly. The block scanner learns about a bed placed a
+     * moment ago only on its next rescan, and in that gap the bed is neither in the inventory nor
+     * "found": full51 placed its bed at night, the sleep branch saw no bed at all, and the bot dug a
+     * night shelter two blocks away from it.
+     */
+    private boolean bedAtHand(AltoClef mod) {
+        if (mod.getItemStorage().hasItem(ItemHelper.BED)) return true;
+        if (mod.getBlockScanner().anyFound(WorldHelper::canBreak, ItemHelper.itemsToBlocks(ItemHelper.BED))) {
+            return true;
+        }
+        BlockPos feet = mod.getPlayer().getBlockPos();
+        for (BlockPos p : BlockPos.iterate(feet.add(-BED_NEAR_RADIUS, -3, -BED_NEAR_RADIUS),
+                feet.add(BED_NEAR_RADIUS, 3, BED_NEAR_RADIUS))) {
+            if (mod.getWorld().getBlockState(p).getBlock() instanceof net.minecraft.block.BedBlock) return true;
+        }
+        return false;
+    }
+
+    private static final int BED_NEAR_RADIUS = 8;
 
     /**
      * Checks if any beds are found in the game.
