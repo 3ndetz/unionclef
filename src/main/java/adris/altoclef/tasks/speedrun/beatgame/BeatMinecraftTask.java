@@ -112,6 +112,9 @@ public class BeatMinecraftTask extends Task {
     private Task netherFoodTask;
     /** The night's shelter when there is no bed (see the sleep branch). */
     private adris.altoclef.tasks.movement.NightShelterTask nightShelterTask;
+    /** Time spent on the bed hunt today (see the bed priority task); capped per day. */
+    private long bedHuntDay = -1, bedHuntSpentMs, bedHuntLastMs;
+    private static final long BED_HUNT_BUDGET_MS = 180_000;
     private static final int NETHER_MIN_FOOD_UNITS = 16;
     private static final int NETHER_FOOD_UNITS = 40;
     private final TimerGame changedTaskTimer = new TimerGame(3);
@@ -223,6 +226,23 @@ public class BeatMinecraftTask extends Task {
             Pair<Task, Double> pair = new Pair<>(null, Double.NEGATIVE_INFINITY);
             if (!config.sleepThroughNight || WorldHelper.getCurrentDimension() != Dimension.OVERWORLD) return pair;
             if (a.getItemStorage().hasItem(ItemHelper.BED) || WorldHelper.canSleep()) return pair;
+            // Not before iron tools, and not more than a few minutes a day. full50: the bed task
+            // took 4.5 minutes of the first day, before any iron, and brought no bed; the night
+            // then came with stone tools. A bed is worth a short detour, not the day.
+            if (!a.getItemStorage().hasItem(Items.IRON_PICKAXE, Items.DIAMOND_PICKAXE)) return pair;
+            long day = a.getWorld().getTimeOfDay() / 24000L;
+            if (day != bedHuntDay) {
+                bedHuntDay = day;
+                bedHuntSpentMs = 0;
+            }
+            if (bedHuntSpentMs > BED_HUNT_BUDGET_MS) return pair;
+            if (getOneBedTask.isActive()) {
+                long now = System.currentTimeMillis();
+                if (bedHuntLastMs > 0) bedHuntSpentMs += Math.min(1000, now - bedHuntLastMs);
+                bedHuntLastMs = now;
+            } else {
+                bedHuntLastMs = 0;
+            }
             int wool = a.getItemStorage().getItemCount(ItemHelper.WOOL);
             boolean sheepNear = a.getEntityTracker().getClosestEntity(a.getPlayer().getPos(),
                     net.minecraft.entity.passive.SheepEntity.class)
@@ -1828,8 +1848,9 @@ public class BeatMinecraftTask extends Task {
                     // nothing; on the surface, dig in and wait for the morning (NightShelterTask).
                     BlockPos head = mod.getPlayer().getBlockPos().up();
                     if (kaptainwutax.tungsten.TungstenConfig.get().nightShelterOnSurface
-                            && mod.getWorld().isSkyVisible(head)
-                            && adris.altoclef.tasks.movement.NightShelterTask.hasBlock(mod)) {
+                            && mod.getWorld().isSkyVisible(head)) {
+                        // No block needed up front: the two cells it digs drop the cap (full50 spent
+                        // its first night on the surface for want of one, with 25 items in the pack).
                         if (nightShelterTask == null || nightShelterTask.isFinished()) {
                             nightShelterTask = new adris.altoclef.tasks.movement.NightShelterTask();
                         }
