@@ -34,6 +34,9 @@ project in `hf/`, rules in `vidsmith/docs/CUT_RULES.md` and `mineswarm/docs/VIDE
 ```bash
 # 1. keep the recordings you will show (gamer_smoke overwrites artifacts/gamer_run1.mp4)
 mv deploy/runner/artifacts/gamer_run1.mp4 reports/footage/<run>.mp4
+#    stopping a run early: this stops EVERY gamer_smoke process and keeps the recording --
+#    killing the shell does not stop the runner, and a stale one keeps driving the client
+python deploy/runner/stop_run.py <run>
 
 # 2. find the moments: RUNG / LAVA/DEATH / pinned lines in the run log give t= seconds, and the
 #    recording starts with the run, so a log time is a video time (check one frame first)
