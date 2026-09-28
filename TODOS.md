@@ -85,6 +85,20 @@
   (to guarantee a real face), the same shape as the wall requirement already applied one and two
   levels down.
 
+  **UPDATE 2026-09-28, later same day: shipped (`a58092ec`) with `siteHolds` byte-for-byte unchanged
+  -- this concern is not addressed in the code -- but two live uses are now on record and both
+  succeeded.** The rung-bucket night replay in the commit's own validation went 20 -> 1.7 health
+  before to a flat 20 held all night after, one arrow taken before the cap closed. Separately,
+  `6dcf1475`'s own commit message describes `full51` placing a bed and THEN digging a night shelter
+  two blocks away, which only makes sense if the shelter had already run to completion (dug, dropped
+  in, sealed) earlier the same night -- a second, independent successful seal, on different terrain.
+  Per this project's own RULE FIVE, two successes are still not a rate, and neither run says anything
+  about a surface site with open ground at the entrance's own height specifically (the one geometry
+  this note worries about) -- they may simply both have had a wall there by chance. Not closing this
+  note on two green runs; worth closing only once either the code changes to require a horizontal
+  neighbour of `top` itself, or enough varied-terrain runs make the open-ground case genuinely rare
+  in practice regardless.
+
 ## [RESOLVED 2026-09-21, differently than expected] `VoidGuard`'s new lava clamp (G108, 2026-09-19) is only on `protect()`, not on `apply()` -- the combat-strafe death it names stays unfixed as staged
 
 > RESOLVED, but not by the route this note expected. `VoidGuard.apply(CombatMoveIntent, ...)`
