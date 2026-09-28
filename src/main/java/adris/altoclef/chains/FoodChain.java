@@ -40,6 +40,8 @@ public class FoodChain extends SingleTaskChain {
     private boolean needsFood = false;
     private Optional<Item> cachedPerfectFood = Optional.empty();
     private boolean shouldStop = false;
+    /** Bites started and bites broken off with food still needed (read over py4j: foodStats). */
+    public static volatile int eatStarts, eatAborts;
 
     public FoodChain(TaskRunner runner) {
         super(runner);
@@ -58,6 +60,7 @@ public class FoodChain extends SingleTaskChain {
             return;
         }
 
+        if (!isTryingToEat) eatStarts++;
         isTryingToEat = true;
         requestFillup = true;
         // Only equip if we're not already holding this food.
@@ -167,6 +170,7 @@ public class FoodChain extends SingleTaskChain {
             }
             startEat(mod, toUse);
         } else {
+            if (isTryingToEat && hasFood && (needsToEat() || requestFillup)) eatAborts++;
             stopEat();
         }
 
@@ -188,8 +192,21 @@ public class FoodChain extends SingleTaskChain {
         return Float.NEGATIVE_INFINITY;
     }
 
+    /**
+     * A bite takes 32 ticks. Begin one only with no enemy within EAT_START_CLEAR, which is about
+     * what a walking zombie covers in those 1.6 s plus its reach; once begun, break it off only when
+     * an enemy is within EAT_ABORT_RANGE, i.e. about to hit.
+     *
+     * <p>⛔ THIS WAS THE OTHER WAY ROUND (operator 2026-09-28: "it tries to eat, a mob comes, it runs,
+     * for ever"). The range was 7 to begin and 14 to keep eating, so a mob anywhere between 7 and 14
+     * blocks started a bite on one tick and cancelled it on the next, again and again -- mob_hungry
+     * counted 10 and 23 bites begun for one meal. A band like this is meant to make an action that
+     * is under way HARDER to stop, not easier.
+     */
+    private static final double EAT_START_CLEAR = 7, EAT_ABORT_RANGE = 3.5;
+
     private boolean areEnemiesNearby(AltoClef mod) {
-        double dangerRange = isTryingToEat ? 14 : 7;
+        double dangerRange = isTryingToEat ? EAT_ABORT_RANGE : EAT_START_CLEAR;
         for (Entity entity : mod.getEntityTracker().getCloseEntities()) {
             // Hostile mobs nearby — too dangerous to eat
             if (entity instanceof HostileEntity hostile && hostile.distanceTo(mod.getPlayer()) < dangerRange) {

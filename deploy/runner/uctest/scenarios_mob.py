@@ -1119,6 +1119,81 @@ class MobUnarmedCrowd(Scenario):
         yield Criterion("health lost (recorded, not gated)", True, f"min_hp={low}")
 
 
+class MobHungry(Scenario):
+    """HUNGRY, HURT, ONE ZOMBIE COMING (operator 2026-09-28: "it tries to eat, a mob comes, it runs,
+    and so on for ever").
+
+    The bot has a sword, food, 14 health and an empty stomach, so health does not come back on its
+    own; one zombie walks in from ten blocks. Two ways out of this are right -- eat before it
+    arrives, or kill it and eat after -- and one is wrong: bite, break off as it comes closer, run,
+    bite again, which is a loop with no end, since neither the food nor the zombie is dealt with.
+
+    The bot runs an ordinary errand (@get oak_log on a treeless field, so it keeps looking), as in
+    mob_unarmed: an idle bot runs no chains.
+
+    Gates: alive (server death score), the zombie dead, food eaten (food level up from the drained
+    start), and eatStarts small -- a loop shows up as dozens of bites begun.
+    """
+    id = "mob_hungry"
+    tier = "gate"
+    needs_victim = False
+    duration = 90
+    MAX_EAT_STARTS = 4
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def drive_start(self, ctx):
+        b = ctx.bot.name
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=zombie]")
+        ctx.rcon.cmd(f"clear {b}", allow_reject=True)
+        ctx.rcon.cmd(f"item replace entity {b} weapon.mainhand with iron_sword")
+        ctx.rcon.cmd(f"give {b} cooked_beef 8")
+        ctx.rcon.cmd(f"effect give {b} minecraft:instant_health 1 10 true")
+        # Empty the stomach: hunger 255 burns a food point every few ticks.
+        ctx.rcon.cmd(f"effect give {b} minecraft:hunger 3 255 true")
+        time.sleep(3.5)
+        ctx.rcon.cmd(f"effect clear {b} minecraft:hunger", allow_reject=True)
+        ctx.rcon.cmd(f"effect give {b} minecraft:instant_damage 1 0 true")
+        time.sleep(1)
+        ctx.geo["food0"] = ctx.rcon.entity_float(b, "foodLevel")
+        ctx.geo["d0"] = ctx.rcon.score(b, "d")
+        ctx.bot.py.try_call("resetRunCounters")
+        ctx.rcon.cmd(f"summon zombie 10.5 {STAND_Y} 0.5")
+        ctx.geo["spawned"] = _zombie_count(ctx)
+        time.sleep(1)
+        ctx.bot.cmd("@get oak_log 3")
+
+    def judge(self, ctx):
+        b = ctx.bot.name
+        d0, d1 = ctx.geo.get("d0"), ctx.rcon.score(b, "d")
+        died = None if d0 is None or d1 is None else d1 - d0
+        food0, food1 = ctx.geo.get("food0"), ctx.rcon.entity_float(b, "foodLevel")
+        ok, fs = ctx.bot.py.try_call("foodStats")
+        starts = None
+        if ok and fs:
+            m = re.search(r"eatStarts=(\d+)", str(fs))
+            starts = int(m.group(1)) if m else None
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+        yield Criterion("one zombie was spawned", ctx.geo.get("spawned") == 1,
+                        f"count_at_spawn={ctx.geo.get('spawned')}")
+        yield Criterion("did not die", died == 0, f"deaths={died} min_hp={low}")
+        yield Criterion("the zombie is dead", _zombie_count(ctx) == 0,
+                        f"remaining={_zombie_count(ctx)}")
+        yield Criterion("ate", food0 is not None and food1 is not None and food1 > food0,
+                        f"food {food0} -> {food1}")
+        yield Criterion("no eat-flee loop", starts is not None and starts <= self.MAX_EAT_STARTS,
+                        f"{fs if ok else 'unread'} (max {self.MAX_EAT_STARTS}) "
+                        f"mdFleeStuck={_stat(ctx, 'mdFleeStuck')} mdFight={_stat(ctx, 'mdFight')} "
+                        f"flee={_stat(ctx, 'flee')}")
+
+
 def _count(ctx, etype):
     r = ctx.rcon.cmd(f"execute if entity @e[type={etype}]", allow_reject=True)
     if "Count:" not in r:
@@ -1239,4 +1314,4 @@ class MobEndermenShelter(MobEndermenHurt):
 
 
 SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
-             MobEndermenShelter]
+             MobEndermenShelter, MobHungry]

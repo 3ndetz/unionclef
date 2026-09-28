@@ -2654,6 +2654,8 @@ public class Py4jEntryPoint {
         // counters that describe it: the barren streak refuses every path after two
         // barren locks and used to survive into the next course.
         adris.altoclef.util.helpers.TungstenHelper.reset();
+        adris.altoclef.chains.FoodChain.eatStarts = 0;
+        adris.altoclef.chains.FoodChain.eatAborts = 0;
         var q = kaptainwutax.tungsten.path.movements.MovementQueue.class;   // for the reader
         kaptainwutax.tungsten.path.movements.MovementQueue.qStarted = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qSteps = 0;
@@ -4442,6 +4444,16 @@ public class Py4jEntryPoint {
      * depend on catching a 10-tick flag with a 20-tick sampler.
      */
     public int hitsTaken() { return kaptainwutax.tungsten.combat.VoidGuard.kbImpulseN; }
+
+    /**
+     * Eating, as counters: "eatStarts=N eatAborts=M". A start is a bite begun, an abort is a bite
+     * broken off by an enemy while food was still needed. Many starts and few completed meals is
+     * the eat-flee loop: bite, mob steps in, run, bite again.
+     */
+    public String foodStats() {
+        return "eatStarts=" + adris.altoclef.chains.FoodChain.eatStarts
+                + " eatAborts=" + adris.altoclef.chains.FoodChain.eatAborts;
+    }
 
     /**
      * Ticks spent fighting with a rim at the bot's back -- the knockback guard's exposure.

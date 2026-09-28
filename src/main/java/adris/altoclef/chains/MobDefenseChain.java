@@ -500,6 +500,42 @@ public class MobDefenseChain extends SingleTaskChain {
         mod.getInputControls().hold(Input.CLICK_RIGHT);
     }
 
+    /** Weapon, armour and shield against {@link #getDangerousnessScore}: the fight branch's scale. */
+    private static int canDealWithScore(AltoClef mod) {
+        Item bestSword = getBestSword(mod);
+        float damage = bestSword == null ? 0 : meleeDamageOf(bestSword) + 1;
+        int shield = hasShield(mod) && bestSword != null ? 3 : 0;
+        return (int) Math.ceil((mod.getPlayer().getArmor() * 3.6 / 20.0) + (damage * 0.8) + shield);
+    }
+
+    /**
+     * The mobs that put us in danger are ones the fight branch would take on, and health is not low.
+     *
+     * <p>WHY (operator 2026-09-28, "it tries to eat, a mob comes, it runs, for ever"). isVulnerable()
+     * calls an unarmoured body vulnerable below 18 health, and a hungry body does not regenerate, so
+     * one zombie within 8 blocks sent the bot running at priority 70 -- ahead of the fight branch that
+     * judges the same zombie beatable with the sword in the pack. Running from a mob that follows
+     * settles nothing: the bot bit into its food once the gap opened, broke off as the zombie came
+     * back, and ran again. mob_hungry measured 10 and 23 bites begun for one meal. Over half health
+     * and with the numbers on our side, the answer to one beatable mob is to kill it; below that the
+     * flight stays (with its own valves for flights that do not work).
+     */
+    private boolean dangerIsBeatable(AltoClef mod) {
+        if (mod.getPlayer().getHealth() <= 10) return false;
+        List<LivingEntity> threats = new ArrayList<>();
+        synchronized (BaritoneHelper.MINECRAFT_LOCK) {
+            for (LivingEntity e : mod.getEntityTracker().getHostiles()) {
+                if (!e.isInRange(mod.getPlayer(), SAFE_KEEP_DISTANCE)
+                        || mod.getBehaviour().shouldExcludeFromForcefield(e)
+                        || !EntityHelper.isAngryAtPlayer(mod, e)) continue;
+                // A creeper is never fought at melee range (G43); its avoidance lives elsewhere.
+                if (e instanceof CreeperEntity) return false;
+                threats.add(e);
+            }
+        }
+        return !threats.isEmpty() && canDealWithScore(mod) >= getDangerousnessScore(threats);
+    }
+
     private static int getDangerousnessScore(List<LivingEntity> toDealWithList) {
         int numberOfProblematicEntities = toDealWithList.size();
         for (LivingEntity toDealWith : toDealWithList) {
@@ -907,7 +943,8 @@ public class MobDefenseChain extends SingleTaskChain {
             runAwayTask = null;
         }
         // Dodge all mobs cause we boutta die son
-        if (isInDanger(mod) && !escapeDragonBreath(mod) && !mod.getFoodChain().isShouldStop()) {
+        if (isInDanger(mod) && !escapeDragonBreath(mod) && !mod.getFoodChain().isShouldStop()
+                && !dangerIsBeatable(mod)) {
             if (targetEntity == null || WorldHelper.isSurroundedByHostiles()) {
                 // ⛔ YOU CANNOT OUTRUN AN ARROW, AND THIS BRANCH HAS BEEN TRYING TO.
                 //
@@ -1103,9 +1140,6 @@ public class MobDefenseChain extends SingleTaskChain {
             if (!toDealWithList.isEmpty()) {
 
                 // Depending on our weapons/armor, we may choose to straight up kill hostiles if we're not dodging their arrows.
-                Item bestSword = getBestSword(mod);
-
-                int armor = mod.getPlayer().getArmor();
                 // ASK THE ITEM WHAT IT HITS FOR. ONE ANSWER, BOTH VERSIONS.
                 // This used to be a version split whose 1.21.11 half was `float damage = 0` with a
                 // TODO, because getMaterial().getAttackDamage() was removed there. The consequence
@@ -1117,11 +1151,8 @@ public class MobDefenseChain extends SingleTaskChain {
                 // got a tick (kaTaskTicks=0), which is why the tungsten combat wiring looked dead.
                 // The damage lives in the item's attribute modifiers on both 1.21.1 and 1.21.11,
                 // so reading it there removes the divergence instead of papering over one side.
-                float damage = bestSword == null ? 0 : meleeDamageOf(bestSword) + 1;
-
-                int shield = hasShield(mod) && bestSword != null ? 3 : 0;
-
-                int canDealWith = (int) Math.ceil((armor * 3.6 / 20.0) + (damage * 0.8) + (shield));
+                // (The computation lives in canDealWithScore, shared with dangerIsBeatable.)
+                int canDealWith = canDealWithScore(mod);
 
                 // With flight stood down for not breaking contact, running is off the table: fight.
                 if (canDealWith >= getDangerousnessScore(toDealWithList) || needsChangeOnAttack
