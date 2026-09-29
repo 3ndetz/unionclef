@@ -49,6 +49,15 @@
 - [ ] **Overworld death at 15:30 of a run from zero (full46, 0.95.46).** hp 19 -> 0 in 23 s near
   (96,77,-405), "Mine And Collect oak_log"; the run was cut by the Docker hang before the death
   messages were read. Recording lost with the stand; reproduce from a checkpoint of a new run.
+- [ ] **NEXT: the bucket-cast portal cannot cast its upper frame (G108, reproduced 2026-09-29).**
+  Without a diamond pickaxe the only way into the nether is ConstructNetherPortalBucketTask, and
+  PlaceObsidianBucketTask builds a cobblestone mould around each frame cell; for the cells above
+  the ground (e.g. 18,-58,2 on portal_lava_lake) the mould hangs in the air and PlaceBlockTask ->
+  "Wander for 5 blocks" loops for ever. full56 and full57 (no diamonds) spent their last 40-60
+  minutes here. The lake search half is fixed (world scan, 0.95.52). Course: craft suite
+  portal_lava_lake (gate: first obsidian in 300 s; both arms currently fail at the upper frame).
+  Needs: casting order bottom-up with the cast frame supported by blocks already placed, and a
+  scaffold (pillar) to stand on for the top row.
 - [ ] **Portal builder re-sites its pad repeatedly on rough ground** (n59/n61: "Portal pad ... is
   unreachable ... re-siting here" three times, the frame dismantled and rebuilt). Also: a resumed
   checkpoint forgets the portal it came through (MiscBlockTracker is in memory only) -- CODE DONE
