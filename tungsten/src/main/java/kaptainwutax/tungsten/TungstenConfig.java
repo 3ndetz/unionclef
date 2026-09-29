@@ -5070,6 +5070,10 @@ public class TungstenConfig {
      *  false = the old unconditional 12-tick settle, kept for A/B on nav_tunnel. */
     public boolean settleOnlyNearFalling = true;
 
+    /** The bucket portal looks for its lava lake in the world, not only among the scanner's 40
+     *  nearest lava blocks (ConstructNetherPortalBucketTask.scanForLavaLake); false for the A/B. */
+    public boolean lavaLakeWorldScan = true;
+
     /** Scales the cost of bridging with a placed block. Raise it to make the bot prefer
      *  going around; lower it to make it build more readily. */
     public double placeCostMultiplier = 1.0;

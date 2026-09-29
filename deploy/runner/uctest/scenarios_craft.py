@@ -11,9 +11,10 @@ project is hammering this box, so these courses answer in seconds under any load
 WHAT THEY GATE. Holding the item. Not "the task ran", not "the screen opened" -- the rung is the
 item in the pack, the same bar the playthrough ladder uses.
 """
+import re
 import time
 
-from .arena import STAND_Y
+from .arena import FLOOR_Y, STAND_Y
 from .scenario import Criterion, Scenario
 
 
@@ -1613,8 +1614,68 @@ class PickupDropPit(PickupDrop):
     pit = True
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
+
+class PortalLavaLake(Scenario):
+    """BUCKET PORTAL WITH MANY SMALL LAVA SOURCES NEARER THAN THE LAKE (full57, 2026-09-29).
+
+    BlockScanner keeps the 40 nearest positions of a block, and the 40 nearest lava blocks in a
+    real world are lava falls and puddles; ConstructNetherPortalBucketTask looked for its lake only
+    among them and found "depth 1" 1606 times in an hour. Here: 48 single lava sources in the floor
+    within 12 blocks, a 5x5 lake 22-26 blocks off, buckets, water, flint and steel, cobblestone.
+    Gate: the first frame block of obsidian is cast within MAX_S. Portal completion is recorded.
+    """
+    id = "portal_lava_lake"
+    tier = "gate"
+    needs_victim = False
+    duration = 420
+    MAX_S = 300
+    bot_kit = ["item replace entity {name} weapon.mainhand with iron_pickaxe",
+               "give {name} water_bucket 1", "give {name} bucket 1",
+               "give {name} flint_and_steel 1", "give {name} cobblestone 64"]
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=30, grass=False)
+        arena._fill(-30, FLOOR_Y - 1, -30, 30, FLOOR_Y - 1, 30, "stone")
+        for x in range(-12, 13, 4):
+            for z in range(-12, 13, 4):
+                if abs(x) <= 1 and abs(z) <= 1:
+                    continue
+                arena._fill(x, FLOOR_Y, z, x, FLOOR_Y, z, "lava")
+        arena._fill(22, FLOOR_Y, -2, 26, FLOOR_Y, 2, "lava")
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.geo["t0"] = time.time()
+        ctx.bot.cmd("@test portalbucket")
+
+    def _present(self, ctx, block):
+        # "fill ... replace X" with X itself reports how many X it found and changes nothing
+        r = ctx.rcon.cmd(f"fill -30 {FLOOR_Y} -30 30 {STAND_Y + 10} 30 {block} replace {block}",
+                         allow_reject=True)
+        m = re.search(r"(\d+) block", r)
+        return int(m.group(1)) if m else 0
+
+    def drive_tick(self, ctx, elapsed):
+        if ctx.geo.get("first_obsidian") is None and self._present(ctx, "obsidian") > 0:
+            ctx.geo["first_obsidian"] = time.time() - ctx.geo["t0"]
+        if ctx.geo.get("portal_at") is None and self._present(ctx, "nether_portal") > 0:
+            ctx.geo["portal_at"] = time.time() - ctx.geo["t0"]
+
+    def early_stop(self, ctx):
+        return ctx.geo.get("portal_at") is not None
+
+    def judge(self, ctx):
+        t = ctx.geo.get("first_obsidian")
+        yield Criterion(f"first obsidian cast within {self.MAX_S} s", t is not None and t <= self.MAX_S,
+                        f"t={None if t is None else round(t, 1)}")
+        p = ctx.geo.get("portal_at")
+        yield Criterion("portal lit (recorded, not gated)", True, f"t={None if p is None else round(p, 1)}")
+
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
-             PickupMinableDrop, PickupAfterGoto]
+             PickupMinableDrop, PickupAfterGoto, PortalLavaLake]

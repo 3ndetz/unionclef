@@ -325,7 +325,52 @@ public class ConstructNetherPortalBucketTask extends Task {
                 }
             }
         }
+        if (nearestLake == null && kaptainwutax.tungsten.TungstenConfig.get().lavaLakeWorldScan)
+            nearestLake = scanForLavaLake(mod, playerPos, alreadyExplored);
         return nearestLake;
+    }
+
+    /**
+     * ⛔ THE SCANNER KEEPS ONLY THE 40 NEAREST POSITIONS OF A BLOCK (BlockScanner
+     * CACHED_POSITIONS_PER_BLOCK), and the 40 nearest lava blocks are lava falls and puddles, one
+     * source each. full57 searched 567 times in an hour and "found" a lake of depth 1 1606 times,
+     * with the lava sea under y=-54 in the loaded chunks the whole time. So look at the world:
+     * every LAKE_SCAN_STEP-th column of the loaded chunks within LAKE_SCAN_RADIUS, full height,
+     * still lava sources measured with the same flood fill; nearest lake of MIN_LAKE_SOURCES wins.
+     */
+    private static final int LAKE_SCAN_RADIUS = 64, LAKE_SCAN_STEP = 4, MIN_LAKE_SOURCES = 12;
+    public static volatile int lakeScans, lakeScanFound;
+
+    private BlockPos scanForLavaLake(AltoClef mod, BlockPos playerPos, HashSet<BlockPos> alreadyExplored) {
+        var world = mod.getWorld();
+        lakeScans++;
+        BlockPos best = null;
+        double bestSq = Double.POSITIVE_INFINITY;
+        BlockPos.Mutable m = new BlockPos.Mutable();
+        for (int dx = -LAKE_SCAN_RADIUS; dx <= LAKE_SCAN_RADIUS; dx += LAKE_SCAN_STEP) {
+            for (int dz = -LAKE_SCAN_RADIUS; dz <= LAKE_SCAN_RADIUS; dz += LAKE_SCAN_STEP) {
+                int x = playerPos.getX() + dx, z = playerPos.getZ() + dz;
+                if (!mod.getChunkTracker().isChunkLoaded(new BlockPos(x, 0, z))) continue;
+                for (int y = world.getBottomY(); y < world.getTopY(); y++) {
+                    m.set(x, y, z);
+                    BlockState st = world.getBlockState(m);
+                    if (st.getBlock() != Blocks.LAVA || !st.getFluidState().isStill()) continue;
+                    BlockPos p = m.toImmutable();
+                    if (alreadyExplored.contains(p)) continue;
+                    double sq = playerPos.getSquaredDistance(p);
+                    if (sq >= bestSq) continue;
+                    if (getNumberOfBlocksAdjacent(alreadyExplored, p) >= MIN_LAKE_SOURCES) {
+                        bestSq = sq;
+                        best = p;
+                    }
+                }
+            }
+        }
+        if (best != null) {
+            lakeScanFound++;
+            Debug.logMessage("Lava lake found by a world scan at " + best.toShortString());
+        }
+        return best;
     }
 
     private int getNumberOfBlocksAdjacent(HashSet<BlockPos> alreadyExplored, BlockPos start) {
