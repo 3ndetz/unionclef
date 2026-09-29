@@ -391,6 +391,17 @@ public class CollectFoodTask extends Task {
                 if (!world.getFluidState(candidate).isEmpty()
                         || !world.getFluidState(candidate.down()).isEmpty()
                         || !WorldHelper.canReach(candidate)) continue;
+                // The bottom of a 1x1 shaft has open sky above it and is no surface: full55 kept
+                // "reaching the surface" one cell over, at the foot of the shaft next to its own.
+                boolean walledIn = true;
+                for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
+                    BlockPos n = candidate.offset(d);
+                    if (world.getBlockState(n).getCollisionShape(world, n).isEmpty()) {
+                        walledIn = false;
+                        break;
+                    }
+                }
+                if (walledIn) continue;
                 double dy = support - mod.getPlayer().getY();
                 double distance = dx * dx + dz * dz + dy * dy;
                 if (distance < bestDistance) {

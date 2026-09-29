@@ -23,16 +23,26 @@ public class ExploreOutwardTask extends Task {
     private static final double MIN_GAIN = 4;
     private static final long LEG_PATIENCE_MS = 25_000;
 
-    private double heading = Double.NaN;   // radians, 0 = +x
-    private int legX, legZ;
-    private boolean hasLeg;
-    private double legBestDist;
-    private long legProgressMs;
-    public static volatile int legsStarted, legsTurned;
+    // ⛔ THE SEARCH OUTLIVES THE TASK OBJECT (full55, 2026-09-29). Parents re-create this task
+    // whenever they restart, and with the state per instance every new one took the same heading
+    // from the same yaw and reset its patience: fifteen minutes on one unreachable leg,
+    // "heading -271, Getting to (85,-568)", never turning. One search, kept across instances,
+    // forgotten only after SEARCH_FORGET_MS without a tick.
+    private static final long SEARCH_FORGET_MS = 60_000;
+    private static double heading = Double.NaN;   // radians, 0 = +x
+    private static int legX, legZ;
+    private static boolean hasLeg;
+    private static double legBestDist;
+    /** Time this search has actually been ticking (ms): patience counts only that, not the minutes
+     *  a bed, a fight or a meal took in between. */
+    private static long activeMs, legProgressMs, lastTickMs;
+    /** Where the body was when the current leg started, and whether the build engine has had a go. */
+    private static Vec3d legStartPos;
+    private static boolean legEscapeTried;
+    public static volatile int legsStarted, legsTurned, escapes;
 
     @Override
     protected void onStart() {
-        hasLeg = false;
     }
 
     @Override
@@ -40,6 +50,25 @@ public class ExploreOutwardTask extends Task {
         AltoClef mod = AltoClef.getInstance();
         Vec3d pos = mod.getPlayer().getPos();
         long now = System.currentTimeMillis();
+        if (now - lastTickMs > SEARCH_FORGET_MS) {
+            heading = Double.NaN;
+            hasLeg = false;
+        } else {
+            activeMs += Math.min(now - lastTickMs, 1000);
+        }
+        lastTickMs = now;
+        // WALLED IN? THEN THIS IS NOT A SEARCH, IT IS AN ESCAPE -- the same answer TimeoutWanderTask
+        // gives (G29). full55: in a 1x1 shaft left by the night, every leg answered "NO ROUTE" and
+        // the build engine was never armed for long enough to dig out; PlannedEscape arms it now.
+        if (kaptainwutax.tungsten.task.FastNavigator.isActive() && PlannedEscape.armedFrom() != null) {
+            setDebugState("Enclosed -- escaping via FastPlanner (dig/build allowed)");
+            return null;
+        }
+        if (PlannedEscape.enclosed(mod) && PlannedEscape.tryStart(mod, "explore enclosed")) {
+            escapes++;
+            setDebugState("Enclosed -- escaping via FastPlanner (dig/build allowed)");
+            return null;
+        }
         if (Double.isNaN(heading)) {
             heading = Math.toRadians(mod.getPlayer().getYaw() + 90);   // where it faces
         }
@@ -49,8 +78,21 @@ public class ExploreOutwardTask extends Task {
                 hasLeg = false;                       // reached: next leg, same heading
             } else if (d < legBestDist - MIN_GAIN) {
                 legBestDist = d;
-                legProgressMs = now;
-            } else if (now - legProgressMs > LEG_PATIENCE_MS) {
+                legProgressMs = activeMs;
+            } else if (activeMs - legProgressMs > LEG_PATIENCE_MS) {
+                // NOT MOVED AT ALL? THE WALKER IS STUCK, NOT THE HEADING (full55, t617 resume).
+                // In a pocket left by the night the grid route kept flickering between "none" and a
+                // step into a one-high niche, so the drive's own escalation to the build engine
+                // (2.5 s of NO ROUTE in a row) never fired and every heading was refused alike.
+                // Give the build engine this leg once before turning.
+                if (!legEscapeTried && legStartPos != null && pos.distanceTo(legStartPos) < 4
+                        && PlannedEscape.tryStart(mod, "explore stalled")) {
+                    legEscapeTried = true;
+                    escapes++;
+                    legProgressMs = activeMs;
+                    setDebugState("Stalled -- escaping via FastPlanner (dig/build allowed)");
+                    return null;
+                }
                 heading += Math.PI / 2;               // this way is blocked: turn
                 legsTurned++;
                 hasLeg = false;
@@ -60,7 +102,9 @@ public class ExploreOutwardTask extends Task {
             legX = (int) Math.floor(pos.x + Math.cos(heading) * LEG);
             legZ = (int) Math.floor(pos.z + Math.sin(heading) * LEG);
             legBestDist = LEG;
-            legProgressMs = now;
+            legProgressMs = activeMs;
+            legStartPos = pos;
+            legEscapeTried = false;
             hasLeg = true;
             legsStarted++;
         }

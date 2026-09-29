@@ -1434,5 +1434,66 @@ class MobPigs(Scenario):
                         f"pigs_left={_count(ctx, 'pig')}")
 
 
+class NightShelterExit(NightShelterFlat):
+    """...and out again in the morning (full55, 2026-09-29).
+
+    full55 spent the morning and ten more minutes in its own capped shaft: "primDrive NO ROUTE ...
+    sz0", every heading of the food search refused, the body jumping on the spot. The shelter task
+    ends at dawn and leaves the climb out to the navigator. Here: dig in and seal as in
+    night_shelter_flat, then make it day and ask for a surface point eight blocks away.
+    """
+    id = "night_shelter_exit"
+    duration = 120
+    EXIT_S = 40
+    # A mound, not the flat pad: the pad sits on the bottom of the world (-64), and the first runs
+    # of this course dug through its last layer into the void.
+    TOP = STAND_Y + 6
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=False)
+        arena._fill(-10, STAND_Y, -10, 10, self.TOP - 1, 10, "dirt")
+        ctx.geo["bot_spawn"] = f"0.5 {self.TOP} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def _sealed(self, ctx):
+        pos = ctx.rcon.entity_pos(ctx.bot.name)
+        if not pos:
+            return False, "no position"
+        x, y, z = int(pos[0] // 1), int(round(pos[1])), int(pos[2] // 1)
+
+        def air(yy):
+            return "passed" in ctx.rcon.cmd(f"execute if block {x} {yy} {z} #minecraft:air", allow_reject=True)
+        ok = y == self.TOP - 3 and air(self.TOP - 2) and not air(self.TOP - 1)
+        return ok, f"feet=({x},{y},{z}) surface={self.TOP}"
+
+    def drive_tick(self, ctx, elapsed):
+        if ctx.geo.get("exit_cmd_at") is None:
+            now = time.time()
+            if self._sealed(ctx)[0]:
+                ctx.geo.setdefault("sealed_since", now)
+            else:
+                ctx.geo.pop("sealed_since", None)
+            if now - ctx.geo.get("sealed_since", now) >= 3:
+                ctx.rcon.cmd("time set 1500")
+                time.sleep(2)
+                ctx.bot.py.call("gotoXYZ", 8, self.TOP, 0)
+                ctx.geo["exit_cmd_at"] = time.time()
+        elif ctx.geo.get("out_at") is None:
+            pos = ctx.rcon.entity_pos(ctx.bot.name)
+            if pos and pos[1] >= self.TOP - 0.1 and abs(pos[0] - 8) < 2.5 and abs(pos[2]) < 2.5:
+                ctx.geo["out_at"] = time.time() - ctx.geo["exit_cmd_at"]
+
+    def early_stop(self, ctx):
+        return ctx.geo.get("out_at") is not None
+
+    def judge(self, ctx):
+        yield Criterion("sealed in", ctx.geo.get("exit_cmd_at") is not None, "")
+        t = ctx.geo.get("out_at")
+        pos = ctx.rcon.entity_pos(ctx.bot.name)
+        yield Criterion(f"out and at the surface point within {self.EXIT_S} s",
+                        t is not None and t <= self.EXIT_S,
+                        f"t={None if t is None else round(t, 1)} pos={pos}")
+
+
 SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
-             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs]
+             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs, NightShelterExit]
