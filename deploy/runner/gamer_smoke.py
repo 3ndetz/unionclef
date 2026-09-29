@@ -1320,7 +1320,7 @@ def main():
             # logs for an hour had its whole route geometry sitting in lavaEntryStats all along.
             try:
                 _lv = py4j("lava")
-                _sig = (_lv.get("entries"), (_lv.get("deaths") or 0) + 1000 * _server_deaths())
+                _sig = (_lv.get("entries"), int(_lv.get("deaths") or 0) + 1000 * _server_deaths())
                 if _sig != _lava_last[0]:
                     if _lava_last[0] is not None and _sig[1] != _lava_last[0][1]:
                         _lava_died[0] = True
@@ -1343,8 +1343,12 @@ def main():
                               f" | at={_lv.get('pos')} prev1={_lv.get('prev1')} task={_lv.get('task')[:160]}"
                               f" | breaks={_lv.get('brk')[:200]}")
                     _lava_last[0] = _sig
-            except Exception:
-                pass
+            except Exception as _le:
+                # Said once: a silent failure here turned death detection off for a whole run
+                # (full52, a str + int in the signature) and nobody could tell.
+                if not getattr(_server_deaths, "warned", False):
+                    _server_deaths.warned = True
+                    print(f"  [death watch] broken: {type(_le).__name__}: {str(_le)[:120]}")
             responsive+=1
             # HOW FAST WAS THE CLIENT WHILE IT TRIED? The nav suite has asked this since the day a
             # starved host was read as a code regression; this bench never has, so its verdicts
