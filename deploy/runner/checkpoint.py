@@ -157,7 +157,7 @@ def _pos_from_playerdata():
         tmp.unlink(missing_ok=True)
 
 
-def save(name, note=""):
+def save(name, note="", extra=None):
     free = disk_free_gb()
     if free < MIN_FREE_GB:
         print(f"[checkpoint] NOT saving {name}: only {free:.0f} GB free on the disk (< {MIN_FREE_GB})")
@@ -170,6 +170,8 @@ def save(name, note=""):
     meta = {"name": name, "note": note, "saved_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "seed": rcon("seed").replace("Seed: ", "").strip("[]"),
             "daytime": rcon("time query daytime"), "bot": bot_summary(), "light": True}
+    # client-side state a resumed run needs back (e.g. the last nether portals); see gamer_smoke
+    meta.update(extra or {})
     dim = str(meta["bot"].get("Dimension", "")).strip('"')
     xz = _parse_pos(meta["bot"].get("Pos", ""))
     if xz is None:

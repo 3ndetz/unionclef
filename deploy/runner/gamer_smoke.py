@@ -84,6 +84,8 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids,"food":food}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
+elif op=="portals": out=dict(mc.getLastNetherPortals())
+elif op=="setportal": out={"ok": bool(mc.setLastNetherPortal(req["dim"], int(req["x"]), int(req["y"]), int(req["z"])))}
 elif op=="lava":
     d=dict(mc.lavaEntryStats())
     out={k: str(d.get(k)) for k in ("entries","deaths","deathTakeoff","takeoff","driver","pos","task","prev1")}
@@ -123,6 +125,27 @@ def py4j(op,t=30,**kw):
     r=sh(["docker","exec",CLIENT,"python3","-c",SNIP,json.dumps({"op":op,"port":PORT,**kw})],t)
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
+def cp_save(name, note=""):
+    """checkpoint.save plus what the client remembers and the world does not: the last nether
+    portal used in each dimension. MiscBlockTracker holds it in memory only, so a resumed run used
+    to forget the portal it came through and build another (n59/n61, TODOS)."""
+    try:
+        portals = py4j("portals", t=15)
+    except Exception:
+        portals = {}
+    return _cp.save(name, note=note, extra={"portals": portals})
+
+
+def _restore_client_memory(meta):
+    for dim, xyz in (meta.get("portals") or {}).items():
+        try:
+            x, y, z = (int(v) for v in str(xyz).split(","))
+            r = py4j("setportal", dim=dim, x=x, y=y, z=z, t=15)
+            print(f"  last {dim} portal restored: {x},{y},{z} ok={r.get('ok')}")
+        except Exception as e:
+            print(f"  last {dim} portal not restored: {str(e)[:80]}")
+
+
 def _restore_render_flags(flags):
     """Give the client its visualisation back, whatever ended the run.
 
@@ -787,7 +810,7 @@ def main():
         # to move; what matters is that the swap happens right before @gamer and that the bot
         # rejoins the restored world with the position, inventory and armour the checkpoint holds.
         phase("resume"); print(f"[2c] resuming from checkpoint {FROM_CP} (the reset above is discarded with the world)...")
-        _cp.restore(FROM_CP)
+        _cp_meta = _cp.restore(FROM_CP)
         joined = False
         for attempt in range(4):
             py4j("connect", ip="gamer-server")
@@ -805,6 +828,7 @@ def main():
         _self = py4j("gs").get("self") or {}
         pos = _self.get("pos"); spawn = None
         print(f"  resumed at: {pos} hp={_self.get('hp')} food={_self.get('food')}")
+        _restore_client_memory(_cp_meta or {})
         # ⛔ SURVIVE THE RESTORE (2026-09-19). A checkpoint like nether-reach sits UNDERGROUND (y~37)
         # in the dark, so on resume the bot can be killed by standing mobs before @gamer's survival
         # chain heals it -- it then respawns at WORLD SPAWN, EMPTY, and re-runs the whole tool ladder,
@@ -1205,7 +1229,7 @@ def main():
             # a checkpoint must never end the run it is describing
             try:
                 _name = f"{_cp_prefix}-t{int(time.time() - t0)}"
-                _cp.save(_name, note=f"periodic, {int((time.time() - t0) / 60)} min into run {RUN_SEQ[0]}")
+                cp_save(_name, note=f"periodic, {int((time.time() - t0) / 60)} min into run {RUN_SEQ[0]}")
                 _cp_series.append(_name)
                 while len(_cp_series) > CP_KEEP:
                     _cp.drop(_cp_series.pop(0))
@@ -1230,7 +1254,7 @@ def main():
                         grcon(f"effect give {BOT} minecraft:fire_resistance 30 0 true")
                     except Exception: pass
                     try:
-                        _cp.save("nether-fresh",
+                        cp_save("nether-fresh",
                                  note=f"clean nether entry (hostiles cleared, healed) run {RUN_SEQ[0]}")
                     except Exception as _ne:            # noqa: BLE001
                         print(f"  nether-fresh checkpoint failed: {str(_ne)[:120]}")
@@ -1288,7 +1312,7 @@ def main():
                 # the next stage that is never older than the newest run to get this far.
                 _rn = "rung-" + re.sub(r"[^a-z0-9]+", "-", _new_rungs[-1].lower()).strip("-")
                 try:
-                    _cp.save(_rn, note=f"rung {', '.join(_new_rungs)} at {int(time.time() - t0)}s, run {RUN_SEQ[0]}")
+                    cp_save(_rn, note=f"rung {', '.join(_new_rungs)} at {int(time.time() - t0)}s, run {RUN_SEQ[0]}")
                 except Exception as _re:              # noqa: BLE001
                     print(f"  rung checkpoint failed: {str(_re)[:120]}")
             # EVERY LAVA ENTRY AND DEATH, WITH ITS SNAPSHOT, AS IT HAPPENS (2026-09-25). The client's
@@ -1492,7 +1516,7 @@ def main():
         # THE END OF A RUN IS WHERE THE NEXT TEST STARTS. Frozen after the recording stops so the
         # clip ends with the run, not with a minute of the copy.
         try:
-            _cp.save(SAVE_END, note=f"end of run {RUN_SEQ[0]} ({MINUTES:g} min), ladder: "
+            cp_save(SAVE_END, note=f"end of run {RUN_SEQ[0]} ({MINUTES:g} min), ladder: "
                      + (", ".join(f"{k}@{v}s" for k, v in reached.items()) if reached else "nothing"))
         except Exception as _ce:                      # noqa: BLE001
             print(f"  end checkpoint failed: {str(_ce)[:120]}")

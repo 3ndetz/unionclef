@@ -58,6 +58,21 @@ public class MiscBlockTracker {
         }
     }
 
+    /** The last portal used in each dimension, as the tracker holds it now (a copy). */
+    public Map<Dimension, BlockPos> snapshot() {
+        return new HashMap<>(lastNetherPortalsUsed);
+    }
+
+    /**
+     * Tell the tracker which portal was last used in a dimension. The map lives in memory only and
+     * is cleared on leaving the world, so a bot that rejoins (a checkpoint resume, a reconnect)
+     * otherwise has no way back but to build a new portal; a caller that kept the position hands it
+     * back here. A stale position is dropped by getLastUsedNetherPortal once its chunk is loaded.
+     */
+    public void remember(Dimension dimension, BlockPos portal) {
+        lastNetherPortalsUsed.put(dimension, portal);
+    }
+
     public void reset() {
         lastNetherPortalsUsed.clear();
     }

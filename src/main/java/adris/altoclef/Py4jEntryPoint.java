@@ -4452,6 +4452,33 @@ public class Py4jEntryPoint {
      * broken off by an enemy while food was still needed. Many starts and few completed meals is
      * the eat-flee loop: bite, mob steps in, run, bite again.
      */
+    /**
+     * The last nether portal the bot used in each dimension: {"OVERWORLD": "x,y,z", "NETHER": ...}.
+     * This is where the bot heads to change dimension before it considers building a portal. The
+     * memory is lost on leaving the world; save it with this and give it back with
+     * setLastNetherPortal after a rejoin.
+     */
+    public java.util.Map<String, String> getLastNetherPortals() {
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        _mod.getMiscBlockTracker().snapshot().forEach((d, p) ->
+                out.put(d.name(), p.getX() + "," + p.getY() + "," + p.getZ()));
+        return out;
+    }
+
+    /**
+     * Set the last used nether portal of a dimension ("OVERWORLD", "NETHER"); the bot goes there
+     * to change dimension. Returns false for an unknown dimension name.
+     */
+    public boolean setLastNetherPortal(String dimension, int x, int y, int z) {
+        try {
+            _mod.getMiscBlockTracker().remember(adris.altoclef.util.Dimension.valueOf(dimension),
+                    new net.minecraft.util.math.BlockPos(x, y, z));
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     public String foodStats() {
         return "eatStarts=" + adris.altoclef.chains.FoodChain.eatStarts
                 + " eatAborts=" + adris.altoclef.chains.FoodChain.eatAborts;
