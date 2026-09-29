@@ -95,11 +95,15 @@ public class NightShelterTask extends Task {
             setDebugState("Going to dig in for the night at " + top.toShortString());
             return new GetToBlockTask(top);
         }
-        for (int d = 1; d <= DEPTH; d++) {
-            if (solid(world, top.down(d))) {
-                committed = true;
-                setDebugState("Digging in for the night");
-                return new DestroyBlockTask(top.down(d));
+        // Dig only on the way down. At the bottom the top dug cell IS the cap, and a solid cap is
+        // the goal: full54 dug its own cap out, put it back, dug it out again, for eight minutes.
+        if (!feet.equals(bottom)) {
+            for (int d = 1; d <= DEPTH; d++) {
+                if (solid(world, top.down(d))) {
+                    committed = true;
+                    setDebugState("Digging in for the night");
+                    return new DestroyBlockTask(top.down(d));
+                }
             }
         }
         if (!feet.equals(bottom)) {

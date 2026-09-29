@@ -1231,8 +1231,17 @@ class NightShelterFlat(Scenario):
         time.sleep(3)
         ctx.bot.cmd("@test shelter")
 
+    HOLD_S = 10
+
     def early_stop(self, ctx):
-        return self._sealed(ctx)[0]
+        # Sealed AND STAYING sealed: stopping at the first sealed sample hid a loop in which the
+        # bot dug its own cap out again the next tick (full54, eight minutes).
+        now = time.time()
+        if self._sealed(ctx)[0]:
+            ctx.geo.setdefault("sealed_since", now)
+        else:
+            ctx.geo.pop("sealed_since", None)
+        return now - ctx.geo.get("sealed_since", now) >= self.HOLD_S
 
     def _sealed(self, ctx):
         pos = ctx.rcon.entity_pos(ctx.bot.name)
@@ -1252,7 +1261,8 @@ class NightShelterFlat(Scenario):
 
     def judge(self, ctx):
         ok, detail = self._sealed(ctx)
-        yield Criterion("dug in and sealed", ok, detail)
+        yield Criterion(f"dug in and sealed, held {self.HOLD_S} s", ok and ctx.geo.get("sealed_since") is not None
+                        and time.time() - ctx.geo["sealed_since"] >= self.HOLD_S - 1, detail)
 
 
 def _count(ctx, etype):
