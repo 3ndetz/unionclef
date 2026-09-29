@@ -1374,5 +1374,55 @@ class MobEndermenShelter(MobEndermenHurt):
         ctx.bot.cmd("@test huntender")
 
 
+class MobPigs(Scenario):
+    """THREE PIGS ON A FIELD, GET THREE PORKCHOPS (full53, 2026-09-29).
+
+    In full53 the bot spent most of seven minutes on "Collect 140 units of food: Killing pig" in a
+    birch forest with pigs two or three blocks away on many frames, still in "Long haul to entity
+    via the drive" and not striking. Here: open grass, three pigs, a sword, daytime, @get porkchop 3.
+    The time to three porkchops is the measure; a player does this in about fifteen seconds.
+    """
+    id = "mob_pigs"
+    tier = "gate"
+    needs_victim = False
+    duration = 120
+    bot_kit = KIT_SWORD
+    MAX_S = 45
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=True)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("kill @e[type=pig]")
+        ctx.rcon.cmd("kill @e[type=item]")
+        ctx.bot.py.try_call("resetRunCounters")
+        for x, z in ((6.5, 4.5), (-5.5, 6.5), (4.5, -7.5)):
+            ctx.rcon.cmd(f"summon pig {x} {STAND_Y} {z}")
+        time.sleep(1)
+        ctx.geo["t_cmd"] = time.time()
+        ctx.bot.cmd("@get porkchop 3")
+
+    def _chops(self, ctx):
+        r = ctx.rcon.cmd(f"clear {ctx.bot.name} minecraft:porkchop 0", allow_reject=True)
+        m = re.search(r"(\d+)", r)
+        return int(m.group(1)) if m and "Found" in r else 0
+
+    def drive_tick(self, ctx, elapsed):
+        if ctx.geo.get("done_at") is None and self._chops(ctx) >= 3:
+            ctx.geo["done_at"] = time.time() - ctx.geo["t_cmd"]
+
+    def early_stop(self, ctx):
+        return ctx.geo.get("done_at") is not None
+
+    def judge(self, ctx):
+        t = ctx.geo.get("done_at")
+        yield Criterion(f"three porkchops within {self.MAX_S} s", t is not None and t <= self.MAX_S,
+                        f"t={None if t is None else round(t, 1)} chops={self._chops(ctx)} "
+                        f"pigs_left={_count(ctx, 'pig')}")
+
+
 SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
-             MobEndermenShelter, MobHungry, NightShelterFlat]
+             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs]

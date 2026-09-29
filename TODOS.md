@@ -62,7 +62,11 @@
   (0/4 without the melee guard, 2026-09-25) -- pre-existing combat quality, not regressions.
 - [ ] **Water escape without tools** (flooded ravine after a death: drift stops "Path stopped: drift
   4.2 blocks" in water, no pickaxe).
-- [ ] **A long haul to an animal tunnels through a mountain (food2 resume, 2026-09-29).** Pigs seen
+- [ ] **"Doing stuff in smoker: cooked_porkchop x3" for ~4 minutes (full53 resume from t1288,
+  2026-09-29).** Three porkchops smoke in 15 s; the task recurs from 47 s to 283 s. Unread.
+- [ ] **A long haul to an animal tunnels through a mountain (food2 resume, 2026-09-29).** PARTLY:
+  the 0.6 s settle after every dig run is gone (nav_tunnel 31 -> 23.5 s); the pause between a dig
+  and the next leg measured under 0.05 s, so the "3 s replanning" item did not reproduce there. Pigs seen
   at 166 s, killed at ~420 s: "Long haul to entity via the drive (walk/dig/build)" dug and pillared
   through stone for two minutes instead of walking round. Compare the planner's break cost with the
   measured dig time (baritone ActionCosts / MovementHelper.getMiningDurationTicks) before touching it.
