@@ -115,6 +115,24 @@ public class BeatMinecraftTask extends Task {
     /** Time spent on the bed hunt today (see the bed priority task); capped per day. */
     private long bedHuntDay = -1, bedHuntSpentMs, bedHuntLastMs;
     private static final long BED_HUNT_BUDGET_MS = 180_000;
+    /**
+     * Time allowed per night to get into a bed that is at hand; after it the night is waited out
+     * like a bedless one. full51 and a full52 resume spent whole nights on "Placing a bed nearby"
+     * on the surface, losing health to mobs (14.6 -> 6.6), because nothing ever gave up on it.
+     */
+    private static final long SLEEP_TRY_BUDGET_MS = 90_000;
+    private long sleepTryNight = -1, sleepTryStartMs;
+
+    /** True once this night's attempt to sleep has used up SLEEP_TRY_BUDGET_MS. */
+    private boolean sleepGivenUpTonight(AltoClef mod) {
+        long night = mod.getWorld().getTimeOfDay() / 24000;
+        long now = System.currentTimeMillis();
+        if (night != sleepTryNight) {
+            sleepTryNight = night;
+            sleepTryStartMs = now;
+        }
+        return !mod.getPlayer().isSleeping() && now - sleepTryStartMs > SLEEP_TRY_BUDGET_MS;
+    }
     private static final int NETHER_MIN_FOOD_UNITS = 16;
     private static final int NETHER_FOOD_UNITS = 40;
     private final TimerGame changedTaskTimer = new TimerGame(3);
@@ -1839,7 +1857,7 @@ public class BeatMinecraftTask extends Task {
                 // VISIBLE and breakable. Ask it here too: skipping the night is not worth spending
                 // the night failing to build the thing that would skip it.
                 if (kaptainwutax.tungsten.TungstenConfig.get().sleepNeedsAnObtainableBed
-                        && !bedAtHand(mod)) {
+                        && !bedAtHand(mod) || sleepGivenUpTonight(mod)) {
                     sleepDeclined++;
                     // ⛔ NOT ON THE SURFACE (2026-09-28). "Working through the night" on the surface
                     // is where the night's damage came from on the rung-bucket checkpoint: skeletons

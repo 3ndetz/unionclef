@@ -329,23 +329,26 @@ public class PlaceBedAndSetSpawnTask extends Task {
 
         // Clear and make bed foundation
 
-        for (Vec3i baseOffs : BED_BOTTOM_PLATFORM) {
-            BlockPos toPlace = currentBedRegion.add(baseOffs);
-            if (!WorldHelper.isSolidBlock(toPlace)) {
-                currentStructure = toPlace;
+        // Only the strip the bed needs: where we stand, the bed's foot and head, a cell of
+        // headroom over each, and the floor under all three (see stripWork). This used to clear a
+        // 3x2x3 box and lay a 3x3 platform, a dozen block operations on a slope or in a forest --
+        // full51/full52 spent whole nights on them ("Failed to place, wandering timeout", "Place
+        // structure" stuck for a minute) with the bed in the pack.
+        for (int dx = 0; dx < 3; ++dx) {
+            BlockPos floor = currentBedRegion.add(dx, -1, 1);
+            if (!WorldHelper.isSolidBlock(floor)) {
+                currentStructure = floor;
                 break;
             }
         }
 
         outer:
-        for (int dx = 0; dx < BED_CLEAR_SIZE.getX(); ++dx) {
-            for (int dz = 0; dz < BED_CLEAR_SIZE.getZ(); ++dz) {
-                for (int dy = 0; dy < BED_CLEAR_SIZE.getY(); ++dy) {
-                    BlockPos toClear = currentBedRegion.add(dx,dy,dz);
-                    if (WorldHelper.isSolidBlock(toClear)) {
-                        currentBreak = toClear;
-                        break outer;
-                    }
+        for (int dx = 0; dx < 3; ++dx) {
+            for (int dy = 0; dy < 2; ++dy) {
+                BlockPos toClear = currentBedRegion.add(dx, dy, 1);
+                if (WorldHelper.isSolidBlock(toClear)) {
+                    currentBreak = toClear;
+                    break outer;
                 }
             }
         }
@@ -531,117 +534,60 @@ public class PlaceBedAndSetSpawnTask extends Task {
     private BlockPos locateBedRegion(AltoClef mod, BlockPos origin) {
         final int SCAN_RANGE = 10;
 
-        BlockPos closestGood = null;
-        double closestDist = Double.POSITIVE_INFINITY;
-
+        BlockPos best = null;
+        double bestScore = Double.POSITIVE_INFINITY;
         for (int x = origin.getX() - SCAN_RANGE; x < origin.getX() + SCAN_RANGE; ++x) {
             for (int z = origin.getZ() - SCAN_RANGE; z < origin.getZ() + SCAN_RANGE; ++z) {
-                outer:
                 for (int y = origin.getY() - SCAN_RANGE; y < origin.getY() + SCAN_RANGE; ++y) {
                     BlockPos attemptPos = new BlockPos(x, y, z);
-                    double distance = BlockPosVer.getSquaredDistance(attemptPos,mod.getPlayer().getPos());
-
-                    Debug.logInternal("Checking position: " + attemptPos);
-
-                    if (distance > closestDist) {
-                        Debug.logInternal("Skipping position: " + attemptPos);
-                        continue;
-                    }
-
-                    if (isGoodPosition(mod, attemptPos)) {
-                        Debug.logInternal("Found good position: " + attemptPos);
-                        closestGood = attemptPos;
-                        closestDist = distance;
+                    int work = stripWork(mod, attemptPos);
+                    if (work < 0) continue;
+                    double score = Math.sqrt(BlockPosVer.getSquaredDistance(attemptPos, mod.getPlayer().getPos()))
+                            + WORK_BLOCKS * work;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = attemptPos;
                     }
                 }
             }
         }
-
-        return closestGood;
+        return best;
     }
 
-    /**
-     * Check if the given position is a good position.
-     * A position is considered good if all blocks within a specific area around it can be placed inside or cleared.
-     *
-     * @param mod The AltoClef mod instance.
-     * @param pos The position to check.
-     * @return True if the position is good, false otherwise.
-     */
-    private boolean isGoodPosition(AltoClef mod, BlockPos pos) {
-        final BlockPos BED_CLEAR_SIZE = new BlockPos(2, 1, 2);
+    /** One block of digging or filling costs as much as this many blocks of walking. */
+    private static final double WORK_BLOCKS = 8;
 
-        // Iterate over the area around the position
-        for (int x = 0; x < BED_CLEAR_SIZE.getX(); ++x) {
-            for (int y = 0; y < BED_CLEAR_SIZE.getY(); ++y) {
-                for (int z = 0; z < BED_CLEAR_SIZE.getZ(); ++z) {
-                    BlockPos checkPos = pos.add(x,y,z);
-                    if (!isGoodToPlaceInsideOrClear(mod, checkPos)) {
-                        Debug.logInternal("Not a good position: " + checkPos);
-                        return false;
-                    }
+    /**
+     * Block operations the bed strip at {@code region} needs, or -1 if it cannot be made.
+     *
+     * <p>The strip is x = 0..2 at z = 1, relative to the region: we stand in x=0 and click the floor
+     * of x=1 facing +x, so the bed's foot lands in x=1 and its head in x=2. Each of the three cells
+     * and the cell above it must be clear (a solid one is one dig), the floor under each must be
+     * solid (a missing one is one placement). Fluids, unbreakable blocks and hazards rule a strip out.
+     */
+    private int stripWork(AltoClef mod, BlockPos region) {
+        int work = 0;
+        for (int dx = 0; dx < 3; ++dx) {
+            BlockPos floor = region.add(dx, -1, 1);
+            if (!mod.getWorld().getFluidState(floor).isEmpty()) return -1;
+            if (WorldHelper.isSolidBlock(floor)) {
+                // a floor as it is
+            } else if (WorldHelper.isAir(floor) || mod.getWorld().getBlockState(floor).isReplaceable()) {
+                work++;
+            } else {
+                return -1;
+            }
+            for (int dy = 0; dy < 2; ++dy) {
+                BlockPos c = region.add(dx, dy, 1);
+                if (!mod.getWorld().getFluidState(c).isEmpty()) return -1;
+                if (WorldHelper.isSolidBlock(c)) {
+                    if (!WorldHelper.canBreak(c)) return -1;
+                    work++;
+                } else if (!WorldHelper.isAir(c) && !mod.getWorld().getBlockState(c).isReplaceable()) {
+                    return -1;
                 }
             }
         }
-
-        Debug.logInternal("Good position");
-        return true;
-    }
-
-    /**
-     * Checks if a given position is good to place inside or clear.
-     *
-     * @param mod The AltoClef instance.
-     * @param pos The position to check.
-     * @return True if the position is good to place inside or clear, false otherwise.
-     */
-    private boolean isGoodToPlaceInsideOrClear(AltoClef mod, BlockPos pos) {
-        // Define the offsets to check around the position
-        final Vec3i[] CHECK = {
-                new Vec3i(0, 0, 0),
-                new Vec3i(-1, 0, 0),
-                new Vec3i(1, 0, 0),
-                new Vec3i(0, 1, 0),
-                new Vec3i(0, -1, 0),
-                new Vec3i(0, 0, 1),
-                new Vec3i(0, 0, -1)
-        };
-
-        // Check each offset
-        for (Vec3i offset : CHECK) {
-            BlockPos newPos = pos.add(offset);
-            if (!isGoodAsBorder(mod, newPos)) {
-                Debug.logInternal("Not good as border: " + newPos);
-                return false;
-            }
-        }
-
-        Debug.logInternal("Good to place inside or clear");
-        return true;
-    }
-
-    /**
-     * Checks if a block is suitable as a border block.
-     *
-     * @param mod The mod instance.
-     * @param pos The position of the block.
-     * @return true if the block can be used as a border, false otherwise.
-     */
-    private boolean isGoodAsBorder(AltoClef mod, BlockPos pos) {
-        // Check if the block is solid
-        boolean isSolid = WorldHelper.isSolidBlock(pos);
-        Debug.logInternal("isSolid: " + isSolid);
-
-        if (isSolid) {
-            // Check if the block can be broken
-            boolean canBreak = WorldHelper.canBreak(pos);
-            Debug.logInternal("canBreak: " + canBreak);
-            return canBreak;
-        } else {
-            // Check if the block is air
-            boolean isAir = WorldHelper.isAir(pos);
-            Debug.logInternal("isAir: " + isAir);
-            return isAir;
-        }
+        return work;
     }
 }

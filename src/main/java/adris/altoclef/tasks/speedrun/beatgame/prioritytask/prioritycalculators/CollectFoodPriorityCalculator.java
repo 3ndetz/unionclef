@@ -31,6 +31,10 @@ public class CollectFoodPriorityCalculator extends ItemPriorityCalculator {
     private final AltoClef mod;
     private final double foodUnits;
     private final double minFoodUnits;
+    /** Food units (hunger points in the pack) under which the reserve counts as gone: two or three items. */
+    static final double OUT_OF_FOOD_UNITS = 20;
+    /** Above ore and diamond gathering (single digits to tens), below a bed by day (180/350). */
+    static final double OUT_OF_FOOD_PRIORITY = 100;
 
     public CollectFoodPriorityCalculator(AltoClef mod, double foodUnits, double minFoodUnits) {
         super(Integer.MAX_VALUE,Integer.MAX_VALUE);
@@ -71,6 +75,14 @@ public class CollectFoodPriorityCalculator extends ItemPriorityCalculator {
         // (finite distance) still tops up to foodUnits normally, and needsEmergencyFood (+inf above)
         // and the low-reserve ramp still guard survival.
         if (Double.isInfinite(distance) && foodPotential < foodUnits) {
+            // ⛔ OUT OF FOOD IS NOT "A BIT SHORT" (full52, 2026-09-29). 0.1 is below every ore, so a
+            // bot with NOTHING to eat and no animal in sight -- underground, where none are tracked
+            // -- kept mining for diamonds: 15.6 health and hunger 11 for five minutes, so no
+            // regeneration, then a cave with a skeleton, a zombie and a spider, 15.6 -> 3.6 -> dead.
+            // needsEmergencyFood waits for hunger <= 10 or health <= 10, which is already inside the
+            // fight. With less than a couple of meals left, go and find food (CollectFoodTask heads
+            // for the surface; in the nether it hunts hoglins or goes home) ahead of ores.
+            if (foodPotential < OUT_OF_FOOD_UNITS) return OUT_OF_FOOD_PRIORITY;
             return foodPotential < minFoodUnits ? 0.1d : Double.NEGATIVE_INFINITY;
         }
 
