@@ -341,8 +341,12 @@ public class SmeltInBlastFurnaceTask extends ResourceTask {
         @Override
         protected double getCostToMakeNew(AltoClef mod) {
             if (_blastFurnaceCache.burnPercentage > 0 || _blastFurnaceCache.burningFuelCount > 0 ||
-                    _blastFurnaceCache.fuelSlot != null || _blastFurnaceCache.materialSlot != null ||
-                    _blastFurnaceCache.outputSlot != null) {
+                    !_blastFurnaceCache.fuelSlot.isEmpty() || !_blastFurnaceCache.materialSlot.isEmpty() ||
+                    !_blastFurnaceCache.outputSlot.isEmpty()) {
+                // isEmpty, not != null: the slots start as ItemStack.EMPTY, so "!= null" was true
+                // for every smoker ever opened and a new one was never worth making -- full53 walked
+                // ~75 blocks, tunnelling, back to an old one with 3 porkchops (SmeltInFurnaceTask
+                // already asks isEmpty).
                 return 9999999.0;
             }
             if (mod.getItemStorage().getItemCount(Items.COBBLESTONE) > 11 &&

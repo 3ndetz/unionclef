@@ -67,6 +67,10 @@
   ~75 blocks (tunnelling) to an OLD smoker, because SmeltInSmokerTask.getCostToMakeNew returns
   9999999 whenever its cache says that smoker holds anything. Check whether the cache is current,
   and weigh what is in it against the walk (three raw porkchops are not worth 75 blocks).
+  2026-09-29: the condition was "!= null" on ItemStack.EMPTY fields -- always true (the furnace task
+  already asked isEmpty); fixed for smoker and blast furnace. The same checkpoint then CRAFTS a new
+  smoker instead, cooked food at 353 s against ~190 s walking (one run, a creeper in between): the
+  make-new cost (10-100) ignores gathering the logs and furnace it needs. Price that.
 - [ ] **A long haul to an animal tunnels through a mountain (food2 resume, 2026-09-29).** PARTLY:
   the 0.6 s settle after every dig run is gone (nav_tunnel 31 -> 23.5 s); the pause between a dig
   and the next leg measured under 0.05 s, so the "3 s replanning" item did not reproduce there. Pigs seen
