@@ -346,13 +346,14 @@ public class SmeltInSmokerTask extends ResourceTask {
                 // already asks isEmpty).
                 return 9999999.0;
             }
-            if (mod.getItemStorage().getItemCount(Items.COBBLESTONE) > 8 &&
-                    mod.getItemStorage().getItemCount(ItemHelper.LOG) > 4) {
-                double cost = 100.0 - 90.0 * (((double) mod.getItemStorage().getItemCount(new Item[]{Items.COBBLESTONE})
-                        / 8.0) + ((double) mod.getItemStorage().getItemCount(ItemHelper.LOG) / 4.0));
-                return Math.max(cost, 10.0);
-            }
-            return StorageHelper.miningRequirementMetInventory(MiningRequirement.WOOD) ? 50.0 : 100.0;
+            // In TICKS, the unit of the walk it is compared with (BaritoneHelper.calculateGenericHeuristic,
+            // ~4.6 a block). The old 10-100 scale read as "a few blocks' walk" even when the logs
+            // still had to be chopped, so any far smoker lost to a new one and a near one could too.
+            boolean logs = mod.getItemStorage().getItemCount(ItemHelper.LOG) >= 4;
+            if (mod.getItemStorage().hasItem(Items.SMOKER)) return 40;                       // place it
+            if (logs && mod.getItemStorage().hasItem(Items.FURNACE)) return 120;             // one craft
+            if (logs && mod.getItemStorage().getItemCount(Items.COBBLESTONE) >= 8) return 240; // two crafts
+            return 1200;                                                                      // go and gather
         }
 
         @Override
