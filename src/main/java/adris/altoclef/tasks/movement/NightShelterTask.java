@@ -18,8 +18,15 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Wait out the night in a capped two-deep hole: dig the two cells under the feet, drop in, put a
- * block where the feet were, and stay until morning.
+ * Wait out the night in a capped hole: dig the three cells under the feet, drop to the bottom, put
+ * a block in the top dug cell (one below ground level), and stay until morning.
+ *
+ * <p>WHY THREE AND NOT TWO (2026-09-29). The first version dug two and capped the cell the feet
+ * had been in, at ground level. A block there needs a solid neighbour to be placed against; below
+ * it is the dug hole and on flat ground its sides are open air, so on open ground the cap had
+ * nothing to go on (found reading placementStand, TODOS 2026-09-28; the two live successes were on
+ * slopes). One cell lower the cap is surrounded by the ground itself -- the same walls siteHolds
+ * already requires.
  *
  * <p>WHY. Without a bed the main task used to "work through the night" on the surface. Measured on
  * the rung-bucket checkpoint (snowy mountains, full47 and two replays): every health loss of the
@@ -37,9 +44,11 @@ import java.util.List;
 public class NightShelterTask extends Task {
 
     private static final int SITE_SEARCH_RADIUS = 6;
+    /** Cells dug under the feet: the body takes the lower two, the cap goes in the top one. */
+    private static final int DEPTH = 3;
     private static volatile boolean holding;
 
-    private BlockPos top;   // the cap: the cell the feet were in when the digging started
+    private BlockPos top;   // the cell the feet were in when the digging started; the cap goes under it
     /** Set on the first dig: from then on the site is kept. Re-picking it after every dig is how
      *  the first version took a 186-block shaft down from y 155 to -31 (each dug site stopped
      *  passing siteHolds, the next one was picked under the feet). */
@@ -80,36 +89,34 @@ public class NightShelterTask extends Task {
             }
             Debug.logMessage("Night shelter at " + top.toShortString());
         }
-        BlockPos mid = top.down(), bottom = top.down(2);
-        if (!feet.equals(top) && !feet.equals(mid) && !feet.equals(bottom)) {
+        BlockPos cap = top.down(), bottom = top.down(DEPTH);
+        if (feet.getX() != top.getX() || feet.getZ() != top.getZ()
+                || feet.getY() > top.getY() || feet.getY() < bottom.getY()) {
             setDebugState("Going to dig in for the night at " + top.toShortString());
             return new GetToBlockTask(top);
         }
-        if (solid(world, mid)) {
-            committed = true;
-            setDebugState("Digging in for the night");
-            return new DestroyBlockTask(mid);
-        }
-        if (solid(world, bottom)) {
-            committed = true;
-            setDebugState("Digging in for the night");
-            return new DestroyBlockTask(bottom);
+        for (int d = 1; d <= DEPTH; d++) {
+            if (solid(world, top.down(d))) {
+                committed = true;
+                setDebugState("Digging in for the night");
+                return new DestroyBlockTask(top.down(d));
+            }
         }
         if (!feet.equals(bottom)) {
             setDebugState("Dropping into the shelter");
             return new GetToBlockTask(bottom);
         }
         holding = true;
-        if (world.getBlockState(top).isReplaceable()) {
+        if (world.getBlockState(cap).isReplaceable()) {
             setDebugState("Closing the shelter");
-            return new PlaceBlockTask(top, new Block[0], true, false);
+            return new PlaceBlockTask(cap, new Block[0], true, false);
         }
         setDebugState("Waiting for the morning in a shelter");
         return null;
     }
 
     private static boolean floods(World world, BlockPos top) {
-        for (int d = 0; d <= 2; d++) {
+        for (int d = 0; d <= DEPTH; d++) {
             if (!world.getFluidState(top.down(d)).isEmpty()) return true;
         }
         return false;
@@ -131,14 +138,15 @@ public class NightShelterTask extends Task {
     }
 
     /**
-     * The body can stand at {@code top}; the two cells below are solid, breakable and dry, with no
-     * fluid or hazard beside them (digging must not open a flood or lava onto the body); the floor
-     * under them is solid and not a hazard.
+     * The body can stand at {@code top}; the DEPTH cells below are solid, breakable and dry, with
+     * solid walls and no fluid or hazard beside them (digging must not open a flood or lava onto the
+     * body, and the top dug cell's walls are what the cap is placed against); the floor under them
+     * is solid and not a hazard.
      */
     static boolean siteHolds(World world, BlockPos top) {
         if (!kaptainwutax.tungsten.helpers.PlayerFit.standable(world, top)) return false;
         BlockPos.Mutable s = new BlockPos.Mutable();
-        for (int d = 1; d <= 2; d++) {
+        for (int d = 1; d <= DEPTH; d++) {
             BlockPos c = top.down(d);
             if (!solid(world, c) || !WorldHelper.canBreak(c)) return false;
             if (!world.getFluidState(c).isEmpty()) return false;
@@ -151,7 +159,7 @@ public class NightShelterTask extends Task {
                 if (!solid(world, n)) return false;
             }
         }
-        BlockPos floor = top.down(3);
+        BlockPos floor = top.down(DEPTH + 1);
         return solid(world, floor) && !RouteHazards.hazardAt(world, floor.getX(), floor.getY(), floor.getZ(), s);
     }
 

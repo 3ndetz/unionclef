@@ -1194,6 +1194,56 @@ class MobHungry(Scenario):
                         f"flee={_stat(ctx, 'flee')}")
 
 
+class NightShelterFlat(Scenario):
+    """NightShelterTask on OPEN FLAT ground: can it close the roof? (TODOS 2026-09-28)
+
+    The first version capped the cell the feet had been in, at ground level, whose sides on flat
+    ground are open air and whose underside is the dug hole -- no face to place against. Its two
+    live successes were on slopes. This course is the flat case: a 7x7 dirt pad five deep, level
+    with the stone floor around it, nothing standing near, at night; the bot runs @test shelter.
+
+    Gates: the bot is at the bottom of a shaft (feet three below the surface) and the cell right
+    above its head's cell -- one below the surface -- is solid, i.e. the cap is in.
+    """
+    id = "night_shelter_flat"
+    tier = "gate"
+    needs_victim = False
+    duration = 60
+    bot_kit = ["item replace entity {name} weapon.mainhand with iron_shovel"]
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=False)
+        arena._fill(-3, STAND_Y - 6, -3, 3, STAND_Y - 2, 3, "dirt")
+        arena._fill(-3, STAND_Y - 1, -3, 3, STAND_Y - 1, 3, "dirt")
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("kill @e[type=zombie]")
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@test shelter")
+
+    def early_stop(self, ctx):
+        return self._sealed(ctx)[0]
+
+    def _sealed(self, ctx):
+        pos = ctx.rcon.entity_pos(ctx.bot.name)
+        if not pos:
+            return False, "no position"
+        x, y, z = int(pos[0] // 1), int(round(pos[1])), int(pos[2] // 1)
+        deep = y == STAND_Y - 3
+        r = ctx.rcon.cmd(f"execute if block {x} {STAND_Y - 1} {z} #minecraft:air", allow_reject=True)
+        capped = "passed" not in r
+        return deep and capped, f"feet=({x},{y},{z}) surface={STAND_Y} capped={capped}"
+
+    def judge(self, ctx):
+        ok, detail = self._sealed(ctx)
+        yield Criterion("dug in and sealed", ok, detail)
+
+
 def _count(ctx, etype):
     r = ctx.rcon.cmd(f"execute if entity @e[type={etype}]", allow_reject=True)
     if "Count:" not in r:
@@ -1314,4 +1364,4 @@ class MobEndermenShelter(MobEndermenHurt):
 
 
 SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
-             MobEndermenShelter, MobHungry]
+             MobEndermenShelter, MobHungry, NightShelterFlat]

@@ -87,7 +87,7 @@ public class Playground {
             "cam 0", "cam 1", "cam 2",
             "sign", "sign2", "signshop", "pickup", "chunk", "structure", "place",
             "deadmeme", "stacked", "stacked2", "ravage", "temples", "outer",
-            "smelt", "iron", "avoid", "portal", "kill", "killhostile", "kill2", "craft",
+            "smelt", "iron", "avoid", "portal", "shelter", "kill", "killhostile", "kill2", "craft",
             "food", "temple", "blaze", "flint", "unobtainable", "piglin",
             "stronghold", "terminate", "stoprot", "startrot",
             "t", "tt", "sw", "swt", "mm", "kpvp", "thepit",
@@ -306,6 +306,10 @@ public class Playground {
                 break;
             case "portal":
                 mod.runUserTask(new EnterNetherPortalTask(new ConstructNetherPortalObsidianTask(), WorldHelper.getCurrentDimension() == Dimension.OVERWORLD ? Dimension.NETHER : Dimension.OVERWORLD));
+                break;
+            case "shelter":
+                // NightShelterTask on its own (the night-shelter course): dig in here and hold.
+                mod.runUserTask(new adris.altoclef.tasks.movement.NightShelterTask());
                 break;
             case "kill":
                 List<ZombieEntity> zombs = mod.getEntityTracker().getTrackedEntities(ZombieEntity.class);
