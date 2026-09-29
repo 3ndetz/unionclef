@@ -1495,5 +1495,47 @@ class NightShelterExit(NightShelterFlat):
                         f"t={None if t is None else round(t, 1)} pos={pos}")
 
 
+class DrownTunnel(Scenario):
+    """UNDER WATER IN A FLOODED TUNNEL, STONE OVERHEAD, AIR FOUR BLOCKS AWAY (full56, 2026-09-29).
+
+    full56 fled a creeper into a flooded cave and drowned digging up through one stone block for
+    20 s: GetToAirTask always dug when the column was capped, and under water, off the ground, a
+    block breaks 25 times slower. Here the tunnel is two high, the ceiling stone, and a shaft up to
+    open air four blocks along. Swimming is the answer. Gate: alive, and breathing again.
+    """
+    id = "drown_tunnel"
+    tier = "gate"
+    needs_victim = False
+    duration = 45
+    bot_kit = ["item replace entity {name} weapon.mainhand with stone_pickaxe"]
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=False)
+        arena._fill(-4, STAND_Y, -2, 7, STAND_Y + 5, 2, "stone")
+        arena._fill(-3, STAND_Y, 0, 6, STAND_Y + 1, 0, "water")
+        arena._fill(4, STAND_Y + 2, 0, 4, STAND_Y + 5, 0, "air")
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 90 0"
+        ctx.geo["fps"] = []
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:instant_health 1 10 true")
+        ctx.geo["d0"] = ctx.rcon.score(ctx.bot.name, "d")
+        ctx.bot.py.try_call("resetRunCounters")
+        ctx.bot.cmd("@get oak_log 3")
+
+    def judge(self, ctx):
+        b = ctx.bot.name
+        died = (ctx.rcon.score(b, "d") or 0) - (ctx.geo.get("d0") or 0)
+        air = ctx.rcon.entity_float(b, "Air")
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        yield Criterion("did not drown", died == 0, f"deaths={died} min_hp={min(hps) if hps else None}")
+        yield Criterion("breathing again", air is not None and air >= 200, f"air={air}")
+        # Digging out survives here too, barely (min_hp 6 and 4 on the build that always dug):
+        # the measure is how much water the bot swallowed on the way.
+        low = min(hps) if hps else None
+        yield Criterion("health never under 12", low is not None and low >= 12, f"min_hp={low}")
+
+
 SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
-             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs, NightShelterExit]
+             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs, NightShelterExit, DrownTunnel]
