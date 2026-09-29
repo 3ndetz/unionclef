@@ -1209,7 +1209,10 @@ class NightShelterFlat(Scenario):
     tier = "gate"
     needs_victim = False
     duration = 60
-    bot_kit = ["item replace entity {name} weapon.mainhand with iron_shovel"]
+    # Blocks in the pack as a playing bot has them: the course is about where the cap can go, and
+    # without them the first runs measured item pickup from the shaft instead.
+    bot_kit = ["item replace entity {name} weapon.mainhand with iron_shovel",
+               "give {name} cobblestone 16"]
 
     def build(self, arena, ctx):
         arena.flat_field(half=14, grass=False)
@@ -1223,7 +1226,9 @@ class NightShelterFlat(Scenario):
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         ctx.rcon.cmd("kill @e[type=zombie]")
         ctx.bot.py.try_call("resetRunCounters")
-        time.sleep(1)
+        # The task ends itself by day, and the client learns the new time a moment after the
+        # server: one run of six started on the old (day) time and finished at once.
+        time.sleep(3)
         ctx.bot.cmd("@test shelter")
 
     def early_stop(self, ctx):
@@ -1235,9 +1240,15 @@ class NightShelterFlat(Scenario):
             return False, "no position"
         x, y, z = int(pos[0] // 1), int(round(pos[1])), int(pos[2] // 1)
         deep = y == STAND_Y - 3
-        r = ctx.rcon.cmd(f"execute if block {x} {STAND_Y - 1} {z} #minecraft:air", allow_reject=True)
-        capped = "passed" not in r
-        return deep and capped, f"feet=({x},{y},{z}) surface={STAND_Y} capped={capped}"
+
+        def air(yy):
+            return "passed" in ctx.rcon.cmd(f"execute if block {x} {yy} {z} #minecraft:air", allow_reject=True)
+        # The head cell must be open, or this is not the shaft: the first version read a solid cap
+        # over a neighbouring, undug column and stopped the course at 6 s, before the bot had
+        # picked up its dirt and placed the real cap.
+        head_open = air(STAND_Y - 2)
+        capped = not air(STAND_Y - 1)
+        return deep and head_open and capped, f"feet=({x},{y},{z}) surface={STAND_Y} head_open={head_open} capped={capped}"
 
     def judge(self, ctx):
         ok, detail = self._sealed(ctx)
