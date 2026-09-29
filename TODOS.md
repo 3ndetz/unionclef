@@ -63,7 +63,10 @@
 - [ ] **Water escape without tools** (flooded ravine after a death: drift stops "Path stopped: drift
   4.2 blocks" in water, no pickaxe).
 - [ ] **"Doing stuff in smoker: cooked_porkchop x3" for ~4 minutes (full53 resume from t1288,
-  2026-09-29).** Three porkchops smoke in 15 s; the task recurs from 47 s to 283 s. Unread.
+  2026-09-29).** Three porkchops smoke in 15 s; the task recurs from 47 s to 283 s. READ: it walks
+  ~75 blocks (tunnelling) to an OLD smoker, because SmeltInSmokerTask.getCostToMakeNew returns
+  9999999 whenever its cache says that smoker holds anything. Check whether the cache is current,
+  and weigh what is in it against the walk (three raw porkchops are not worth 75 blocks).
 - [ ] **A long haul to an animal tunnels through a mountain (food2 resume, 2026-09-29).** PARTLY:
   the 0.6 s settle after every dig run is gone (nav_tunnel 31 -> 23.5 s); the pause between a dig
   and the next leg measured under 0.05 s, so the "3 s replanning" item did not reproduce there. Pigs seen
