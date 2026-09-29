@@ -1839,7 +1839,11 @@ public class BeatMinecraftTask extends Task {
                         setDebugState("Resetting sleep through night task.");
                         return new PickupDroppedItemTask(new ItemTarget(ItemHelper.BED), true);
                     }
-                    if (anyBedsFound(mod)) {
+                    // Only the bed that just failed, next to us. This took ANY known bed: full53 walked
+                    // at night to one ~80 blocks off to break it, twice, for two minutes. And not once
+                    // tonight's sleep budget is spent -- the shelter takes over then.
+                    if (!sleepGivenUpTonight(mod) && mod.getBlockScanner().anyFoundWithinDistance(
+                            BED_NEAR_RADIUS, ItemHelper.itemsToBlocks(ItemHelper.BED))) {
                         setDebugState("Resetting sleep through night task.");
                         return new DoToClosestBlockTask(DestroyBlockTask::new, ItemHelper.itemsToBlocks(ItemHelper.BED));
                     }
