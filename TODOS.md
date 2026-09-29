@@ -11,7 +11,9 @@
 - [x] **FIXED 2026-09-24 (arrive only when the body is held -- baritone AT_GOAL; nav_powder_pit PASS). Arrival overshoot (nav_powder_pit).** The nav task reports FINISHED at the goal (13,-60,0)
   after 18 s, then the body ends 2.9 blocks past it at the floor edge. Find what moves it after the
   goal (sprint momentum vs a second driver).
-- [ ] **Cave fight at low health (full1, 0.95.39).** Died to a spider with a diamond sword while
+- [ ] **Cave fight at low health (full1, 0.95.39).** LIKELY THE SAME MECHANISM AS mob_hungry, fixed in
+  0.95.48 (FoodChain saw enemies only within a sword's reach; the danger flight fled beatable mobs
+  whenever unarmoured under 18 hp). Close after a live run shows a cave fight at 12-17 hp. Died to a spider with a diamond sword while
   MobDefense "routed to safety" through a lush cave; hp had sat at 16 for minutes (hunger < 18, eat
   threshold 14). Reproduce from a checkpoint before it; compare FoodChain thresholds.
 - [ ] **After a planned dig the navigator stands ~3 s replanning** ("Mining done -- passage open",
@@ -49,7 +51,9 @@
   messages were read. Recording lost with the stand; reproduce from a checkpoint of a new run.
 - [ ] **Portal builder re-sites its pad repeatedly on rough ground** (n59/n61: "Portal pad ... is
   unreachable ... re-siting here" three times, the frame dismantled and rebuilt). Also: a resumed
-  checkpoint forgets the portal it came through (MiscBlockTracker is in memory only).
+  checkpoint forgets the portal it came through (MiscBlockTracker is in memory only) -- CODE DONE
+  2026-09-29 (py4j get/setLastNetherPortal, stored in checkpoint meta by gamer_smoke cp_save);
+  needs a nether resume on the stand to close.
 - [ ] **Fall damage at very low health.** n55 at 0.64 hp "hit the ground too hard": drops of 4+
   blocks happened although every planner caps drops at 3 (damage-free: FastPlanner/SmartMoves/
   MovementQueue MAX_FALL=3) -- the fall came from outside a plan (knockback, a free walk). Unread.
@@ -62,6 +66,9 @@
   into a powder-snow grove at minute 2 (full2, 0.95.41). getGameState now reports food/saturation.
 
 <!-- NIGHTSHELTER-CEILING-FACE-UNCHECKED-2026-09-28 -->
+- **2026-09-29: code changed (0da5c02e)** -- the shelter digs three deep and caps the top dug cell,
+  one below the surface, whose walls siteHolds requires. Course night_shelter_flat (open 7x7 pad)
+  checks it; close this item when it passes on the stand.
 - [ ] **`NightShelterTask` (2026-09-28, still uncommitted as of this note) may have no face to seal
   its own roof with.** The task digs `mid = top.down()` and `bottom = top.down(2)`, drops the bot
   into `bottom`, then tries `PlaceBlockTask(top, ...)` to close the entrance. `siteHolds()` requires
