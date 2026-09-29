@@ -367,6 +367,11 @@ public class CollectFoodTask extends Task {
         }
         // Already exposed, outside the Overworld, or no loaded dry surface nearby.
         setDebugState("Searching...");
+        // On the surface with nothing in sight: go somewhere else, not round in circles here
+        // (ExploreOutwardTask says why; full52 resume, 2026-09-29).
+        if (WorldHelper.getCurrentDimension() == Dimension.OVERWORLD) {
+            return new adris.altoclef.tasks.movement.ExploreOutwardTask();
+        }
         return new TimeoutWanderTask();
     }
 
