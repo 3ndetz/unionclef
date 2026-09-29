@@ -715,7 +715,12 @@ public class PathExecutor {
             }
         }
         if (target == null) {
-            if (settleTicks++ < 12) { // wait for sand/gravel to land
+            // Wait for sand/gravel to land -- when there is any. This waited 12 ticks after EVERY
+            // dig run, stone included: 0.6 s a run, which on a tunnel is a pause per block pair
+            // (TODOS "stands after a planned dig"; nav_tunnel). baritone waits only where a
+            // falling block is involved (MovementHelper.getMiningDurationTicks' includeFalling,
+            // MovementPillar / MovementTraverse checking FallingBlock above).
+            if ((!TungstenConfig.get().settleOnlyNearFalling || fallingNear(world, breakQueue)) && settleTicks++ < 12) {
                 releaseMovementKeys(options);
                 options.attackKey.setPressed(false);
                 return true;
@@ -1693,4 +1698,16 @@ public class PathExecutor {
     	return new TungstenPlayerInput(options.forwardKey.isPressed(), options.backKey.isPressed(), options.leftKey.isPressed(), options.rightKey.isPressed(), options.jumpKey.isPressed(), options.sneakKey.isPressed(), options.sprintKey.isPressed());
     }
 
+
+    /** A falling block above any dug cell, or a falling-block entity near one: worth a settle. */
+    private static boolean fallingNear(net.minecraft.world.World world,
+                                       java.util.List<net.minecraft.util.math.BlockPos> cells) {
+        if (cells == null) return false;
+        for (net.minecraft.util.math.BlockPos c : cells) {
+            if (world.getBlockState(c.up()).getBlock() instanceof net.minecraft.block.FallingBlock) return true;
+            if (!world.getEntitiesByClass(net.minecraft.entity.FallingBlockEntity.class,
+                    new net.minecraft.util.math.Box(c).expand(1.5), e -> true).isEmpty()) return true;
+        }
+        return false;
+    }
 }

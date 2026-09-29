@@ -5066,6 +5066,10 @@ public class TungstenConfig {
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 
+    /** After a dig run, wait for falling blocks only when one is there (PathExecutor.fallingNear);
+     *  false = the old unconditional 12-tick settle, kept for A/B on nav_tunnel. */
+    public boolean settleOnlyNearFalling = true;
+
     /** Scales the cost of bridging with a placed block. Raise it to make the bot prefer
      *  going around; lower it to make it build more readily. */
     public double placeCostMultiplier = 1.0;
