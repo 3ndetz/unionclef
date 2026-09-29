@@ -62,8 +62,14 @@
   (0/4 without the melee guard, 2026-09-25) -- pre-existing combat quality, not regressions.
 - [ ] **Water escape without tools** (flooded ravine after a death: drift stops "Path stopped: drift
   4.2 blocks" in water, no pickaxe).
+- [ ] **A long haul to an animal tunnels through a mountain (food2 resume, 2026-09-29).** Pigs seen
+  at 166 s, killed at ~420 s: "Long haul to entity via the drive (walk/dig/build)" dug and pillared
+  through stone for two minutes instead of walking round. Compare the planner's break cost with the
+  measured dig time (baritone ActionCosts / MovementHelper.getMiningDurationTicks) before touching it.
 - [ ] **Food: "Collect 140 units of food" on a food-less mountain start** sent the bot chasing a rabbit
   into a powder-snow grove at minute 2 (full2, 0.95.41). getGameState now reports food/saturation.
+  2026-09-29: with none in sight the search now walks outward (ExploreOutwardTask) instead of a
+  spiral round the start; on the full52 resume it found pigs in under three minutes.
 
 <!-- NIGHTSHELTER-CEILING-FACE-UNCHECKED-2026-09-28 -->
 - **2026-09-29: code changed (0da5c02e)** -- the shelter digs three deep and caps the top dug cell,
