@@ -161,6 +161,10 @@ public class WorldSurvivalChain extends SingleTaskChain {
     // Block break tracking
     private boolean _lastBrokenBlock = false;
     private BlockPos _lastBrokenBlockPos = null;
+    /** What was broken there: a DIFFERENT block in the cell half a second later was put there, not
+     *  refused (a shelter cap of cobblestone in a dug dirt cell, gravel falling in). */
+    private net.minecraft.block.Block _lastBrokenBlockType = null;
+    public static volatile int breakFailReplaced;
 
     /**
      * Why a failed break was NOT believed, split by reason, plus the times a ban went regional.
@@ -484,7 +488,13 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
     private void checkLastBrokenBlock(AltoClef mod) {
         if (_lastBrokenBlock && _lastBrokenBlockPos != null && _blockBreakCheckTimer.elapsed()) {
-            if (!WorldHelper.isAir(_lastBrokenBlockPos)) {
+            net.minecraft.block.Block nowThere = mod.getWorld().getBlockState(_lastBrokenBlockPos).getBlock();
+            if (!WorldHelper.isAir(_lastBrokenBlockPos) && _lastBrokenBlockType != null
+                    && nowThere != _lastBrokenBlockType) {
+                // Broken, then something else put in: not a refusal. The night shelter placing its
+                // cap into the cell it had just dug was read as a claim and banned breaking there.
+                breakFailReplaced++;
+            } else if (!WorldHelper.isAir(_lastBrokenBlockPos)) {
                 // A BREAK THAT FAILED BECAUSE YOU COULD NOT REACH IT SAYS NOTHING ABOUT A CLAIM.
                 //
                 // This reads "the block did not turn to air" as "private area" and answers by
@@ -691,6 +701,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
             }
             _lastBrokenBlock = true;
             _lastBrokenBlockPos = pos;
+            _lastBrokenBlockType = block == null ? null : block.getBlock();
             _blockBreakCheckTimer.reset();
         }
     }
