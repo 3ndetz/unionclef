@@ -12,9 +12,15 @@ import net.minecraft.util.math.Vec3d;
  * blocks out, so it keeps searching the same ground. On the full52 resume that ground was a
  * snowy mountain with no animals: five minutes of wandering, ninety seconds of it stuck in a gap,
  * then a cave and a zombie. Animals live by biome, and a straight line leaves a barren biome fastest.
- * baritone's ExploreProcess (baritone/src/main/java/baritone/process/ExploreProcess.java) makes the
- * same choice for the same reason: its goal is the nearest chunk not yet seen, which from any start
- * moves outward, never back over explored ground.
+ *
+ * <p>⛔ NOT A PORT OF baritone's ExploreProcess, ON A MEASUREMENT (2026-09-29). ExploreProcess
+ * (baritone/src/main/java/baritone/process/ExploreProcess.java, closestUncachedChunks) covers the
+ * map: Manhattan rings of unseen chunks around the origin, nearest member first. A faithful port was
+ * written and run on the same no-food checkpoint (death1950-0929-0827-t1613): its goals swung
+ * between chunks on opposite sides of the origin ((-408,-200), (-664,..), (-680,..), (-552,..)), it
+ * found no food in eight minutes and health went 15.6 -> 3.6. These straight legs found pigs there
+ * in 166 s. Coverage around a point is the right shape for a map and the wrong one for leaving a
+ * barren biome. One run each: re-measure before trading one for the other.
  */
 public class ExploreOutwardTask extends Task {
 
