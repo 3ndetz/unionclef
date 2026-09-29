@@ -1203,6 +1203,13 @@ def main():
     def _server_deaths():
         m = re.search(r"has (\d+) \[", grcon(f"scoreboard players get {BOT} ucDeaths"))
         return int(m.group(1)) if m else 0
+    # The baseline is taken NOW, not at the first poll: a death in the first twenty seconds (a
+    # resumed bot next to a cave-spider spawner, 2026-09-29) otherwise became the baseline itself.
+    try:
+        _lv0 = py4j("lava")
+        _lava_last[0] = (_lv0.get("entries"), int(_lv0.get("deaths") or 0) + 1000 * _server_deaths())
+    except Exception:
+        pass
     # CAPTURE THE NETHER ENTRY THE MOMENT IT HAPPENS. The one-run underground->nether entry is proven
     # (v0.95.24 + v0.95.25), but the bot dies within ~30 s of arriving (Enderman knockback off a ledge)
     # -- faster than a 2 GB checkpoint copy -- so no periodic checkpoint ever caught it ALIVE in the
