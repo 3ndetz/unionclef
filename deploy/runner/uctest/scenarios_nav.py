@@ -680,6 +680,34 @@ class NavPowderPit(NavCourse):
         yield Criterion("lost at most a heart", low is not None and low >= 18.0, f"min_hp={low}")
 
 
+class NavTunnel(NavCourse):
+    """Ten blocks of solid stone, three high, across a corridor with barrier walls and a barrier
+    ceiling: the only way is to dig a 1x2 tunnel. Measures the pause after every planned dig
+    (TODOS: "the navigator stands ~3 s replanning"; the food2 resume spent two minutes tunnelling
+    to a pig). With an iron pickaxe a stone block takes 0.4 s, so twenty blocks and twenty-four
+    steps are about 12 s of work; the rest of the arrival time is overhead."""
+    id = "nav_tunnel"
+    duration = 150
+    bot_kit = ["item replace entity {name} weapon.mainhand with iron_pickaxe"]
+
+    def course(self, arena, ctx):
+        arena.floor(7, -1, 30, 1, "stone")
+        arena._fill(7, STAND_Y, -2, 30, STAND_Y + 3, -2, "barrier")
+        arena._fill(7, STAND_Y, 2, 30, STAND_Y + 3, 2, "barrier")
+        arena._fill(7, STAND_Y + 3, -1, 30, STAND_Y + 3, 1, "barrier")
+        arena._fill(10, STAND_Y, -1, 19, STAND_Y + 2, 1, "stone")
+        return (24, STAND_Y, 0)
+
+    def drive_start(self, ctx):
+        ctx.bot.py.try_call("resetRunCounters")
+        super().drive_start(ctx)
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        ok, ds = ctx.bot.py.try_call("digStats")
+        yield Criterion("dig timing (recorded, not gated)", True, str(ds) if ok else "unread")
+
+
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend, NavCliff,
              NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
-             NavNotch, NavLava, NavPowder, NavPowderPit]
+             NavNotch, NavLava, NavPowder, NavPowderPit, NavTunnel]

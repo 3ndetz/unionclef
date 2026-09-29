@@ -2657,6 +2657,9 @@ public class Py4jEntryPoint {
         // barren locks and used to survive into the next course.
         adris.altoclef.util.helpers.TungstenHelper.reset();
         adris.altoclef.chains.FoodChain.eatStarts = 0;
+        kaptainwutax.tungsten.task.FastNavigator.navDigN = 0;
+        kaptainwutax.tungsten.task.FastNavigator.navDigMsSum = 0;
+        kaptainwutax.tungsten.task.FastNavigator.navDigResumeMsSum = 0;
         adris.altoclef.chains.FoodChain.eatAborts = 0;
         var q = kaptainwutax.tungsten.path.movements.MovementQueue.class;   // for the reader
         kaptainwutax.tungsten.path.movements.MovementQueue.qStarted = 0;
@@ -4477,6 +4480,17 @@ public class Py4jEntryPoint {
         } catch (IllegalArgumentException e) {
             return false;
         }
+    }
+
+    /**
+     * Planned digs driven by FastNavigator: "navDig=runs/digMs/resumeMs" -- how many dig runs, the
+     * total time spent mining, and the total time from "mining done" to the next leg starting.
+     * resumeMs / runs is the pause after every dig.
+     */
+    public String digStats() {
+        return "navDig=" + kaptainwutax.tungsten.task.FastNavigator.navDigN
+                + "/" + kaptainwutax.tungsten.task.FastNavigator.navDigMsSum
+                + "/" + kaptainwutax.tungsten.task.FastNavigator.navDigResumeMsSum;
     }
 
     public String foodStats() {

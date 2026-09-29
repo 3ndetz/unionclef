@@ -280,6 +280,12 @@ public final class FastNavigator {
     /** Break runs owned here: started, refused because the walker stopped short, and resumed
      *  after "Mining done". Read as navBreak=started/tooFar/resumed. */
     public static volatile int navBreakStarted, navBreakTooFar, navBreakResumed;
+    /** Dig timing (TODOS "stands ~3 s replanning after a planned dig"): per dig run, the time
+     *  mining took and the time from "mining done" to the next leg starting. Sums in ms and count,
+     *  read as navDig=count/digMs/resumeMs. */
+    public static volatile long navDigMsSum, navDigResumeMsSum;
+    public static volatile int navDigN;
+    private static long digStartMs, digDoneMs;
     /** G42: planned pillar runs cut out of a queue leg and handed to PillarTask. */
     public static volatile int navPillarRuns;
     /** G51: towers whose hand-off first walked the body onto the plan's column, and the ticks
@@ -796,6 +802,7 @@ public final class FastNavigator {
             awaitingBreak = false;
             legTail = null;
             navBreakResumed++;
+            digDoneMs = System.currentTimeMillis();
             planAhead(player.getBlockPos());   // the dig moved the body; plan from where it is
             return;
         }
@@ -827,6 +834,7 @@ public final class FastNavigator {
                 exB.stop = false;
                 exB.startBreaking(cells);
                 awaitingBreak = true;
+                digStartMs = System.currentTimeMillis();
                 return;
             }
             // The walker stopped short of the dig: fall back to the physics hand-off, which is
@@ -1224,6 +1232,15 @@ public final class FastNavigator {
             // a tick with the walker or the physics executor. This is the replacement for the split
             // path (walker moves the body, PathExecutor.tickPlacing aims and clicks), whose seam
             // measured clicked=0 across eleven thousand in-range ticks.
+            if (digDoneMs > 0) {
+                long now = System.currentTimeMillis();
+                navDigN++;
+                navDigMsSum += digDoneMs - digStartMs;
+                navDigResumeMsSum += now - digDoneMs;
+                Debug.logMessage("FastNavigator: dig took " + (digDoneMs - digStartMs)
+                        + " ms, next leg " + (now - digDoneMs) + " ms after it");
+                digDoneMs = 0;
+            }
             boolean queued = false;
             if (nextLegMovement) {
                 nextLegMovement = false;
