@@ -403,7 +403,12 @@ public interface AltoGoal {
             var live = dangers.get();
             var snapshot = live == null ? java.util.List.<Vec3d>of() : java.util.List.copyOf(live);
             double separation = distance + margin;
-            return at -> safeAt(at, snapshot, separation);
+            // Not under water: full56 fled a creeper into a flooded cave, stayed under and drowned.
+            // A cell whose head space is water is no refuge from anything.
+            var world = adris.altoclef.AltoClef.getInstance() == null ? null
+                    : adris.altoclef.AltoClef.getInstance().getWorld();
+            return at -> (world == null || world.getFluidState(at.up()).isEmpty())
+                    && safeAt(at, snapshot, separation);
         }
 
         /**
