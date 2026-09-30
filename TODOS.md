@@ -49,7 +49,7 @@
 - [ ] **Overworld death at 15:30 of a run from zero (full46, 0.95.46).** hp 19 -> 0 in 23 s near
   (96,77,-405), "Mine And Collect oak_log"; the run was cut by the Docker hang before the death
   messages were read. Recording lost with the stand; reproduce from a checkpoint of a new run.
-- [ ] **HIGH: arrow dodging reported broken by a player (2026-09-30).** It used to work in
+- [x] **HIGH: arrow dodging reported broken by a player (2026-09-30).** It used to work in
   unionclef. It is the bot's defence against skeletons. Check, in this order:
   1. Setting: `dodgeProjectiles` defaults to true in Settings.java, but it is read from the user's
      `altoclef/altoclef_settings.json`; an old file with `false` overrides the default. Should it be
@@ -62,6 +62,11 @@
      dodge on vs off) and on mob_skeleton; record a video for the operator.
   4. The dodge must be SAFE (no step off an edge, into lava or water) and FAST: the same quick
      search tungsten uses for PvP movement, not a route search -- an arrow gives a few ticks.
+  DONE 0.95.52: (1) default was always true; a false in the file now warns on load. (2) left as
+  is. (3) with a task: 0 damage from 10 arrows on flat ground 3/3 (off: 24 hp). (4)
+  ProjectileDodge.plan simulates 18 key combinations with the physics agent, refuses baritone's
+  avoidWalkingInto set and drops over 3; danger zones no longer use the standing-still route task.
+  arrow_dodge_ledge: 28-36 hp -> 0-4 hp, no lava or falls. Issue #34 open for the reporter.
 - [ ] **NEXT: the bucket-cast portal cannot cast its upper frame (G108, reproduced 2026-09-29).**
   Without a diamond pickaxe the only way into the nether is ConstructNetherPortalBucketTask, and
   PlaceObsidianBucketTask builds a cobblestone mould around each frame cell; for the cells above
