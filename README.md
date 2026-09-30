@@ -23,7 +23,7 @@ pre-built JARs, no tears.
 | ~~shredder/~~ | Fork of baritone with WindMouse camera + tungsten bridge. **Not compiled** — kept as source reference for the parts not yet ported into tungsten |
 | ~~baritone/~~ | Original pathfinding code. **Not compiled** — kept as reference |
 
-**Minecraft 1.21** / **Fabric** / **Java 21**
+**Minecraft 1.21.x** (release builds for 1.21.11) / **Fabric** / **Java 21**
 
 > **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)** | **[Multi-version →](docs/MULTIVERSIONING.md)** | **[Python scripting →](docs/SCRIPTS.md)**
 
@@ -36,13 +36,17 @@ pre-built JARs, no tears.
 |---|---|---|
 | **MLG** |
 | Enderpearl clutch ![alt text](assets/README/EnderClutch.gif) | TP with enderpearl when pursue target. Save self with enderpearl when dropped from edge. | 3/3 ✅ |
-| Arrow dodger ![alt text](assets/README/AutoclefDodging.gif) | Epic incoming arrow dodging. If has shielf - uses it. | 1/1 ✅ |
-| `@test mace` ![alt text](assets/README/MaceClutch.gif) | 😎 | 1/1 ✅ |
-| `#bridgingMode jump` ![alt text](assets/README/ShredderBridging256.gif) | Super-fast sprint-speed telly bridging. Cancel with `slow`, `standard`, or `back-jump` mode. | 3/3 ✅ |
+| Arrow dodger ![alt text](assets/README/AutoclefDodging.gif) | Sidesteps incoming arrows: each tick it simulates the possible steps with tungsten's physics and takes the one that clears the arrow without walking into lava, fluid or a drop. Raises a shield if it has one. On by default (`dodgeProjectiles`). | 3/3 ✅ |
+| `@test mace` ![alt text](assets/README/MaceClutch.gif) | Mace landing from a height | 1/1 ✅ |
+| `#bridgingMode jump` ![alt text](assets/README/ShredderBridging256.gif) | Sprint-speed telly bridging. Cancel with `slow`, `standard`, or `back-jump` mode. | 3/3 ✅ |
 | **PvP** |
 | Attacking bot `@punk` | Handles close target battle. [Wind-mouse](https://github.com/arevi/wind-mouse) based rotations. Brokes shields (axe). Uses own shield. Combines ranging and melee attacks automatically, pursues targets. Using mace from the height | 3/3 ✅ |
 | Shooting bot `@shoot` | Handles ranged target battle with 2 types of angle (rapid-fire, sniper, artillery) | 3/3 ✅ |
 | Pursuing bot | Pursue parkouring targets. Slow for now. | 2/3 ⚠️ |
+| **Survival** |
+| Beat the game `@gamer` | Full playthrough from an empty inventory: wood, stone and iron tools (about 8 minutes), food, a bed from sheep or a dug-in shelter at night, then the nether. Without a diamond pickaxe it builds the portal from buckets and a lava lake. Gets to the nether; the End is not reached yet. | 2/5 ⚠️ |
+| Night shelter | No bed at night on the surface: digs a 1x1 hole, caps it, waits for the morning. `;settings survival night_shelter 0` turns it off. | 3/3 ✅ |
+| Bucket nether portal | Casts the 10 frame blocks with water and lava around a cobblestone mould, lights it and walks in. Lit in about 5 runs of 9 on the test course. | 2/3 ⚠️ |
 | **Minigames** |
 | Skywars `@game sw` | SkyWars (fails exploration, buggy) | 3/5 ⚠️ |
 | Skywars `@game bw` | BedWars (only bed protect) | 3/5 ⚠️ |
@@ -51,13 +55,14 @@ pre-built JARs, no tears.
 | **Building** |
 | `@grave <text>`, `@sign <text>` | New structures to build | 2/2 ✅ |
 | Privated regions support | Temporal block placement and removal locks | 4/5 ✅ |
-| `@schematic <schematic>` | Schematic integration | 0/3 ❌ TODO |
+| WorldEdit-style building `@@` | `@@pos1`/`@@pos2` selection, `@@set`, `@@replace`, `@@walls`, `@@hollow`, `@@cyl`, `@@sphere`, `@@copy`/`@@paste`, `@@undo`. The bot walks, pillars and places every block itself. Bulk fills can leave cells unplaced. | 2/3 ⚠️ |
+| `@@schem load <name>` | Loading schematic files. The reader went away with the legacy module (G-0); needs a native .schem/.litematic reader. | 0/3 ❌ TODO |
 | **Multiplayer** |
 | Autologin (`@set multiplayer_password <password>`) | Autologin and autoregister | 3/3 ✅ |
 | **Agentic** |
 | Python integration | Py4J configurable two-way interface. Port configures via `@set pythonGatewayPort <port>`. Supports multi-instance launching. Rich contextual and method base (see `adris.altoclef.Py4JEntryPoint` class) for agents, including live-screenshot support. | 3/3 ✅ |
 | Agentic commands | `@check_block`, `@check_player` | 3/3 ✅ |
-| Agentic MCP server | MCP for AI agents endpoint on java-side | 0/3 ❌ TODO |
+| Agentic MCP server | The mod hosts an MCP server (HTTP, port 25350): 60 tools for perception, movement, combat, building and menus. Any MCP client (Claude Code, Claude Desktop, your own agent) can drive the bot. See [Connect your agent](#connect-your-agent-mcp). | 3/3 ✅ |
 | **Comfort** |
 | Command suggestions | Rich chat commands suggestions `@help` | 1/1 ✅ |
 | Monorepo structure | Multi-versioned structured mono-repo with easy-to-work with any of integrated mod | 1/1 ✅ |
@@ -72,6 +77,46 @@ pre-built JARs, no tears.
     > Ensure you have the correct Minecraft version for the release you download
 
 2. Type `@help` in chat for the list of commands
+
+## Connect your agent (MCP)
+
+The mod runs an MCP server inside the game client, so an AI agent can see the world and drive the
+bot through tools: `getGameState`, `getBlocksAround`, `gotoXYZ`, `bridgeTo`, `mineBlock`,
+`punk`, `shootArrowAt`, `fillSelection`, `buildBlocks`, `clickMenuByName`, `ExecuteCommand` and
+about fifty more. Every tool carries a description of what it does and when to call it.
+
+1. **Start the game with the mod.** The server starts with it and writes a line to the log:
+   `MCP server started on 0.0.0.0:25350`. It listens on every interface, so an agent on another
+   machine in your LAN can reach it.
+2. **Take the token.** On first start the mod generates a secret and saves it in
+   `<game dir>/altoclef/altoclef_settings.json` as `mcpAuthToken`. Every request must carry it as
+   `Authorization: Bearer <token>`. The port is `mcpPort` in the same file; `mcpEnabled` turns
+   the server off.
+3. **Add the server to your agent.**
+
+   Claude Code:
+   ```bash
+   claude mcp add --transport http unionclef http://<game-machine-ip>:25350/mcp \
+     --header "Authorization: Bearer <token>"
+   ```
+   Any client that reads `.mcp.json` (Claude Desktop, Cursor, your own):
+   ```json
+   { "mcpServers": { "unionclef": {
+       "type": "http",
+       "url": "http://<game-machine-ip>:25350/mcp",
+       "headers": { "Authorization": "Bearer <token>" } } } }
+   ```
+4. **Check it.**
+   ```bash
+   curl -s http://127.0.0.1:25350/mcp -H "Authorization: Bearer <token>" \
+     -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+   ```
+   Then ask the agent to call `getGameState`: it returns position, health, food, inventory,
+   nearby players and what the bot is looking at.
+
+The same levers are available from Python over Py4J (port 25333). Details:
+[docs/features/MCP_SERVER.md](docs/features/MCP_SERVER.md) and
+[docs/features/AGENT_PY4J_LEVERS.md](docs/features/AGENT_PY4J_LEVERS.md).
 
 ## Development
 
@@ -127,9 +172,9 @@ unionclef/
 ├── scripts/                python scripting via Py4J (uv project)
 ├── root.gradle.kts         root build config
 ├── gradle.properties       versions & settings
-└── docs/
-    ├── DEVELOP.md          build & run instructions
-    └── SCRIPTS.md          python scripting guide
+├── deploy/                 docker test bench and course runner
+├── reports/                video report builder (HyperFrames)
+├── docs/                   build, release, features, checklists
 ├── README.md               you are here
 └── TODOS.md                project TODOs and roadmap
 ```

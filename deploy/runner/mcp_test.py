@@ -9,13 +9,21 @@ Proves the control surface works end-to-end without py4j/docker-exec. Exit 0=pas
 import functools, json, subprocess, sys, time, urllib.request
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; BOT="tester1"; MCP="http://127.0.0.1:25350/mcp"
+# The server wants "Authorization: Bearer <mcpAuthToken>"; the mod mints the token on first start
+# and keeps it in altoclef_settings.json. Read it from the bot's container, never print it.
+def _token():
+    out=subprocess.run(["docker","exec","uctest-mc-tester1","cat","/mc-data/altoclef/altoclef_settings.json"],
+                       capture_output=True,text=True,timeout=20).stdout
+    return json.loads(out).get("mcpAuthToken","")
+TOKEN=_token()
 _id=0
 def rpc(method, params=None, timeout=30):
     global _id; _id+=1
     body={"jsonrpc":"2.0","id":_id,"method":method}
     if params is not None: body["params"]=params
     req=urllib.request.Request(MCP, data=json.dumps(body).encode(),
-        headers={"Content-Type":"application/json","Accept":"application/json"})
+        headers={"Content-Type":"application/json","Accept":"application/json",
+                 "Authorization":"Bearer "+TOKEN})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode())
 def call(name, args=None, timeout=30):

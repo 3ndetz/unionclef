@@ -83,6 +83,10 @@
   above a side) is walked at and never climbed -- investigating (throwaways left? planner pillar?).
   Also failing on 0.95.52 already, not from this work: place_test.py (placed 1/4) and
   nether_portal_test.py (no portal in 180 s).
+- [ ] **A 2x2 fill through the build queue places 1 of 4 cells** (found 2026-09-30, already so on
+  0.95.52): mcp_test.py `fillSelection` -> dirt 1/4, place_test.py `placed: 1/4`; diag_build (4
+  mixed cells) passes. MCP itself works (60 tools, getGameState, auth). Also: schematic FILE loading
+  (`@@schem load`) is gone since G-0 -- needs a native .schem/.litematic reader.
 - [ ] **Portal builder re-sites its pad repeatedly on rough ground** (n59/n61: "Portal pad ... is
   unreachable ... re-siting here" three times, the frame dismantled and rebuilt). Also: a resumed
   checkpoint forgets the portal it came through (MiscBlockTracker is in memory only) -- CODE DONE

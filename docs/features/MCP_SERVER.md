@@ -21,6 +21,7 @@ docker-exec or the loopback bottleneck. One source of truth: MCP wraps the metho
 |---|---|---|
 | `mcpEnabled` | `true` | Whether to bring up the MCP server |
 | `mcpPort` | `25350` | Port (bind 0.0.0.0) |
+| `mcpAuthToken` | generated | Bearer secret. Minted (a UUID) and saved on first start; every request needs `Authorization: Bearer <token>`, otherwise 401 |
 
 Starts automatically after the py4j gateway. In the log: `MCP server started on
 0.0.0.0:25350`.
@@ -33,13 +34,15 @@ Endpoint: `http://<bot-machine-ip>:25350/mcp` (on LAN — e.g.
 Claude Code (HTTP transport):
 
 ```bash
-claude mcp add --transport http unionclef http://192.168.1.20:25350/mcp
+claude mcp add --transport http unionclef http://192.168.1.20:25350/mcp \
+  --header "Authorization: Bearer <mcpAuthToken>"
 ```
 
 Or in `.mcp.json`:
 
 ```json
-{ "mcpServers": { "unionclef": { "type": "http", "url": "http://192.168.1.20:25350/mcp" } } }
+{ "mcpServers": { "unionclef": { "type": "http", "url": "http://192.168.1.20:25350/mcp",
+    "headers": { "Authorization": "Bearer <mcpAuthToken>" } } } }
 ```
 
 The Docker bench publishes the port externally (`compose.test.yml`: `25350:25350`). A native
@@ -51,7 +54,8 @@ client on the host binds 0.0.0.0 itself — visible over LAN without publishing.
 fillSelection (action) over HTTP. Or by hand:
 
 ```bash
-curl -s http://127.0.0.1:25350/mcp -H 'Content-Type: application/json' \
+curl -s http://127.0.0.1:25350/mcp -H "Authorization: Bearer <mcpAuthToken>" \
+  -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python3 -m json.tool
 ```
 
