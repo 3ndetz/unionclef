@@ -1684,6 +1684,9 @@ class PortalLavaLake(Scenario):
                 pos = ctx.rcon.entity_pos(ctx.bot.name)
                 if pos:
                     snap["at"] = [round(v, 1) for v in pos]
+                # Throwaways left: the planner pillars only while it holds some (placeBudget).
+                m = re.search(r"(\d+) matching", ctx.rcon.cmd(f"clear {ctx.bot.name} cobblestone 0", allow_reject=True))
+                snap["cobble"] = int(m.group(1)) if m else 0
                 ctx.geo.setdefault("bq", []).append(snap)
         ctx.geo["obsidian"] = max(n, ctx.geo.get("obsidian", 0))
         if ctx.geo.get("first_obsidian") is None and n > 0:

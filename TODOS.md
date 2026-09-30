@@ -76,6 +76,13 @@
   portal_lava_lake (gate: first obsidian in 300 s; both arms currently fail at the upper frame).
   Needs: casting order bottom-up with the cast frame supported by blocks already placed, and a
   scaffold (pillar) to stand on for the top row.
+  PROGRESS 2026-09-30 (commit after 0.95.52): portal_lava_lake lit 2 of 3 at ~132 s (was 1 of 8).
+  Fixed: invested site kept (no re-site one block over), cast task reads the world and never mines
+  obsidian, aim timeout in BlockPlaceHelper, 40 s attempt budget in PlaceBlockTask, scaffold stand
+  beside a side-supported mould cell. LEFT: a stand on top of a two-high mould column (corner cell
+  above a side) is walked at and never climbed -- investigating (throwaways left? planner pillar?).
+  Also failing on 0.95.52 already, not from this work: place_test.py (placed 1/4) and
+  nether_portal_test.py (no portal in 180 s).
 - [ ] **Portal builder re-sites its pad repeatedly on rough ground** (n59/n61: "Portal pad ... is
   unreachable ... re-siting here" three times, the frame dismantled and rebuilt). Also: a resumed
   checkpoint forgets the portal it came through (MiscBlockTracker is in memory only) -- CODE DONE
