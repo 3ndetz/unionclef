@@ -117,15 +117,64 @@ public final class PlannedEscape {
         return null;
     }
 
-    /** All four cardinal neighbours of the feet cell are solid: the body cannot step anywhere. */
+    /** Enclosures seen from a body afloat, judged from the floor under it instead of the feet cell. */
+    public static volatile int enclosedAfloat;
+    /** Pits noted once by {@link #describePit}: where, and what was around. */
+    public static volatile String lastPit = "-";
+
+    /**
+     * All four cardinal neighbours of the cell the body STANDS in are solid: it cannot step anywhere.
+     *
+     * <p>⛔ FROM THE FLOOR, NOT FROM THE FEET (2026-09-30). A body in water bobs: at the top of each
+     * bob the feet cell is a block higher, its neighbours are the open air above the pit's rim, and
+     * this answered "not enclosed" on every other tick. portal_lava_lake: six minutes in a one-block
+     * pit of cast water by the frame's corner, the wander never handing the body to the build
+     * engine. The stance is the cell above the first solid block under the body, through any fluid.
+     */
     public static boolean enclosed(AltoClef mod) {
         if (mod == null || mod.getPlayer() == null || mod.getWorld() == null) return false;
         BlockPos feet = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(mod.getPlayer());
         net.minecraft.world.World w = mod.getWorld();
+        if (!mod.getPlayer().isOnGround() && mod.getPlayer().isTouchingWater()) {
+            BlockPos c = feet;
+            for (int i = 0; i < 3 && w.getBlockState(c.down()).getCollisionShape(w, c.down()).isEmpty()
+                    && !w.getFluidState(c.down()).isEmpty(); i++) {
+                c = c.down();
+            }
+            if (!w.getBlockState(c.down()).getCollisionShape(w, c.down()).isEmpty() && !c.equals(feet)) {
+                feet = c;
+                enclosedAfloat++;
+            }
+        }
         for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
             BlockPos n = feet.offset(d);
             if (w.getBlockState(n).getCollisionShape(w, n).isEmpty()) return false;
         }
+        describePit(w, feet);
         return true;
+    }
+
+    /** Write the 3x3x3 around a pit to the log once per pit, so a stall there can be read later
+     *  without reproducing it: '#' solid, '~' water, 'L' lava, '.' air; layers from the floor up. */
+    private static void describePit(net.minecraft.world.World w, BlockPos feet) {
+        String at = feet.toShortString();
+        if (lastPit.startsWith(at)) return;
+        StringBuilder sb = new StringBuilder(at).append(" |");
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                sb.append(' ');
+                for (int dx = -1; dx <= 1; dx++) {
+                    BlockPos p = feet.add(dx, dy, dz);
+                    var st = w.getBlockState(p);
+                    char ch = !st.getCollisionShape(w, p).isEmpty() ? '#'
+                            : st.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA) ? 'L'
+                            : !st.getFluidState().isEmpty() ? '~' : '.';
+                    sb.append(ch);
+                }
+            }
+            sb.append(" |");
+        }
+        lastPit = sb.toString();
+        System.out.println("[PlannedEscape] enclosed at " + lastPit);   // log only, once per pit
     }
 }
