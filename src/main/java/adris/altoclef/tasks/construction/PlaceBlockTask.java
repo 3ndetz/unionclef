@@ -40,6 +40,16 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
     private final TimeoutWanderTask wanderTask = new TimeoutWanderTask(5); // This can get stuck forever, so we increase the range.
     private Task materialTask;
     private int failCount = 0;
+    /** When the current attempt at the cell began: set on start and after every wander. */
+    private long attemptStartMs;
+    /**
+     * One attempt at one block gets this long, whatever the body is doing. The movement checks
+     * below judge the BODY, and a body can move without placing anything: on portal_lava_lake
+     * (2026-09-30) the bot bobbed more than a block in the water of the last cast while the queue
+     * went NOSTAND, re-queue, NOSTAND for three minutes, and neither check ever fired. A block is
+     * placed in seconds or not at all from here.
+     */
+    private static final long PLACE_ATTEMPT_MS = 40_000;
 
     public PlaceBlockTask(BlockPos target, Block[] toPlace, boolean useThrowaways, boolean autoCollectStructureBlocks) {
         this.target = target;
@@ -69,6 +79,7 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
     @Override
     protected void onStart() {
         progressChecker.reset();
+        attemptStartMs = System.currentTimeMillis();
         // If we get interrupted by another task, this might cause problems...
         //_wanderTask.resetWander();
     }
@@ -106,6 +117,7 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         if (wanderTask.isActive() && !wanderTask.isFinished()) {
             setDebugState("Wandering.");
             progressChecker.reset();
+            attemptStartMs = System.currentTimeMillis();
             return wanderTask;
         }
 
@@ -140,9 +152,13 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         // portal). resetIfPathingWithGrace keeps the "don't yank a MOVING climb" guarantee (it still
         // resets while the body has moved within the last STALL_MOVE_GRACE ticks) but lets a genuinely
         // FROZEN drain fall through to the wander below, which re-picks a stand and recovers.
+        // A queued cell counts too (G108, 2026-09-30): with the drain holding the cell but nothing
+        // driving, a body bobbing in the water of the last cast "moved" enough for the plain check
+        // for 3.5 minutes on portal_lava_lake, and only the in-place test below catches that.
         boolean drainDriving = kaptainwutax.tungsten.task.FastNavigator.isActive()
                 || kaptainwutax.tungsten.task.PillarTask.isActive()
-                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
+                || BlockPlaceHelper.queued() > 0;
         progressChecker.resetIfPathingWithGrace(mod, drainDriving);
 
         // ⛔ A SHIMMY IS A STALL (G108, 2026-09-19). The drain does not always FREEZE when it
@@ -154,8 +170,11 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         // grace window, we fall through to the wander, which relocates the body and lets the drain
         // re-pick a stand from somewhere the shimmy cannot recur.
         // Check if we're approaching our point. If we fail, wander for a bit.
-        if (!progressChecker.check(mod) || (drainDriving && progressChecker.stalledInPlace())) {
+        boolean attemptSpent = System.currentTimeMillis() - attemptStartMs > PLACE_ATTEMPT_MS;
+        if (!progressChecker.check(mod) || (drainDriving && progressChecker.stalledInPlace()) || attemptSpent) {
             failCount++;
+            attemptStartMs = System.currentTimeMillis();
+            if (attemptSpent) attemptsSpent++;
             if (!tryingAlternativeWay()) {
                 Debug.logMessage("Failed to place, wandering timeout.");
                 // ⛔ RELEASE THE DRAIN BEFORE HANDING THE BODY TO THE WANDER (G108, 2026-09-19).
@@ -261,6 +280,9 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
     protected String toDebugString() {
         return "Place structure" + ArrayUtils.toString(toPlace) + " at " + target.toShortString();
     }
+
+    /** Attempts that ran out of PLACE_ATTEMPT_MS rather than tripping a movement check. */
+    public static volatile int attemptsSpent;
 
     private boolean tryingAlternativeWay() {
         return failCount % 4 == 3;

@@ -150,7 +150,8 @@ public class ConstructNetherPortalBucketTask extends Task {
             if (portalOrigin != null && currentDestroyTarget != null) {
                 mod.getBlockScanner().requestBlockUnreachable(portalOrigin);
                 mod.getBlockScanner().requestBlockUnreachable(currentDestroyTarget);
-                if (mod.getBlockScanner().isUnreachable(portalOrigin) && mod.getBlockScanner().isUnreachable(currentDestroyTarget)) {
+                if (mod.getBlockScanner().isUnreachable(portalOrigin) && mod.getBlockScanner().isUnreachable(currentDestroyTarget)
+                        && !siteInvested(mod)) {
                     portalOrigin = null;
                     currentDestroyTarget = null;
                 }
@@ -265,7 +266,7 @@ public class ConstructNetherPortalBucketTask extends Task {
             }
 
             // We need to place obsidian here.
-            if (mod.getBlockScanner().isUnreachable(framePos)) {
+            if (mod.getBlockScanner().isUnreachable(framePos) && !siteInvested(mod)) {
                 portalOrigin = null;
             }
             return new PlaceObsidianBucketTask(framePos);
@@ -286,6 +287,29 @@ public class ConstructNetherPortalBucketTask extends Task {
         setDebugState("Flinting and Steeling");
         // Flint and steel it baby
         return new InteractWithBlockTask(new ItemTarget(new Item[]{Items.FLINT_AND_STEEL, Items.FIRE_CHARGE}, 1), Direction.UP, portalOrigin.down(), true);
+    }
+
+    /**
+     * Does the current site's frame already hold obsidian? Then it is kept, whatever the scanner
+     * says about a cell being unreachable.
+     *
+     * <p>⛔ A RE-SITE THROWS THE OBSIDIAN AWAY, AND WORSE (G108, 2026-09-30). This task is the way
+     * into the nether WITHOUT a diamond pickaxe, so obsidian it has cast can never be taken back.
+     * A stall on one cell marked it unreachable and the site was dropped; the region search then
+     * picked a spot one block over, so the new frame's opening held the old frame's obsidian.
+     * portal_lava_lake: sides cast at z=1 and z=4, then casts at z=2 and z=5, and the last minutes
+     * spent in "Destroy block" on an obsidian cell an iron pickaxe cannot break. A stall on an
+     * invested site is answered by the cast's own retry (PlaceObsidianBucketTask wanders and
+     * tries again), not by starting over.
+     */
+    private boolean siteInvested(AltoClef mod) {
+        if (portalOrigin == null) return false;
+        for (Vec3i framePosRelative : PORTAL_FRAME) {
+            if (mod.getWorld().getBlockState(portalOrigin.add(framePosRelative)).getBlock() == Blocks.OBSIDIAN) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

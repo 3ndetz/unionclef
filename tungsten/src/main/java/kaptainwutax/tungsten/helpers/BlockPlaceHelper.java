@@ -184,6 +184,12 @@ public final class BlockPlaceHelper {
      *  a walking problem, not an aiming problem. */
     public static volatile int blockedByOwnBody;
     private static String equipped;
+    /** The cell the aim is converging on, and for how many ticks it has not got there. */
+    private static BlockPos aimCell;
+    private static int aimTicks;
+    /** Ticks an aim may take to land on a traced face before the cell is handed back. WindMouse
+     *  converges in tens of ticks; three seconds is well past that. */
+    private static final int AIM_TIMEOUT_TICKS = 60;
 
     /** How long to keep looking before handing the rest back. Generous: the aim is humanized
      *  (WindMouse), so convergence is tens of ticks at worst, and the caller may be walking. */
@@ -392,7 +398,32 @@ public final class BlockPlaceHelper {
                 // escape hatch below: an aim that never converges kept resetting idleTicks, so the
                 // queue neither walked nor gave up. Only a placement, or the rate gate holding us
                 // back from one, counts.
-                if (hit == null) return;         // aim still on its way; hold this cell
+                if (hit == null) {
+                    // ⛔ AN AIM THAT NEVER ARRIVES HELD THE CELL FOR EVER (G108, 2026-09-30).
+                    // Nothing here counted: idleTicks moves only below this loop, so a face that
+                    // traced every tick while the crosshair never landed on it kept the queue on
+                    // one cell with no walk and no timeout. Measured on portal_lava_lake: 3.5
+                    // minutes, buildQ=1, the body bobbing in water from the last cast, the task
+                    // above satisfied that it "moved". deferTimeout was declared for exactly this
+                    // and never incremented. Hand the cell back like every other defer.
+                    if (!target.equals(aimCell)) {
+                        aimCell = target;
+                        aimTicks = 0;
+                    }
+                    if (++aimTicks > AIM_TIMEOUT_TICKS) {
+                        if (walkDebug.length() < 700) {
+                            walkDebug += "AIMTIMEOUT(" + target.toShortString() + ")@"
+                                    + player.getBlockPos().toShortString() + " ";
+                        }
+                        it.remove();
+                        DEFERRED.add(target);
+                        deferTimeout++;
+                        aimCell = null;
+                        idleTicks = 0;
+                    }
+                    return;                      // aim still on its way; hold this cell
+                }
+                aimCell = null;
                 idleTicks = 0;
                 if (!tryPlace(hit)) return;      // rate gate closed this tick
                 // DO NOT TRUST ActionResult.SUCCESS — TRUST THE WORLD. The click succeeding is a
@@ -560,7 +591,16 @@ public final class BlockPlaceHelper {
         }
         if (idleTicks <= WALK_AFTER_TICKS) return;   // the aim may still be arriving
         BlockPos stand = placementStand(mc.world, head, wantedState(player, headCell.blockName()));
-        if (stand == null) {
+        // A STAND ABOVE THE CELL IS THE LAST CHOICE, NOT THE FIRST (G108, 2026-09-30). baritone's
+        // GoalAdjacent ranks lower stands first (heuristic y * 100, BuilderProcess.java:1109-1112)
+        // and its pathfinder reaches one beside the cell by pillaring a block (MovementPillar).
+        // Ours took the only EXISTING stand, on top of a two-high mould column, walked at it four
+        // times and never got up: portal_lava_lake, three runs of three, every one stuck on the
+        // top row with the body jumping in place at the column's foot. A stand one pillar up
+        // beside the cell, at its own level, is taken before a stand above it.
+        boolean preferScaffold = stand != null && stand.getY() > head.getY()
+                && scaffoldBase(mc.world, head) != null;
+        if (stand == null || preferScaffold) {
             // ⛔ BUILD THE STAND (2026-09-26). The comment below hands the cell back to "the agent,
             // which can put a block under itself or come at it from a scaffold" -- and no agent did.
             // Measured: a portal frame's top cell with leaves above it (so it cannot be pillared
@@ -574,7 +614,7 @@ public final class BlockPlaceHelper {
                     stopWalking();
                     if (walkDebug.length() < 700) walkDebug += "SCAFFOLD(" + base.toShortString() + ") ";
                     scaffoldsStarted++;
-                    kaptainwutax.tungsten.task.PillarTask.startTo(head.getY() - 1, null, base.getX(), base.getZ());
+                    kaptainwutax.tungsten.task.PillarTask.startTo(scaffoldStandY, null, base.getX(), base.getZ());
                     idleTicks = 0;
                     return;
                 }
@@ -788,17 +828,35 @@ public final class BlockPlaceHelper {
     /** Scaffolds started for a cell with no reachable stand (see drainQueue). */
     public static volatile int scaffoldsStarted;
 
+    /** The feet level the last {@link #scaffoldBase} stand is at: where the pillar stops. */
+    private static int scaffoldStandY;
+
     /**
      * The ground cell of a neighbouring column from which a pillar reaches a stand for
-     * {@code target}'s top face: the stand is beside the support (the block under the target) at
-     * target.y-1, with room for the body, and the column under it is air down to ground no more
-     * than 6 blocks below. Null when no such column exists.
+     * {@code target}, with room for the body, the column under the stand air down to ground no
+     * more than 6 blocks below. Null when no such column exists. The stands, in baritone's
+     * GoalAdjacent terms (BuilderProcess.java:1092-1106):
+     * <ul>
+     *   <li>the block under the target can be placed against (its top face): beside that support,
+     *       one level down -- the case this was first written for;</li>
+     *   <li>a horizontal neighbour can be placed against: beside the target at its own level,
+     *       which GoalAdjacent always allows (only feet one level DOWN needs allowSameLevel).</li>
+     * </ul>
      */
     private static BlockPos scaffoldBase(net.minecraft.world.WorldView world, BlockPos target) {
-        BlockPos support = target.down();
-        if (!RealPlacement.canPlaceAgainst(world, support)) return null;
+        boolean topFace = RealPlacement.canPlaceAgainst(world, target.down());
+        boolean sideFace = false;
         for (Direction d : Direction.Type.HORIZONTAL) {
-            BlockPos stand = target.offset(d).down();
+            if (RealPlacement.canPlaceAgainst(world, target.offset(d))) sideFace = true;
+        }
+        java.util.List<BlockPos> stands = new java.util.ArrayList<>();
+        for (Direction d : Direction.Type.HORIZONTAL) {
+            if (topFace) stands.add(target.offset(d).down());
+        }
+        for (Direction d : Direction.Type.HORIZONTAL) {
+            if (sideFace) stands.add(target.offset(d));
+        }
+        for (BlockPos stand : stands) {
             if (!world.getBlockState(stand).isReplaceable() || !world.getBlockState(stand.up()).isReplaceable()) continue;
             if (!world.getBlockState(stand.up(2)).getCollisionShape(world, stand.up(2)).isEmpty()) continue;
             if (kaptainwutax.tungsten.path.RouteHazards.hazard(world, stand)) continue;
@@ -807,10 +865,15 @@ public final class BlockPlaceHelper {
                 if (!world.getBlockState(cell).isReplaceable()) {
                     BlockPos base = cell.up();
                     if (base.equals(stand)) break;
-                    if (standable(world, base)) return base;
+                    if (standable(world, base)) {
+                        scaffoldStandY = stand.getY();
+                        return base;
+                    }
                     break;
                 }
-                if (!world.getFluidState(cell).isEmpty()) break;
+                // A source is a pool: no pillar from inside one. Flowing water is the run-off of the
+                // last cast at the frame's foot, a few pixels deep, and a pillar block replaces it.
+                if (!world.getFluidState(cell).isEmpty() && world.getFluidState(cell).isStill()) break;
             }
         }
         return null;

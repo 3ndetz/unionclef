@@ -1653,20 +1653,38 @@ class PortalLavaLake(Scenario):
         ctx.geo["t0"] = time.time()
         ctx.bot.cmd("@test portalbucket")
 
-    def _present(self, ctx, block):
+    def _present(self, ctx, block, y0=FLOOR_Y):
         # Count by cloning only that block into the empty sky above the arena, then clear it.
         # ("fill ... X replace X" changes nothing and reports "No blocks were filled" whatever is
         # there -- the first version of this course counted zero obsidian every run that way.)
         # The lake side only: clone refuses more than 32768 blocks, and the whole arena is 44652
         # (which read as zero obsidian on every run of the second version of this course).
-        r = ctx.rcon.cmd(f"clone 0 {FLOOR_Y} -25 30 {STAND_Y + 10} 25 0 20 -25 filtered minecraft:{block}",
+        r = ctx.rcon.cmd(f"clone 0 {y0} -25 30 {STAND_Y + 10} 25 0 20 -25 filtered minecraft:{block}",
                          allow_reject=True)
         ctx.rcon.cmd(f"fill 0 20 -25 30 {20 + STAND_Y + 10 - FLOOR_Y} 25 air", allow_reject=True)
         m = re.search(r"(\d+) block", r)
         return int(m.group(1)) if m and "cloned" in r else 0
 
     def drive_tick(self, ctx, elapsed):
-        n = self._present(ctx, "obsidian")
+        # ABOVE THE GROUND ONLY. Water from a cast reaching the floor lava (or the lake) makes
+        # obsidian too, and counting it read as a first cast at 7.9 s on 2026-09-30. The eight frame
+        # cells above the ground are the sides and the top; the bottom row is in the floor.
+        n = self._present(ctx, "obsidian", STAND_Y)
+        if elapsed - ctx.geo.get("bq_t", -99) >= 20:
+            ctx.geo["bq_t"] = elapsed
+            ok, bq = ctx.bot.py.try_call("buildQueue")
+            if ok and bq is not None:
+                snap = {k: bq.get(k) for k in ("queued", "placed", "deferNoFace", "blockedByOwnBody", "walkStarted")}
+                snap["t"] = round(elapsed)
+                snap["walk"] = str(bq.get("walkDebug"))[-160:]
+                okc, chain = ctx.bot.py.try_call("getTaskChainString")
+                if okc and chain:
+                    c = str(chain).replace(chr(10), " | ")
+                    snap["chain"] = c[c.find("Placing obsidian"):][:260] if "Placing obsidian" in c else c[-200:]
+                pos = ctx.rcon.entity_pos(ctx.bot.name)
+                if pos:
+                    snap["at"] = [round(v, 1) for v in pos]
+                ctx.geo.setdefault("bq", []).append(snap)
         ctx.geo["obsidian"] = max(n, ctx.geo.get("obsidian", 0))
         if ctx.geo.get("first_obsidian") is None and n > 0:
             ctx.geo["first_obsidian"] = time.time() - ctx.geo["t0"]
@@ -1679,7 +1697,9 @@ class PortalLavaLake(Scenario):
     def judge(self, ctx):
         t = ctx.geo.get("first_obsidian")
         yield Criterion(f"first obsidian cast within {self.MAX_S} s", t is not None and t <= self.MAX_S,
-                        f"t={None if t is None else round(t, 1)} frame_blocks={ctx.geo.get('obsidian', 0)}/10")
+                        f"t={None if t is None else round(t, 1)} frame_above_ground={ctx.geo.get('obsidian', 0)}/8")
+        for snap in ctx.geo.get("bq", [])[-8:]:
+            yield Criterion("build queue (recorded)", True, str(snap))
         p = ctx.geo.get("portal_at")
         yield Criterion("portal lit (recorded, not gated)", True, f"t={None if p is None else round(p, 1)}")
 
