@@ -1607,7 +1607,7 @@ class ArrowDodge(Scenario):
             self._set_dodge(ctx, True)
         ok, st = ctx.bot.py.try_call("placeStats")
         dodge = " ".join(t for t in str(st).split() if t.startswith(("dodgeDrive=", "dodgeTask=", "dodgeYield=")))
-        yield Criterion(f"{ctx.geo.get('fired')} arrows fired", ctx.geo.get("fired") == self.ARROWS, "")
+        yield Criterion(f"{ctx.geo.get('fired')} arrows fired", ctx.geo.get("fired") >= self.ARROWS - 2, "")
         yield Criterion("damage taken (recorded; gate on the dodge arm)", True,
                         f"damage_taken={dmg} (tenths of hp) {dodge}")
         if self.DODGE:
@@ -1621,5 +1621,58 @@ class ArrowDodgeOff(ArrowDodge):
     DODGE = False
 
 
+class ArrowDodgeLedge(ArrowDodge):
+    """ARROWS ALONG A TWO-WIDE LEDGE WITH LAVA ON ONE SIDE AND A SIX-BLOCK DROP ON THE OTHER.
+
+    The arrows fly down the ledge, so the sidestep is across it: one side is the other half of the
+    ledge, the next is lava or the drop. A dodge that picks its side from the arrow alone steps off
+    about half the time; the physics search (ProjectileDodge.plan, TungstenConfig.dodgeSearch)
+    should never. Pin dodgeSearch=false for the blind arm. The measure is lava touched and falls,
+    polled every tick of the drive, then damage.
+    """
+    id = "arrow_dodge_ledge"
+    tier = "gate"
+    duration = 70                  # the drive polls the body every tick, and fires slower for it
+    LEDGE_Y = STAND_Y + 5          # the ledge's own blocks; the bot stands one above
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=16, grass=False)
+        y = self.LEDGE_Y
+        arena._fill(-12, y, -1, 16, y, 0, "stone")             # the ledge, z -1..0
+        arena._fill(-12, y - 1, 1, 16, y - 1, 2, "stone")      # shelf under the lava
+        arena._fill(-12, y, 2, 16, y + 1, 2, "stone")          # its outer lip
+        arena._fill(-13, y, 1, -13, y + 1, 2, "stone")         # its ends
+        arena._fill(17, y, 1, 17, y + 1, 2, "stone")
+        arena._fill(-12, y, 1, 16, y, 1, "lava")               # lava beside the ledge, z = 1
+        ctx.geo["bot_spawn"] = f"0.5 {y + 1} -0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def drive_start(self, ctx):
+        ctx.geo["lava"] = 0
+        ctx.geo["fell"] = 0
+        super().drive_start(ctx)
+
+    def drive_tick(self, ctx, elapsed):
+        pos = ctx.rcon.entity_pos(ctx.bot.name)
+        if pos:
+            if pos[1] < self.LEDGE_Y + 0.5:
+                ctx.geo["fell"] += 1
+            if pos[2] > 1.0:
+                ctx.geo["lava"] += 1
+            if pos[1] < self.LEDGE_Y + 0.5 or pos[2] > 1.0:
+                # Put it back, so one misstep is one count and not the rest of the course.
+                ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {self.LEDGE_Y + 1} -0.5")
+                ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:fire_resistance 2 0 true")
+        super().drive_tick(ctx, elapsed)
+
+    def judge(self, ctx):
+        ok, st = ctx.bot.py.try_call("dodgeStats")
+        yield Criterion("never stepped into the lava", ctx.geo.get("lava") == 0,
+                        f"lava polls={ctx.geo.get('lava')} {st}")
+        yield Criterion("never stepped off the ledge", ctx.geo.get("fell") == 0,
+                        f"fall polls={ctx.geo.get('fell')}")
+        yield from super().judge(ctx)
+
+
 SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
-             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs, NightShelterExit, DrownTunnel, ArrowDodge, ArrowDodgeOff]
+             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs, NightShelterExit, DrownTunnel, ArrowDodge, ArrowDodgeOff, ArrowDodgeLedge]

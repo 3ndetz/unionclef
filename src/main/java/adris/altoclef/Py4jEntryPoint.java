@@ -3432,6 +3432,11 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.CombatController.strafeFarTicks = 0;
         kaptainwutax.tungsten.combat.CombatController.strafeNearTicks = 0;
         kaptainwutax.tungsten.task.ProjectileDodge.driveTicks = 0;
+        kaptainwutax.tungsten.task.ProjectileDodge.searches = 0;
+        kaptainwutax.tungsten.task.ProjectileDodge.searchDeviated = 0;
+        kaptainwutax.tungsten.task.ProjectileDodge.searchAllUnsafe = 0;
+        kaptainwutax.tungsten.task.ProjectileDodge.searchRejected = 0;
+        kaptainwutax.tungsten.task.ProjectileDodge.searchJumped = 0;
         adris.altoclef.chains.MobDefenseChain.mdAuraTungstenTicks = 0;
         adris.altoclef.chains.MobDefenseChain.mdDamageTaken = 0f;
         kaptainwutax.tungsten.combat.DamageWatch.reset();
@@ -4491,6 +4496,17 @@ public class Py4jEntryPoint {
         return "navDig=" + kaptainwutax.tungsten.task.FastNavigator.navDigN
                 + "/" + kaptainwutax.tungsten.task.FastNavigator.navDigMsSum
                 + "/" + kaptainwutax.tungsten.task.FastNavigator.navDigResumeMsSum;
+    }
+
+    /** The arrow dodge's physics search: searches run, searches that overruled the blind heading,
+     *  searches with no safe candidate at all, candidates refused as unsafe, ticks the keys were driven. */
+    public String dodgeStats() {
+        return "searches=" + kaptainwutax.tungsten.task.ProjectileDodge.searches
+                + " deviated=" + kaptainwutax.tungsten.task.ProjectileDodge.searchDeviated
+                + " allUnsafe=" + kaptainwutax.tungsten.task.ProjectileDodge.searchAllUnsafe
+                + " rejected=" + kaptainwutax.tungsten.task.ProjectileDodge.searchRejected
+                + " jumped=" + kaptainwutax.tungsten.task.ProjectileDodge.searchJumped
+                + " drive=" + kaptainwutax.tungsten.task.ProjectileDodge.driveTicks;
     }
 
     public String foodStats() {

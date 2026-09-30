@@ -437,6 +437,9 @@ public class MobDefenseChain extends SingleTaskChain {
      * requirement and the camera stays on the target.
      */
     private double suggestedDodgeX, suggestedDodgeZ;
+    /** The arrow the heading was taken from; ProjectileDodge.plan simulates the sidestep against it. */
+    private Vec3d suggestedArrowPos, suggestedArrowVel;
+    private double suggestedArrowGravity;
     /** How long one sidestep runs. An arrow crosses twelve blocks in about eight ticks. */
     private static final int DODGE_HOLD_TICKS = 6;
     /**
@@ -880,7 +883,14 @@ public class MobDefenseChain extends SingleTaskChain {
         // Dodge projectiles (ported from autoclef: direct sprint+jump sideways, or baritone in danger zones)
         if (mod.getModSettings().isDodgeProjectiles() && projectileIsClose) {
             doingFunkyStuff = true;
-            if (WorldHelper.isDangerZone(mod, mod.getPlayer().getBlockPos())) {
+            // ⛔ A DANGER ZONE NO LONGER MEANS A ROUTE SEARCH (2026-09-30). ProjectileDodge.plan
+            // refuses lava, fluids, fire and drops over three blocks itself, by simulating each
+            // sidestep, so the edge is covered without handing the legs to a pathing task. That
+            // task stood still: on arrow_dodge_ledge (lava on one side, a six-block drop on the
+            // other) it took 43 ticks and every one of 8 arrows landed (32 hp). It stays only for
+            // the dodgeSearch=false arm.
+            if (!kaptainwutax.tungsten.TungstenConfig.get().dodgeSearch
+                    && WorldHelper.isDangerZone(mod, mod.getPlayer().getBlockPos())) {
                 // Danger zone (void/lava/edge): use baritone pathfinding to dodge safely
                 // ⛔ THIS IS THE SUSPECTED FEEDBACK LOOP, AND THIS COUNTS IT.
                 // DodgeProjectilesTask is a PATHING task whose job is to hold ARROW_KEEP_DISTANCE
@@ -933,8 +943,15 @@ public class MobDefenseChain extends SingleTaskChain {
                 // It strafes in the player's own frame rather than turning the head, so the bot
                 // keeps facing what it is fighting -- the swing gate refuses past 40 degrees, and a
                 // dodge that looks away cannot also attack.
-                kaptainwutax.tungsten.task.ProjectileDodge.hold(
-                        suggestedDodgeX, suggestedDodgeZ, suggestedDodgeTicks);
+                // The heading only says which way is away from the arrow. Which keys are SAFE --
+                // not off the ledge, not into the lava beside it -- is the physics search's call.
+                if (kaptainwutax.tungsten.TungstenConfig.get().dodgeSearch && suggestedArrowPos != null) {
+                    kaptainwutax.tungsten.task.ProjectileDodge.plan(suggestedDodgeX, suggestedDodgeZ,
+                            suggestedDodgeTicks, suggestedArrowPos, suggestedArrowVel, suggestedArrowGravity);
+                } else {
+                    kaptainwutax.tungsten.task.ProjectileDodge.hold(
+                            suggestedDodgeX, suggestedDodgeZ, suggestedDodgeTicks);
+                }
             }
             mdRet2++; return 65;
         }
@@ -2005,6 +2022,9 @@ public class MobDefenseChain extends SingleTaskChain {
                         // decide where the head points.
                         suggestedDodgeX = dodgeDir.x;
                         suggestedDodgeZ = dodgeDir.z;
+                        suggestedArrowPos = projectile.position;
+                        suggestedArrowVel = projectile.velocity;
+                        suggestedArrowGravity = projectile.gravity;
                         // shotRange is already computed above for the press bias; the hold length
                         // is the one other thing it can answer, and until now nothing asked.
                         suggestedDodgeTicks = kaptainwutax.tungsten.TungstenConfig.get()

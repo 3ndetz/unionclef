@@ -1,7 +1,17 @@
 package kaptainwutax.tungsten.task;
 
+import kaptainwutax.tungsten.agent.Agent;
+import net.minecraft.block.AbstractFireBlock;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.WorldView;
 
 /**
  * Sidestep-an-incoming-arrow execution primitive: drive the movement keys along a world-space
@@ -49,9 +59,195 @@ public class ProjectileDodge {
      * flight, and the newest heading is the right one.
      */
     public static synchronized void hold(double x, double z, int ticks) {
+        planned = false;
         dirX = x;
         dirZ = z;
         holdTicks = Math.max(holdTicks, ticks);
+    }
+
+    // ── the planned dodge ─────────────────────────────────────────────────────
+
+    /** Set by {@link #plan}: the keys to hold, in the player's own frame. */
+    private static boolean planned, pFwd, pBack, pLeft, pRight, pJump, jumpHeld;
+    /** Searches run, searches that left the chain's heading for a safer or clearer one, searches
+     *  in which even standing still was unsafe, candidates refused as unsafe. Read over py4j. */
+    public static volatile int searches, searchDeviated, searchAllUnsafe, searchRejected, searchJumped;
+
+    /** Ticks after the keys are released that the search keeps simulating: momentum carries a
+     *  sprinting body about a block further, and that block has to be safe too. */
+    private static final int SETTLE_TICKS = 6;
+    /** A clearance past this is a certain miss; beyond it the candidates only differ by heading. */
+    private static final double CLEAR_ENOUGH = 1.0;
+    /** baritone's maxFallHeightNoWater (baritone/src/main/java/baritone/api/Settings.java:536). */
+    private static final int MAX_SAFE_FALL = 3;
+
+    /**
+     * Sidestep an arrow, choosing the keys by search rather than trusting a heading.
+     *
+     * <p>{@link #hold} strafes along whatever heading the chain computed, and the chain computes it
+     * from the arrow alone: it has never looked at the ground. On a ledge, a bridge or beside a lava
+     * lake the right sidestep and the fatal one differ only by which side of the arrow line they are.
+     *
+     * <p>So this does what tungsten's planner does, cut down to one step: each of the nine key
+     * combinations (eight strafes and standing still), each with and without a jump, is simulated with the physics agent for
+     * {@code ticks} ticks plus {@link #SETTLE_TICKS} of coasting, against the arrow's own flight.
+     * A candidate is refused if the body touches anything baritone refuses to walk into
+     * (MovementHelper.avoidWalkingInto, baritone/src/main/java/baritone/pathing/movement/
+     * MovementHelper.java:420 -- fluids, magma, cactus, berry bush, fire, cobweb) or drops further
+     * than {@link #MAX_SAFE_FALL}. Of the rest, the one whose body stays furthest from the arrow
+     * wins, and the chain's heading breaks ties -- it carries the bias toward the shooter. If
+     * nothing is safe, not even standing, nothing is pressed.
+     *
+     * <p>Eighteen candidates at about a dozen agent ticks each is two hundred ticks of physics,
+     * small next to what the planner simulates per search, so it runs every tick an arrow is close.
+     */
+    public static synchronized void plan(double x, double z, int ticks,
+                                         Vec3d arrowPos, Vec3d arrowVel, double gravity) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ClientPlayerEntity player = mc.player;
+        if (player == null || mc.world == null) return;
+        WorldView world = mc.world;
+        searches++;
+
+        double yaw = Math.toRadians(player.getYaw());
+        double fx = -Math.sin(yaw), fz = Math.cos(yaw);
+        double rx = -fz, rz = fx;
+        double pref = Math.hypot(x, z);
+        double px = pref > 1e-6 ? x / pref : 0, pz = pref > 1e-6 ? z / pref : 0;
+        // Already in water: every candidate touches it, and refusing them all would pin the body in
+        // the arrow's path.
+        boolean startWet = player.isTouchingWater();
+
+        double bestScore = Double.NEGATIVE_INFINITY;
+        int bestF = 0, bestS = 0;
+        boolean any = false;
+        boolean bestJ = false;
+        for (int j = 0; j <= 1; j++) for (int f = -1; f <= 1; f++) {
+            for (int s = -1; s <= 1; s++) {
+                boolean jump = j == 1;
+                // A jump only starts from the ground; in the air the candidate is the same as j=0.
+                if (jump && !player.isOnGround()) continue;
+                double clear = simulate(player, world, f, s, jump, ticks, arrowPos, arrowVel, gravity, startWet);
+                if (Double.isNaN(clear)) {
+                    searchRejected++;
+                    continue;
+                }
+                double wx = f * fx + s * rx, wz = f * fz + s * rz;
+                double wl = Math.hypot(wx, wz);
+                double along = wl > 1e-6 ? (wx * px + wz * pz) / wl : 0;
+                // A jump is kept for when it clears the arrow better: it lands where it lands, and a
+                // bot hopping at every arrow is a tell.
+                double score = Math.min(clear, CLEAR_ENOUGH) + 0.1 * along - (jump ? 0.15 : 0);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestF = f;
+                    bestS = s;
+                    bestJ = jump;
+                    any = true;
+                }
+            }
+        }
+        if (!any) {
+            searchAllUnsafe++;
+        } else {
+            // What the blind heading would have pressed, to count the times the search overruled it.
+            double hf = x * fx + z * fz, hs = x * rx + z * rz;
+            int hF = hf > 0.25 ? 1 : hf < -0.25 ? -1 : 0, hS = hs > 0.25 ? 1 : hs < -0.25 ? -1 : 0;
+            if (hF != bestF || hS != bestS || bestJ) searchDeviated++;
+            if (bestJ) searchJumped++;
+        }
+        planned = true;
+        pFwd = bestF > 0;
+        pBack = bestF < 0;
+        pRight = bestS > 0;
+        pLeft = bestS < 0;
+        pJump = bestJ;
+        dirX = x;
+        dirZ = z;
+        holdTicks = Math.max(holdTicks, ticks);
+    }
+
+    /**
+     * The closest the arrow comes to the body under these keys, or NaN when the keys are unsafe.
+     * {@code f}: +1 forward, -1 back; {@code s}: +1 right, -1 left (the frame {@link #tick} uses).
+     */
+    private static double simulate(ClientPlayerEntity player, WorldView world, int f, int s, boolean jump, int ticks,
+                                   Vec3d arrowPos, Vec3d arrowVel, double gravity, boolean startWet) {
+        Agent sim = Agent.of(player);
+        sim.yaw = player.getYaw();
+        sim.pitch = player.getPitch();
+        double startY = sim.posY;
+        double ax = arrowPos.x, ay = arrowPos.y, az = arrowPos.z;
+        double vx = arrowVel.x, vy = arrowVel.y, vz = arrowVel.z;
+        double best = Double.POSITIVE_INFINITY;
+        double prevX = sim.posX, prevY = sim.posY, prevZ = sim.posZ;
+        BlockPos.Mutable m = new BlockPos.Mutable();
+        for (int t = 0; t < ticks + SETTLE_TICKS; t++) {
+            boolean keys = t < ticks;
+            sim.keyForward = keys && f > 0;
+            sim.keyBack = keys && f < 0;
+            sim.keyRight = keys && s > 0;
+            sim.keyLeft = keys && s < 0;
+            sim.keySprint = keys && f > 0;
+            sim.keyJump = jump && t == 0;
+            sim.keySneak = false;
+            sim.tick(world);
+            if (sim.isInLava() || (!startWet && sim.touchingWater)) return Double.NaN;
+            int bx = MathHelper.floor(sim.posX), by = MathHelper.floor(sim.posY + 0.01), bz = MathHelper.floor(sim.posZ);
+            for (int dy = -1; dy <= 1; dy++) {
+                BlockState st = world.getBlockState(m.set(bx, by + dy, bz));
+                if (avoidWalkingInto(st, startWet || dy < 0)) return Double.NaN;
+            }
+            if (startY - sim.posY > MAX_SAFE_FALL) return Double.NaN;
+            // The arrow covers ~2.5 blocks a tick, more than the body is wide, so each tick is
+            // sampled along its length rather than only at its ends.
+            double nx = ax + vx, ny = ay + vy, nz = az + vz;
+            for (int k = 1; k <= 8; k++) {
+                double u = k / 8.0;
+                double qx = ax + (nx - ax) * u, qy = ay + (ny - ay) * u, qz = az + (nz - az) * u;
+                double bxp = prevX + (sim.posX - prevX) * u;
+                double byp = prevY + (sim.posY - prevY) * u;
+                double bzp = prevZ + (sim.posZ - prevZ) * u;
+                best = Math.min(best, boxDistance(qx, qy, qz, bxp, byp, bzp));
+            }
+            ax = nx; ay = ny; az = nz;
+            vx *= 0.99; vy = vy * 0.99 - gravity; vz *= 0.99;
+            prevX = sim.posX; prevY = sim.posY; prevZ = sim.posZ;
+        }
+        // Where it comes to rest: a drop past the limit there is a fall the coasting has not
+        // finished yet. VoidDetector counts lava below as a bottomless drop.
+        if (kaptainwutax.tungsten.combat.VoidDetector.fallHeight(sim.getPos(), world) > MAX_SAFE_FALL) {
+            return Double.NaN;
+        }
+        return best;
+    }
+
+    /** Distance from a point to a standing player's box (0.6 wide, 1.8 tall) with feet at (x,y,z). */
+    private static double boxDistance(double px, double py, double pz, double x, double y, double z) {
+        double dx = Math.max(Math.max(x - 0.3 - px, 0), px - (x + 0.3));
+        double dy = Math.max(Math.max(y - py, 0), py - (y + 1.8));
+        double dz = Math.max(Math.max(z - 0.3 - pz, 0), pz - (z + 0.3));
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /**
+     * baritone's MovementHelper.avoidWalkingInto (baritone/src/main/java/baritone/pathing/movement/
+     * MovementHelper.java:420), with one difference: water is allowed when {@code waterOk} -- the
+     * body is already in it, or it is the cell under the feet, where only lava and the damaging
+     * blocks matter.
+     */
+    private static boolean avoidWalkingInto(BlockState state, boolean waterOk) {
+        Block block = state.getBlock();
+        if (!state.getFluidState().isEmpty()) {
+            if (state.getFluidState().isIn(FluidTags.LAVA)) return true;
+            if (!waterOk) return true;
+        }
+        return block == Blocks.MAGMA_BLOCK
+                || block == Blocks.CACTUS
+                || block == Blocks.SWEET_BERRY_BUSH
+                || block instanceof AbstractFireBlock
+                || block == Blocks.COBWEB
+                || block == Blocks.BUBBLE_COLUMN;
     }
 
     public static boolean isActive() {
@@ -71,6 +267,10 @@ public class ProjectileDodge {
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sprintKey.setPressed(false);
+        if (jumpHeld) {
+            mc.options.jumpKey.setPressed(false);
+            jumpHeld = false;
+        }
     }
 
     /**
@@ -115,12 +315,24 @@ public class ProjectileDodge {
         // A component this small is noise in the heading, and pressing on it would jitter the keys
         // between two opposite presses on consecutive ticks.
         final double DEADZONE = 0.25;
-        mc.options.forwardKey.setPressed(fwd > DEADZONE);
-        mc.options.backKey.setPressed(fwd < -DEADZONE);
-        mc.options.rightKey.setPressed(side > DEADZONE);
-        mc.options.leftKey.setPressed(side < -DEADZONE);
+        boolean kF = planned ? pFwd : fwd > DEADZONE;
+        mc.options.forwardKey.setPressed(kF);
+        mc.options.backKey.setPressed(planned ? pBack : fwd < -DEADZONE);
+        mc.options.rightKey.setPressed(planned ? pRight : side > DEADZONE);
+        mc.options.leftKey.setPressed(planned ? pLeft : side < -DEADZONE);
         // Sprint only earns its speed going forwards, and a backwards sprint is not a thing.
-        mc.options.sprintKey.setPressed(fwd > DEADZONE);
+        mc.options.sprintKey.setPressed(kF);
+        // The jump is one tap: pressed on the first tick of the hold, released on the next, so it
+        // is not left held for whoever writes the keys after the dodge.
+        if (jumpHeld) {
+            mc.options.jumpKey.setPressed(false);
+            jumpHeld = false;
+        }
+        if (planned && pJump) {
+            jumpHeld = player.isOnGround();
+            mc.options.jumpKey.setPressed(jumpHeld);
+            pJump = false;
+        }
         driveTicks++;
 
         // ⛔ KNOWN DEFECT, FOUND BY RE-READING, NOT YET FIXED OR MEASURED.

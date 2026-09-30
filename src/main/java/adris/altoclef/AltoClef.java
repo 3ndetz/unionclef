@@ -395,6 +395,13 @@ public class AltoClef implements ModInitializer {
         // Load settings
         adris.altoclef.Settings.load(newSettings -> {
             settings = newSettings;
+            // The arrow dodge is the bot's defence against skeletons and defaults to on, but an old
+            // settings file can carry false (issue #34). Say so on every load rather than let it
+            // pass for a broken dodge.
+            if (!settings.isDodgeProjectiles()) {
+                Debug.logWarning("dodgeProjectiles is false in " + adris.altoclef.Settings.SETTINGS_PATH
+                        + ": the bot will not sidestep arrows. Set it to true and @reload_settings.");
+            }
             // Baritone's `acceptableThrowawayItems` should match our own.
             List<Item> placeableThrowaways = Arrays.stream(settings.getThrowawayItems(true))
                     .filter(item -> item != Items.SOUL_SAND && item != Items.MAGMA_BLOCK && item != Items.SAND && item

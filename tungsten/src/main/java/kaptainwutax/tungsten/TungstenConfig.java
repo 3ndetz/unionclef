@@ -5078,6 +5078,11 @@ public class TungstenConfig {
      *  first (PlaceObsidianBucketTask.supportFirst); false for the A/B. */
     public boolean castSupports = true;
 
+    /** The arrow dodge picks its keys by simulating each of the nine key combinations with the
+     *  physics agent and keeping the safe one that clears the arrow best
+     *  (ProjectileDodge.plan); false drives the chain's heading blind, for the A/B. */
+    public boolean dodgeSearch = true;
+
     /** Scales the cost of bridging with a placed block. Raise it to make the bot prefer
      *  going around; lower it to make it build more readily. */
     public double placeCostMultiplier = 1.0;
