@@ -13,6 +13,7 @@ Building the course through the arena helper removes that whole class of error: 
 a floor, laid the same way every run.
 """
 import re
+import subprocess
 import time
 
 from .actors import KIT_SWORD
@@ -1537,5 +1538,88 @@ class DrownTunnel(Scenario):
         yield Criterion("health never under 12", low is not None and low >= 12, f"min_hp={low}")
 
 
+class ArrowDodge(Scenario):
+    """ARROWS FROM TWELVE BLOCKS, NOTHING TO FIGHT: DOES THE BOT GET OUT OF THE WAY? (issue #34)
+
+    A player reports arrow dodging stopped working. Measured without a skeleton so nothing else
+    moves the bot: it runs @idle (a task, so the chains tick), holds no weapon, and ARROWS arrows are
+    summoned every INTERVAL_S seconds twelve blocks east, each flying straight at where the bot is.
+    The measure is damage taken (the server's damage_taken statistic, tenths of a heart-half).
+    arrow_dodge_off runs the same with dodgeProjectiles switched off, for the difference.
+    """
+    id = "arrow_dodge"
+    tier = "gate"
+    needs_victim = False
+    duration = 55
+    ARROWS = 10
+    INTERVAL_S = 2.5
+    SPEED = 2.0
+    DODGE = True
+    SETTINGS = "/mc-data/altoclef/altoclef_settings.json"
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=16, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def _set_dodge(self, ctx, on):
+        subprocess.run(["docker", "exec", ctx.bot.container, "sed", "-i",
+                        f's/"dodgeProjectiles" : [a-z]*/"dodgeProjectiles" : {"true" if on else "false"}/',
+                        self.SETTINGS], capture_output=True)
+        ctx.bot.cmd("@reload_settings")
+        time.sleep(1)
+
+    def drive_start(self, ctx):
+        b = ctx.bot.name
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("kill @e[type=arrow]")
+        ctx.rcon.cmd(f"clear {b}", allow_reject=True)
+        ctx.rcon.cmd(f"effect give {b} minecraft:instant_health 1 10 true")
+        ctx.rcon.cmd("scoreboard objectives remove ucDmg", allow_reject=True)
+        ctx.rcon.cmd("scoreboard objectives add ucDmg minecraft.custom:minecraft.damage_taken", allow_reject=True)
+        ctx.rcon.cmd(f"scoreboard players set {b} ucDmg 0", allow_reject=True)
+        self._set_dodge(ctx, self.DODGE)
+        ctx.bot.py.try_call("resetRunCounters")
+        ctx.bot.cmd("@idle")
+        time.sleep(2)
+        ctx.geo["fired"] = 0
+        ctx.geo["next"] = time.time()
+
+    def drive_tick(self, ctx, elapsed):
+        if ctx.geo["fired"] >= self.ARROWS or time.time() < ctx.geo["next"]:
+            return
+        pos = ctx.rcon.entity_pos(ctx.bot.name)
+        if not pos:
+            return
+        sx, sy, sz = pos[0] + 12, pos[1] + 1.4, pos[2]
+        dx, dy, dz = pos[0] - sx, pos[1] + 1.0 - sy, pos[2] - sz
+        n = (dx * dx + dy * dy + dz * dz) ** 0.5
+        vx, vy, vz = dx / n * self.SPEED, dy / n * self.SPEED + 0.03, dz / n * self.SPEED
+        ctx.rcon.cmd(f"summon arrow {sx:.2f} {sy:.2f} {sz:.2f} "
+                     f"{{Motion:[{vx:.3f}d,{vy:.3f}d,{vz:.3f}d],pickup:0b,damage:2.0d}}")
+        ctx.geo["fired"] += 1
+        ctx.geo["next"] = time.time() + self.INTERVAL_S
+
+    def judge(self, ctx):
+        dmg = ctx.rcon.score(ctx.bot.name, "ucDmg")
+        if not self.DODGE:
+            self._set_dodge(ctx, True)
+        ok, st = ctx.bot.py.try_call("placeStats")
+        dodge = " ".join(t for t in str(st).split() if t.startswith(("dodgeDrive=", "dodgeTask=", "dodgeYield=")))
+        yield Criterion(f"{ctx.geo.get('fired')} arrows fired", ctx.geo.get("fired") == self.ARROWS, "")
+        yield Criterion("damage taken (recorded; gate on the dodge arm)", True,
+                        f"damage_taken={dmg} (tenths of hp) {dodge}")
+        if self.DODGE:
+            yield Criterion("dodged most arrows: under 3 hits (60 tenths)", dmg < 60, f"damage_taken={dmg}")
+
+
+class ArrowDodgeOff(ArrowDodge):
+    """arrow_dodge with dodgeProjectiles switched off: the baseline the dodge is measured against."""
+    id = "arrow_dodge_off"
+    tier = "info"
+    DODGE = False
+
+
 SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack, MobUnarmedCrowd, MobEndermen, MobEndermenHurt,
-             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs, NightShelterExit, DrownTunnel]
+             MobEndermenShelter, MobHungry, NightShelterFlat, MobPigs, NightShelterExit, DrownTunnel, ArrowDodge, ArrowDodgeOff]
