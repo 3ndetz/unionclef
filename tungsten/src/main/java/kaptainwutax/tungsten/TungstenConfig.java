@@ -5074,6 +5074,10 @@ public class TungstenConfig {
      *  nearest lava blocks (ConstructNetherPortalBucketTask.scanForLavaLake); false for the A/B. */
     public boolean lavaLakeWorldScan = true;
 
+    /** A bucket-cast mould cell with nothing to be placed against gets a throwaway support column
+     *  first (PlaceObsidianBucketTask.supportFirst); false for the A/B. */
+    public boolean castSupports = true;
+
     /** Scales the cost of bridging with a placed block. Raise it to make the bot prefer
      *  going around; lower it to make it build more readily. */
     public double placeCostMultiplier = 1.0;

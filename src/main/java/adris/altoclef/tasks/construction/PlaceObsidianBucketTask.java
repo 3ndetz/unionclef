@@ -170,7 +170,8 @@ public class PlaceObsidianBucketTask extends Task {
         for (Vec3i castPosRelative : CAST_FRAME) {
             BlockPos castPos = _pos.add(castPosRelative);
             if (!WorldHelper.isSolidBlock(castPos)) {
-                _currentCastTarget = castPos;
+                _currentCastTarget = kaptainwutax.tungsten.TungstenConfig.get().castSupports ? supportFirst(mod, castPos) : castPos;
+                if (!_currentCastTarget.equals(castPos)) supportsPlaced++;
                 Debug.logInternal("Building cast frame...");
                 return null;
             }
@@ -226,6 +227,63 @@ public class PlaceObsidianBucketTask extends Task {
         }
         return null;
     }
+
+    /** Support blocks placed under cast cells that had nothing to be placed against. */
+    public static volatile int supportsPlaced;
+
+    /**
+     * The cell to place before {@code cell}: the cell itself if it has a solid neighbour to place
+     * against, otherwise the nearest empty air cell (down first) that has one -- a support of
+     * throwaway blocks that grows back to the cell like a bridge.
+     *
+     * <p>What baritone does, read from the source: BuilderProcess.possibleToPlace
+     * (baritone/src/main/java/baritone/process/BuilderProcess.java:498) places a block only where a
+     * solid neighbour's face can be clicked, and assemble (same file, :941) takes pending cells
+     * bottom-up (none pending one or two below). A cell with no neighbour is simply never placed --
+     * BuilderProcess has no scaffolding; what lifts the body to a placement is the movements'
+     * throwaway blocks (MovementPillar.java:226, selectThrowawayForLocation), which baritone never
+     * removes. So this is the same rule with the gap baritone leaves: a chain of throwaway supports
+     * to the cell, placed from the supported end, and never removed by this task.
+     *
+     * <p>⛔ WHY (G108, reproduced on portal_lava_lake 2026-09-29). A frame cell above the ground has
+     * mould cells in the air -- the ring under it and the walls beside it one level down -- and
+     * PlaceBlockTask cannot place into a cell with no face to click: "Place structure" -> "Wander
+     * for 5 blocks" for the rest of the course, and the last hour of full56 and full57. Supports
+     * are never removed by this task. The ones inside the portal's opening are cleared by
+     * ConstructNetherPortalBucketTask's "Clearing inside of portal" step, which runs only after
+     * every frame cell is obsidian -- after the last placement -- so nothing is placed again once
+     * clearing starts. The ones outside the opening stay: they block nothing.
+     */
+    private static BlockPos supportFirst(AltoClef mod, BlockPos cell) {
+        // Breadth-first over EMPTY AIR only, down before sideways before up, to the nearest cell that
+        // has a solid neighbour: that one is placed first, and the chain grows back to the cell the
+        // way a bridge does. Never through a fluid: the first version walked the column down
+        // through the lava lake next to the portal and started filling the lake with cobblestone.
+        var world = mod.getWorld();
+        java.util.ArrayDeque<BlockPos> q = new java.util.ArrayDeque<>();
+        java.util.Map<BlockPos, Integer> depth = new java.util.HashMap<>();
+        q.add(cell);
+        depth.put(cell, 0);
+        Direction[] order = {Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP};
+        while (!q.isEmpty()) {
+            BlockPos c = q.poll();
+            for (Direction d : Direction.values()) {
+                BlockPos n = c.offset(d);
+                if (WorldHelper.isSolidBlock(n) && world.getFluidState(n).isEmpty()) return c;
+            }
+            int dd = depth.get(c);
+            if (dd >= SUPPORT_SEARCH_DEPTH) continue;
+            for (Direction d : order) {
+                BlockPos n = c.offset(d);
+                if (depth.containsKey(n) || !world.getBlockState(n).isAir()) continue;
+                depth.put(n, dd + 1);
+                q.add(n);
+            }
+        }
+        return cell;   // nothing within reach: leave it to the placer as before
+    }
+
+    private static final int SUPPORT_SEARCH_DEPTH = 5;
 
     /**
      * This method is called when the task is interrupted.

@@ -1635,7 +1635,9 @@ class PortalLavaLake(Scenario):
 
     def build(self, arena, ctx):
         arena.flat_field(half=30, grass=False)
-        arena._fill(-30, FLOOR_Y - 1, -30, 30, FLOOR_Y - 1, 30, "stone")
+        # Ground down to the bottom of the world: the portal's bottom frame row is IN the ground and
+        # its cast needs the block under it (a one-layer-under floor left that cell over air).
+        arena._fill(-30, FLOOR_Y - 3, -30, 30, FLOOR_Y - 1, 30, "stone")
         for x in range(-12, 13, 4):
             for z in range(-12, 13, 4):
                 if abs(x) <= 1 and abs(z) <= 1:
@@ -1652,14 +1654,21 @@ class PortalLavaLake(Scenario):
         ctx.bot.cmd("@test portalbucket")
 
     def _present(self, ctx, block):
-        # "fill ... replace X" with X itself reports how many X it found and changes nothing
-        r = ctx.rcon.cmd(f"fill -30 {FLOOR_Y} -30 30 {STAND_Y + 10} 30 {block} replace {block}",
+        # Count by cloning only that block into the empty sky above the arena, then clear it.
+        # ("fill ... X replace X" changes nothing and reports "No blocks were filled" whatever is
+        # there -- the first version of this course counted zero obsidian every run that way.)
+        # The lake side only: clone refuses more than 32768 blocks, and the whole arena is 44652
+        # (which read as zero obsidian on every run of the second version of this course).
+        r = ctx.rcon.cmd(f"clone 0 {FLOOR_Y} -25 30 {STAND_Y + 10} 25 0 20 -25 filtered minecraft:{block}",
                          allow_reject=True)
+        ctx.rcon.cmd(f"fill 0 20 -25 30 {20 + STAND_Y + 10 - FLOOR_Y} 25 air", allow_reject=True)
         m = re.search(r"(\d+) block", r)
-        return int(m.group(1)) if m else 0
+        return int(m.group(1)) if m and "cloned" in r else 0
 
     def drive_tick(self, ctx, elapsed):
-        if ctx.geo.get("first_obsidian") is None and self._present(ctx, "obsidian") > 0:
+        n = self._present(ctx, "obsidian")
+        ctx.geo["obsidian"] = max(n, ctx.geo.get("obsidian", 0))
+        if ctx.geo.get("first_obsidian") is None and n > 0:
             ctx.geo["first_obsidian"] = time.time() - ctx.geo["t0"]
         if ctx.geo.get("portal_at") is None and self._present(ctx, "nether_portal") > 0:
             ctx.geo["portal_at"] = time.time() - ctx.geo["t0"]
@@ -1670,7 +1679,7 @@ class PortalLavaLake(Scenario):
     def judge(self, ctx):
         t = ctx.geo.get("first_obsidian")
         yield Criterion(f"first obsidian cast within {self.MAX_S} s", t is not None and t <= self.MAX_S,
-                        f"t={None if t is None else round(t, 1)}")
+                        f"t={None if t is None else round(t, 1)} frame_blocks={ctx.geo.get('obsidian', 0)}/10")
         p = ctx.geo.get("portal_at")
         yield Criterion("portal lit (recorded, not gated)", True, f"t={None if p is None else round(p, 1)}")
 
