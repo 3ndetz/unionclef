@@ -632,7 +632,7 @@ public class BeatMinecraftTask extends Task {
 
             double priority = rawFoodCount >= 8 ? 450 : rawFoodCount * 25;
 
-            if (lastTask instanceof SmeltInSmokerTask) {
+            if (lastTask instanceof SmeltInSmokerTask || adris.altoclef.tasks.container.CookFood.isCooking(lastTask)) {
                 priority = Double.POSITIVE_INFINITY;
             }
 
@@ -650,7 +650,7 @@ public class BeatMinecraftTask extends Task {
 
                 SmeltTarget target = new SmeltTarget(new ItemTarget(cookable.cookedFood, toSmelt), new ItemTarget(cookable.rawFood, rawCount));
 
-                pair.setLeft(new SmeltInSmokerTask(target));
+                pair.setLeft(adris.altoclef.tasks.container.CookFood.task(a, target, false));
                 pair.setRight(priority);
 
                 return pair;

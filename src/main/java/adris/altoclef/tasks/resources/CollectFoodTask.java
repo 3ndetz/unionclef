@@ -80,7 +80,7 @@ public class CollectFoodTask extends Task {
     // "keep on smelting" branch below and isFinished()'s smeltTask check were both permanently
     // dead. Confirmed by comparing against the sibling CollectMeatTask.java, which implements the
     // identical pattern correctly with a mutable field. See the smelting-loop restoration below.
-    private SmeltInSmokerTask smeltTask = null;
+    private Task smeltTask = null;
     private Task currentResourceTask = null;
     private Task surfaceSearchTask;
     private int surfaceSearchY;
@@ -234,8 +234,8 @@ public class CollectFoodTask extends Task {
                 if (rawCount > 0) {
                     //Debug.logMessage("STARTING COOK OF " + cookable.getRaw().getTranslationKey());
                     int toSmelt = rawCount + mod.getItemStorage().getItemCount(cookable.getCooked());
-                    smeltTask = new SmeltInSmokerTask(new SmeltTarget(new ItemTarget(cookable.cookedFood, toSmelt), new ItemTarget(cookable.rawFood, rawCount)));
-                    smeltTask.ignoreMaterials();
+                    smeltTask = adris.altoclef.tasks.container.CookFood.task(mod,
+                            new SmeltTarget(new ItemTarget(cookable.cookedFood, toSmelt), new ItemTarget(cookable.rawFood, rawCount)), true);
                     return smeltTask;
                 }
             }

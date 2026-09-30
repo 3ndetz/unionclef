@@ -36,7 +36,7 @@ public class CollectMeatTask extends Task {
     };
     private final double unitsNeeded;
     private final TimerGame checkNewOptionsTimer = new TimerGame(10);
-    private SmeltInSmokerTask smeltTask = null;
+    private Task smeltTask = null;
     private Task currentResourceTask = null;
 
     public CollectMeatTask(double unitsNeeded) {
@@ -107,8 +107,8 @@ public class CollectMeatTask extends Task {
                 if (rawCount > 0) {
                     //Debug.logMessage("STARTING COOK OF " + cookable.getRaw().getTranslationKey());
                     int toSmelt = rawCount + mod.getItemStorage().getItemCount(cookable.getCooked());
-                    smeltTask = new SmeltInSmokerTask(new SmeltTarget(new ItemTarget(cookable.cookedFood, toSmelt), new ItemTarget(cookable.rawFood, rawCount)));
-                    smeltTask.ignoreMaterials();
+                    smeltTask = adris.altoclef.tasks.container.CookFood.task(mod,
+                            new SmeltTarget(new ItemTarget(cookable.cookedFood, toSmelt), new ItemTarget(cookable.rawFood, rawCount)), true);
                     return smeltTask;
                 }
             }
@@ -152,7 +152,8 @@ public class CollectMeatTask extends Task {
                 Optional<Item> cooked = ItemHelper.getCookedFood(raw);
                 if (cooked.isPresent()) {
                     int targetCount = mod.getItemStorage().getItemCount(cooked.get()) + mod.getItemStorage().getItemCount(raw);
-                    smeltTask = new SmeltInSmokerTask(new SmeltTarget(new ItemTarget(cooked.get(), targetCount), new ItemTarget(raw, targetCount)));
+                    smeltTask = adris.altoclef.tasks.container.CookFood.task(mod,
+                            new SmeltTarget(new ItemTarget(cooked.get(), targetCount), new ItemTarget(raw, targetCount)), false);
                     return smeltTask;
                 }
             }
