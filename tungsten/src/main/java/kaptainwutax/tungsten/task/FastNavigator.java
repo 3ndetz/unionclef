@@ -108,6 +108,14 @@ public final class FastNavigator {
 
     private FastNavigator() {}
 
+    /** Water in the feet cell AND the one above: a column there is something to swim up in.
+     *  baritone's MovementPillar condition for "ascend by swimming" (MovementPillar.java:86-90). */
+    private static boolean inWaterColumn(net.minecraft.world.WorldView world, ClientPlayerEntity player) {
+        BlockPos feet = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player);
+        return world.getFluidState(feet).isIn(net.minecraft.registry.tag.FluidTags.WATER)
+                && world.getFluidState(feet.up()).isIn(net.minecraft.registry.tag.FluidTags.WATER);
+    }
+
     /** Releasing input does not remove momentum. Do not finish an exact goal if
      * vanilla ground drag will carry the body into the next cell after release.
      * Summing v + v*drag + ... also covers slippery supporting blocks.
@@ -1125,9 +1133,15 @@ public final class FastNavigator {
                         && TungstenConfig.get().planPlaceMoves && canPillar
                         && !kaptainwutax.tungsten.task.PillarTask.isActive()
                         && !kaptainwutax.tungsten.task.SwimOutTask.isActive()) {
-                    if (TungstenConfig.get().swimOutOfWaterNotPillar && player.isTouchingWater()) {
+                    if (TungstenConfig.get().swimOutOfWaterNotPillar && inWaterColumn(world, player)) {
                         // FROM WATER YOU RISE BY SWIMMING, NOT PLACING. Pillaring needs footing and
                         // only bobs in water; climb out with the swim-out primitive instead (G24).
+                        // ⛔ BUT ONLY IN A COLUMN OF WATER (2026-09-30). isTouchingWater() is also
+                        // true ankle-deep in the run-off of a bucket cast, where there is nothing to
+                        // swim up: portal_lava_lake bobbed at the foot of a two-high mould column
+                        // for three minutes, "swimming out" of water a few pixels deep. baritone
+                        // swims up only where the water goes on above (MovementPillar.java:86-90)
+                        // and pillars from water on a floor it can place against (:103-107).
                         Debug.logMessage("At a bank in water — swimming out to y=" + jump.getY());
                         kaptainwutax.tungsten.task.SwimOutTask.startTo(jump);
                     } else {

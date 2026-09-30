@@ -232,7 +232,13 @@ def _rec_start(scn_id, dur, persp=0, bot=None):
 def _rec_stop(scn_id, art):
     """Stop ffmpeg, copy the mp4 into the artifact dir. Returns host path."""
     finish_recording(BOT_CONTAINER)
+    # One file per run: a --repeat series used to write every run over the same path, and the
+    # clip of the one run that failed was gone by the time the series ended.
     dst = art.path(f"{scn_id}.mp4")
+    n = 1
+    while os.path.exists(dst):
+        n += 1
+        dst = art.path(f"{scn_id}-{n}.mp4")
     subprocess.run(["docker", "cp", f"{BOT_CONTAINER}:/mc-data/rec_{scn_id}.mp4",
                     dst], capture_output=True)
     return dst if os.path.exists(dst) and os.path.getsize(dst) > 1000 else None

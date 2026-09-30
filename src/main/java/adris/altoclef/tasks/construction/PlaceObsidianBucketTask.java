@@ -40,6 +40,8 @@ public class PlaceObsidianBucketTask extends Task {
             new Vec3i(1, 1, 0)
     };
     private final MovementProgressChecker _progressChecker = new MovementProgressChecker();
+    /** Kept, not re-created: a wander handed back as a new object each time ran for one tick. */
+    private final TimeoutWanderTask _wanderTask = new TimeoutWanderTask(5);
     private final BlockPos _pos;
 
     private BlockPos _currentCastTarget;
@@ -134,12 +136,24 @@ public class PlaceObsidianBucketTask extends Task {
             }
         }
 
-        // Check progress
-        if (!_progressChecker.check(mod)) {
+        // ⛔ ONE WANDER, RUN TO THE END, AND NOT OVER A MOULD BLOCK'S OWN ATTEMPT (2026-09-30).
+        // This returned a NEW TimeoutWanderTask on every failed check, the next tick's check passed
+        // (it had just been reset) and the mould placement came back: the wander lived one tick, and
+        // the PlaceBlockTask child was torn down and restarted every six seconds. Its pillar, its
+        // wander and its 40 s attempt budget never got to run. portal_lava_lake: "Costing ...:
+        // attempt 36 / 4" at six-second intervals for four minutes at the frame's top corner.
+        // While a mould block is being placed, that child judges its own progress.
+        if (_wanderTask.isActive() && !_wanderTask.isFinished()) {
+            _progressChecker.reset();
+            return _wanderTask;
+        }
+        if (_currentCastTarget != null) {
+            _progressChecker.reset();
+        } else if (!_progressChecker.check(mod)) {
             Nav.cancel();
             mod.getBlockScanner().requestBlockUnreachable(_pos);
             _progressChecker.reset();
-            return new TimeoutWanderTask(5);
+            return _wanderTask;
         }
 
         // Build cast frame if not already built

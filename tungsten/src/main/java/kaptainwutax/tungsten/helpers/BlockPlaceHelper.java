@@ -253,6 +253,7 @@ public final class BlockPlaceHelper {
 
     public static synchronized void clearQueue() {
         QUEUE.clear();
+        scaffoldFor = null;
         idleTicks = 0;
         walkingFor = null;
         walkTicks = 0;
@@ -598,8 +599,18 @@ public final class BlockPlaceHelper {
         // times and never got up: portal_lava_lake, three runs of three, every one stuck on the
         // top row with the body jumping in place at the column's foot. A stand one pillar up
         // beside the cell, at its own level, is taken before a stand above it.
-        boolean preferScaffold = stand != null && stand.getY() > head.getY()
+        // ⛔ AND A STAND ALREADY WALKED AT ONCE WITHOUT ARRIVING IS NOT WALKED AT AGAIN (2026-09-30).
+        // "Standable" is not "reachable": portal_lava_lake chose the cast cell itself for a mould
+        // above the east wall -- a one-by-one cup a block above the ground, rimmed by the mould --
+        // and walked at it four times from the ground beside it. baritone's planner would pillar
+        // there; ours walks. So after one failed walk the scaffold, when there is one, goes first.
+        boolean walkedInVain = sameCellAsLastAttempt && walkAttempts >= 1;
+        boolean preferScaffold = stand != null
+                && (stand.getY() > head.getY() || walkedInVain || head.equals(scaffoldFor))
                 && scaffoldBase(mc.world, head) != null;
+        // Once chosen for a cell, the scaffold stays chosen: the walk to its base changes
+        // lastWalkCell, and without this the next tick would go back to the stand it gave up on.
+        if (preferScaffold) scaffoldFor = head;
         if (stand == null || preferScaffold) {
             // ⛔ BUILD THE STAND (2026-09-26). The comment below hands the cell back to "the agent,
             // which can put a block under itself or come at it from a scaffold" -- and no agent did.
@@ -828,6 +839,8 @@ public final class BlockPlaceHelper {
     /** Scaffolds started for a cell with no reachable stand (see drainQueue). */
     public static volatile int scaffoldsStarted;
 
+    /** The cell a scaffold was chosen for over a walkable-looking stand. */
+    private static BlockPos scaffoldFor;
     /** The feet level the last {@link #scaffoldBase} stand is at: where the pillar stops. */
     private static int scaffoldStandY;
 
