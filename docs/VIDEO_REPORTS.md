@@ -28,6 +28,13 @@ project in `hf/`, rules in `vidsmith/docs/CUT_RULES.md` and `mineswarm/docs/VIDE
    progress are on screen -- they explain what the bot is doing better than any caption.
 6. No emoji in cards or captions (typographic arrows and dots are fine), no self-praise: say what
    it does.
+7. **English only**, cards, captions and the Telegram caption alike. Record with the bench
+   clients on `lang:en_us` so the game's own chat on screen is English too.
+8. **Not a slideshow.** Open on the payoff (`hook`: the best 5-10 s, one big line), show
+   before/after SIDE BY SIDE (`split`) rather than one after the other, point at the thing that
+   matters (`callouts`: a ring and a word at a second of the clip), and give numbers as bars
+   (`before_n`/`after_n` on a stat card). Clips get a slow push-in by default (`zoom`). Keep text
+   cards short -- four lines at most -- and the whole report around a minute.
 
 ## How
 
