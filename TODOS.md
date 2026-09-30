@@ -49,6 +49,19 @@
 - [ ] **Overworld death at 15:30 of a run from zero (full46, 0.95.46).** hp 19 -> 0 in 23 s near
   (96,77,-405), "Mine And Collect oak_log"; the run was cut by the Docker hang before the death
   messages were read. Recording lost with the stand; reproduce from a checkpoint of a new run.
+- [ ] **HIGH: arrow dodging reported broken by a player (2026-09-30).** It used to work in
+  unionclef. It is the bot's defence against skeletons. Check, in this order:
+  1. Setting: `dodgeProjectiles` defaults to true in Settings.java, but it is read from the user's
+     `altoclef/altoclef_settings.json`; an old file with `false` overrides the default. Should it be
+     impossible to switch off by accident (always on)?
+  2. No task running: TaskRunner is disabled without a user task and no chain ticks (MobDefense
+     included), so nothing dodges. Expected, but `idleCommand` defaults to "" -- nothing keeps the
+     chains alive when idle. The report is assumed to be WITH a task running.
+  3. With a task running: the strafe dodge goes through tungsten ProjectileDodge.hold, and
+     DodgeProjectilesTask only in danger zones. Measure on a course with real arrows (hits taken,
+     dodge on vs off) and on mob_skeleton; record a video for the operator.
+  4. The dodge must be SAFE (no step off an edge, into lava or water) and FAST: the same quick
+     search tungsten uses for PvP movement, not a route search -- an arrow gives a few ticks.
 - [ ] **NEXT: the bucket-cast portal cannot cast its upper frame (G108, reproduced 2026-09-29).**
   Without a diamond pickaxe the only way into the nether is ConstructNetherPortalBucketTask, and
   PlaceObsidianBucketTask builds a cobblestone mould around each frame cell; for the cells above
