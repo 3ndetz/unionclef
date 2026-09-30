@@ -2456,10 +2456,13 @@ public class BeatMinecraftTask extends Task {
         switch (WorldHelper.getCurrentDimension()) {
             case OVERWORLD -> {
                 PriorityTask toGather = null;
-                double maxPriority = 0;
+                // The nether step competes as a priority of its own (TungstenConfig.netherPriority):
+                // a gather task must beat it to run first, where anything above zero used to.
+                double netherFloor = kaptainwutax.tungsten.TungstenConfig.get().netherPriority;
+                double maxPriority = netherFloor;
 
                 if (!gatherResources.isEmpty()) {
-                    if (!forcedTaskTimer.elapsed() && isTaskRunning(mod, lastTask) && lastGather != null && lastGather.calculatePriority(mod) > 0) {
+                    if (!forcedTaskTimer.elapsed() && isTaskRunning(mod, lastTask) && lastGather != null && lastGather.calculatePriority(mod) > netherFloor) {
                         return lastTask;
                     }
 
@@ -2483,7 +2486,7 @@ public class BeatMinecraftTask extends Task {
                     boolean sameTask = lastGather == toGather;
 
                     setDebugState("Priority: " + String.format(Locale.US, "%.2f", maxPriority) + ", " + toGather);
-                    if (!sameTask && prevLastGather == toGather && lastTask != null && lastGather.calculatePriority(mod) > 0 && isTaskRunning(mod, lastTask)) {
+                    if (!sameTask && prevLastGather == toGather && lastTask != null && lastGather.calculatePriority(mod) > netherFloor && isTaskRunning(mod, lastTask)) {
                         mod.logWarning("might be stuck or switching too much, forcing current resource for a bit more");
                         changedTaskTimer.reset();
                         prevLastGather = null; //do not force infinitely, 3 sec should be enough I hope

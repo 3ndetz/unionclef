@@ -5089,6 +5089,13 @@ public class TungstenConfig {
      *  two-hour run. Beyond it, ore within 5 blocks is still taken on the way. */
     public int diamondsBeforeNether = 5;
 
+    /** The overworld's "go to the nether" step as a priority among the gather tasks: a gather task
+     *  must beat this to run first. It used to be 0, so anything above zero came first -- a food
+     *  top-up at 0.10 with a full stomach, raw gold known 5000 blocks away at 0.19 -- and the
+     *  full58 resumes mined and wandered past the nether for an hour. 5 still lets ore within
+     *  ~200 blocks (1050/distance) and every real need (bucket 300, cooking 450) go first. */
+    public double netherPriority = 5.0;
+
     /** Scales the cost of bridging with a placed block. Raise it to make the bot prefer
      *  going around; lower it to make it build more readily. */
     public double placeCostMultiplier = 1.0;
