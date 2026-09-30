@@ -1,222 +1,222 @@
 # Shredder → 1.21.11 Migration Guide
 
-⛔ СУДЬБА ЭТОГО ДОКУМЕНТА, ЗАПИСАНО 2026-09-01: миграция, описанная ниже, НЕ СОСТОЯЛАСЬ в том
-виде, в каком её здесь планировали — вместо того чтобы довести shredder до 1.21.11, миграция
-«G-0» (2026-08-24, см. `TODOS.md`) вывела shredder из сборки ПОЛНОСТЬЮ и на ВСЕХ версиях, не
-только на 1.21.11. Сегодня `settings.gradle.kts` не компилирует shredder вообще (не noop-режим —
-самого модуля нет в сборке ни для одной версии), а `#`-команды не регистрируются нигде. Tungsten
-самостоятельно ведёт весь пасфайндинг на всех версиях, включая 1.21.11. Ниже — снимок состояния
-на момент, когда noop-обход ещё был текущим планом; ценность документа теперь историческая
-(объясняет, ПОЧЕМУ движение на 1.21.11 когда-то не работало), а не как руководство к действию.
+⛔ FATE OF THIS DOCUMENT, RECORDED 2026-09-01: the migration described below did NOT happen in the
+form planned here — instead of bringing shredder up to 1.21.11, the "G-0" migration (2026-08-24,
+see `TODOS.md`) took shredder out of the build COMPLETELY and on ALL versions, not just 1.21.11.
+Today `settings.gradle.kts` does not compile shredder at all (not noop mode — the module itself
+is absent from the build on every version), and `#` commands are not registered anywhere. Tungsten
+now drives all pathfinding on every version by itself, including 1.21.11. Below is a snapshot of
+the state from when the noop workaround was still the current plan; the document's value is now
+historical (it explains WHY movement on 1.21.11 used to not work), not a guide to action.
 
-## Текущее состояние (на момент написания, устарело — см. пометку выше)
+## Current state (at time of writing, outdated — see the note above)
 
-Shredder (наш форк baritone) скомпилирован под MC 1.21.1 (yarn mappings).
-На 1.21.11 он работает в **noop-режиме**: `BaritoneAPI` ловит `NoClassDefFoundError`
-при инициализации `BaritoneProvider` и подставляет `NoopBaritoneProvider` —
-dynamic proxy, все методы возвращают safe defaults (null/false/emptyList).
+Shredder (our baritone fork) is compiled for MC 1.21.1 (yarn mappings).
+On 1.21.11 it runs in **noop mode**: `BaritoneAPI` catches `NoClassDefFoundError`
+during `BaritoneProvider` initialization and substitutes `NoopBaritoneProvider` —
+a dynamic proxy where every method returns safe defaults (null/false/emptyList).
 
-### Что работает на 1.21.11 сейчас
+### What works on 1.21.11 right now
 
-- Minecraft запускается, мир загружается
-- Altoclef команды (`@help`, `@goto` и т.д.) — принимаются, но без pathfinding
-- Tab-complete для `@` команд — работает (перенесён в altoclef'овский mixin)
-- Подсветка синтаксиса команд — работает
-- Tungsten (line rendering, A* movement) — работает независимо
+- Minecraft launches, the world loads
+- Altoclef commands (`@help`, `@goto`, etc.) — are accepted, but without pathfinding
+- Tab-complete for `@` commands — works (moved into altoclef's own mixin)
+- Command syntax highlighting — works
+- Tungsten (line rendering, A* movement) — works independently
 
-### Что НЕ работает
+### What does NOT work
 
-- **Pathfinding** — полностью отключен (noop)
-- **`#` команды shredder** — не регистрируются, не исполняются
-- **Все altoclef tasks, зависящие от baritone** — получают noop-ответы, ничего не делают
-  - GoToTask, MineTask, GetItemTask, KillTask и т.д.
-- **TungstenBridge** — не активируется (PathExecutor noop)
-- **God Bridge / Jump Bridge** — не работают
-- **Chunk caching** — не работает
+- **Pathfinding** — fully disabled (noop)
+- **`#` commands from shredder** — not registered, not executed
+- **All altoclef tasks that depend on baritone** — get noop responses, do nothing
+  - GoToTask, MineTask, GetItemTask, KillTask, etc.
+- **TungstenBridge** — is not activated (PathExecutor noop)
+- **God Bridge / Jump Bridge** — do not work
+- **Chunk caching** — does not work
 
-## Что нужно для миграции
+## What the migration needs
 
-### Ключевая проблема: маппинги
+### The key problem: mappings
 
-Upstream [cabaletta/baritone](https://github.com/cabaletta/baritone) уже имеет ветку
-для 1.21.11, но использует **mojmap** (Mojang official mappings). Наш shredder — **yarn**.
+Upstream [cabaletta/baritone](https://github.com/cabaletta/baritone) already has a branch
+for 1.21.11, but it uses **mojmap** (Mojang official mappings). Our shredder is **yarn**.
 
-Между 1.21.1 и 1.21.11 Mojang переименовал/изменил ряд MC классов и методов.
-Baritone upstream уже адаптировал свой код под эти изменения (на mojmap).
-Нам нужно перенести эти адаптации, но в yarn терминах.
+Between 1.21.1 and 1.21.11 Mojang renamed/changed a number of MC classes and methods.
+Baritone upstream has already adapted its code to these changes (on mojmap).
+We need to carry those adaptations over, but in yarn terms.
 
-### Три стратегии миграции
+### Three migration strategies
 
-#### Стратегия A: Адаптировать diff upstream'а под наш код
+#### Strategy A: Adapt upstream's diff to our code
 
-**Суть**: взять diff между baritone 1.21.1 и 1.21.11 (на mojmap), перевести
-изменённые имена в yarn, и точечно применить к нашему shredder.
+**Idea**: take the diff between baritone 1.21.1 and 1.21.11 (on mojmap), translate
+the changed names into yarn, and apply it to our shredder surgically.
 
-**Плюсы**:
-- Минимальный объём работы — трогаем только то, что изменилось
-- Сохраняем все наши кастомные фичи (TungstenBridge, GodBridge, jump bridge)
-- Не нужно заново мигрировать 345 файлов
+**Pros**:
+- Minimal amount of work — touches only what changed
+- Keeps all our custom features (TungstenBridge, GodBridge, jump bridge)
+- No need to re-migrate 345 files
 
-**Минусы**:
-- Нужно вручную маппить каждое mojmap-имя → yarn-имя в diff'е
-- Если upstream менял архитектуру (не только имена), могут быть конфликты
-- Рискуем пропустить неочевидные изменения
+**Cons**:
+- Need to manually map every mojmap name → yarn name in the diff
+- If upstream changed architecture (not just names), there may be conflicts
+- Risk of missing non-obvious changes
 
-**Оценка сложности**: средняя. Хороший вариант если diff между версиями небольшой.
+**Complexity estimate**: medium. A good option if the diff between versions is small.
 
-#### Стратегия B: Заново мигрировать upstream 1.21.11 в yarn, потом влить наши фичи
+#### Strategy B: Re-migrate upstream 1.21.11 into yarn from scratch, then merge our features in
 
-**Суть**: взять чистый cabaletta/baritone ветку 1.21.11 (mojmap), прогнать
-через `migrateMappings` в yarn (как делали при создании shredder), и потом
-cherry-pick/merge наши кастомные изменения поверх.
+**Idea**: take a clean cabaletta/baritone 1.21.11 branch (mojmap), run it
+through `migrateMappings` into yarn (as was done when shredder was created), and then
+cherry-pick/merge our custom changes on top.
 
-**Плюсы**:
-- Чистая база — гарантировано совместима с 1.21.11
-- `migrateMappings` автоматизирует бо́льшую часть переименований
-- Проще верифицировать корректность
+**Pros**:
+- Clean base — guaranteed compatible with 1.21.11
+- `migrateMappings` automates most of the renaming
+- Easier to verify correctness
 
-**Минусы**:
-- `migrateMappings` не идеален — часть кода придётся фиксить вручную
-- Нужно заново вносить ВСЕ наши кастомные изменения (может потеряться что-то)
-- Наши файлы структурно отличаются от upstream — merge будет не тривиален
+**Cons**:
+- `migrateMappings` is not perfect — some code will need manual fixing
+- Need to reintroduce ALL our custom changes from scratch (something could get lost)
+- Our files differ structurally from upstream — the merge will not be trivial
 
-**Оценка сложности**: высокая. Но результат надёжнее.
+**Complexity estimate**: high. But the result is more reliable.
 
-#### Стратегия C: Взять upstream 1.21.11 за основу, портировать наши фичи поверх
+#### Strategy C: Take upstream 1.21.11 as the base, port our features on top
 
-**Суть**: использовать cabaletta/baritone 1.21.11 AS IS (mojmap или мигрировать
-в yarn), и вносить наши нововведения как патчи поверх.
+**Idea**: use cabaletta/baritone 1.21.11 AS IS (mojmap, or migrate
+to yarn), and bring in our additions as patches on top.
 
-**Плюсы**:
-- Самая чистая база, 100% upstream совместимость
-- Проще поддерживать в будущем (обновления upstream → merge)
+**Pros**:
+- The cleanest base, 100% upstream compatibility
+- Easier to maintain going forward (upstream updates → merge)
 
-**Минусы**:
-- Самый большой объём ручной работы
-- Нужно портировать все кастомные фичи заново
-- Если оставить mojmap — нужны compat-слои для altoclef (yarn)
-- Если мигрировать в yarn — двойная работа
+**Cons**:
+- The largest amount of manual work
+- Need to port all custom features again from scratch
+- If mojmap is kept — compat layers are needed for altoclef (yarn)
+- If migrated to yarn — double the work
 
-**Оценка сложности**: очень высокая. Имеет смысл только если планируем
-регулярно синхронизироваться с upstream.
+**Complexity estimate**: very high. Only makes sense if we plan
+to sync with upstream regularly.
 
-### Рекомендация
+### Recommendation
 
-**Стратегия A** — самый прагматичный выбор. Наши кастомные изменения затрагивают
-~10 файлов из 345. Остальные 335 — это upstream baritone код, уже на yarn.
-Достаточно:
+**Strategy A** is the most pragmatic choice. Our custom changes touch
+~10 files out of 345. The remaining 335 are upstream baritone code, already on yarn.
+It is enough to:
 
-1. Получить diff между cabaletta/baritone 1.21.1 и 1.21.11
-2. Перевести mojmap имена в yarn (таблица маппингов ниже)
-3. Применить изменения к нашему shredder
-4. Проверить что наши фичи не сломались
+1. Get the diff between cabaletta/baritone 1.21.1 and 1.21.11
+2. Translate mojmap names to yarn (mapping table below)
+3. Apply the changes to our shredder
+4. Check that our features did not break
 
-## Наши кастомные файлы (дельта от upstream)
+## Our custom files (delta from upstream)
 
-### Новые файлы (отсутствуют в upstream)
+### New files (absent from upstream)
 
-| Файл | Назначение |
+| File | Purpose |
 |------|------------|
-| `baritone/tungsten/TungstenBridge.java` | Мост к tungsten physics movement |
-| `baritone/utils/GodBridgeClickHelper.java` | Render-frame jitter clicks для god bridge |
-| `baritone/api/noop/NoopBaritone.java` | Noop-прокси для несовместимых версий |
-| `baritone/api/noop/NoopBaritoneProvider.java` | Noop-провайдер |
+| `baritone/tungsten/TungstenBridge.java` | Bridge to tungsten physics movement |
+| `baritone/utils/GodBridgeClickHelper.java` | Render-frame jitter clicks for god bridge |
+| `baritone/api/noop/NoopBaritone.java` | Noop proxy for incompatible versions |
+| `baritone/api/noop/NoopBaritoneProvider.java` | Noop provider |
 
-### Модифицированные файлы (отличаются от upstream)
+### Modified files (differ from upstream)
 
-| Файл | Что изменено |
+| File | What changed |
 |------|-------------|
-| `baritone/pathing/path/PathExecutor.java` | TungstenBridge интеграция, jump bridge state machine |
+| `baritone/pathing/path/PathExecutor.java` | TungstenBridge integration, jump bridge state machine |
 | `baritone/pathing/movement/movements/MovementTraverse.java` | God bridge mode |
-| `baritone/api/Settings.java` | +5 настроек: bridgingMode, godBridgeEdgeDistance, useTungsten, tungstenMinSegment, experimentalPathfinding |
-| `baritone/launch/mixins/MixinMinecraft.java` | Render-frame hook для GodBridgeClickHelper, joinWorld перенесён |
-| `baritone/api/BaritoneAPI.java` | Noop fallback при ошибке инициализации |
-| `baritone/BaritoneProvider.java` | Noop-aware инициализация |
+| `baritone/api/Settings.java` | +5 settings: bridgingMode, godBridgeEdgeDistance, useTungsten, tungstenMinSegment, experimentalPathfinding |
+| `baritone/launch/mixins/MixinMinecraft.java` | Render-frame hook for GodBridgeClickHelper, joinWorld moved |
+| `baritone/api/BaritoneAPI.java` | Noop fallback on initialization error |
+| `baritone/BaritoneProvider.java` | Noop-aware initialization |
 
-### Зарегистрированные миксины (10 штук)
+### Registered mixins (10 of them)
 
-Все в `mixins.shredder.json`:
+All in `mixins.shredder.json`:
 MixinChunkArray, MixinClientChunkProvider, MixinClientPlayNetHandler,
 MixinCommandSuggestionHelper, MixinEntity, MixinFireworkRocketEntity,
 MixinItemStack, MixinLivingEntity, MixinMinecraft, MixinNetworkManager.
 
-Проверено: все target-методы существуют в 1.21.11 yarn маппингах.
-Миксины сами по себе совместимы — проблема в инициализации core-классов.
+Checked: all target methods exist in the 1.21.11 yarn mappings.
+The mixins themselves are compatible — the problem is in the initialization of the core classes.
 
-## Пошаговый план миграции (стратегия A)
+## Step-by-step migration plan (strategy A)
 
-### Шаг 1: Получить upstream diff
+### Step 1: Get the upstream diff
 
 ```bash
-# Клонировать upstream baritone
+# Clone upstream baritone
 git clone https://github.com/cabaletta/baritone.git /tmp/baritone-upstream
 cd /tmp/baritone-upstream
 
-# Найти ветки/теги для 1.21.1 и 1.21.11
+# Find the branches/tags for 1.21.1 and 1.21.11
 git branch -r | grep 1.21
 
-# Получить diff
+# Get the diff
 git diff <1.21.1-branch>..<1.21.11-branch> -- src/main/java/ > upstream-diff.patch
 ```
 
-### Шаг 2: Составить таблицу маппингов mojmap → yarn
+### Step 2: Build the mojmap → yarn mapping table
 
-Для каждого переименованного класса/метода в diff'е найти yarn-эквивалент.
-Использовать [Yarn browser](https://mappings.dev/) или tiny-файл:
+For each renamed class/method in the diff, find the yarn equivalent.
+Use the [Yarn browser](https://mappings.dev/) or the tiny file:
 `versions/1.21.11/.gradle/loom-cache/source_mappings/*.tiny`
 
-Известные различия mojmap → yarn:
+Known mojmap → yarn differences:
 - `Minecraft` → `MinecraftClient`
 - `LocalPlayer` → `ClientPlayerEntity`
 - `MultiPlayerGameMode` → `ClientPlayerInteractionManager`
 - `Connection` → `ClientConnection`
 - `Level` → `World`
 - `net.minecraft.core.BlockPos` → `net.minecraft.util.math.BlockPos`
-- И т.д. — полный список нужно составить по diff'у
+- Etc. — the full list needs to be built from the diff
 
-### Шаг 3: Применить изменения к shredder
+### Step 3: Apply the changes to shredder
 
-Для каждого изменённого файла в upstream diff:
-1. Найти соответствующий файл в `shredder/src/main/java/`
-2. Перевести mojmap имена → yarn
-3. Применить изменение
-4. Если файл из нашего "модифицированного" списка — merge аккуратно
+For each changed file in the upstream diff:
+1. Find the corresponding file in `shredder/src/main/java/`
+2. Translate mojmap names → yarn
+3. Apply the change
+4. If the file is on our "modified" list — merge carefully
 
-### Шаг 4: Проверить инициализацию
+### Step 4: Check initialization
 
-Убедиться что `BaritoneProvider` создаёт `Baritone` без ошибок на 1.21.11.
-Если какие-то классы MC изменились структурно — починить.
+Make sure `BaritoneProvider` creates `Baritone` without errors on 1.21.11.
+If any MC classes changed structurally — fix it.
 
-### Шаг 5: Проверить mixins
+### Step 5: Check the mixins
 
-Все 10 зарегистрированных миксинов уже совместимы по target-методам.
-Но если upstream добавил новые миксины для 1.21.11 — перенести их тоже.
+All 10 registered mixins are already compatible on their target methods.
+But if upstream added new mixins for 1.21.11 — port those too.
 
-### Шаг 6: Тестирование
+### Step 6: Testing
 
-- Запуск на 1.21.11, вход в мир
-- `#goto 100 64 100` — базовый pathfinding
+- Launch on 1.21.11, join a world
+- `#goto 100 64 100` — basic pathfinding
 - `#mine diamond_ore` — mining
-- God bridge на плоскости
-- TungstenBridge делегация на ровных участках
+- God bridge on flat ground
+- TungstenBridge delegation on flat sections
 
-## Разведка upstream diff (04.04.2026)
+## Upstream diff reconnaissance (04.04.2026)
 
-### Ветки cabaletta/baritone
+### cabaletta/baritone branches
 
-Существуют ветки: `1.21`, `1.21.1`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.8`,
-`1.21.10`, `1.21.11`. Чистая линейная цепочка, без расхождений.
-Тегов для 1.21.x нет — diff только по веткам.
+Existing branches: `1.21`, `1.21.1`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.8`,
+`1.21.10`, `1.21.11`. A clean linear chain, no divergences.
+No tags for 1.21.x — diff by branch only.
 
-### Общий diff `1.21.1...1.21.11`
+### Overall diff `1.21.1...1.21.11`
 
-- **65 коммитов**, 0 behind
-- **76 файлов** изменено (из ~345 в baritone)
-- **+840 / -615 строк** (net +225)
+- **65 commits**, 0 behind
+- **76 files** changed (out of ~345 in baritone)
+- **+840 / -615 lines** (net +225)
 
-### Инкрементальные шаги
+### Incremental steps
 
-| Шаг             | Коммиты | Файлов |
+| Step             | Commits | Files |
 | --------------- | ------- | ------ |
 | 1.21.1 → 1.21.3 | 8 | 29 |
 | 1.21.3 → 1.21.4 | 10 | 7 |
@@ -225,16 +225,16 @@ git diff <1.21.1-branch>..<1.21.11-branch> -- src/main/java/ > upstream-diff.pat
 | 1.21.8 → 1.21.10 | 8 | 13 |
 | 1.21.10 → 1.21.11 | 14 | 41 |
 
-Два крупных скачка: **1.21.4→1.21.5** (38 файлов) и **1.21.10→1.21.11** (41 файл).
+Two big jumps: **1.21.4→1.21.5** (38 files) and **1.21.10→1.21.11** (41 files).
 
-### Ключевые области изменений
+### Key areas of change
 
-**Рендеринг (основной объём):**
-- `IRenderer.java` — +141/-57 (крупная переработка)
-- `PathRenderer.java` — +97/-62 (крупная переработка)
-- 4 новых файла: `MixinRenderPipelines`, `MixinRenderType`, `IRenderPipelines`, `IRenderType`
-- ⚠️ Render pipeline переработан в MC 1.21.11 — это самая трудоёмкая часть миграции.
-  Upstream добавил 4 новых файла (миксины + accessor'ы) специально для этого.
+**Rendering (the bulk of it):**
+- `IRenderer.java` — +141/-57 (major rework)
+- `PathRenderer.java` — +97/-62 (major rework)
+- 4 new files: `MixinRenderPipelines`, `MixinRenderType`, `IRenderPipelines`, `IRenderType`
+- ⚠️ The render pipeline was reworked in MC 1.21.11 — this is the most labor-intensive part
+  of the migration. Upstream added 4 new files (mixins + accessors) specifically for this.
 
 **Player input/movement:**
 - `PlayerMovementInput.java` — +28/-17
@@ -246,38 +246,38 @@ git diff <1.21.1-branch>..<1.21.11-branch> -- src/main/java/ > upstream-diff.pat
 **Block handling:**
 - `BlockOptionalMeta.java` — +33/-51
 - `ChunkPacker.java` — +10/-16
-- `BaritoneToast.java` — +4/-56 (упрощён)
+- `BaritoneToast.java` — +4/-56 (simplified)
 
 **Schematics:**
-- `LitematicaSchematic.java`, `MCEditSchematic.java`, `SpongeSchematic.java` — мелкие правки
+- `LitematicaSchematic.java`, `MCEditSchematic.java`, `SpongeSchematic.java` — minor edits
 
-**Миксины:**
-- Обновлены: `MixinClientPlayerEntity`, `MixinLivingEntity`, `MixinScreen`,
+**Mixins:**
+- Updated: `MixinClientPlayerEntity`, `MixinLivingEntity`, `MixinScreen`,
   `MixinWorldRenderer`, `MixinMinecraft`, `MixinNetworkManager`, `MixinEntityRenderManager`
-- 2 новых миксина в `mixins.baritone.json`
+- 2 new mixins in `mixins.baritone.json`
 
 **Build/config:**
-- `gradle.properties`, `build.gradle`, `fabric.mod.json` — обновления версий
+- `gradle.properties`, `build.gradle`, `fabric.mod.json` — version bumps
 
-### Выводы из разведки
+### Conclusions from the recon
 
-1. **Объём умеренный.** 76 файлов, но реальная суть — 10-15 файлов. Остальные — мелкие
-   правки импортов, версий, API tweaks.
-2. **Стратегия A подтверждена** как оптимальная. Diff обозрим, архитектурных переломов нет.
-3. **Рендеринг — самая трудоёмкая часть.** IRenderer/PathRenderer сильно переработаны,
-   плюс 4 новых файла. MC 1.21.11 изменил render pipeline.
-4. **Preprocessor** стоит добавить в shredder для multi-version, инфраструктура
-   уже есть в проекте.
-5. **Все имена в upstream diff — mojmap.** Перед применением нужна таблица mojmap→yarn
-   для каждого изменённого символа.
+1. **Moderate volume.** 76 files, but the real substance is 10-15 files. The rest are minor
+   import/version edits, API tweaks.
+2. **Strategy A confirmed** as optimal. The diff is surveyable, no architectural breaks.
+3. **Rendering is the most labor-intensive part.** IRenderer/PathRenderer are heavily
+   reworked, plus 4 new files. MC 1.21.11 changed the render pipeline.
+4. **A preprocessor** is worth adding to shredder for multi-version, the infrastructure
+   already exists in the project.
+5. **All names in the upstream diff are mojmap.** A mojmap→yarn table is needed before
+   applying, for every changed symbol.
 
-## Заметки
+## Notes
 
-- Shredder build.gradle сейчас хардкодит `minecraft "com.mojang:minecraft:1.21.1"`.
-  Для 1.21.11 нужно либо сделать multi-version (preprocessor), либо отдельный build.
-- altoclef'овский `build.gradle` уже исключает shredder JAR для 1.21.11:
+- Shredder's build.gradle currently hardcodes `minecraft "com.mojang:minecraft:1.21.1"`.
+  For 1.21.11 it needs either multi-version (preprocessor), or a separate build.
+- altoclef's `build.gradle` already excludes the shredder JAR for 1.21.11:
   `if (mcVersion < 12111) { include project(":shredder") }`.
-  После миграции это условие нужно убрать.
-- Tab-complete для `@` команд altoclef уже работает без shredder (перенесён
-  в ChatInputSuggestorMixin). Но `#` команды shredder по-прежнему зависят
-  от MixinCommandSuggestionHelper.
+  After the migration this condition should be removed.
+- Tab-complete for altoclef's `@` commands already works without shredder (moved
+  into ChatInputSuggestorMixin). But shredder's `#` commands still depend
+  on MixinCommandSuggestionHelper.

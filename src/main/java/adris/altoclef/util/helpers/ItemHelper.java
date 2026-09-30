@@ -579,7 +579,7 @@ public class ItemHelper {
     // --- Multiplayer helpers (ported from autoclef) ---
 
     // Throttle for server-menu join clicks: autojoin task loops call clickCustomItem EVERY tick,
-    // and the musteryworld cluster rate-limits rapid clicks ("Подождите, прежде чем снова щелкнуть").
+    // and the musteryworld cluster rate-limits rapid clicks (server text: "wait before clicking again").
     // Pace the actual click to ~1 per 1.2s so autojoin does not spam-trip the server anti-double-click.
     private static final adris.altoclef.util.time.TimerGame _customItemClickTimer =
             new adris.altoclef.util.time.TimerGame(1.2);
@@ -600,7 +600,7 @@ public class ItemHelper {
         Slot newGameSlot = getCustomItemSlot(mod, joinItems);
         if (newGameSlot != null) {
             // Rate-limit: called every tick by autojoin; the server rejects rapid clicks
-            // ("Подождите, прежде чем снова щелкнуть"). Act at most ~once per 1.2s.
+            // ("wait before clicking again"). Act at most ~once per 1.2s.
             if (!_customItemClickTimer.elapsed()) return false;
             _customItemClickTimer.reset();
             // If the item is in the hotbar, just switch selected slot instead of SWAP.
@@ -746,7 +746,7 @@ public class ItemHelper {
      * to say the class "lives in shredder's tree" and "dies with shredder rather than before it" —
      * that was true when this comment was written, but {@code AltoClefSettings} has since moved to
      * {@code adris.altoclef.settings}, its own altoclef package (part of G-0's tail; see
-     * {@code TODOS.md}'s "G-0 СВЯЗНОСТЬ"). It is now a fully native altoclef reference with no
+     * {@code TODOS.md}'s "G-0 connectivity" item). It is now a fully native altoclef reference with no
      * connection to shredder at all — an even cleaner remove of the old {@code baritone.utils}
      * dependency than originally described, not a debt that dies alongside shredder.
      *

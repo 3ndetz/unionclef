@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify: a non-standable / unreachable goal no longer makes tungsten compute forever
 (user bug 2026-07-22). Measures isTungstenActive() (PATHFINDER.active || EXECUTOR
-running) — the real 'вечно считает' signal — NOT hasActiveTask (which is true whenever
+running) — the real 'computes forever' signal — NOT hasActiveTask (which is true whenever
 the altoclef task isn't idle).
 
 Cases (pure tungsten ;goto = gotoXYZ, the path with no altoclef snap):

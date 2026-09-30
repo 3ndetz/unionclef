@@ -1,8 +1,8 @@
 {
  "name": "0.95.51",
  "title": "unionclef 0.95.51",
- "subtitle": "из ям и из воды",
- "caption": "unionclef 0.95.51: под водой бот плывёт к воздуху вместо того, чтобы 20 секунд копать камень; не убегает от крипера под воду; ночное укрытие больше не раскапывает свою крышку; поиск еды не застревает в ямах. github.com/3ndetz/unionclef/releases/tag/v0.95.51",
+ "subtitle": "out of pits and out of water",
+ "caption": "unionclef 0.95.51: underwater the bot now swims to air instead of spending 20 seconds mining stone; no longer flees a creeper into water; the night shelter no longer digs up its own lid; food search no longer gets stuck in pits. github.com/3ndetz/unionclef/releases/tag/v0.95.51",
  "segments": [
   {
    "kind": "clip",
@@ -10,8 +10,8 @@
    "from": 0,
    "to": 20,
    "speed": 1,
-   "title": "Было: копает вверх под водой",
-   "caption": "под водой и не стоя на земле блок ломается в 25 раз медленнее"
+   "title": "Before: mines upward underwater",
+   "caption": "underwater and not standing on ground, blocks break 25 times slower"
   },
   {
    "kind": "clip",
@@ -19,24 +19,24 @@
    "from": 0,
    "to": 15,
    "speed": 1,
-   "title": "Стало: плывёт к воздуху",
-   "caption": "сравнивает время копания и путь до воздуха, выбирает быстрое"
+   "title": "After: swims to air",
+   "caption": "compares mining time against the path to air, picks whichever is faster"
   },
   {
    "kind": "stat",
-   "title": "drown_tunnel, минимум здоровья",
-   "before": "6 и 4",
+   "title": "drown_tunnel, minimum health",
+   "before": "6 and 4",
    "after": "20, 20, 20",
-   "note": "затопленный туннель, камень над головой, воздух в 4 блоках"
+   "note": "flooded tunnel, stone overhead, air 4 blocks away"
   },
   {
    "kind": "text",
-   "title": "Ещё",
+   "title": "Also",
    "lines": [
-    "от крипера — не под воду",
-    "укрытие не раскапывает свою крышку",
-    "поиск еды помнит курс и выбирается из ям",
-    "full56: железные инструменты на 8.4-й минуте"
+    "no longer flees a creeper into water",
+    "shelter no longer digs up its own lid",
+    "food search remembers its course and gets out of pits",
+    "full56: iron tools by minute 8.4"
    ]
   }
  ]

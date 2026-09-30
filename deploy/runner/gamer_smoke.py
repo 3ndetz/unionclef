@@ -32,8 +32,8 @@ MINUTES=float(sys.argv[1]) if len(sys.argv)>1 and not sys.argv[1].startswith("--
 # MIN minutes of the watch (cpMMDD-HHMM-tSECONDS); the end of every run is frozen as `last`
 # unless --no-save-end, or under --save-end NAME. See checkpoint.py.
 FROM_CP = sys.argv[sys.argv.index("--from") + 1] if "--from" in sys.argv else None
-# ⛔⛔ DENSE BY DEFAULT (operator, 2026-09-24: "почему ты не юзаешь чекпоинты ... должен быть крайне
-# плотный пайплайн чекпоинтов"). This used to default to 0 -- no periodic checkpoints unless asked --
+# ⛔⛔ DENSE BY DEFAULT (operator, 2026-09-24: "why aren't you using checkpoints ... there must be a very
+# dense checkpoint pipeline"). This used to default to 0 -- no periodic checkpoints unless asked --
 # and the session that owned the rule ran two playthroughs from zero in a row, the second dying of
 # cold at minute two with nothing frozen to test the fix from. Now every run freezes the world every
 # 5 minutes (the last CP_KEEP of them kept per run, older ones deleted: a world is ~2 GB) AND at every
@@ -879,7 +879,7 @@ def main():
     # This pinned all five off and never restored them, so every bench run left the client BLIND for
     # whoever looked at it next -- no route, no place plan, no break plan, `renderers=0` and
     # `renderVisualization=False` read straight off the client. The user watched tester1 and reported
-    # exactly that ("визуализации фаст планнера я вообще не вижу маршрута"), and they were right: the
+    # exactly that ("I can't see the fast planner's route visualisation at all"), and they were right: the
     # harness had silently disabled the one instrument a HUMAN can use. That is the checklist's own
     # RULE SEVEN -- state a run changes, it restores in a finally -- broken by the harness that
     # carries the rule. Watching the bot is not a nicety here: the benches score OUTCOMES and cannot

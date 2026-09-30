@@ -152,7 +152,7 @@ public class WindMouseRotation {
         // Measured on nav_bridge: 16.3 fps -> reaches the goal in 11.0s; 9.9 fps (the same course
         // WITH the recorder running) -> the bot stands at the lip of the gap and never places a
         // block. Same build, same course, different frame rate. The user's word for it was that
-        // it must work "железно стабильно" -- and a behaviour that depends on frame rate is not
+        // it must work "rock solid" -- and a behaviour that depends on frame rate is not
         // that.
         // So the step becomes a rate in TIME rather than per frame: a frame that took twice as
         // long is allowed twice the angular movement. Clamped at 1.0 below so nothing changes at
@@ -241,7 +241,7 @@ public class WindMouseRotation {
         // Clamping to `dist` is the arithmetic fix rather than another tuned constant: the step
         // keeps its wind, its momentum and its direction, and simply stops at the target instead
         // of past it. Overshooting by 175 deg is not more human than landing — it is the shake the
-        // user complained about ("прицел трясёт как не в себя").
+        // user complained about ("the aim shakes like crazy").
         double stepMag = Math.sqrt(veloYaw * veloYaw + veloPitch * veloPitch);
         if (stepMag > dist && stepMag > 1.0E-6) {
             double s = dist / stepMag;

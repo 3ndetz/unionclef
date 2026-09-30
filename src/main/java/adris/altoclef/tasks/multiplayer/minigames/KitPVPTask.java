@@ -139,13 +139,13 @@ public class KitPVPTask extends Task {
             if (!mod.getPlayer().hasStatusEffect(StatusEffects.STRENGTH)
                     && mod.getItemStorage().hasItem(Items.GUNPOWDER)) {
                 if (LookHelper.tryAvoidingInteractable(mod)) {
-                    setDebugState("Найдена смесь силы; надо понюхать");
+                    setDebugState("Found a strength potion; drinking it");
                     mod.getSlotHandler().forceEquipItem(new Item[]{Items.GUNPOWDER});
                     mod.getInputControls().hold(Input.CLICK_RIGHT);
                     mod.getInputControls().release(Input.CLICK_RIGHT);
                     _isEatingStrength = true;
                 } else {
-                    setDebugState("Нюхаем смесь силы: меняем угол обзора чтобы не интерактить");
+                    setDebugState("Drinking the strength potion: turning the view so we don't interact");
                 }
                 return null;
             }
@@ -156,7 +156,7 @@ public class KitPVPTask extends Task {
             if (needEatGapple && mod.getItemStorage()
                     .hasItemInventoryOnly(Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE)) {
                 if (LookHelper.tryAvoidingInteractable(mod) && !_isEatingGapple) {
-                    setDebugState("Есть яблоко, почему бы не пожрать..");
+                    setDebugState("Have an apple, eating it");
                     mod.getSlotHandler().forceEquipItem(
                             new Item[]{Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE}, true);
                     mod.getInputControls().hold(Input.CLICK_RIGHT);
@@ -166,9 +166,9 @@ public class KitPVPTask extends Task {
                 } else {
                     if (_isEatingGapple && _eatingGappleTimer.elapsed()) {
                         _isEatingGapple = false;
-                        setDebugState("Яблоко не съелось! Попытка 2!");
+                        setDebugState("Apple not eaten, attempt 2");
                     } else {
-                        setDebugState("Жрем геплы: меняем угол обзора");
+                        setDebugState("Eating golden apples: turning the view");
                     }
                 }
                 return null;
@@ -214,7 +214,7 @@ public class KitPVPTask extends Task {
                     Blocks.CHEST);
             if (closestCont.isPresent() && WorldHelper.canReach(closestCont.get())
                     && TimersHelper.CanChestInteract()) {
-                setDebugState("Поиск ресурсов -> контейнеры:");
+                setDebugState("Looking for resources -> containers:");
                 _lastLootPos = closestCont.get();
                 _lootTask = new LootContainerTask(closestCont.get(), lootableItems(mod));
                 return _lootTask;
@@ -245,7 +245,7 @@ public class KitPVPTask extends Task {
         }
 
         if (closest.isPresent()) {
-            setDebugState("УНИЧТОЖИТЬ");
+            setDebugState("ATTACK");
             PlayerEntity entity = (PlayerEntity) closest.get();
             if (LookHelper.cleanLineOfSight(entity.getPos(), 100)) {
                 if (mod.getPlayer().distanceTo(entity) > 10) {
@@ -262,7 +262,7 @@ public class KitPVPTask extends Task {
             }
         }
 
-        setDebugState("Поиск низших сущностей...");
+        setDebugState("Looking for weak entities...");
         _currentVisibleTarget = null;
         return null;
     }
@@ -280,7 +280,7 @@ public class KitPVPTask extends Task {
 
     @Override
     protected String toDebugString() {
-        return "Режим терминатора (кпвп): уничтожить";
+        return "Terminator mode (KitPVP): attack";
     }
 
     private boolean shouldBow(AltoClef mod) {

@@ -34,7 +34,7 @@ public class MixinMouse {
         //     mean |dyaw| per tick  : 13.56 deg
         //     max  |dyaw| per tick  : 175.35 deg
         // The head is not frozen. It WHIPS — 175 degrees in a tick — which is the shake the aim
-        // low-pass in SafetySystem was added for ("прицел трясёт как не в себя"). Missing a 40 deg
+        // low-pass in SafetySystem was added for ("the aim shakes like crazy"). Missing a 40 deg
         // window while swinging past the target is a different fault from never turning.
 
         double[] deltas = WindMouseRotation.INSTANCE.consumeRawPixelDeltas();

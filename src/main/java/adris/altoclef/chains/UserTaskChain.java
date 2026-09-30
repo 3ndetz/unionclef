@@ -67,7 +67,7 @@ public class UserTaskChain extends SingleTaskChain {
         // Check task timeout
         AltoClef mod = AltoClef.getInstance();
         if (mod != null && mainTask != null && mainTask.isActive() && mod.checkAndClearTimeout()) {
-            Debug.logMessage("Задача завершена по таймауту.");
+            Debug.logMessage("Task ended on timeout.");
             cancel(mod);
             return;
         }
@@ -138,7 +138,7 @@ public class UserTaskChain extends SingleTaskChain {
         // it used to, so a genuinely doomed task still terminates and says so.
         if (mainTask != null && !mainTask.isFinished() && rearmAttempts < MAX_REARM_ATTEMPTS) {
             rearmAttempts++;
-            Debug.logMessage("Задача была ПРЕРВАНА, а не выполнена — возобновляю (попытка %d из %d)",
+            Debug.logMessage("Task was INTERRUPTED, not finished; resuming (attempt %d of %d)",
                     rearmAttempts, MAX_REARM_ATTEMPTS);
             mainTask.reset();
             return;
@@ -201,7 +201,7 @@ public class UserTaskChain extends SingleTaskChain {
         boolean actuallyDone = mainTask == null;
         if (actuallyDone) {
             if (!runningIdleTask) {
-                Debug.logMessage("Поставленная задача ЗАВЕРШЕНА за %s сек.", prettyPrintTimeDuration(seconds));
+                Debug.logMessage("Task finished in %s s.", prettyPrintTimeDuration(seconds));
                 EventBus.publish(new TaskFinishedEvent(seconds, oldTask));
             }
             if (shouldIdle) {

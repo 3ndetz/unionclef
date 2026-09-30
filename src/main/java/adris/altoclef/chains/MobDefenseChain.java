@@ -1051,8 +1051,8 @@ public class MobDefenseChain extends SingleTaskChain {
                     // this list like any hostile, the fight branch judged it "beatable" with an iron
                     // sword, KillEntitiesTask + the duelling controller PURSUED it to striking
                     // distance -- and striking distance is its fuse distance. Recorded 14:00 run,
-                    // 11:08:45 UTC: DANGER_BATTLE -> NARROW_BATTLE -> PURSUE -> "tester1 был
-                    // взорван Крипер", hp 20 -> 4.5 in 40 s, respawn with an empty pack. The fusing
+                    // 11:08:45 UTC: DANGER_BATTLE -> NARROW_BATTLE -> PURSUE -> "tester1 was
+                    // blown up by Creeper" (ru client), hp 20 -> 4.5 in 40 s, respawn with an empty pack. The fusing
                     // branch above only fires once the hiss has started, which is already too late
                     // for a bot that is walking INTO it. A creeper that is close and can see us is
                     // avoided, not engaged; one further away is left alone.

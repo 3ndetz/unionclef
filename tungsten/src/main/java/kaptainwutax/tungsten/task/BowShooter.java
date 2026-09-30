@@ -437,10 +437,10 @@ public class BowShooter {
         // Humanized aim via WindMouse (mouse-pipeline) — never setYaw/setPitch,
         // anti-cheats flag instant rotation. FAST mode: a real archer flicks onto
         // the target and holds; the slow glide made every shot take seconds
-        // (user 2026-07-24: "стрелял ОЧЕНЬ МЕДЛЕННО").
+        // (user 2026-07-24: "it shot VERY SLOWLY").
         kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTargetFast(sol.yaw, sol.pitch);
         // VISUALIZE the ballistic solution — the user must SEE the arc the solver
-        // chose (RW-6 / "где траектории при стрельбе из лука").
+        // chose (RW-6 / "where are the bow shot trajectories").
         renderTrajectory(player, sol, Math.max(charge, 1.0));
         float dYaw = MathHelper.wrapDegrees(sol.yaw - player.getYaw());
         float dPitch = MathHelper.wrapDegrees(sol.pitch - player.getPitch());

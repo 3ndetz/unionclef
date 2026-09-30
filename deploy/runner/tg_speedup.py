@@ -6,7 +6,7 @@ unwatchable at 1x, so this time-compresses it (default 12x) and posts the result
 re-encode runs INSIDE the client container (that is where ffmpeg lives); only the small output
 is copied out and uploaded.
 
-    python deploy/runner/tg_speedup.py /mc-data/full_run.mp4 12 "проход @gamer, ускорено 12x"
+    python deploy/runner/tg_speedup.py /mc-data/full_run.mp4 12 "@gamer run, sped up 12x"
 
 Telegram creds come from mineswarm/.env (TG_BOT_TOKEN, OPERATOR_CHAT_ID); the token is never
 printed. Set UC_CLIENT / UC_ENV to override the container / env path.

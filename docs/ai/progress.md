@@ -1497,7 +1497,7 @@ Follow-up same day (fallback + trustworthy bench + BUILD-half evidence):
 - The bench's first run FAILED and found the other half (G99b): the navigator's sphere arrival accepted a body IN THE WATER as settled — "arrived (1.6)" with the body rising at y=-61.04 toward the bank at -60 (goalRise 0.95 for one tick) — stopped the queue mid-stroke, and the body floated with no inputs until it drowned 22 s later (no survival chain under a bare gotoXYZ). Water counts as settled only when the goal itself is in water.
 - Verification: pool_bank PASS twice, on the bank in 2.3 s (`mqSteps=3 swimAim=23 navWet=1/0`); nav_water PASS twice; nav suite 14/14 (nav_gaps' first-go fall, the recorded course flake, passed on the retry). Released **v0.95.3**.
 
-### Checkpoints (operator: "ты бы уж тогда фиксировал ЧЕКПОИНТ где начинаются косяки")
+### Checkpoints (operator: "you might as well record a CHECKPOINT right where the glitches start")
 - Two sixty-minute runs from an empty inventory in one day, each spending thirty minutes to reach the state whose wall was the question, was the mistake. `deploy/runner/checkpoint.py` freezes the whole gamer world (2082 MB, 29.7 s: save-off, save-all flush, docker cp, save-on; meta.json with seed, time of day, the bot's position/hp/inventory ids when online) and restores it (kick, stop, swap `/data/world`, chown to the server's user, start, wait for rcon). `gamer_smoke.py --from NAME` swaps the world in right before `@gamer` (the reset and the spiral still run and are discarded with the swap; `GAMER_SPAWN` pinned so the forest search does not spend minutes), `--checkpoint-every MIN` freezes the middle of a run, and the end of every run is frozen as `last` unless `--no-save-end`. First checkpoint on disk: `post-run2` (the end of the second sixty-minute run). Checklist §4y.7, AUTOTESTING.md.
 
 ### The third run, and what the checkpoints found (v0.95.3, fresh start #56)
@@ -1720,7 +1720,7 @@ standing post-iron ceiling for weeks. Two fixes did it (the reclaim fix above wa
   interior stays clean, the Clear-middle phase removes any throwaway, and the frame's obsidian is
   spent only on frame cells.
 - **deploy/runner/nether_portal_test.py: findportal matches the registry id, not the localized
-  display name.** getBlockAt's "block"/"name" is localized ("портал незера" on this ru client), so
+  display name.** getBlockAt's "block"/"name" is localized ("nether portal" in Russian, on this ru client), so
   the old substring test for "nether_portal" reported every real, lit portal as FAIL -- a harness
   bug that masked success. Read the "id" field ("minecraft:nether_portal") instead.
 - **Verified (bench OBS flood path, 5x5 lake), ground truth by block id at the build site:** frame

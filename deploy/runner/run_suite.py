@@ -146,8 +146,8 @@ BOT, VICTIM = "tester1", "tester2"
 
 # Stand worlds. "flat" = the deterministic superflat arena server; "gamer" = the
 # REAL world generator (normal terrain, seed 12345) for benches that must run on
-# genuine terrain instead of a hand-built strip (user 2026-07-24: "РЕЛЬЕФ — это
-# РЕАЛЬНЫЙ ГЕНЕРАТОР МИРА"). Start it with:
+# genuine terrain instead of a hand-built strip (user 2026-07-24: "TERRAIN means
+# THE REAL WORLD GENERATOR"). Start it with:
 #   docker compose -f deploy/compose.test.yml --profile gamer --profile pvp up -d
 WORLDS = {
     "flat":  {"container": "uctest-server",       "host": "test-server"},

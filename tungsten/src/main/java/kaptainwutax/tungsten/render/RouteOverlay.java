@@ -13,8 +13,8 @@ import net.minecraft.util.math.Vec3d;
  * What the bot is about to do, drawn in the world every frame -- baritone's PathRenderer, for the
  * drivers a playthrough actually runs.
  *
- * <p>⛔ WHY THIS EXISTS (user, 2026-09-24): "визуализации действий fastplanner где ломает или ставит
- * блоки и baritone-like маршруты -- никаких нет". Checked against the code: the render containers were
+ * <p>⛔ WHY THIS EXISTS (user, 2026-09-24): "there is no visualisation of fastplanner actions where it breaks or places
+ * blocks, and no baritone-like routes". Checked against the code: the render containers were
  * only ever fed by FastNavigator and the physics replay (PathExecutor). The drive @gamer runs almost
  * all the time -- CombatPathfinder's route walked by {@link BlockPathWalker}, the ported baritone
  * {@link MovementQueue}, and altoclef's own digging -- put nothing in them. So the one thing a person

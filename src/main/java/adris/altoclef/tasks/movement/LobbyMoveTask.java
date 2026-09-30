@@ -32,7 +32,7 @@ public class LobbyMoveTask extends Task {
         AltoClef mod = AltoClef.getInstance();
 
         if (_lookTimer.elapsed()) {
-            Debug.logMessage("Двигаемся в лобби...");
+            Debug.logMessage("Moving to the lobby...");
             _lookTimer.reset();
             _elapsed = true;
             //LookHelper.randomOrientation(mod);

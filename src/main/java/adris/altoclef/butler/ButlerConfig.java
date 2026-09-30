@@ -67,6 +67,8 @@ public class ButlerConfig {
      */
     public String[] whisperFormats = new String[]{
             "{from} whispers to you: {message}",
+            // Russian server/client whisper formats: "шепчет вам" = "whispers to you",
+            // "я" / "Я" = "me". Server text, keep verbatim.
             "{from} шепчет вам: {message}",
             "{from} шепчет: {message}",
             "{from} whispers: {message}",
@@ -88,16 +90,16 @@ public class ButlerConfig {
     /**
      * Determines if failure messages should be sent to a non-authorized entity attempting to use butler
      * <p>
-     * DEFAULT false: do NOT auto-reply rude "не пиши сюда" to players who PM the bot — the
+     * DEFAULT false: do NOT auto-reply a rude "don't write here" to players who PM the bot — the
      * private message still reaches the agent's LLM (onWeakChatMessage), so it answers IN
-     * CHARACTER instead of the butler bluntly rejecting. (operator: фикс навсегда)
+     * CHARACTER instead of the butler bluntly rejecting. (operator: "a permanent fix")
      */
     public boolean sendAuthorizationResponse = false;
     /**
      * The response sent in a failed execution due to non-authorization
      * {from}: the username of the player who triggered the failed authorization response
      */
-    public String failedAuthorizationResponse = "{from}, не пиши сюда, пожалуйста";
+    public String failedAuthorizationResponse = "{from}, please don't message me here";
     /**
      * Use this to choose if the prefix should be required in messages
      * <p>
@@ -116,6 +118,10 @@ public class ButlerConfig {
      * {@code configs/butler.json} itself), loaded once below. Behavior for existing and new
      * installs is unchanged -- same defaults, same {@code configs/butler.json} override path --
      * only the storage location moved out of source.
+     * <p>
+     * Some patterns in that file carry Russian channel prefixes ("[Чат пати]" = party chat,
+     * "[Зритель]" = spectator, "[Всем]" = to everyone). They are real server text and must stay
+     * verbatim for matching.
      */
     public String[][] chatFormats = loadDefaultChatFormats();
 

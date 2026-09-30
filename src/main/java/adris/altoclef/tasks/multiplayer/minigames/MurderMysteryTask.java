@@ -121,7 +121,8 @@ public class MurderMysteryTask extends Task {
         }
 
         if (ButlerConfig.getInstance().autoJoin) {
-            if (clickCustomItem(mod, "новая игра", "начать игру", "быстро играть (пкм)")) {
+            // Server item names: "new game" / "start game" / "quick play (right click)".
+        if (clickCustomItem(mod, "новая игра", "начать игру", "быстро играть (пкм)")) {
                 resetGameInfo();
             }
         }
@@ -248,7 +249,7 @@ public class MurderMysteryTask extends Task {
         }
 
         if (injured) {
-            setDebugState("Вы ранены и погибаете, остаётся ждать доктора");
+            setDebugState("Wounded and dying, waiting for the doctor");
             return null;
         }
 
@@ -262,7 +263,7 @@ public class MurderMysteryTask extends Task {
                         check);
                 if (closestEnt.isPresent()) {
                     if (_change_chain_priority) mod.getBehaviour().setDefaultUserTaskChainPriority();
-                    setDebugState("Сбор ресурсов для оружия");
+                    setDebugState("Collecting resources for a weapon");
                     _pickupTask = new PickupDroppedItemTask(new ItemTarget(check, 1), false);
                     return _pickupTask;
                 }
@@ -275,7 +276,7 @@ public class MurderMysteryTask extends Task {
             _chill_tactics_changed = true;
         }
 
-        setDebugState("Чилл");
+        setDebugState("Idle");
         if (_change_chain_priority) mod.getBehaviour().setDefaultUserTaskChainPriority();
         return new IdleTask();
     }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Aim-jitter (shake) QUANTIFIER: fighter ;punkPlayer a moving victim; sample the fighter's
 per-tick yaw (getAimSamples) and compute the Δyaw sign-reversal rate. A smooth aim tracking
-a target turns near-monotonically (few reversals/s); the reported "прицел трясёт" shake is
+a target turns near-monotonically (few reversals/s); the reported "the aim is shaking" shake is
 excessive high-frequency reversals. Validates the v0.47/0.48 aim smoothing.
 
 PASS: reversal rate below MAX_REV_PER_S (smooth). Requires the pvp profile. Exit 0 = pass.

@@ -89,6 +89,7 @@ public class SkyPvpTask extends Task {
                     ? MinecraftClient.getInstance().currentScreen.getTitle() : null;
             if (title != null) {
                 String t = title.getString().toLowerCase();
+                // Server menu title: "choose a mode" / "mode select".
                 if (t.contains("выбери режим") || t.contains("выбор режима")) {
                     Slot slot = ItemHelper.getCustomItemSlot(mod, "SkyPvP", "skypvp", "Sky PvP");
                     if (slot != null) {
@@ -102,10 +103,10 @@ public class SkyPvpTask extends Task {
             }
         }
 
-        // ── Lobby detection: compass "Выбор режима" means we're in hub ──────
+        // ── Lobby detection: the "mode select" compass means we're in hub ──
         if (isInLobby(mod)) {
             // Click compass to open mode selection menu
-            if (ItemHelper.clickCustomItem(mod, "Выбор режима", "выбор режима")) {
+            if (ItemHelper.clickCustomItem(mod, "Выбор режима", "выбор режима")) { // server item: "mode select"
                 setDebugState("Lobby: opening mode menu...");
             } else {
                 setDebugState("In lobby, waiting...");
@@ -227,7 +228,7 @@ public class SkyPvpTask extends Task {
 
     // ── lobby detection ────────────────────────────────────────────────────────
 
-    /** If the player has a compass named "Выбор режима" in inventory, we're in the hub lobby. */
+    /** If the player has the "mode select" compass (server item name below) in inventory, we're in the hub lobby. */
     private boolean isInLobby(AltoClef mod) {
         return ItemHelper.getCustomItemSlot(mod, "Выбор режима", "выбор режима") != null;
     }

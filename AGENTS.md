@@ -2,7 +2,7 @@
 
 RE-READ THIS FULLY IF THE CONVERSATION WAS SUMMARIZED! Always read this file at the start of every conversation before doing anything else.
 
-> При первом прочтении или после суммаризации диалога — скажи кратко (5-10 слов) выжимку правил. Не повторяй каждый раз.
+> On the first read, or after the conversation was summarised, state the rules in brief (5-10 words). Do not repeat it every time.
 
 ## ⛔⛔ "MY CONTEXT IS EXHAUSTED" IS NOT A STOP. YOU **ARE** THE FRESH SESSION. (user 2026-07-30)
 
@@ -63,9 +63,11 @@ wrong, and this section exists so it never is again.
 > → release → checkpoint-without-stopping). Read it before any work. The rules below are
 > part of it.
 >
-> ⛔ **LANGUAGE RULE: ALL instructions / docs / checklists / code comments MUST be in
-> ENGLISH.** (Existing Russian in the repo stays as-is — don't mass-rewrite it — but any
-> NEW instructional text is English.)
+> ⛔⛔ **ONLY ENGLISH (user 2026-09-30).** The project has ONE language: English. Code, comments,
+> javadoc, docs, checklists, TODOS.md, progress files, commit messages, release notes, issue and PR
+> comments, video captions and Telegram reports — all English. Talking to the user in chat follows
+> the user. The one exception is DATA the code must match literally (a Russian server's chat or
+> menu text); it stays as a quoted literal with an English comment saying what it is.
 
 ## What is this
 
@@ -91,105 +93,98 @@ this correction, the way this correction had to check it instead of trusting the
 build to replace. ⛔ CORRECTED 2026-09-02: this used to say `import baritone.…` lines "remain" in
 `src/main` as historical debt — checked with a fresh `grep -rl "^import baritone\." src/main/java/
 --include=*.java`, **zero files**, not some leftover count. Commit `05d74f3d` (2026-08-24, "G-0
-COMPLETE") already recorded this ("imports of baritone in altoclef: 0"); `TODOS.md`'s "G-0
-СВЯЗНОСТЬ" item was found still marked open nine days after that commit and closed the same pass.
+COMPLETE") already recorded this ("imports of baritone in altoclef: 0"); `TODOS.md`'s "G-0 CONNECTIVITY" item was found still marked open nine days after that commit and closed the same pass.
 There is no baritone import debt left in `src/main` at all.
 
-## РАБОЧАЯ ВЕТКА — `main` (юзер 2026-07-23)
+## WORKING BRANCH — `main` (user 2026-07-23)
 
-После мерджа `1.21.11 → main` рабочая ветка — **`main`** (канон). Коммить и пуш в `main`;
-стенд `deploy/` тоже пуллит `main`. Держи `main` и `1.21.11` синхронными (не давай снова
-разойтись — если работал в другой ветке, сразу мерджи/ff в main). Релиз по-прежнему
-`gradlew :1.21.11:githubRelease` — `:1.21.11:` это gradle-САБПРОЕКТ `versions/1.21.11`
-(не ветка), так что от смены ветки не зависит.
+After the `1.21.11 → main` merge the working branch is **`main`** (canonical). Commit and push to
+`main`; the `deploy/` bench also pulls `main`. Keep `main` and `1.21.11` in sync (do not let them
+diverge again — if you worked on another branch, merge/ff it into main at once). Releases are still
+`gradlew :1.21.11:githubRelease` — `:1.21.11:` is the gradle SUBPROJECT `versions/1.21.11` (not a
+branch), so it does not depend on the branch change.
 
-## ⭐ ГЛАВНЫЙ ПРИНЦИП ДИЗАЙНА — ИНСТРУМЕНТАРИЙ ДЛЯ АГЕНТА, НЕ СКРИПТЫ (юзер 2026-07-21)
+## ⭐ MAIN DESIGN PRINCIPLE — A TOOLKIT FOR THE AGENT, NOT SCRIPTS (user 2026-07-21)
 
-Мы строим **удобную ЭКОСИСТЕМУ / РАБОЧЕЕ МЕСТО** для когнитивного агента (Клод по
-py4j/MCP), а НЕ готовые скрипты, которые всё делают за него. Агент сам решает ГДЕ,
-КОГДА и ЧТО — ему нужны удобные **рычажки** и понятные объяснения.
+We are building a convenient **ECOSYSTEM / WORKBENCH** for a cognitive agent (Claude over
+py4j/MCP), NOT ready-made scripts that do everything for it. The agent decides WHERE, WHEN and
+WHAT itself; it needs convenient **levers** and clear explanations.
 
-- **Минимум хардкода под конкретный сервер, максимум гибкости.** Никаких
-  зашитых слотов/координат/названий одного сервера в логике. Параметризуй,
-  читай по имени/смыслу, выноси в конфиг/аргументы.
-- **Максимум объяснений для агента.** Каждый py4j/MCP-метод — с внятным
-  описанием (javadoc → описание MCP-инструмента): что делает, что возвращает,
-  когда звать. Агент должен ПОНИМАТЬ рычажок, а не угадывать.
-- **Примитивы, а не политика.** Мод исполняет (удар/прицел/бридж/установка/
-  чтение меню), агент решает стратегию. Не встраивай «умные» решения за агента —
-  дай ему данные (getGameState) и рычаги (bridgeTo/attack/buyByName/clickMenuByName).
-- **Гибкие, композируемые, переиспользуемые** методы; без дублей. Один источник
-  правды, тонкие обёртки.
-- Скриптовые таски (BedWarsTask и пр.) — legacy/удобный дефолт, но цель —
-  когнитивный режим, где агент рулит через инструментарий.
+- **Minimum hardcoding for one particular server, maximum flexibility.** No slots/coordinates/names
+  of one server baked into the logic. Parameterise, read by name/meaning, move it to config/arguments.
+- **Maximum explanation for the agent.** Every py4j/MCP method has a clear description (javadoc →
+  MCP tool description): what it does, what it returns, when to call it. The agent must UNDERSTAND
+  the lever, not guess.
+- **Primitives, not policy.** The mod executes (hit/aim/bridge/place/read a menu), the agent decides
+  the strategy. Do not build "smart" decisions in on the agent's behalf — give it data
+  (getGameState) and levers (bridgeTo/attack/buyByName/clickMenuByName).
+- **Flexible, composable, reusable** methods; no duplicates. One source of truth, thin wrappers.
+- Scripted tasks (BedWarsTask etc.) are legacy / a convenient default; the goal is the cognitive
+  mode, where the agent drives through the toolkit.
 
-## ⚙️ РАБОЧИЙ ПРОЦЕСС АГЕНТА (правила, юзер 2026-07-22)
+## ⚙️ AGENT WORKFLOW (rules, user 2026-07-22)
 
 > FULL process with phases and detailed testing instructions —
 > **[docs/CHECKLIST.md](docs/CHECKLIST.md)**. The points below are the short iron rules.
 > `TODOS.md` = only the user's GENERAL GOALS; the DECOMPOSITION of a specific task (with
 > test→audit→transition stages) goes in your OWN TODO tool, NOT in TODOS.md.
 
-1. **Автономно, без остановок.** Не переспрашивать по очевидному и не гейтить работу
-   ничем (в т.ч. тоном). Берёшь самый ценный вектор — делаешь. Аффект/резкость юзера
-   = усиление величины ошибки/приоритета, а не повод останавливаться.
-2. **Тщательно, НЕ наспех.** Каждый пункт из `TODO.md` — это БОЛЬШАЯ аккуратная
-   задача. Медленно, но верно. «Быстрее» — не цель, никто этого не просил.
-3. **Декомпозиция через TODO-инструмент.** `TODO.md` — верхнеуровневый, для юзера-
-   разработчика (туда НЕ сваливать рабочий процесс/мелкие шаги). Берёшь пункт из
-   `TODO.md` → раскладываешь на простые подзадачи → заводишь в свой TODO-инструмент
-   (Task*) → ведёшь работу по нему, отмечаешь прогресс.
-4. **Тестирование обязательно НА ВСЁ.** Ни одно изменение не считается сделанным без
-   фазы теста (стенд `deploy/`, перетест регрессий; для tungsten — clean build).
-5. **Tungsten-first, БЕЗ фоллбеков на baritone.** baritone/shredder криво портированы
-   до этой версии — на них не опираться и не откатываться. Цель — рабочий tungsten;
-   портировать в него всё (эвристики block-space можно КОПИРОВАТЬ из baritone внутрь
-   BFS tungsten, но исполнение — физ-движок tungsten).
-6. **ПОЛНОЦЕННО, БЕЗ скриптов/костылей/фоллбеков.** Каждую задачу решать ПРАВИЛЬНО в
-   ядре (пасфайндер/физика/эвристики), а не реактивным скриптом-заплаткой. Пример:
-   вода = умный расчёт ходов в водном pathfinder (нырять/всплывать как часть пути),
-   а НЕ «всегда всплывать». Если фичи нет — добавить в TODO.md, декомпозировать в
-   свой TODO-инструмент, реализовать в ядре, подробно протестировать.
+1. **Autonomously, without stopping.** Do not re-ask about the obvious and do not gate work on
+   anything (tone included). Take the most valuable vector and do it. The user's affect/sharpness =
+   a stronger signal of the size/priority of an error, not a reason to stop.
+2. **Thoroughly, NOT in a hurry.** Every item in `TODOS.md` is a BIG careful task. Slow but sure.
+   "Faster" is not a goal; nobody asked for it.
+3. **Decomposition through the TODO tool.** `TODOS.md` is top-level, for the user-developer (do NOT
+   dump the working process / small steps there). Take an item from `TODOS.md` → break it into
+   simple subtasks → put them in your TODO tool (Task*) → work through it, marking progress.
+4. **Testing is mandatory for EVERYTHING.** No change counts as done without a test phase (the
+   `deploy/` bench, regression retests; for tungsten a clean build).
+5. **Tungsten-first, NO fallbacks to baritone.** baritone/shredder were ported to this version
+   badly — do not rely on them and do not fall back to them. The goal is a working tungsten; port
+   everything into it (block-space heuristics MAY be COPIED from baritone into tungsten's BFS, but
+   execution is tungsten's physics engine).
+6. **PROPERLY, WITHOUT scripts/hacks/fallbacks.** Solve every task CORRECTLY in the core
+   (pathfinder/physics/heuristics), not with a reactive script patch. Example: water = a smart
+   computation of moves in the water pathfinder (dive/surface as part of the path), NOT "always
+   surface". If a feature is missing — add it to TODO.md, decompose it in your TODO tool, implement
+   it in the core, test it in detail.
 
-   ⭐ **БОЛЬШАЯ ПРАВКА (юзер 2026-07-23) — НЕ БОЯТЬСЯ CORE-ПЕРЕДЕЛОК.** Мы строим НА
-   БУДУЩЕЕ, надёжно, НАВСЕГДА. Временные фиксы / хардкоды / заплатки / реактивные
-   таймаут-триггеры — это ПЛОХО, даже если «работает сейчас». Если правильное решение
-   требует переделки ЯДРА (пасфайндер, move-generation, физ-движок, executor) — делаем
-   CORE FIX ПОЛНОЦЕННО, а НЕ обходим его заплаткой сбоку. Большая/рискованная/
-   регрессионно-опасная задача — НЕ повод выбрать заплатку и НЕ повод отложить: учитываем
-   ВСЕ возможные проблемы, декомпозируем, и **ТЕСТИРУЕМ ТЩАТЕЛЬНЕЕ** (все регрессии,
-   все курсы, все режимы) до полной уверенности. Пример этого правила: place-as-a-move
-   должен быть ПЕРВОКЛАССНЫМ ХОДОМ в block-space поиске (как tryPlanBreakThrough уже
-   встроен), а не реактивным «стой 14с → потом мости». Заплатка допустима ТОЛЬКО как
-   явно-помеченный временный фоллбек, пока строится core-версия — и должна быть заменена.
-7. **РЕЛИЗ-ДИСЦИПЛИНА.** Регулярно релизить накопленную СТАБИЛЬНУЮ (протестированную)
-   работу — не копить. После значимой фичи/фикса (напр. поставка блоков, swap,
-   input-фикс) поднять `mod_version` (gradle.properties), написать ноты
-   `docs/releases/<ver>.md`, `gradlew githubRelease` (тегает + публикует). Каждый
-   релиз = тег стабильной версии, чтобы не потерять. Не релизить недотестированное/
-   в процессе. См. docs/RELEASE.md.
-8. **CLOSED-LOOP АВТОНОМИЯ (юзер 2026-07-23).** Ты работаешь в ЗАМКНУТОМ цикле — юзер НЕ
-   нужен для решений/тестов. Юзер ставит БОЛЬШИЕ задачи и ждёт идеальный оттестированный
-   продукт. Правила: (а) НЕ ждать решений юзера, НЕ гейтить работу вопросами; (б) сомнение
-   в сложной задаче = НЕ повод отложить/остановиться, а повод ТЩАТЕЛЬНЕЕ ПРОТЕСТИРОВАТЬ на
-   стенде (`deploy/`, Mac) и довести; (в) «рискованно / многосессионно / регрессионно-
-   опасно» — НЕ причины откладывать: разбей на подзадачи, сделай фокус-заход, протестируй
-   до зелёного, отрелизь. ЕДИНСТВЕННАЯ валидная причина финально остановиться — отказ
-   hardware или ВСЕ задачи TODO (включая дочерние/появляющиеся) закрыты и оттестированы.
-   Пока есть незакрытый пункт — берёшь следующий сфокусированный заход, не «финалишь».
-9. **ФИНАЛЬНЫЙ ОТЧЁТ В TG — ВСЕГДА НА РУССКОМ** (оператор читает по-русски, юзер 2026-07-24).
-   Когда реально заканчиваешь и финально останавливаешься —
-   отправь ИТОГОВЫЙ отчёт оператору в Telegram, если есть токен бота. Готовый лончер:
-   `python C:/repos/pet/mineswarm/game/cristalix/tg_report.py <файл_с_текстом>` (читает
-   `TG_BOT_TOKEN`/`OPERATOR_CHAT_ID` из `mineswarm/.env`, токен НЕ печатать). В отчёте:
-   что сделано+релизы, статус ВСЕХ задач TODO, и — если остановка не по «всё закрыто» —
-   ЧЁТКО по какой причине и что помешало сделать фокус-заход на следующую задачу.
-10. **PR/ISSUES — ЗАКРЫВАЙ САМ, НЕ ОСТАВЛЯЙ ЮЗЕРУ (юзер 2026-07-23).** Все PR ты обрабатываешь
-    АВТОНОМНО: посмотри дифф адекватно (нужен ли, не ломает ли логику, не супер-старая ли база),
-    проверь против ТЕКУЩЕГО кода (не сделано ли уже), ПРОТЕСТИРУЙ если мержишь — и если всё ок,
-    МЕРЖ; если фиксы уже в main / база протухла / диф ревертит текущую работу — ЗАКРОЙ с внятным
-    уважительным комментарием. НЕ «оставляй на ревью юзеру». Итог фиксируй в TODO. То же для issues
-    (закрыл фикс → коммент+close; не воспроизводится → коммент-вопрос).
+   ⭐ **BIG AMENDMENT (user 2026-07-23) — DO NOT FEAR CORE REWORK.** We build FOR THE FUTURE,
+   reliably, FOR GOOD. Temporary fixes / hardcoding / patches / reactive timeout triggers are BAD,
+   even if they "work now". If the right solution needs a rework of the CORE (pathfinder,
+   move-generation, physics engine, executor) — do the CORE FIX PROPERLY, do NOT route around it
+   with a side patch. A big/risky/regression-prone task is NOT a reason to pick a patch and NOT a
+   reason to postpone: account for ALL possible problems, decompose, and **TEST MORE THOROUGHLY**
+   (all regressions, all courses, all modes) until fully confident. Example of this rule:
+   place-as-a-move must be a FIRST-CLASS MOVE in the block-space search (as tryPlanBreakThrough
+   already is), not a reactive "stand 14 s → then bridge". A patch is allowed ONLY as an explicitly
+   marked temporary fallback while the core version is built — and it must be replaced.
+7. **RELEASE DISCIPLINE.** Regularly release the accumulated STABLE (tested) work — do not hoard.
+   After a significant feature/fix (e.g. block placement, swap, input fix) bump `mod_version`
+   (gradle.properties), write notes in `docs/releases/<ver>.md`, run `gradlew githubRelease` (tags +
+   publishes). Every release = a tag of a stable version, so it is not lost. Do not release
+   under-tested / in-progress work. See docs/RELEASE.md.
+8. **CLOSED-LOOP AUTONOMY (user 2026-07-23).** You work in a CLOSED loop — the user is NOT needed
+   for decisions/tests. The user sets BIG tasks and expects a perfect tested product. Rules: (a) do
+   NOT wait for the user's decisions, do NOT gate work on questions; (b) doubt about a hard task is
+   NOT a reason to postpone/stop but a reason to TEST MORE THOROUGHLY on the bench (`deploy/`, Mac)
+   and finish it; (c) "risky / multi-session / regression-prone" are NOT reasons to postpone: break
+   it into subtasks, do a focused pass, test to green, release. The ONLY valid reason to stop for
+   good is a hardware failure or ALL TODO tasks (including child/emergent ones) closed and tested.
+   While there is an open item, take the next focused pass; do not "finalise".
+9. **THE FINAL TELEGRAM REPORT** (user 2026-07-24; language changed to English 2026-09-30).
+   When you really finish and stop for good, send the FINAL report to the operator in Telegram if
+   there is a bot token. Ready launcher: `python C:/repos/pet/mineswarm/game/cristalix/tg_report.py
+   <text_file>` (reads `TG_BOT_TOKEN`/`OPERATOR_CHAT_ID` from `mineswarm/.env`; NEVER print the
+   token). In the report: what was done + releases, the status of ALL TODO tasks, and — if the stop
+   is not "everything closed" — CLEARLY why, and what prevented a focused pass on the next task.
+10. **PRs/ISSUES — CLOSE THEM YOURSELF, DO NOT LEAVE THEM TO THE USER (user 2026-07-23).** You
+    handle all PRs AUTONOMOUSLY: review the diff sensibly (is it needed, does it break logic, is the
+    base very old), check it against the CURRENT code (is it already done), TEST it if you merge —
+    and if all is well, MERGE; if the fixes are already in main / the base is stale / the diff
+    reverts current work — CLOSE it with a clear respectful comment. Do NOT "leave it for the user to
+    review". Record the outcome in TODO. The same for issues (fix closed it → comment + close; does
+    not reproduce → comment with a question).
     **STOP-HOOK ENFORCEMENT (autonomous mode).** A `Stop` hook (`.claude/hooks/autonomy_stop.py`,
     wired in `.claude/settings.json`) enforces rule #11 mechanically: while `.claude/autonomy_active.flag`
     exists it refuses to let a turn finalise and re-injects the checklist directive (audit -> next
@@ -198,7 +193,7 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
     child/emergent is closed+tested, or hardware failure): create `.claude/autonomy_stop.flag` (or
     remove the active flag) and send the final TG report. The flags are git-ignored (session state).
     Hooks execute code, so wiring them into settings.json / creating the flag needs the user's consent.
-11. **MILESTONE IS NOT A STOP — AUDIT, THEN IMMEDIATELY START THE NEXT FOCUSED PASS (юзер 2026-07-23).**
+11. **MILESTONE IS NOT A STOP — AUDIT, THEN IMMEDIATELY START THE NEXT FOCUSED PASS (user 2026-07-23).**
     Reaching a milestone in a BIG run (a fix released + validated) is NOT a reason to stop or wait
     for the user. At every milestone: (a) run an AUDIT regression test of that milestone (guard against
     regressions — the checklist audit phase), (b) pick the NEXT-PRIORITY task and IMMEDIATELY start a
@@ -279,7 +274,7 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
   - Add upperleveled module name to commit message if relevant (e.g. "tungsten: implement ...").
   - Do not forget periodically do pulls to keep up with parallel workers.
 - **All three modules use yarn mappings.** Baritone was migrated from mojmap to yarn. Do NOT switch back to mojmap.
-- **Автономность:** делай только то, что помечено как TODO в `TODOS.md`. Не забегай вперёд, не делай лишнего.
+- **Autonomy:** do only what is marked as TODO in `TODOS.md`. Do not run ahead, do not do extra.
 
 ## Tone & style
 
@@ -306,21 +301,21 @@ When referencing Minecraft classes, always use yarn names:
 - `net.minecraft.util.math.BlockPos` not `net.minecraft.core.BlockPos`
 - `net.minecraft.block.*` not `net.minecraft.world.level.block.*`
 
-## Введение в проект (план для AI)
+## Getting into the project (plan for the AI)
 
-1. Прочитать `CLAUDE.md` (этот файл)
-2. Прочитать `docs/ai/progress.md` — **обязательно**
-3. Прочитать `TODOS.md` — текущие задачи
-4. Если нужен контекст — изучить код по задаче
+1. Read `CLAUDE.md` (this file)
+2. Read `docs/ai/progress.md` — **mandatory**
+3. Read `TODOS.md` — current tasks
+4. If context is needed — study the code for the task
 
-## Документация сессий
+## Session documentation
 
-- `TODOS.md` — верхнеуровневые задачи (пишет юзер, AI отмечает выполнение)
-- `docs/ai/progress.md` — детальный прогресс по структуре **IPI** (Investigate → Plan → Implement)
-- `docs/ai/archive/` — архив прогресса (при >500 строк или завершении крупного блока)
-- `docs/ai/readme.md` — формат и правила ведения progress-файлов
+- `TODOS.md` — top-level tasks (the user writes them, the AI marks them done)
+- `docs/ai/progress.md` — detailed progress in the **IPI** structure (Investigate → Plan → Implement)
+- `docs/ai/archive/` — progress archive (at >500 lines or when a large block is finished)
+- `docs/ai/readme.md` — format and rules for the progress files
 
-Формат архивов: `DD-MM-YYYY-task-name.md`
+Archive file name format: `DD-MM-YYYY-task-name.md`
 
 ## Releasing
 
@@ -362,5 +357,5 @@ The gradle task automatically:
 - `README.md` — project overview, fork history, credits
 - `docs/DEVELOP.md` — how to build and run from scratch
 - `CLAUDE.md` — this file (AI assistant rules)
-- `TODOS.md` — текущие задачи
-- `docs/ai/progress.md` — прогресс AI по задачам
+- `TODOS.md` — current tasks
+- `docs/ai/progress.md` — the AI's progress on tasks

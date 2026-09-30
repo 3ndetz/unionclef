@@ -1291,7 +1291,7 @@ public class Py4jEntryPoint {
      * Players are in getPlayersInfo. Pure data exposure over EntityTracker.getAllTrackedEntities()
      * (it read getCloseEntities() until 2026-09-28, which is only what a sword can reach, so the
      * agent saw no mob or drop further than about 3.5 blocks) —
-     * closes the TARGET.md Level-0/1 gap "знать ГДЕ мобы/дропы рядом" (agent decides what to do).
+     * closes the TARGET.md Level-0/1 gap "know WHERE mobs/drops are nearby" (agent decides what to do).
      * py4j auto-converts List<Map> to a Python list of dicts. limit<=0 = no cap.
      */
     public List<Map<String, String>> getEntitiesInfo(int limit) {
@@ -1344,7 +1344,7 @@ public class Py4jEntryPoint {
     }
 
     /**
-     * Block at an exact coordinate (TARGET.md Level 1 "проверить тип блока по координате").
+     * Block at an exact coordinate (TARGET.md Level 1 "check the block type at a coordinate").
      * Mirrors getGroundBlock's world access. name+id+hardness+air+replaceable.
      */
     /** Shield-block primitive: raise the shield (must be in a hand) for N ticks. */
@@ -1628,7 +1628,7 @@ public class Py4jEntryPoint {
     }
 
     /**
-     * Top-down SURFACE map around the bot (TARGET.md Level 2/3 — "карта поверхности").
+     * Top-down SURFACE map around the bot (TARGET.md Level 2/3 — "surface map").
      * For each (dx,dz) column within radius, the HIGHEST non-air block, scanning from
      * bot.y+8 down to bot.y-8. Gives a height + hardness grid: where the ground/roof is,
      * how hard it is to dig, so the agent can walk/dig/build over it. radius capped at 6.

@@ -40,7 +40,7 @@ public class SetSettingsCommand extends Command {
             if (val.isPresent()) {
                 mod.log(settingName + " = " + val.get());
             } else {
-                mod.log("Настройка '" + settingName + "' не найдена.");
+                mod.log("Setting '" + settingName + "' not found.");
             }
             finish();
             return;
@@ -51,12 +51,12 @@ public class SetSettingsCommand extends Command {
         if (SettingsReflectionHelper.setSetting(mod.getModSettings(), settingName, newValue)) {
             ConfigHelper.saveConfig("altoclef_settings.json", mod.getModSettings());
             ConfigHelper.reloadAllConfigs();
-            mod.log("Настройка успешно обновлена!");
+            mod.log("Setting updated.");
             success = true;
         } else if (SettingsReflectionHelper.setSetting(ButlerConfig.getInstance(), settingName, newValue)) {
             ConfigHelper.saveConfig("configs/butler.json", ButlerConfig.getInstance());
             ConfigHelper.reloadAllConfigs();
-            mod.log("Butler настройка успешно обновлена!");
+            mod.log("Butler setting updated.");
             success = true;
         }
 
@@ -69,20 +69,20 @@ public class SetSettingsCommand extends Command {
         // are experiment levers, and a run must start from the compiled default.
         if (!success && SettingsReflectionHelper.setSetting(
                 kaptainwutax.tungsten.TungstenConfig.get(), settingName, newValue)) {
-            mod.log("Tungsten настройка обновлена (runtime only, не сохраняется)");
+            mod.log("Tungsten setting updated (runtime only, not saved)");
             success = true;
         }
 
         if (!success) {
-            mod.log("Настройка '" + settingName + "' не найдена. Используй '@set list' для списка.");
+            mod.log("Setting '" + settingName + "' not found. Use '@set list' to list settings.");
         }
 
         finish();
     }
 
     private void listAllSettings(AltoClef mod) {
-        mod.log("=== Доступные настройки ===");
-        mod.log("Основные (altoclef_settings.json):");
+        mod.log("=== Available settings ===");
+        mod.log("Main (altoclef_settings.json):");
         List<SettingsReflectionHelper.SettingInfo> main =
                 SettingsReflectionHelper.getSettableFields(mod.getModSettings());
         for (SettingsReflectionHelper.SettingInfo s : main) {

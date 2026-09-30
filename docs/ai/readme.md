@@ -1,45 +1,45 @@
 # AI Progress Documentation
 
-## Структура progress.md
+## Structure of progress.md
 
-Файл `progress.md` ведётся по методологии **IPI** (Investigate → Plan → Implement).
+The `progress.md` file is kept using the **IPI** methodology (Investigate → Plan → Implement).
 
-### Формат
+### Format
 
 ```markdown
 # Progress
 
-## <Название задачи>
+## <Task Name>
 
 ### Investigate
-- Что изучено, какие файлы прочитаны, выводы
+- What was studied, which files were read, conclusions
 
 ### Plan
-- Конкретный план действий, решения по архитектуре
+- Concrete plan of action, architecture decisions
 
 ### Implement
-- Что сделано, какие файлы изменены, результат
-- [ ] подзадача в процессе
-- [x] подзадача выполнена
+- What was done, which files were changed, result
+- [ ] subtask in progress
+- [x] subtask done
 ```
 
-Каждая задача содержит все три секции IPI. Подзадачи можно добавлять в любую секцию.
+Every task contains all three IPI sections. Subtasks can be added to any section.
 
-## Архивирование
+## Archiving
 
-Когда `progress.md` превышает **500 строк** или завершён крупный блок задач:
-1. Переместить содержимое в `docs/ai/archive/DD-MM-YYYY-task-name.md`
-2. Очистить `progress.md`, оставив только шапку и активные задачи
+When `progress.md` exceeds **500 lines** or a large block of tasks is completed:
+1. Move the content into `docs/ai/archive/DD-MM-YYYY-task-name.md`
+2. Clear `progress.md`, keeping only the header and active tasks
 
-### Именование архивов
+### Archive naming
 
-Формат: `DD-MM-YYYY-краткое-название-задачи.md`
+Format: `DD-MM-YYYY-short-task-name.md`
 
-Примеры:
+Examples:
 - `03-03-2026-baritone-yarn-migration.md`
 - `15-03-2026-Multi-versioning-Guide-setup.md`
 
-## Связь с TODOS.md
+## Relation to TODOS.md
 
-- `TODOS.md` (корень) — верхнеуровневый список задач от юзера
-- `docs/ai/progress.md` — детальный прогресс AI по этим задачам
+- `TODOS.md` (repo root) — the top-level task list from the user
+- `docs/ai/progress.md` — the AI's detailed progress on those tasks

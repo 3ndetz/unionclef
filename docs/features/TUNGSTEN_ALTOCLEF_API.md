@@ -1,118 +1,120 @@
-# Tungsten ↔ AltoClef: разделение ролей и API
+# Tungsten ↔ AltoClef: role split and API
 
-Статус: дизайн (2026-07-20). Реализация — инкрементально, каждая ступень с
-автотестом на стенде (`deploy/`).
+Status: design (2026-07-20). Implementation — incremental, each stage with an
+autotest on the bench (`deploy/`).
 
-⛔ СВЕРЕНО 2026-09-02: Ступени 2 и 3 (§«Интерфейс 2») ниже помечены как будущая работа — это
-устарело. Обе ЦЕЛИ достигнуты, но НЕ через задуманный здесь `NeedFulfiller`-интерфейс/
-`reserveScaffoldBlocks` (этих имён нет нигде в коде, grep пуст) — реализовано ДРУГИМ путём,
-самим tungsten, без запроса к altoclef:
-- **Ступень 2 (лимит по инвентарю) — есть, но проще, чем задумано.** `FastPlanner.placeBudget`/
-  `countPlaceable` (`FastPlanner.java:314,346`) считает доступные блоки и режет план
-  (`placedDepth >= placeBudget`) — но БЕЗ мусорной классификации altoclef, которую этот раздел
-  предполагал переиспользовать. `selectThrowaway` (`MovementHelperB.java:1010`) по СВОЕМУ
-  собственному javadoc — «deliberately minimal», берёт ЛЮБОЙ размещаемый блок, не спрашивая
-  altoclef про protected/throwaway. То есть Ступень 2 закрывает вопрос «сколько блоков»,
-  но не «какие блоки не жалко» — эта часть замысла (`docs/BARITONE-PORT.md`, block-placement
-  секция, находка "throwaway-block accounting") всё ещё открыта отдельно.
-- **Ступень 3 (установка блоков как ход) — сделана**, тоже другим путём: не «в PathExecutor по
-  образцу майнинга», как здесь написано, а через более новую систему `MovementQueue`/
-  `MovementTraverse`/`MovementHelperB` (`docs/BARITONE-PORT-SPEC.md`, Units 1-3), которой не
-  существовало на момент написания этого документа. `FastPlanner.placeAcross`/`pillarUp` —
-  ровно «block-space дети «поставить блок и встать»» с реальной ценой; прицел в грань + ПКМ —
-  `RealPlacement`/`MovementHelperB.attemptToPlaceABlock`. Проверено этой же сессией
-  (`docs/BARITONE-PORT.md`, block-placement секция).
+⛔ CHECKED 2026-09-02: Stages 2 and 3 (§"Interface 2") below are marked as future work — this
+is outdated. Both GOALS were reached, but NOT through the `NeedFulfiller` interface/
+`reserveScaffoldBlocks` envisioned here (these names appear nowhere in the code, grep is
+empty) — they were implemented a DIFFERENT way, by tungsten itself, with no request to
+altoclef:
+- **Stage 2 (inventory limit) — exists, but simpler than planned.** `FastPlanner.placeBudget`/
+  `countPlaceable` (`FastPlanner.java:314,346`) counts available blocks and trims the plan
+  (`placedDepth >= placeBudget`) — but WITHOUT altoclef's throwaway-block classification, which
+  this section assumed would be reused. `selectThrowaway` (`MovementHelperB.java:1010`) by its
+  OWN javadoc is "deliberately minimal" — it takes ANY placeable block, without asking altoclef
+  about protected/throwaway. So Stage 2 answers the "how many blocks" question, but not "which
+  blocks don't matter" — that part of the plan (`docs/BARITONE-PORT.md`, block-placement
+  section, the "throwaway-block accounting" finding) is still open separately.
+- **Stage 3 (block placement as a move) — done**, also a different way: not "in PathExecutor
+  following the mining pattern" as written here, but through the newer `MovementQueue`/
+  `MovementTraverse`/`MovementHelperB` system (`docs/BARITONE-PORT-SPEC.md`, Units 1-3), which
+  did not exist when this document was written. `FastPlanner.placeAcross`/`pillarUp` are
+  exactly "block-space children of 'place a block and stand on it'" with a real cost; aiming at
+  the face + right-click is `RealPlacement`/`MovementHelperB.attemptToPlaceABlock`. Verified in
+  this same session (`docs/BARITONE-PORT.md`, block-placement section).
 
-«Порядок работ» в конце файла тоже устарел в свете этого — пункты 4 в основном сделаны, просто
-не тем путём, что предполагался.
+The "Order of work" at the end of the file is also outdated in light of this — item 4 is
+mostly done, just not the way it was planned.
 
-## Принцип
+## Principle
 
-Один и тот же сплит для боя и для работы с миром:
+The same split for combat and for working with the world:
 
-- **tungsten** — исполнение и физика: удар, прицел, траектории, движение,
-  майнинг-примитив, (будущее) установка блока. Ничего не знает про инвентарь,
-  ценность предметов и стратегию.
-- **altoclef** — мозг и инвентарь: что экипировать, чем платить, когда есть
-  золотое яблоко, какой блок мусорный. Слушает «потребности» tungsten и
-  удовлетворяет их из инвентаря.
+- **tungsten** — execution and physics: hitting, aiming, trajectories, movement,
+  the mining primitive, (future) block placement. Knows nothing about the inventory,
+  item value, or strategy.
+- **altoclef** — the brain and the inventory: what to equip, what to spend, when it has
+  a golden apple, which block is junk. Listens to tungsten's "needs" and
+  satisfies them from the inventory.
 
-Направление зависимостей уже правильное: altoclef зависит от tungsten,
-поэтому канал — **колбэки/интерфейсы, которые tungsten объявляет, а altoclef
-регистрирует при инициализации** (`TungstenModDataContainer`-стиль, static
-слоты). Никаких обратных импортов.
+The dependency direction is already correct: altoclef depends on tungsten,
+so the channel is **callbacks/interfaces that tungsten declares and altoclef
+registers at init time** (`TungstenModDataContainer`-style, static
+slots). No back-imports.
 
-## Интерфейс 1: комбат-примитивы (TODO 2.4–2.5)
+## Interface 1: combat primitives (TODO 2.4-2.5)
 
-tungsten экспортирует (частично уже есть, довести до API):
+tungsten exports (partially already there, bring up to an API):
 
-Фасад: `kaptainwutax.tungsten.combat.CombatPrimitives` (2026-07-21).
+Facade: `kaptainwutax.tungsten.combat.CombatPrimitives` (2026-07-21).
 
-| Примитив | Статус |
+| Primitive | Status |
 |---|---|
-| `canHit(player, target, angle)` — гейт (reach/COLLIDER LOS/угол) | ЕСТЬ (фасад; TriggerBot использует ту же логику + кулдаун) |
-| `attack(player, target)` — прямая доставка (attackEntity + swing) | ЕСТЬ |
-| `aimAt(Vec3d/Entity)` — WindMouse-прицел | есть (SafetySystem/WindMouseRotation), в фасад не вынесен |
-| `shieldHold(ticks)/shieldRelease/isShieldBlocking` | ЕСТЬ (ShieldBlocker; уступает use-ключ луку). Тест: 0/3 урона от стрел при контроле 2/2. ⛔ УТОЧНЕНИЕ 2026-09-01: примитив существует и вызываем (`ShieldBlocker.java`, `CombatController.java:454-456`), но боевой движок поднимает щит САМ только когда `combatShieldEnabled = true`, а это НЕ дефолт (`TungstenConfig`) — см. `TODOS.md` C6.5/C6.11 для актуальной картины (щит измерен нейтральным на `mob_trio`, не измерен на дуэльном наборе, где щита в ките вообще нет). Таблица здесь про наличие ПРИМИТИВА, не про то, включён ли он в бою по умолчанию — не путать одно с другим. |
-| `solveArrow(player, target)` — баллистика с упреждением | ЕСТЬ (TrajectorySolver; 3/5 стоя, 2/5 по бегущей на 18 блоках) |
-| `shootArrow(target)` — выстрел (прицел→заряд→трекинг→relase) | ЕСТЬ (BowShooter) |
-| `throwProjectile` (трезубец/снежок/пёрл), mace-удар с высоты | нет — следующие примитивы |
-| Телеметрия: свой/чужой ХП, кулдаун, дистанция, danger-оценки | есть внутри, наружу не оформлено |
+| `canHit(player, target, angle)` — gate (reach/COLLIDER LOS/angle) | EXISTS (facade; TriggerBot uses the same logic + cooldown) |
+| `attack(player, target)` — direct delivery (attackEntity + swing) | EXISTS |
+| `aimAt(Vec3d/Entity)` — WindMouse aim | exists (SafetySystem/WindMouseRotation), not exposed in the facade |
+| `shieldHold(ticks)/shieldRelease/isShieldBlocking` | EXISTS (ShieldBlocker; yields the use key to the bow). Test: 0/3 damage from arrows with 2/2 control. ⛔ CLARIFICATION 2026-09-01: the primitive exists and is callable (`ShieldBlocker.java`, `CombatController.java:454-456`), but the combat engine only raises the shield ON ITS OWN when `combatShieldEnabled = true`, and that is NOT the default (`TungstenConfig`) — see `TODOS.md` C6.5/C6.11 for the current picture (shield measured neutral on `mob_trio`, unmeasured on the duel set, which has no shield in its kit at all). The table here is about the PRIMITIVE's existence, not whether it is on by default in combat — don't confuse the two. |
+| `solveArrow(player, target)` — lead-computing ballistics | EXISTS (TrajectorySolver; 3/5 stationary, 2/5 against a running target at 18 blocks) |
+| `shootArrow(target)` — shot (aim→charge→track→release) | EXISTS (BowShooter) |
+| `throwProjectile` (trident/snowball/pearl), mace strike from height | no — next primitives |
+| Telemetry: own/enemy HP, cooldown, distance, danger scores | exists internally, not exposed outward |
 
-py4j-обвязка: shootArrowAt, solveArrowAim, shieldBlock (для внешних тестов).
+py4j wiring: shootArrowAt, solveArrowAim, shieldBlock (for external tests).
 
-altoclef поверх этого строит мозг: выбор оружия (меч/топор/лук/mace/трезубец/
-арбалет — реализация лука в altoclef уже отличная и остаётся там), расходники
-(пёрлы, золотые яблоки по ХП), снежки для первой отдачи, щит против топора.
-tungsten отдаёт **решение траектории** для лука (физдвижок: гравитация 0.05,
-drag 0.99, упреждение по симуляции движения цели).
+altoclef builds the brain on top of this: weapon choice (sword/axe/bow/mace/trident/
+crossbow — the bow implementation in altoclef is already excellent and stays there),
+consumables (pearls, golden apples by HP), snowballs for the first knockback, shield
+against an axe. tungsten hands back the **trajectory solution** for the bow (physics
+engine: gravity 0.05, drag 0.99, lead computed by simulating the target's movement).
 
-## Интерфейс 2: майнинг и строительство (TODO 3.6)
+## Interface 2: mining and building (TODO 3.6)
 
-Поток «потребностей» от tungsten к altoclef:
+Flow of "needs" from tungsten to altoclef:
 
 ```java
-// tungsten объявляет (static-слоты в TungstenModDataContainer):
+// tungsten declares (static slots in TungstenModDataContainer):
 interface NeedFulfiller {
-    // «Собираюсь ломать pos/state — экипируй лучшее» (вызов перед майнингом
-    // и раз в N тиков во время). Возвращает false = ломай чем есть.
+    // "About to break pos/state — equip the best tool" (called before mining
+    // and once every N ticks during). Returns false = break with what's in hand.
     boolean equipToolFor(BlockPos pos, BlockState state);
 
-    // «Хочу поставить N блоков-расходников — есть?» Блоки в руку, ответ —
-    // сколько реально доступно (мусорная классификация — на стороне altoclef).
+    // "I want to place N scaffold blocks — got any?" Blocks go into the hand, the
+    // answer is how many are actually available (junk classification lives on
+    // altoclef's side).
     int reserveScaffoldBlocks(int wanted);
 }
 ```
 
-- **Ступень 1 — инструменты — СДЕЛАНА (2026-07-20)**: хук
+- **Stage 1 — tools — DONE (2026-07-20)**: hook
   `TungstenModDataContainer.equipToolHook` (BiConsumer<BlockPos, BlockState>),
-  tungsten зовёт его из `PathExecutor.tickBreaking` (клиент-тред, try-catch —
-  хук не может сломать майнинг); altoclef регистрирует в `onInitializeLoad`:
-  `StorageHelper.getBestToolSlot` → `SlotHandler.forceEquipItem`, с уважением
-  к еде (isTryingToEat). Автотест `E_tool` PASS: deepslate-дверь (голыми
-  руками 15с/блок — не влезает в бюджет), железная кирка в `container.9`
-  (вне хотбара) — курс прошёл в лимите.
-  Следующий шаг: cost в block-space от ЛУЧШЕГО доступного инструмента
-  (второй хук-supplier `bestBreakTicks(BlockState)`), не от текущей руки.
-- **Ступень 2 — количество**: `reserveScaffoldBlocks` — block-space, планируя
-  мосты/установку, спрашивает лимит ДО построения плана: нельзя обещать мост из
-  20 блоков при 10 в инвентаре. Мусорная классификация (земля/булыжник — трать,
-  алмазные блоки — не трать) живёт в altoclef, у него уже есть понятия
-  protected/throwaway items.
-- **Ступень 3 — установка блоков** (большая): place-примитив в tungsten
-  (прицел в грань + правый клик, как jump-bridge в shredder уже делает),
-  block-space дети «поставить блок и встать» с cost = f(доступность из
-  reserveScaffoldBlocks), исполнение в PathExecutor по образцу майнинга.
-  Предпочтение дешёвых блоков — сортировка внутри altoclef-реализации.
+  tungsten calls it from `PathExecutor.tickBreaking` (client thread, try-catch —
+  the hook cannot break mining); altoclef registers it in `onInitializeLoad`:
+  `StorageHelper.getBestToolSlot` → `SlotHandler.forceEquipItem`, respecting
+  eating (isTryingToEat). Autotest `E_tool` PASS: a deepslate door (bare hands
+  15s/block — doesn't fit the budget), an iron pickaxe in `container.9`
+  (outside the hotbar) — the course passed within the limit.
+  Next step: cost in block-space from the BEST available tool
+  (a second hook-supplier `bestBreakTicks(BlockState)`), not from the current hand.
+- **Stage 2 — quantity**: `reserveScaffoldBlocks` — block-space, when planning
+  bridges/placement, asks for the limit BEFORE building the plan: you cannot promise a
+  20-block bridge with 10 in the inventory. Junk classification (dirt/cobblestone — spend,
+  diamond blocks — don't spend) lives in altoclef, which already has the
+  protected/throwaway items concept.
+- **Stage 3 — block placement** (the big one): a place primitive in tungsten
+  (aim at the face + right click, as jump-bridge in shredder already does),
+  block-space children of "place a block and stand up" with cost = f(availability from
+  reserveScaffoldBlocks), executed in PathExecutor following the mining pattern.
+  Preference for cheap blocks — sorting inside the altoclef implementation.
 
-## Порядок работ
+## Order of work
 
-1. Ступень 1 (инструменты) — маленькая, сразу с тестом.
-2. API-обвязка комбата (формализовать существующее + щит).
-3. Траектории лука (#11) — самостоятельный модуль с юнит-проверкой на стенде
-   (лук + мишень, процент попаданий).
-4. Ступень 2 (количество) → Ступень 3 (установка) — по одной, с курсами.
+1. Stage 1 (tools) — small, with a test right away.
+2. Combat API wiring (formalize what exists + the shield).
+3. Bow trajectories (#11) — a standalone module with a unit check on the bench
+   (bow + target, hit percentage).
+4. Stage 2 (quantity) → Stage 3 (placement) — one at a time, with courses.
 
-Переменных много (hardness×инструмент×зачарования, мусор/ценность, резервы,
-порядок трат) — потому и инкременты: каждый шаг проверяется стендом до
-следующего.
+There are a lot of variables (hardness × tool × enchantments, junk/value, reserves,
+spending order) — which is why it's incremental: each step is verified on the bench
+before the next.

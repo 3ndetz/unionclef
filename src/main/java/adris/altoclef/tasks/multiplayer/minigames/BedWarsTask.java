@@ -678,7 +678,7 @@ public class BedWarsTask extends Task {
 
     public boolean isValidTrader(Entity villager, AltoClef mod) {
         return villager.isAlive() && villager.getName() != null
-                && villager.getName().getString().toLowerCase().contains("магазин");
+                && villager.getName().getString().toLowerCase().contains("магазин"); // server text: "shop"
     }
 
     public static Slot getSlotShopBW(AltoClef mod, boolean chooseCategories, Item... checkItem) {

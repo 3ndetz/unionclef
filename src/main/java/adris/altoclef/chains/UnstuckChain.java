@@ -298,8 +298,8 @@ public class UnstuckChain extends SingleTaskChain {
         // Only trigger when there's an active user task
         if (!mod.getUserTaskChain().isActive()) return;
 
-        // ⭐ FALSE-POSITIVE GUARDS (user 2026-07-24: "Stuck fix активируется ПОСТОЯННО
-        // даже когда не застряли", GitHub issue). "No displacement" alone is NOT stuck:
+        // ⭐ FALSE-POSITIVE GUARDS (user 2026-07-24: "Stuck fix fires ALL THE TIME
+        // even when not stuck", GitHub issue). "No displacement" alone is NOT stuck:
         //  - COMBAT holds a small area on purpose (circle-strafe/kite around a target);
         //    shimmying mid-fight throws the aim away and gets the bot killed.
         //  - TUNGSTEN driving (search running / executor / walker) owns the movement;

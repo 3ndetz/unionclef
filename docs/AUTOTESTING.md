@@ -1,4 +1,4 @@
-# AUTOTESTING — автодеплой + автотест мода
+# AUTOTESTING — autodeploy + autotest of the mod
 
 > **UPDATE 2026-07-24: unified suite pipeline (RW-5) — `deploy/runner/run_suite.py`.**
 > New PvP/ranged/chase/bridge scenarios live in the `uctest` library
@@ -15,127 +15,128 @@
 > so there is nothing left for a `#`-prefixed scenario to test. Kept for the historical design
 > shape, not as a live plan.
 
-Статус: **фаза 0 реализована и работает** (2026-07-20): `deploy/compose.test.yml`
-(itzg vanilla 1.21.11 + mineswarm-mc клиент), `deploy/runner/slime_test.py`
-(слайм-паркур, оба курса PASS), вход — `deploy/autotest.sh` на маке.
-Ниже — общий дизайн пайплайна: altoclef-таски, tungsten-паркур,
-shredder-навигация, CI-триггер. Фазы 1+ ещё не делались.
+Status: **phase 0 implemented and working** (2026-07-20): `deploy/compose.test.yml`
+(itzg vanilla 1.21.11 + mineswarm-mc client), `deploy/runner/slime_test.py`
+(slime parkour, both courses PASS), entry point — `deploy/autotest.sh` on the Mac.
+Below is the overall pipeline design: altoclef tasks, tungsten parkour,
+shredder navigation, CI trigger. Phases 1+ have not been done yet.
 
-TL;DR: почти все кирпичи уже существуют — mineswarm даёт готовый headless-клиент с py4j,
-мод даёт командный интерфейс и `Py4jEntryPoint`, мак даёт железо и Docker. Осталось
-написать тест-сервер, раннер сценариев и триггер. Смоук-версия — 1–2 дня работы,
-полноценный паркур-стенд — ещё 2–3.
+TL;DR: almost all the building blocks already exist — mineswarm gives a ready-made headless
+client with py4j, the mod gives a command interface and `Py4jEntryPoint`, the Mac gives hardware
+and Docker. What's left: write the test server, the scenario runner and the trigger. Smoke
+version — 1-2 days of work, a full parkour bench — another 2-3.
 
-## Что уже есть (ничего из этого писать не надо)
+## What already exists (none of this needs to be written)
 
-| Актив | Где | Что даёт |
+| Asset | Where | What it provides |
 |---|---|---|
-| Headless MC-клиент в Docker | `../mineswarm/game/minecraft/docker/` | PortableMC → Fabric 1.21.11, Java 21, софтверный GL (llvmpipe), noVNC :5800 для глаз, py4j baked-in |
-| Деплой мода без ребилда | `../mineswarm/game/minecraft/mods/` | jar монтируется read-only; свежий билд = скопировать jar + `docker compose restart` |
-| Py4j-интерфейс мода | `src/main/java/adris/altoclef/Py4jEntryPoint.java` | ~100 методов: `ExecuteCommand`, `ChatMessage`, `ConnectToServer`, `inGame`, `hasActiveTask`, `getRecentChat`, `getScreenshot`, `getPlayersInfo`, `getBlockAt`… порт 25333 (`pythonGatewayPort`, при занятости +2) |
-| Скелет e2e-теста | `scripts/custom/example_server_test.py` | join → команда → poll `hasActiveTask()` → `result.txt` OK/FAIL. Это ровно тот цикл, который нужен раннеру |
-| Автоконнект | `altoclef_settings.json`: `autoConnectServer`, `autoReconnect`, `autoRespawn` | клиент сам заходит на сервер при старте — раннеру не надо ничего кликать |
-| Мульти-версии мода | `versions/1.21`, `1.21.1`, `1.21.11` (replaymod preprocessor) | один `gradlew build` даёт jar на каждую MC-версию: `versions/<v>/build/libs/unionclef-<v>-<mod_version>-all.jar` |
-| Мак как хост | mactrindetz `192.168.1.20` (M4 Max, 48 GB, Docker Desktop) | mineswarm мини-стек уже крутится там 24/7 (`docker-compose.mac.yml`, клиент `mc-crossentropy`), клоны `unionclef`/`mineswarm` лежат в `~/repos/pet` |
-| Прецедент тест-сервера | `C:\repos\srv\agicraftmc` | Paper + RCON + push-to-main автодеплой; оттуда берём паттерн RCON-верификации |
-| Прецедент CI-раннера | `nettyan-toolkit/.github/workflows/deploy.yml` | push → self-hosted runner пересобирает контейнер; тот же паттерн, но раннер на маке |
+| Headless MC client in Docker | `../mineswarm/game/minecraft/docker/` | PortableMC → Fabric 1.21.11, Java 21, software GL (llvmpipe), noVNC :5800 for eyes, py4j baked-in |
+| Mod deploy without a rebuild | `../mineswarm/game/minecraft/mods/` | jar is mounted read-only; a fresh build = copy the jar + `docker compose restart` |
+| Mod's py4j interface | `src/main/java/adris/altoclef/Py4jEntryPoint.java` | ~100 methods: `ExecuteCommand`, `ChatMessage`, `ConnectToServer`, `inGame`, `hasActiveTask`, `getRecentChat`, `getScreenshot`, `getPlayersInfo`, `getBlockAt`… port 25333 (`pythonGatewayPort`, +2 if taken) |
+| e2e test skeleton | `scripts/custom/example_server_test.py` | join → command → poll `hasActiveTask()` → `result.txt` OK/FAIL. This is exactly the loop the runner needs |
+| Autoconnect | `altoclef_settings.json`: `autoConnectServer`, `autoReconnect`, `autoRespawn` | the client joins the server on its own at startup — the runner does not need to click anything |
+| Mod multi-versions | `versions/1.21`, `1.21.1`, `1.21.11` (replaymod preprocessor) | one `gradlew build` produces a jar for every MC version: `versions/<v>/build/libs/unionclef-<v>-<mod_version>-all.jar` |
+| Mac as host | mactrindetz `192.168.1.20` (M4 Max, 48 GB, Docker Desktop) | the mineswarm mini-stack already runs there 24/7 (`docker-compose.mac.yml`, client `mc-crossentropy`), clones of `unionclef`/`mineswarm` live in `~/repos/pet` |
+| Test-server precedent | `C:\repos\srv\agicraftmc` | Paper + RCON + push-to-main autodeploy; we take the RCON verification pattern from there |
+| CI-runner precedent | `nettyan-toolkit/.github/workflows/deploy.yml` | push → self-hosted runner rebuilds the container; same pattern, but the runner is on the Mac |
 
-Доступ к маку и пароли — `tools.personalabs.ru/docs` + `/creds` (`hosts.mac`).
+Access to the Mac and passwords — `tools.personalabs.ru/docs` + `/creds` (`hosts.mac`).
 
-## Архитектура
+## Architecture
 
 ```
-push в 1.21.11 (GitHub)
+push to 1.21.11 (GitHub)
         |
         v
-self-hosted runner на маке  (или launchd-поллер, см. "Триггер")
+self-hosted runner on the Mac  (or a launchd poller, see "Trigger")
         |
-        |  1. gradlew build  (Java 21 на маке уже есть; jar — чистый байткод, arch не важна)
-        |  2. cp jar -> deploy-стенд, docker compose up
+        |  1. gradlew build  (Java 21 already on the Mac; jar is pure bytecode, arch doesn't matter)
+        |  2. cp jar -> deploy bench, docker compose up
         v
 +---------------------- docker network: uctest ----------------------+
 |                                                                    |
 |  test-server (itzg/minecraft-server, Paper/Fabric,                 |
-|      offline-mode, RCON, world-template с паркуром)                |
+|      offline-mode, RCON, world-template with parkour)              |
 |          ^                ^                    ^                   |
 |          |                |                    |                   |
 |   mc-test-1         mc-test-2            mc-test-N                |
-|   (mineswarm-mc + свежий jar; autoConnectServer=test-server)       |
+|   (mineswarm-mc + fresh jar; autoConnectServer=test-server)        |
 |                                                                    |
 +--------------------------------------------------------------------+
         |
         v
-runner (python/uv): docker exec -> py4j -> сценарии -> junit.xml,
-скриншоты и latest.log при фейлах -> GH check + артефакты (+ TG опционально)
+runner (python/uv): docker exec -> py4j -> scenarios -> junit.xml,
+screenshots and latest.log on failures -> GH check + artifacts (+ TG optionally)
 ```
 
-## Предлагаемая раскладка в репе
+## Proposed layout in the repo
 
 ```
 deploy/
   test-server/
-    compose-часть (itzg/minecraft-server)
-    world-template/          # закоммиченный zip мира с паркур-курсами
-    courses.json             # координаты start/finish каждого курса
-  compose.test.yml           # сервер + N клиентов + сеть
+    compose part (itzg/minecraft-server)
+    world-template/          # committed world zip with the parkour courses
+    courses.json             # start/finish coordinates of each course
+  compose.test.yml           # server + N clients + network
   runner/
     pyproject.toml           # uv, py4j
-    runner.py                # оркестрация: wait -> connect -> сценарии -> отчёт
+    runner.py                # orchestration: wait -> connect -> scenarios -> report
     scenarios/
-      smoke.py               # мод загрузился, py4j отвечает, зашёл на сервер
+      smoke.py               # mod loaded, py4j answers, joined the server
       altoclef_goto.py       # @goto x y z
-      altoclef_follow.py     # @follow между двумя ботами
-      tungsten_parkour.py    # ;goto через паркур-курс
-      tungsten_follow.py     # ;followPlayer за вторым ботом
-      shredder_goto.py       # #goto + сегмент jump bridging
-  autotest.sh                # локальный вход: build -> deploy -> up -> run -> report
-.github/workflows/autotest.yml   # триггер на push (self-hosted mac runner)
+      altoclef_follow.py     # @follow between two bots
+      tungsten_parkour.py    # ;goto through a parkour course
+      tungsten_follow.py     # ;followPlayer behind a second bot
+      shredder_goto.py       # #goto + a jump-bridging segment
+  autotest.sh                # local entry point: build -> deploy -> up -> run -> report
+.github/workflows/autotest.yml   # push trigger (self-hosted mac runner)
 ```
 
-## Компоненты
+## Components
 
 ### deploy/test-server
 
-Свой локальный сервер, а не внешний: детерминизм (никто не мешает), op-права,
-RCON для setup/teardown, нет rate-limit'ов и античитов.
+Our own local server, not an external one: determinism (nobody interferes), op rights,
+RCON for setup/teardown, no rate limits and no anticheat.
 
-- База: `itzg/minecraft-server` (Paper для RCON-удобства; Fabric — если понадобятся
-  серверные моды, пока не нужны). `online-mode=false` — клиенты заходят под
-  offline-никами из `MC_USERNAME`.
-- Мир: строится один раз руками (паркур-курсы, площадки для тасков, лес для `@get log`),
-  сохраняется и коммитится как `world-template/` (zip). Контейнер при старте
-  распаковывает шаблон во временный volume — каждый прогон начинается с чистого мира.
-- `courses.json` — карта курсов: `{id, start: [x,y,z], finish: [x,y,z], radius, timeout_s}`.
-  Раннер телепортирует бота на start (RCON `tp`) и ждёт попадания в finish-бокс.
-- RCON — вторая рука раннера: `tp`, `gamemode`, `give`, `time set`, и верификация
-  через `execute if entity @a[name=...,x=...,dx=...]` как альтернатива координатам из py4j.
+- Base: `itzg/minecraft-server` (Paper for RCON convenience; Fabric — if server mods are
+  ever needed, not yet). `online-mode=false` — clients join under
+  offline usernames from `MC_USERNAME`.
+- World: built once by hand (parkour courses, task platforms, a forest for `@get log`),
+  saved and committed as `world-template/` (zip). The container unpacks the template into
+  a temporary volume at startup — every run starts from a clean world.
+- `courses.json` — the course map: `{id, start: [x,y,z], finish: [x,y,z], radius, timeout_s}`.
+  The runner teleports the bot to start (RCON `tp`) and waits for it to reach the finish box.
+- RCON — the runner's second hand: `tp`, `gamemode`, `give`, `time set`, and verification
+  via `execute if entity @a[name=...,x=...,dx=...]` as an alternative to py4j coordinates.
 
-### deploy/testing-docker-image (клиент)
+### deploy/testing-docker-image (client)
 
-**Не форкать образ.** `mineswarm-mc` (собирается из `../mineswarm/game/minecraft/docker/`)
-уже решает все больные места: prefetch fabric-либ с проверкой целостности jar'ов,
-llvmpipe, options.txt lockdown, py4j pip внутри. Тест-стенд просто использует его:
+**Do not fork the image.** `mineswarm-mc` (built from `../mineswarm/game/minecraft/docker/`)
+already solves every pain point: fabric-lib prefetch with jar integrity checks,
+llvmpipe, options.txt lockdown, py4j pip baked in. The test bench simply uses it:
 
 ```yaml
-# фрагмент compose.test.yml
+# fragment of compose.test.yml
 mc-test-1:
-  image: mineswarm-mc:amd64        # на маке уже собран; см. "Риски" про arm64
+  image: mineswarm-mc:amd64        # already built on the Mac; see "Risks" about arm64
   platform: linux/amd64
   environment: { MC_USERNAME: "tester1" }
   volumes:
-    - ./run/mods:/mc-data/mods:ro          # свежий jar кладёт autotest.sh
+    - ./run/mods:/mc-data/mods:ro          # autotest.sh places the fresh jar here
     - ./run/data/tester1:/mc-data
 ```
 
-Важно: py4j в моде слушает `127.0.0.1` **внутри** контейнера. Раннер ходит к нему так же,
-как mineswarm gateway — `docker exec mc-test-1 python3 -c '<py4j snippet>'`
-(готовый паттерн: `../mineswarm/docker/gateway/gateway.py`, `_PY4J_SNIPPET` / `_mc_call`).
-Альтернатива на будущее — настройка `pythonGatewayBindAll` в моде, чтобы раннер ходил
-по docker-сети напрямую; для phase 0 достаточно exec.
+Important: the mod's py4j listens on `127.0.0.1` **inside** the container. The runner
+reaches it the same way the mineswarm gateway does — `docker exec mc-test-1 python3 -c
+'<py4j snippet>'` (ready-made pattern: `../mineswarm/docker/gateway/gateway.py`,
+`_PY4J_SNIPPET` / `_mc_call`). A future alternative — configure `pythonGatewayBindAll`
+in the mod so the runner can reach it directly over the docker network; for phase 0,
+exec is enough.
 
-В `run/mods` кладётся: свежий `unionclef-*-all.jar` + минимальный набор из
-`../mineswarm/game/minecraft/mods/` (fabric-api обязателен; sodium/lithium — по вкусу,
-на софтверном рендере лучше оставить).
+`run/mods` gets: the fresh `unionclef-*-all.jar` + a minimal set from
+`../mineswarm/game/minecraft/mods/` (fabric-api is mandatory; sodium/lithium — to taste,
+better left in on the software renderer).
 
 #### Rendering: llvmpipe by default, GPU when there is a usable one
 
@@ -252,17 +253,17 @@ UCTEST_GPU=1 sh deploy/deploy_jar.sh     # insist (ignores the marker), fail lou
 
 ### deploy/runner
 
-Python + uv (как в `scripts/`). Цикл на каждый клиент:
+Python + uv (as in `scripts/`). Loop per client:
 
-1. `wait_for_gateway()` — py4j отвечает (порт из лога `Py4j gateway started on port N`,
-   не хардкодить 25333).
-2. `wait_for_game()` — poll `inGame()` (autoConnectServer делает вход сам).
-3. Прогнать сценарии по списку. Команды: `ExecuteCommand("@…")` для altoclef,
-   `ChatMessage(";…")` / `ChatMessage("#…")` для tungsten/shredder — tungsten перехватывает
-   именно chat send, через `ExecuteCommand` его команды не работают.
-4. Assert: позиция (py4j `getPlayersInfo` или RCON), `getHealth()`, `getRecentChat(n)`
-   на маркеры ошибок, таймауты по `hasActiveTask()`.
-5. При фейле — `getScreenshot()` + хвост `latest.log` в артефакты. Итог — junit.xml.
+1. `wait_for_gateway()` — py4j answers (port from the log `Py4j gateway started on port N`,
+   do not hardcode 25333).
+2. `wait_for_game()` — poll `inGame()` (autoConnectServer joins on its own).
+3. Run the scenarios in order. Commands: `ExecuteCommand("@…")` for altoclef,
+   `ChatMessage(";…")` / `ChatMessage("#…")` for tungsten/shredder — tungsten intercepts
+   chat send specifically, its commands do not work through `ExecuteCommand`.
+4. Assert: position (py4j `getPlayersInfo` or RCON), `getHealth()`, `getRecentChat(n)`
+   for error markers, timeouts via `hasActiveTask()`.
+5. On failure — `getScreenshot()` + the tail of `latest.log` into the artifacts. Result — junit.xml.
 
 ### World checkpoints of the survival stand (2026-09-16)
 
@@ -280,65 +281,65 @@ Checkpoints live in `deploy/runner/checkpoints/` (git-ignored, ~2 GB each). The 
 sixty-minute run reaches its wall at minute forty; a fix for that wall is tested from the
 checkpoint in a few minutes, not from an empty inventory in forty.
 
-### Сценарии (стартовый набор)
+### Scenarios (starting set)
 
-| id | что делает | критерий | таймаут |
+| id | what it does | criterion | timeout |
 |---|---|---|---|
-| smoke | клиент поднялся, py4j жив, зашёл на сервер | `inGame() == true` | 180 c |
-| altoclef_goto | `@goto <финиш площадки>` | позиция в finish-боксе | 60 c |
-| altoclef_get | `@get log 3` (площадка с лесом) | 3 брёвна в инвентаре (`getInventoryFull`) | 120 c |
-| altoclef_follow | бот A `@follow tester2`, бот B бегает по маршруту | дистанция A–B < 6 блоков в конце | 90 c |
-| tungsten_parkour_flat | `;goto` по курсу: прямые + 2-блочные гэпы | finish-бокс | 90 c |
-| tungsten_parkour_hard | курс с 3-блочными гэпами и подъёмами | finish-бокс | 120 c |
-| tungsten_follow | `;followPlayer tester2` | дистанция < 6 блоков, без падений (health) | 90 c |
-| shredder_goto | `#goto` через смешанный рельеф | finish-бокс | 120 c |
-| shredder_bridge | `#goto` через разрыв, требующий jump bridging | finish-бокс, health == 20 | 120 c |
-| gamer_nightly | `@gamer` с нуля | прогресс-маркеры в чате | часы — **только nightly**, не на каждый push |
+| smoke | client came up, py4j is alive, joined the server | `inGame() == true` | 180 s |
+| altoclef_goto | `@goto <platform finish>` | position in the finish box | 60 s |
+| altoclef_get | `@get log 3` (platform with a forest) | 3 logs in inventory (`getInventoryFull`) | 120 s |
+| altoclef_follow | bot A `@follow tester2`, bot B runs a route | distance A-B < 6 blocks at the end | 90 s |
+| tungsten_parkour_flat | `;goto` through a course: straights + 2-block gaps | finish box | 90 s |
+| tungsten_parkour_hard | course with 3-block gaps and climbs | finish box | 120 s |
+| tungsten_follow | `;followPlayer tester2` | distance < 6 blocks, no falls (health) | 90 s |
+| shredder_goto | `#goto` through mixed terrain | finish box | 120 s |
+| shredder_bridge | `#goto` across a gap requiring jump bridging | finish box, health == 20 | 120 s |
+| gamer_nightly | `@gamer` from scratch | progress markers in chat | hours — **nightly only**, not every push |
 
-Два бота (`tester1`/`tester2`) закрывают follow-сценарии; N клиентов в compose — это
-просто N сервисов, py4j-порты не конфликтуют (у каждого свой netns).
+Two bots (`tester1`/`tester2`) cover the follow scenarios; N clients in compose is just
+N services, py4j ports don't conflict (each has its own netns).
 
-## Мульти-версии и мульти-инстансы
+## Multi-version and multi-instance
 
-- **Версии мода** (несколько билдов сразу): каждый клиент-сервис получает свой
-  `run/mods-<tag>` с нужным jar'ом — так можно катать текущий билд против предыдущего
-  релиза на одном стенде (полезно для сравнения паркур-метрик "стало хуже/лучше").
-- **Версии MC**: build уже выдаёт jar на 1.21/1.21.1/1.21.11, но образ mineswarm прибит
-  к `fabric:1.21.11:0.19.3` в `startapp.sh`. Для матрицы MC-версий нужен build-arg
-  `MC_VERSION` в Dockerfile mineswarm (правка на их стороне, ~полдня). Phase 3, не раньше:
-  основная ценность — регрессии на 1.21.11.
-- **Масштаб**: клиент ест ~1.5–2 GB RAM; на 48 GB мака спокойно живут 4–6 тест-клиентов
-  рядом с боевым стеком CEZ.
+- **Mod versions** (several builds at once): each client service gets its own
+  `run/mods-<tag>` with the needed jar — this lets you run the current build against the
+  previous release on one bench (useful for comparing parkour metrics "got worse/better").
+- **MC versions**: build already produces a jar for 1.21/1.21.1/1.21.11, but the mineswarm
+  image is pinned to `fabric:1.21.11:0.19.3` in `startapp.sh`. A matrix of MC versions needs
+  a `MC_VERSION` build-arg in mineswarm's Dockerfile (a change on their side, ~half a day).
+  Phase 3, not before: the main value is regressions on 1.21.11.
+- **Scale**: a client eats ~1.5-2 GB RAM; the Mac's 48 GB comfortably hosts 4-6 test clients
+  alongside the CEZ production stack.
 
-## Триггер (автодеплой)
+## Trigger (autodeploy)
 
-**Вариант A — рекомендуемый: self-hosted GitHub Actions runner на маке.**
-Тот же паттерн, что у nettyan-toolkit (push → runner → деплой). Регистрируется runner
-с label `mac-mc`, workflow `autotest.yml`: on push в `1.21.11` → checkout → `gradlew build`
-→ `deploy/autotest.sh` → junit-отчёт как GH check + артефакты (скриншоты, логи).
-Плюсы: статусы прямо на коммитах, артефакты бесплатно, ноль своей инфраструктуры опроса.
+**Option A — recommended: self-hosted GitHub Actions runner on the Mac.**
+Same pattern as nettyan-toolkit (push → runner → deploy). Register a runner
+with label `mac-mc`, workflow `autotest.yml`: on push to `1.21.11` → checkout → `gradlew build`
+→ `deploy/autotest.sh` → junit report as a GH check + artifacts (screenshots, logs).
+Pros: statuses right on the commits, free artifacts, zero own polling infrastructure.
 
-**Вариант B — запасной: launchd-поллер.** Скрипт на маке раз в N минут: `git fetch`,
-если появился новый коммит — тот же `autotest.sh`, результат в Telegram через toolkit-бот.
-Проще завести (не нужен GH-токен на маке), но статусы на коммитах теряются.
+**Option B — fallback: a launchd poller.** A script on the Mac every N minutes: `git fetch`,
+if a new commit appeared — the same `autotest.sh`, result to Telegram via the toolkit bot.
+Simpler to set up (no GH token needed on the Mac), but statuses on commits are lost.
 
-В обоих вариантах вся работа происходит на маке — jayra не участвует (требование:
-не грузить рабочую машину). Боевой стек mineswarm на маке не трогаем: тест-стенд живёт
-в отдельной compose-сети `uctest` с отдельными именами контейнеров.
+In both options all the work happens on the Mac — jayra is not involved (requirement:
+do not load the work machine). We don't touch the mineswarm production stack on the Mac:
+the test bench lives in a separate compose network `uctest` with separate container names.
 
-## Фазы
+## Phases
 
-| Фаза | Содержимое | Оценка |
+| Phase | Content | Estimate |
 |---|---|---|
-| 0 — смоук | **сделано**: compose.test.yml (сервер + 1 клиент), autotest.sh, runner со слайм-паркуром (`;goto` через bounce), запуск по ssh на маке | — |
-| 1 — паркур | мир с курсами + courses.json, tungsten/shredder-сценарии, второй бот + follow, скриншоты при фейлах | 2–3 дня |
-| 2 — CI | self-hosted runner на маке, autotest.yml, junit + артефакты, TG-нотификация | ~1 день |
-| 3 — матрица | MC_VERSION build-arg в mineswarm-образе, прогон на 1.21.1, сравнение метрик билдов | 1–2 дня |
+| 0 — smoke | **done**: compose.test.yml (server + 1 client), autotest.sh, runner with slime parkour (`;goto` via bounce), launch over ssh on the Mac | — |
+| 1 — parkour | world with courses + courses.json, tungsten/shredder scenarios, second bot + follow, screenshots on failures | 2-3 days |
+| 2 — CI | self-hosted runner on the Mac, autotest.yml, junit + artifacts, TG notification | ~1 day |
+| 3 — matrix | MC_VERSION build-arg in the mineswarm image, run on 1.21.1, comparison of build metrics | 1-2 days |
 
-Фаза 0 уже окупается: ловит "мод не загрузился / крашнулся при джойне / py4j умер" —
-класс регрессий, который сейчас обнаруживается вручную за ~10 минут на каждый билд.
-Фазы 1+ — это регрессионная сетка для TODO 1.6.3, где каждый фикс симуляции требует
-перетеста pathfinder'а: без автотеста этот пункт практически невыполним.
+Phase 0 already pays for itself: it catches "the mod didn't load / crashed on join / py4j
+died" — a class of regressions that is currently found manually in ~10 minutes per build.
+Phases 1+ are the regression net for TODO 1.6.3, where every simulation fix requires
+re-testing the pathfinder: without autotest that item is practically infeasible.
 
 ## Two ways the bench measures code that was never loaded (both fixed, 2026-08-18)
 
@@ -408,29 +409,32 @@ ran for seventeen more minutes with its stdout attached to a dead shell, so noth
 could ever be read. After killing a suite, check for surviving `run_suite.py` processes and clear
 `%TEMP%/uctest_suite.lock` if it names your own dead run.
 
-## Риски и честные оговорки
+## Risks and honest caveats
 
-- **Софтверный рендер + Rosetta = 10–25 FPS.** Игровая логика тикается на 20 TPS и от FPS
-  не зависит, но WindMouse-сглаживание камеры — per-frame; на низком FPS повороты грубее.
-  Для паркур-тестов это источник флаков. Митигации: (1) щедрые таймауты и критерий
-  "дошёл до финиша", а не "прошёл идеально"; (2) один автоматический ретрай на сценарий;
-  (3) настоящий фикс — собрать `mineswarm-mc` под linux/arm64 (Java 21 arm64 + LWJGL
-  linux-arm64 natives для 1.21 существуют, PortableMC умеет) — нативная скорость на M4.
-  Это правка Dockerfile mineswarm, полдня-день, стоит сделать в фазе 1–2.
-- **Движенческие тесты флачные по природе.** Не гнаться за 100% зелёного: скриншот +
-  лог при фейле важнее идеальной стабильности. Порог "2 фейла подряд = красный" — норм.
-- **`@gamer` — длинный.** Никогда не на push, только nightly с жёстким wall-clock лимитом.
-- **py4j слушает loopback** — доступ только через `docker exec` (паттерн mineswarm gateway),
-  пока в мод не добавлен bind на 0.0.0.0 (отдельная маленькая задача, с оглядкой на то,
-  что порт станет виден в docker-сети).
-- **Мир-шаблон в git** — zip мира на пару мегабайт это нормально; не коммитить
-  разросшиеся регионы после тестовых прогонов (каждый прогон — из чистой копии).
+- **Software rendering + Rosetta = 10-25 FPS.** Game logic ticks at 20 TPS and does not
+  depend on FPS, but WindMouse camera smoothing is per-frame; at low FPS turns are coarser.
+  For parkour tests this is a source of flakes. Mitigations: (1) generous timeouts and a
+  "reached the finish" criterion rather than "executed perfectly"; (2) one automatic retry
+  per scenario; (3) the real fix — build `mineswarm-mc` for linux/arm64 (Java 21 arm64 +
+  LWJGL linux-arm64 natives for 1.21 exist, PortableMC supports it) — native speed on the
+  M4. This is a change to mineswarm's Dockerfile, half a day to a day, worth doing in
+  phase 1-2.
+- **Movement tests are flaky by nature.** Don't chase 100% green: a screenshot + log on
+  failure matters more than perfect stability. A "2 failures in a row = red" threshold
+  is fine.
+- **`@gamer` is long.** Never on push, nightly only with a hard wall-clock limit.
+- **py4j listens on loopback** — access only via `docker exec` (the mineswarm gateway
+  pattern), until a bind on 0.0.0.0 is added to the mod (a separate small task, mindful
+  that the port would then become visible on the docker network).
+- **World template in git** — a world zip of a couple megabytes is fine; don't commit
+  regions that have grown after test runs (every run starts from a clean copy).
 
-## Ответ на вопрос "стоит ли свеч"
+## Answer to "is it worth it"
 
-Да. Сложность умеренная (суммарно ~неделя чистой работы до фазы 2), потому что три самых
-дорогих куска — headless-клиент, py4j-мост и деплой jar'а без ребилда — уже написаны и
-проверены в бою mineswarm'ом. Пишется по сути только тест-сервер с картой, раннер
-сценариев и один workflow. Ценность: мгновенное обнаружение крашей/регрессий на каждый
-push и единственный реалистичный способ вести пункты вроде 1.6.3 ("перетест после
-каждого фикса") не руками.
+Yes. The complexity is moderate (about a week of net work total up to phase 2), because
+the three most expensive pieces — the headless client, the py4j bridge and deploying a
+jar without a rebuild — are already written and battle-tested by mineswarm. What's left
+to write is essentially just the test server with a map, the scenario runner and one
+workflow. The value: instant detection of crashes/regressions on every push, and the only
+realistic way to carry out items like 1.6.3 ("re-test after every fix") without doing it
+by hand.

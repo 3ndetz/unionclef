@@ -425,7 +425,7 @@ class ChaseTerrain(Scenario):
     # Dry, walkable ground. NOTE what is NOT here: clay and mud. They are swamp
     # and riverbed floors — picking the first "land" column landed the whole
     # bench in a bog, where the bot waded, bounced in pits and the run measured
-    # nothing useful ("там или болото какое-то или вода").
+    # nothing useful ("it's either some bog or water there").
     LAND_BLOCKS = ("grass_block", "stone", "dirt", "coarse_dirt", "podzol",
                    "sand", "gravel", "sandstone", "snow_block", "moss_block",
                    "rooted_dirt", "terracotta")
@@ -434,7 +434,7 @@ class ChaseTerrain(Scenario):
         """Find a real LAND surface to start on, and prove it.
 
         The world spawn of this seed is an OCEAN — the repo already knew that
-        ("спавн в ОКЕАНЕ — бот утонул") and a naive 'first non-air block from the
+        ("spawn in the OCEAN — the bot drowned") and a naive 'first non-air block from the
         sky' probe stops at the WATER surface, which is how both bots ended up
         spawned in the sea for a whole 'chase' run. Water/lava are not ground:
         scan candidate columns until the surface block is genuinely walkable,

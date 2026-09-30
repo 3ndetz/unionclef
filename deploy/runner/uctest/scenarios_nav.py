@@ -3,7 +3,7 @@
 WHY THIS EXISTS. The block-space search is about to be reworked (unified move
 generation, real g-cost accumulation, physics-A* dedup). Every one of those changes
 alters routing globally, and without a graded course set there is no way to tell a fix
-from a regression — which is exactly how "паркуры он всегда мог проходить раньше"
+from a regression — which is exactly how "it could always do parkour before"
 happened. This suite is the gate: run it BEFORE a search change to get a baseline, and
 after every change to prove nothing fell over.
 

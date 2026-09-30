@@ -916,8 +916,9 @@ The rule:
 
 ## 4p. ⛔ WAITING IS NOT STOPPING — BLOCK INSIDE THE TURN, DO NOT END IT (user 2026-08-12)
 
-The user's instruction, verbatim in spirit: *"если ты ЖДЁШЬ задачи, ты не СТОПишься, а ставишь
-ОЖИДАНИЕ на N минут — чтобы не засирало контекст стоп-хуком"*.
+The user's instruction, verbatim in spirit: *"if you are WAITING for a task, you are not
+STOPPING — you are setting a WAIT for N minutes, so the stop-hook doesn't clutter up the
+context"*.
 
 Ending a turn to wait is what makes the Stop hook fire, and every firing costs a full
 re-injection of the checklist directive plus a status line that says nothing. A single bench
@@ -1408,7 +1409,7 @@ The procedure, every recorded run, before sending anything:
    demand: find WHY it stopped, reproduce it, fix that. Workarounds are for after the root is
    known and shown to be out of scope, and they get named as workarounds.
 7. **Freeze the run where the trouble starts, and test from there** (operator, 2026-09-16:
-   "ты бы уж тогда фиксировал ЧЕКПОИНТ"). A sixty-minute run reaches diamonds at minute thirty
+   "you might as well have been saving a CHECKPOINT then"). A sixty-minute run reaches diamonds at minute thirty
    and its wall at minute forty; a fix for that wall tested from an empty inventory costs thirty
    minutes per look. Every long `gamer_smoke.py` run freezes its end as the `last` checkpoint
    (`deploy/runner/checkpoint.py`: the whole world -- position, inventory, armour, the shafts

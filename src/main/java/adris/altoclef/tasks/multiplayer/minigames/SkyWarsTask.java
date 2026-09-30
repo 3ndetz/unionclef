@@ -135,8 +135,9 @@ public class SkyWarsTask extends Task {
         if (mod.getFoodChain().isTryingToEat()) return null;
 
         if (ButlerConfig.getInstance().autoJoin) {
-            if (ItemHelper.clickCustomItem(mod, "новая игра", "начать игру", "быстро играть (пкм)")) {
-                setDebugState("Проиграли, начинаем новую игру");
+            // Server item names: "new game" / "start game" / "quick play (right click)".
+        if (ItemHelper.clickCustomItem(mod, "новая игра", "начать игру", "быстро играть (пкм)")) {
+                setDebugState("Lost, starting a new game");
                 return null;
             }
         }
@@ -144,7 +145,7 @@ public class SkyWarsTask extends Task {
         if (_thePitTask) {
             setDebugState("ThePit");
             if (mod.getPlayer().getPos().getY() > 85) {
-                setDebugState("МЫ НА СПАВНЕ! НАДО ВЫБРАТЬСЯ");
+                setDebugState("On the spawn island, need to get out");
                 mod.getInputControls().tryPress(Input.JUMP);
                 mod.getInputControls().tryPress(Input.MOVE_FORWARD);
                 if (WorldHelper.isBlock(new BlockPos(-17, 96, 19), Blocks.GLASS)) {
@@ -217,17 +218,17 @@ public class SkyWarsTask extends Task {
             PlayerEntity player = (PlayerEntity) target.get();
             boolean alert = mod.getPlayer().distanceTo(player) <= 10;
             if (alert) {
-                setDebugState("Уничтожить срочно");
+                setDebugState("Attack now");
                 return swKillPlayerTask(player);
             }
             if (LookHelper.cleanLineOfSight(player.getPos(), 100)) {
                 if (mod.getItemStorage().getItemCount(Items.ENDER_PEARL) > 2) {
-                    setDebugState("Кинуть пёрл");
+                    setDebugState("Throw a pearl");
                     return new ThrowEnderPearlSimpleProjectileTask(player.getBlockPos().add(0, -1, 0));
                 }
             }
             if (canUseRangedWeapon(mod) && ShootArrowSimpleProjectileTask.canUseRanged(mod, player)) {
-                setDebugState("Наказать дальним оружием");
+                setDebugState("Hit with a ranged weapon");
                 return new ShootArrowSimpleProjectileTask(player);
             }
         }
@@ -236,7 +237,7 @@ public class SkyWarsTask extends Task {
                 || (nonReachable && !_structureMaterialsTask.isActive())) {
             int buildCount = mod.getItemStorage().getItemCount(ItemHelper.blocksToItems(buildableBlocks));
             if (buildCount < 32 && _structureMaterialsTask != null) {
-                setDebugState("Добыча ресурсов...");
+                setDebugState("Gathering resources...");
                 return _structureMaterialsTask;
             }
         }
@@ -246,13 +247,13 @@ public class SkyWarsTask extends Task {
         if (minCost != Float.POSITIVE_INFINITY) {
             if (minCost == costTarget && target.isPresent()
                     && target.get() instanceof PlayerEntity player) {
-                setDebugState("Уничтожить");
+                setDebugState("Attack");
                 return swKillPlayerTask(player);
             } else if (minCost == costDrop) {
                 return new PickupDroppedItemTask(
                         toItemTargets(lootableItems(mod).toArray(new Item[0])), true);
             } else if (minCost == costContainer) {
-                setDebugState("Поиск ресурсов -> контейнеры: дорога");
+                setDebugState("Looking for resources -> containers: travelling");
                 _lastLootPos = closestCont.get();
                 boolean startLoot = WorldHelper.canReach(closestCont.get());
                 if (!startLoot) {
@@ -343,7 +344,7 @@ public class SkyWarsTask extends Task {
 
     @Override
     protected String toDebugString() {
-        return "Активна игра в SkyWars";
+        return "SkyWars game active";
     }
 
     private List<Item> armorAndToolsNeeded(AltoClef mod) {
@@ -483,7 +484,7 @@ public class SkyWarsTask extends Task {
 
         @Override
         protected String toDebugString() {
-            return "Сканирование территории...";
+            return "Scanning the area...";
         }
     }
 }

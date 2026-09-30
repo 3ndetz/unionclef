@@ -265,7 +265,7 @@ neither closes nor hits. This is a hard logic bug, not an aim-feel issue.
   callers**. Crit jumps fire on a 280-600 ms random cadence, so crits are accidental.
 - **Shield is never raised by the combat engine.** `ShieldBlocker` is reachable only from py4j /
   `CombatPrimitives` — i.e. only if the cognitive agent drives it manually. Directly contradicts
-  FIGHT-1 "уметь пользоваться щитом". The primitive also presses `useKey` without checking what is
+  FIGHT-1 "know how to use a shield". The primitive also presses `useKey` without checking what is
   in hand.
 - `WeaponSelector`: hotbar-only, **enchantment-blind** (plain netherite 100 > Sharpness V iron 75),
   rescans once per 21 ticks, called from **exactly one place** (`PunkPlayerTask.java:202`, COMBAT

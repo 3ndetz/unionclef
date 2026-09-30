@@ -105,21 +105,30 @@ public class Butler {
             }
         }
 
-        // --- Chat type detection (Ⓛ local / Ⓖ global / лобби) ---
+        // --- Chat type detection (Ⓛ local / Ⓖ global / lobby) ---
         if (msg.contains("Ⓛ")) {
             _mod.getInfoSender().UpdateServerInfo("chatType", "local");
         } else if (msg.contains("Ⓖ")) {
             _mod.getInfoSender().UpdateServerInfo("chatType", "global");
-        } else if (msg.toLowerCase().contains("лобби")) {
+        } else if (msg.toLowerCase().contains("лобби")) { // server text: "lobby"
             _mod.getInfoSender().UpdateServerInfo("chatType", "lobby");
         }
 
         // --- Auto-join logic ---
+        // The Cyrillic literals below are chat lines of Russian servers (musteryworld, funnymc,
+        // mlegacy) and must match verbatim. Meanings:
+        //   "] Вы находитесь в Лобби..." = "you are in the Lobby, pick a server and walk into the portal"
+        //   "Вы успешно вошли!" = "logged in successfully"; "Введите капчу с картинки в чат" = "type the captcha
+        //   from the picture"; "пароль" = "password"; "Добро пожаловать!" = "welcome";
+        //   "Вы покинули игру" = "you left the game"; "присоединился к" = "joined";
+        //   "выиграл игру!" = "won the game!"; "1ый Убийца -" = "1st murderer -" (round summary);
+        //   "погиб" / "был убит" / "победил в битве" = "died" / "was killed" / "won the fight against";
+        //   "Игра начинается через 1 [секунду]" = "the game starts in 1 [second]".
         if (ButlerConfig.getInstance().autoJoin) {
             if ((msg.contains("] Вы находитесь в Лобби. Выберите сервер и пройдите в портал!")
                     || msg.contains("Вы успешно вошли!")) && serverAddress.contains("musteryworld")) {
                 _mod.getCommandExecutor().execute("@stop");
-                Debug.logMessage("Мы в лобби!");
+                Debug.logMessage("In the lobby");
                 _lobbyMovingTimer.reset();
                 _mod.runUserTask(new LobbyTask());
             } else if (msg.contains("Введите капчу с картинки в чат")) {
@@ -136,20 +145,20 @@ public class Butler {
                     _mod.getMessageSender().enqueueChat("/register " + password, MessagePriority.TIMELY);
                 }
             } else if (msg.contains("[SkyWars] Добро пожаловать!") || msg.contains("[SkyWars] Вы покинули игру")) {
-                Debug.logMessage("Мы в хабе!");
+                Debug.logMessage("In the hub");
                 _mod.getCommandExecutor().execute("@stop");
                 _lobbyMovingTimer.reset();
                 _mod.getCommandExecutor().execute("@goto -65 -69");
             } else if (msg.contains("[SkyWars] " + ourName + " присоединился к")) {
-                Debug.logMessage("Мы в колбе!");
+                Debug.logMessage("In the spawn cage");
                 _mod.getCommandExecutor().execute("@stop");
             } else if (msg.contains(ourName + " выиграл игру!")) {
-                Debug.logMessage("ПОБЕДА!!! УРАА!!");
+                Debug.logMessage("Won the game");
                 _mod.getCommandExecutor().execute("@stop");
                 _lobbyMovingTimer.reset();
                 _mod.getCommandExecutor().execute("@goto -65 -69");
             } else if (msg.contains("1ый Убийца -")) {
-                Debug.logMessage("Игра остановлена");
+                Debug.logMessage("Game stopped");
                 _mod.getCommandExecutor().execute("@stop");
                 _lobbyMovingTimer.reset();
                 _mod.getCommandExecutor().execute("@goto -65 -69");
@@ -163,7 +172,7 @@ public class Butler {
             } else if (msg.contains("[SkyWars] Игра начинается через 1")
                     || ((serverAddress.equals("funnymc.ru") || serverAddress.equals("mlegacy.net"))
                     && msg.contains("Игра начинается через 1 секунду"))) {
-                Debug.logMessage("Начался батл SW!");
+                Debug.logMessage("SkyWars fight started");
                 _mod.getCommandExecutor().execute("@stop");
                 ClearTeammates();
                 AddNearestPlayerToFriends(_mod, 5);
@@ -188,6 +197,7 @@ public class Butler {
                 String nick = chatParsedResult.from;
                 if (nick != null && !nick.isBlank()
                         && (pred.equals("exact") || pred.equals("server") || pred.equals("universal"))) {
+                    // "Ошибка" ("Error") is a server system sender name, not a player.
                     if (!nick.contains("MurderMystery") && !nick.equals("Ошибка")
                             && !nick.matches(".*[^a-zA-Z0-9_].*")) {
                         _mod.getInfoSender().onStrongChatMessage(chatParsedResult);
@@ -238,12 +248,12 @@ public class Butler {
         if (_captchaTimer.elapsed()) {
             _captchaTimer.reset();
             if (CaptchaSolvingMode.contains("SOLVE")) {
-                Debug.logMessage("КАПЧА РЕШЕНИЕ (рандом, MapItemHelper не портирован)");
+                Debug.logMessage("Captcha answer (random, MapItemHelper is not ported)");
                 String captchaSolving = Integer.toString(ThreadLocalRandom.current().nextInt(1000, 100000));
                 _mod.getMessageSender().enqueueChat(captchaSolving, MessagePriority.TIMELY);
             }
         } else {
-            Debug.logMessage("КАПЧА УЖЕ РЕШАЕТСЯ!");
+            Debug.logMessage("Captcha is already being solved");
         }
     }
 
@@ -267,18 +277,18 @@ public class Butler {
                     String name = entity.getName().getString();
                     if (!_teammates.contains(name)) {
                         _teammates.add(name);
-                        Debug.logMessage("[КЕНТЫ] +игрок " + name);
+                        Debug.logMessage("[TEAMMATES] +player " + name);
                     }
                 }
             }
         } catch (Exception e) {
-            Debug.logWarning("Ошибка системы поиска тиммейтов: проигнорирована.");
+            Debug.logWarning("Teammate search failed: ignored.");
         }
     }
 
     public void ClearTeammates() {
         if (!_teammates.isEmpty()) {
-            Debug.logMessage("[КЕНТЫ] очистка: " + _teammates.size() + " игроков");
+            Debug.logMessage("[TEAMMATES] clearing: " + _teammates.size() + " players");
         }
         _teammates.clear();
     }

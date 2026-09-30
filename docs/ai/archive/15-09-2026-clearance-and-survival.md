@@ -6,7 +6,7 @@ Format and archiving rule: `docs/ai/readme.md`.
 
 This file had grown to 1916 lines (the archiving threshold in `docs/ai/readme.md` is 500) covering
 2026-07-20 through 2026-08-13 without ever being cleared, in violation of its own stated process.
-Every block was either explicitly marked done ("СДЕЛАНО") or ended in a handoff to `TODOS.md`
+Every block was either explicitly marked done ("DONE") or ended in a handoff to `TODOS.md`
 (the last entry, 2026-08-13, explicitly files its open question as TODOS G-1.82 and defers the
 decision to the user) — nothing in it read as work still in flight in `progress.md`'s own terms.
 Moved verbatim, in the original file's order, into:
@@ -30,7 +30,7 @@ Moved verbatim, in the original file's order, into:
   mob_skeleton/inRange-band investigation that ends by filing TODOS G-1.82.
 
 No active IPI task is currently tracked here. The next one written to this file starts a fresh
-`## <Название задачи>` block per the format in `docs/ai/readme.md`.
+`## <Task Name>` block per the format in `docs/ai/readme.md`.
 
 ## 2026-09-14 — Mac pipeline validation
 

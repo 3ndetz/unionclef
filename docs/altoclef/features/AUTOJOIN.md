@@ -1,81 +1,83 @@
-# Autojoin — как работает и как добавлять
+# Autojoin — how it works and how to add one
 
-## Суть
+## The idea
 
-Autojoin — автоматический вход в мини-игру на сервере. Два этапа:
-1. **Клик компаса** в лобби (открывает chest-меню выбора режима)
-2. **Клик слота** в chest-меню (выбирает конкретную игру)
+Autojoin is automatic entry into a minigame on a server. Two stages:
+1. **Click the compass** in the lobby (opens a chest menu for choosing the mode)
+2. **Click a slot** in the chest menu (picks the specific game)
 
-## Где что живёт
+## Where everything lives
 
-| Что | Файл |
+| What | File |
 |-----|------|
-| Общий autojoin (SW/BW/MM) | `src/main/java/adris/altoclef/chains/GameMenuTaskChain.java` |
+| Shared autojoin (SW/BW/MM) | `src/main/java/adris/altoclef/chains/GameMenuTaskChain.java` |
 | SkyPvP autojoin | `src/main/java/adris/altoclef/tasks/multiplayer/minigames/SkyPvpTask.java` |
-| Клик по кастом-итему | `src/main/java/adris/altoclef/util/helpers/ItemHelper.java` — `clickCustomItem()` |
-| Поиск слота по имени | `src/main/java/adris/altoclef/util/helpers/ItemHelper.java` — `getCustomItemSlot()` |
+| Click on a custom item | `src/main/java/adris/altoclef/util/helpers/ItemHelper.java` — `clickCustomItem()` |
+| Find a slot by name | `src/main/java/adris/altoclef/util/helpers/ItemHelper.java` — `getCustomItemSlot()` |
 | Pipeline enum | `src/main/java/adris/altoclef/util/agent/Pipeline.java` (moved from `butler/`, fixed 2026-09-01) |
-| Настройка autoJoin | `src/main/java/adris/altoclef/butler/ButlerConfig.java` |
+| autoJoin setting | `src/main/java/adris/altoclef/butler/ButlerConfig.java` |
 
-## Два подхода
+## Two approaches
 
-### 1. Через GameMenuTaskChain (SW, BW, MurderMystery)
+### 1. Via GameMenuTaskChain (SW, BW, MurderMystery)
 
-`GameMenuTaskChain.getPriority()` делает:
-- Кликает компас (`clickCustomItem("Выбор сервера", "Выбор лобби", "Выбор режима")`)
-- Когда chest открылся — ищет слот "мини-игры", потом слот конкретной игры
-- Возвращает priority 90 пока menu открыто (блокирует другие chain'ы)
+`GameMenuTaskChain.getPriority()` does:
+- Clicks the compass (`clickCustomItem("Выбор сервера", "Выбор лобби", "Выбор режима")` —
+  the server's own menu item names, meaning "Server select", "Lobby select", "Mode select")
+- Once the chest is open — looks for the "minigames" slot, then the slot for the specific game
+- Returns priority 90 while the menu is open (blocks other chains)
 
-Требует `ButlerConfig.autoJoin = true`.
+Requires `ButlerConfig.autoJoin = true`.
 
-### 2. Через сам Task (SkyPvP)
+### 2. Via the Task itself (SkyPvP)
 
-`SkyPvpTask.onTick()` делает всё сам:
-- Детектит лобби по наличию компаса "Выбор режима" в инвентаре
-- Кликает компас через `clickCustomItem`
-- Когда chest открылся — сам ищет слот "SkyPvP" и кликает
+`SkyPvpTask.onTick()` does everything itself:
+- Detects the lobby by the presence of a "Выбор режима" ("Mode select") compass in the inventory
+- Clicks the compass via `clickCustomItem`
+- Once the chest is open — looks for the "SkyPvP" slot itself and clicks it
 
-Не зависит от `autoJoin`. GameMenuTaskChain НЕ держит priority 90 для SkyPvP.
+Does not depend on `autoJoin`. GameMenuTaskChain does NOT hold priority 90 for SkyPvP.
 
-## Как добавить новый autojoin
+## How to add a new autojoin
 
-### Вариант A: через GameMenuTaskChain (если сервер похож на SW/BW)
+### Option A: via GameMenuTaskChain (if the server is similar to SW/BW)
 
-1. Добавить pipeline в `Pipeline.java`
-2. Добавить case в `GameMenuTaskChain` switch (строка ~160):
+1. Add a pipeline to `Pipeline.java`
+2. Add a case to the `GameMenuTaskChain` switch (line ~160):
    ```java
    case MyGame:
        ClickTitles = new String[]{"MyGame", "mygame"};
        break;
    ```
-3. Добавить pipeline в `isMinigamePipeline()`
-4. Убедиться что заголовок chest-меню содержит одну из строк в `isAutoJoinMenu`
+3. Add the pipeline to `isMinigamePipeline()`
+4. Make sure the chest menu's title contains one of the strings in `isAutoJoinMenu`
 
-### Вариант B: через Task (если сервер нестандартный)
+### Option B: via a Task (if the server is non-standard)
 
-1. В `onTick()` таска — сначала проверить открыт ли chest с нужным заголовком → кликнуть слот
-2. Потом проверить лобби → кликнуть компас через `clickCustomItem`
-3. **Не** добавлять обработку в `GameMenuTaskChain` (иначе priority 90 заблокирует таск)
+1. In the task's `onTick()` — first check whether a chest with the needed title is open → click the slot
+2. Then check the lobby → click the compass via `clickCustomItem`
+3. **Do not** add handling to `GameMenuTaskChain` (otherwise priority 90 will block the task)
 
-## Подводные камни
+## Pitfalls
 
-### `clickCustomItem` нельзя вызывать при открытом screen
-Внутри есть guard `instanceof PlayerScreenHandler`. Если chest/любой GUI открыт — возвращает false. Иначе `forceEquipSlot` делает SWAP через чужой screen handler и ломает GUI.
+### `clickCustomItem` cannot be called while a screen is open
+Inside there is a guard, `instanceof PlayerScreenHandler`. If a chest/any GUI is open — it returns false. Otherwise `forceEquipSlot` does a SWAP through someone else's screen handler and breaks the GUI.
 
-### Серверные меню-предметы неперемещаемы
-`clickCustomItem` для хотбар-слотов (0-8) переключает `selectedSlot` вместо SWAP. Серверы блокируют перемещение меню-предметов, SWAP молча откатывается сервером.
+### Server menu items are not movable
+`clickCustomItem` for hotbar slots (0-8) switches `selectedSlot` instead of doing a SWAP. Servers block moving menu items, and the SWAP is silently rolled back by the server.
 
-### `PlayerInteractionFixChain` закрывает screen при смене rotation
-Если rotation изменился на >0.1° пока screen открыт → `closeScreen()`. Поэтому GameMenuTaskChain возвращает priority 90 — блокирует другие chain'ы от изменения rotation. Если таск хендлит menu сам — нужно обрабатывать chest за 1-2 тика, пока rotation не сменился.
+### `PlayerInteractionFixChain` closes the screen on a rotation change
+If rotation changes by >0.1° while a screen is open → `closeScreen()`. That's why GameMenuTaskChain returns priority 90 — it blocks other chains from changing rotation. If a task handles the menu itself, it needs to handle the chest within 1-2 ticks, before rotation changes.
 
-### `tryAvoidingInteractable` закрывает screen
-`LookHelper.tryAvoidingInteractable()` вызывается внутри `clickCustomItem`. Если screen открыт и cursor пустой — вызывает `closeScreen()`. Guard в `clickCustomItem` предотвращает это, но если вызываешь `tryAvoidingInteractable` отдельно — имей в виду.
+### `tryAvoidingInteractable` closes the screen
+`LookHelper.tryAvoidingInteractable()` is called inside `clickCustomItem`. If a screen is open and the cursor is empty — it calls `closeScreen()`. The guard in `clickCustomItem` prevents this, but keep it in mind if you call `tryAvoidingInteractable` separately.
 
-### `getCustomItemSlot` матчит partial в обе стороны
+### `getCustomItemSlot` matches partial strings both ways
 ```java
 checkLower.equals(itemName) || checkLower.contains(itemName) || itemName.contains(checkLower)
 ```
-Поиск "SkyWars" найдёт и "SkyWars", и "SkyWars [клик]", и даже предмет "sw" (потому что "skywars".contains("sw")). Используй достаточно уникальные строки.
+Searching for "SkyWars" will match "SkyWars", "SkyWars [клик]" ("SkyWars [click]"), and even
+an item named "sw" (because "skywars".contains("sw")). Use strings that are unique enough.
 
-### Заголовок chest-меню — всегда lowercase check
-Заголовки проверяются через `title.getString().toLowerCase().contains(...)`. Убедись что строка в коде — lowercase.
+### Chest-menu title — always a lowercase check
+Titles are checked via `title.getString().toLowerCase().contains(...)`. Make sure the string in the code is lowercase.

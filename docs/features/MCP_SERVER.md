@@ -1,62 +1,62 @@
-# MCP-сервер в моде (LAN control surface)
+# MCP server in the mod (LAN control surface)
 
-Мод сам хостит **MCP-сервер** (Model Context Protocol) — когнитивный агент (Клод)
-подключается по сети и рулит ботом теми же рычагами, что и py4j, но напрямую, без
-docker-exec и loopback-затыка. Один источник правды: MCP оборачивает методы
-`Py4jEntryPoint` (см. [AGENT_PY4J_LEVERS.md](AGENT_PY4J_LEVERS.md)).
+The mod itself hosts an **MCP server** (Model Context Protocol) — the cognitive agent (Claude)
+connects over the network and drives the bot with the same levers as py4j, but directly, without
+docker-exec or the loopback bottleneck. One source of truth: MCP wraps the methods of
+`Py4jEntryPoint` (see [AGENT_PY4J_LEVERS.md](AGENT_PY4J_LEVERS.md)).
 
-## Что это
+## What it is
 
-- Транспорт: **Streamable HTTP**, JSON-RPC 2.0, один эндпоинт `POST /mcp`.
-- Реализация: `com.sun.net.httpserver` (встроен в JDK, без зависимостей),
-  `adris.altoclef.mcp.McpServer`. Bind на `0.0.0.0` — доступен по LAN.
-- Методы протокола: `initialize`, `tools/list`, `tools/call`, `ping`.
-- Инструменты: курируемый набор рычагов (перцепция / движение / бой /
-  строительство+WorldEdit / защита / меню / команды), каждый с описанием и
-  JSON-схемой — агент понимает что делает каждый.
+- Transport: **Streamable HTTP**, JSON-RPC 2.0, one endpoint `POST /mcp`.
+- Implementation: `com.sun.net.httpserver` (built into the JDK, no dependencies),
+  `adris.altoclef.mcp.McpServer`. Binds on `0.0.0.0` — reachable over LAN.
+- Protocol methods: `initialize`, `tools/list`, `tools/call`, `ping`.
+- Tools: a curated set of levers (perception / movement / combat /
+  building+WorldEdit / protection / menus / commands), each with a description and
+  a JSON schema — the agent understands what each one does.
 
-## Настройки (`altoclef_settings.json` / Settings)
+## Settings (`altoclef_settings.json` / Settings)
 
-| Поле | Дефолт | Что |
+| Field | Default | What |
 |---|---|---|
-| `mcpEnabled` | `true` | Поднимать ли MCP-сервер |
-| `mcpPort` | `25350` | Порт (bind 0.0.0.0) |
+| `mcpEnabled` | `true` | Whether to bring up the MCP server |
+| `mcpPort` | `25350` | Port (bind 0.0.0.0) |
 
-Стартует автоматически после py4j-шлюза. В логе: `MCP server started on
+Starts automatically after the py4j gateway. In the log: `MCP server started on
 0.0.0.0:25350`.
 
-## Как подключить Claude
+## How to connect Claude
 
-Эндпоинт: `http://<ip-машины-с-ботом>:25350/mcp` (на LAN — напр.
+Endpoint: `http://<bot-machine-ip>:25350/mcp` (on LAN — e.g.
 `http://192.168.1.20:25350/mcp`).
 
-Claude Code (HTTP-транспорт):
+Claude Code (HTTP transport):
 
 ```bash
 claude mcp add --transport http unionclef http://192.168.1.20:25350/mcp
 ```
 
-Или в `.mcp.json`:
+Or in `.mcp.json`:
 
 ```json
 { "mcpServers": { "unionclef": { "type": "http", "url": "http://192.168.1.20:25350/mcp" } } }
 ```
 
-Docker-стенд публикует порт наружу (`compose.test.yml`: `25350:25350`). Нативный
-клиент на хосте биндит 0.0.0.0 сам — виден по LAN без публикации.
+The Docker bench publishes the port externally (`compose.test.yml`: `25350:25350`). A native
+client on the host binds 0.0.0.0 itself — visible over LAN without publishing.
 
-## Проверка
+## Verification
 
-`deploy/runner/mcp_test.py` — initialize + tools/list + getGameState (чтение) +
-fillSelection (действие) по HTTP. Или руками:
+`deploy/runner/mcp_test.py` — initialize + tools/list + getGameState (read) +
+fillSelection (action) over HTTP. Or by hand:
 
 ```bash
 curl -s http://127.0.0.1:25350/mcp -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python3 -m json.tool
 ```
 
-## Добавление инструментов
+## Adding tools
 
-Новый рычаг = метод в `Py4jEntryPoint` + одна строка `tool(...)` в
-`McpServer.registerTools()` (имя, описание, `schema(...)`, лямбда к методу). Не
-дублируем логику — только обёртка. Держать синхронным с py4j-каталогом.
+A new lever = a method in `Py4jEntryPoint` + one `tool(...)` line in
+`McpServer.registerTools()` (name, description, `schema(...)`, lambda to the method). Don't
+duplicate logic — wrapper only. Keep it in sync with the py4j catalog.

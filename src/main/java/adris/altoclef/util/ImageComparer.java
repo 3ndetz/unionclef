@@ -57,7 +57,7 @@ public class ImageComparer {
             BufferedImage img_to_check = byte2BufferedImage(pixels);
             for (File sample : getCaptchaDatasetFiles()) {
                 if (compareImage(img_to_check, sample)) {
-                    Debug.logMessage("СОВПАЛО! Файл=" + sample.getName());
+                    Debug.logMessage("MATCH, file=" + sample.getName());
                     return sample.getName();
                 }
             }

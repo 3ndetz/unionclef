@@ -1,17 +1,17 @@
 {
  "name": "digest-0928",
- "title": "unionclef: незер, лава, ночь",
- "subtitle": "что изменилось в релизах 0.95.43–0.95.46 и после",
- "caption": "unionclef, релизы 0.95.43–0.95.46 и текущая работа: эндермены со столба, побег из лавы, ночь в укрытии, визуализация маршрутов. github.com/3ndetz/unionclef/releases",
+ "title": "unionclef: nether, lava, night",
+ "subtitle": "what changed across releases 0.95.43-0.95.46 and after",
+ "caption": "unionclef, releases 0.95.43-0.95.46 and current work: fighting endermen from a pillar, escaping lava, night shelters, route visualization. github.com/3ndetz/unionclef/releases",
  "segments": [
   {
    "kind": "text",
-   "title": "В этом выпуске",
+   "title": "In this issue",
    "lines": [
-    "эндермены: бой со столба в три блока",
-    "побег из лавы: портировано правило baritone",
-    "ночь без кровати: укрытие вместо боёв на склоне",
-    "визуал маршрута и настройки ;settings visuals"
+    "endermen: fighting from a three-block pillar",
+    "escaping lava: ported a baritone rule",
+    "night without a bed: shelter instead of fighting on a slope",
+    "route visualization and ;settings visuals settings"
    ]
   },
   {
@@ -20,15 +20,15 @@
    "from": 2,
    "to": 32,
    "speed": 1.5,
-   "title": "Эндермен со столба",
-   "caption": "его удар не достаёт на три блока вверх, бот бьёт сверху"
+   "title": "Enderman from a pillar",
+   "caption": "its attack doesn't reach three blocks up, the bot hits from above"
   },
   {
    "kind": "stat",
-   "title": "30 минут в незере, rung-ender",
-   "before": "1–7 смертей",
-   "after": "0 смертей",
-   "note": "прогоны n57 и n58, 45 минут каждый"
+   "title": "30 minutes in the nether, rung-ender",
+   "before": "1-7 deaths",
+   "after": "0 deaths",
+   "note": "runs n57 and n58, 45 minutes each"
   },
   {
    "kind": "clip",
@@ -36,8 +36,8 @@
    "from": 6,
    "to": 46,
    "speed": 4,
-   "title": "Было: побег из лавы",
-   "caption": "планировщики запрещали лаву, бот стоял в пруду"
+   "title": "Before: escaping lava",
+   "caption": "planners forbade lava outright, the bot stood in the pool"
   },
   {
    "kind": "clip",
@@ -45,15 +45,15 @@
    "from": 3,
    "to": 16,
    "speed": 1,
-   "title": "Стало: плывёт к берегу",
-   "caption": "правило canSwimThroughLava из baritone вернули в ядро"
+   "title": "After: swims to shore",
+   "caption": "brought canSwimThroughLava back into the core from baritone"
   },
   {
    "kind": "stat",
-   "title": "Курсы побега из лавы",
-   "before": "0 из 4",
-   "after": "5 из 5",
-   "note": "escape_lava и escape_lava_pool"
+   "title": "Lava escape courses",
+   "before": "0 of 4",
+   "after": "5 of 5",
+   "note": "escape_lava and escape_lava_pool"
   },
   {
    "kind": "clip",
@@ -61,8 +61,8 @@
    "from": 285,
    "to": 345,
    "speed": 4,
-   "title": "Было: бой на склоне",
-   "caption": "мобы на поверхности, здоровье 20 → 1.7 за четыре минуты"
+   "title": "Before: fighting on a slope",
+   "caption": "mobs on the surface, health 20 -> 1.7 over four minutes"
   },
   {
    "kind": "clip",
@@ -70,8 +70,8 @@
    "from": 688,
    "to": 728,
    "speed": 2,
-   "title": "Стало: укрытие на ночь",
-   "caption": "без кровати в темноте закапывается на два блока и закрывает голову"
+   "title": "After: shelter for the night",
+   "caption": "without a bed, digs two blocks down in the dark and covers its head"
   },
   {
    "kind": "clip",
@@ -79,24 +79,24 @@
    "from": 1180,
    "to": 1236,
    "speed": 2,
-   "title": "Утро: снова за работу",
-   "caption": "красным — что сломать, оранжевым — что копает сейчас"
+   "title": "Morning: back to work",
+   "caption": "red marks what to break, orange marks what it's mining right now"
   },
   {
    "kind": "stat",
-   "title": "Первые 38 минут с нуля",
-   "before": "смерть на 30-й",
-   "after": "0 смертей",
-   "note": "full47 против full48"
+   "title": "First 38 minutes from scratch",
+   "before": "death at minute 30",
+   "after": "0 deaths",
+   "note": "full47 vs full48"
   },
   {
    "kind": "text",
-   "title": "Ещё",
+   "title": "Also",
    "lines": [
-    ";settings visuals route 0 — каждый слой визуала отдельно",
-    "еда в незере: хоглины или поход в обычный мир",
-    "установка блока больше не бросает жемчуг",
-    "подпорка для блоков, которые не поставить с земли"
+    ";settings visuals route 0 -- each visual layer toggled separately",
+    "nether food: hoglins, or a trip to the overworld",
+    "placing a block no longer throws pearls",
+    "scaffolding for blocks that can't be placed from the ground"
    ]
   }
  ]

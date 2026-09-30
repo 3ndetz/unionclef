@@ -2,80 +2,80 @@
 
 ## Investigate
 
-### Сравнение tungsten simulation vs vanilla MC 1.21.1
+### Comparing tungsten simulation vs vanilla MC 1.21.1
 
-Tungsten взят с MC 1.21.8 и запущен на 1.21.1. Проведён побайтовый анализ bytecode vanilla Entity/LivingEntity/PlayerEntity/ClientPlayerEntity vs Agent.java.
+Tungsten was taken from MC 1.21.8 and run on 1.21.1. A byte-by-byte bytecode analysis of vanilla Entity/LivingEntity/PlayerEntity/ClientPlayerEntity vs Agent.java was performed.
 
-**Найденные расхождения с vanilla:**
+**Discrepancies found with vanilla:**
 
-| Расхождение | Vanilla | Tungsten | Влияние |
+| Discrepancy | Vanilla | Tungsten | Impact |
 |---|---|---|---|
-| Velocity zeroing X/Z | 0.003 | 1e-5 | Микро-скорости не обнуляются |
-| BlockPos в pushOutOfBlocks | MathHelper.floor() | (int) cast | Неправильный блок при X<0 |
-| Diagonal input normalize | Нет в KeyboardInput | Vec2f.normalize() в AgentInput | ~2% разница диагональной скорости |
-| airStrafingSpeed init | 0.02/0.026 | 0.06 (хардкод) | 3x воздушный контроль |
-| Friction block (fences) | getVelocityAffectingPos() с fence check | floor(minY-0.5) без fence check | Неправильный friction на заборах |
-| fallDistance type | float | double | Мелкий precision drift |
-| movementSpeed update | Атрибут каждый тик | setSprinting() пересчёт | Timing разница |
-| Diagonal normalization (1.21.4+) | applyDirectionalMovementSpeedFactors | Присутствует в коде | Не нужно для 1.21.1 |
-| Server teleport packets | Обрабатываются | ci.cancel() — глотались | Deadlock при телепорте |
-| Entity collisions в pathfinder | Thread-safe не гарантирован | getEntityCollisions из parallel thread | ConcurrentModificationException |
+| Velocity zeroing X/Z | 0.003 | 1e-5 | Micro-velocities aren't zeroed |
+| BlockPos in pushOutOfBlocks | MathHelper.floor() | (int) cast | Wrong block when X<0 |
+| Diagonal input normalize | Not in KeyboardInput | Vec2f.normalize() in AgentInput | ~2% difference in diagonal speed |
+| airStrafingSpeed init | 0.02/0.026 | 0.06 (hardcoded) | 3x air control |
+| Friction block (fences) | getVelocityAffectingPos() with fence check | floor(minY-0.5) without fence check | Wrong friction on fences |
+| fallDistance type | float | double | Minor precision drift |
+| movementSpeed update | Attribute every tick | setSprinting() recalculation | Timing difference |
+| Diagonal normalization (1.21.4+) | applyDirectionalMovementSpeedFactors | Present in the code | Not needed for 1.21.1 |
+| Server teleport packets | Processed | ci.cancel() — were being swallowed | Deadlock on teleport |
+| Entity collisions in pathfinder | Thread-safety not guaranteed | getEntityCollisions from a parallel thread | ConcurrentModificationException |
 
-### Ключевое открытие: simulation = pathfinding
+### Key finding: simulation = pathfinding
 
-Agent.tick() используется и для per-tick validation, и для A* pathfinding. Любое изменение физики меняет оба. Эвристики pathfinder'а (cost function, pruning, node generation) неявно настроены на текущую физику. Изменение физики требует перенастройки эвристик.
+Agent.tick() is used both for per-tick validation and for A* pathfinding. Any physics change affects both. The pathfinder's heuristics (cost function, pruning, node generation) are implicitly tuned to the current physics. Changing the physics requires retuning the heuristics.
 
-### Маяк Speed I
+### Speed I beacon
 
-Обнаружен скрытый маяк рядом с тестовой зоной, дававший Speed I эффект. Объяснил постоянный mismatch 0.156 vs 0.13 (sprint + Speed I vs sprint).
+A hidden beacon was found near the test zone, giving a Speed I effect. It explained the persistent mismatch of 0.156 vs 0.13 (sprint + Speed I vs sprint).
 
 ## Plan
 
-### Безопасные фиксы (не меняют физику Agent.tick)
+### Safe fixes (don't change Agent.tick physics)
 
-- [x] Fence friction — getVelocityAffectingPos с fence/wall/gate проверкой
-- [x] BlockPos flooring — MathHelper.floor() вместо (int) cast
-- [x] Server teleport — не cancel'ить PlayerPositionLookS2CPacket, а стопать executor
-- [x] EntityTrackerUpdate — не cancel'ить
-- [x] ConcurrentModificationException — убрать getEntityCollisions из pathfinder thread
-- [x] IOOB в PathFinder.processNodeChildren — bounds clamp
-- [x] Diagonal normalization 1.21.4+ — закомментировать для 1.21.1
-- [x] Follow target snap — snapToGround для цели на шифте
-- [x] Logging — threshold, aligned format, drift details в чат
+- [x] Fence friction — getVelocityAffectingPos with fence/wall/gate check
+- [x] BlockPos flooring — MathHelper.floor() instead of (int) cast
+- [x] Server teleport — don't cancel PlayerPositionLookS2CPacket, stop the executor instead
+- [x] EntityTrackerUpdate — don't cancel
+- [x] ConcurrentModificationException — remove getEntityCollisions from the pathfinder thread
+- [x] IOOB in PathFinder.processNodeChildren — bounds clamp
+- [x] Diagonal normalization 1.21.4+ — comment out for 1.21.1
+- [x] Follow target snap — snapToGround for a sneaking target
+- [x] Logging — threshold, aligned format, drift details in chat
 - [x] Settings command — overhaul, reload, airStrafe, mismatchThreshold
-- [x] MULTIVERSIONING.md — TODO для tungsten/shredder preprocessor
+- [x] MULTIVERSIONING.md — TODO for the tungsten/shredder preprocessor
 
-### Фиксы simulation (правильные, но ломают pathfinder эвристики)
+### Simulation fixes (correct, but break pathfinder heuristics)
 
-- [x] Velocity threshold 0.003 → **ОТКАЧЕНО** обратно на 1e-5
-- [x] AgentInput.normalize() убрано → **ОТКАЧЕНО** обратно
-- [x] airStrafingSpeed 0.06→0.02 → **ОТКАЧЕНО** обратно на 0.06
-- [x] setSprinting movementSpeed recalc → **ОТКАЧЕНО** к оригиналу
-- [x] fallDistance double→float → **ОТКАЧЕНО** обратно на double
+- [x] Velocity threshold 0.003 → **REVERTED** back to 1e-5
+- [x] AgentInput.normalize() removed → **REVERTED** back
+- [x] airStrafingSpeed 0.06→0.02 → **REVERTED** back to 0.06
+- [x] setSprinting movementSpeed recalc → **REVERTED** to the original
+- [x] fallDistance double→float → **REVERTED** back to double
 
-### TODO: правильный путь к точной симуляции
+### TODO: the correct path to an accurate simulation
 
-Чтобы применить simulation фиксы без поломки pathfinding:
+To apply simulation fixes without breaking pathfinding:
 
-1. **Применить фикс simulation** (например velocity threshold 0.003)
-2. **Проанализировать как изменился search space** pathfinder'а
-3. **Подстроить эвристики/costs** в Node.getChildren, calculateNodeCost, processNodeChildren
-4. **Протестировать** что pathfinder находит пути И бот их проходит
-5. Повторить для следующего фикса
+1. **Apply a simulation fix** (e.g. velocity threshold 0.003)
+2. **Analyze how the pathfinder's search space changed**
+3. **Retune the heuristics/costs** in Node.getChildren, calculateNodeCost, processNodeChildren
+4. **Test** that the pathfinder finds paths AND the bot walks them
+5. Repeat for the next fix
 
-Каждый фикс — отдельная итерация. Не менять всё сразу.
+Each fix is a separate iteration. Don't change everything at once.
 
 ### TODO: closed-loop execution
 
-Текущий executor — open-loop: слепо воспроизводит pre-computed input. Drift накапливается и path abort'ится. Нужен closed-loop: на каждом тике корректировать yaw/input на основе реальной позиции vs ожидаемой.
+The current executor is open-loop: it blindly replays pre-computed input. Drift accumulates and the path aborts. A closed-loop is needed: correct yaw/input every tick based on the actual position vs the expected one.
 
-### TODO: idle movement (бот всегда в движении)
+### TODO: idle movement (the bot is always moving)
 
-Генератор circular idle-маршрута пока pathfinder считает. Seamless переключение idle→real path.
+An idle circular-route generator while the pathfinder is computing. Seamless idle→real path switchover.
 
 ## Implement
 
-### Коммиты (сохранённые)
+### Commits (kept)
 
 - `3260f2e` — tungsten: disable diagonal normalization for MC 1.21.1
 - `2204caf` — tungsten: stop cancelling server packets during execution
@@ -91,7 +91,7 @@ Agent.tick() используется и для per-tick validation, и для A
 - `b94b0f6` — tungsten: fix ConcurrentModificationException in pathfinder
 - `38b6f46` — tungsten: suppress diagonal input speed mismatch in verbose debug
 
-### Коммиты (откаченные)
+### Commits (reverted)
 
 - `a7db22b` → `b1a0449` — velocity threshold 0.003 → reverted to 1e-5
 - `e06ac12` → `98c8f29` — fallDistance float → reverted to double
@@ -99,11 +99,11 @@ Agent.tick() используется и для per-tick validation, и для A
 - `f645c24` → `98c8f29` — airStrafingSpeed 0.02 → reverted to 0.06
 - `fcc9c4c..83ad11d` → `98c8f29` — movementSpeed/setSprinting chain → reverted
 
-### Файлы изменённые (финальное состояние)
+### Files changed (final state)
 
 - `tungsten/src/main/java/kaptainwutax/tungsten/agent/Agent.java` — fence friction, BlockPos floor, entity collision removal, logging threshold
-- `tungsten/src/main/java/kaptainwutax/tungsten/agent/AgentInput.java` — без изменений (normalize восстановлен)
-- `tungsten/src/main/java/kaptainwutax/tungsten/mixin/MixinClientPlayNetworkHandler.java` — не cancel'ить server packets
+- `tungsten/src/main/java/kaptainwutax/tungsten/agent/AgentInput.java` — unchanged (normalize restored)
+- `tungsten/src/main/java/kaptainwutax/tungsten/mixin/MixinClientPlayNetworkHandler.java` — don't cancel server packets
 - `tungsten/src/main/java/kaptainwutax/tungsten/path/PathExecutor.java` — tryReconnect, drift comment
 - `tungsten/src/main/java/kaptainwutax/tungsten/path/PathFinder.java` — IOOB clamp
 - `tungsten/src/main/java/kaptainwutax/tungsten/task/FollowEntityTask.java` — snapToGround

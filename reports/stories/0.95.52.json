@@ -1,17 +1,17 @@
 {
  "name": "0.95.52",
  "title": "unionclef 0.95.52",
- "subtitle": "уклонение от стрел у лавы и обрыва",
- "caption": "unionclef 0.95.52: уклонение от стрел выбирает шаг физической симуляцией tungsten — 18 вариантов клавиш против полёта стрелы, лава, огонь и обрывы глубже 3 блоков отсеиваются. На уступе между лавой и обрывом: было 28-36 hp урона за 10 стрел, стало 0-4, ни одного шага в лаву или с края. Ещё: бакет-портал ищет лавовое озеро по миру. github.com/3ndetz/unionclef/releases/tag/v0.95.52",
+ "subtitle": "dodging arrows by lava and a drop",
+ "caption": "unionclef 0.95.52: arrow dodging picks a step via tungsten's physics simulation -- 18 key combinations tested against the arrow's flight, lava, fire and drops deeper than 3 blocks are filtered out. On a ledge between lava and a drop: went from 28-36 hp of damage over 10 arrows to 0-4, not a single step into lava or off the edge. Also: the bucket portal now searches the whole world for a lava lake. github.com/3ndetz/unionclef/releases/tag/v0.95.52",
  "segments": [
   {
    "kind": "text",
-   "title": "Курс arrow_dodge_ledge",
+   "title": "Course arrow_dodge_ledge",
    "lines": [
-    "уступ в два блока шириной",
-    "с одной стороны лава, с другой обрыв в шесть блоков",
-    "10 стрел вдоль уступа в текущую позицию бота",
-    "уклоняться можно только поперёк — к лаве или к краю"
+    "a ledge two blocks wide",
+    "lava on one side, a six-block drop on the other",
+    "10 arrows along the ledge aimed at the bot's current position",
+    "can only dodge sideways -- toward the lava or toward the edge"
    ]
   },
   {
@@ -20,8 +20,8 @@
    "from": 10,
    "to": 46,
    "speed": 2,
-   "title": "Было: поиск маршрута",
-   "caption": "в опасной зоне уклонение отдавалось задаче-маршруту, бот стоит на месте"
+   "title": "Before: route search",
+   "caption": "in the danger zone, dodging deferred to the route task, the bot stands still"
   },
   {
    "kind": "clip",
@@ -29,24 +29,24 @@
    "from": 10,
    "to": 46,
    "speed": 2,
-   "title": "Стало: симуляция шага",
-   "caption": "каждый тик 18 вариантов клавиш прогоняются через физику, опасные отбрасываются"
+   "title": "After: step simulation",
+   "caption": "every tick, 18 key combinations run through the physics engine, unsafe ones are discarded"
   },
   {
    "kind": "stat",
-   "title": "Урон от 10 стрел на уступе",
+   "title": "Damage from 10 arrows on the ledge",
    "before": "28-36 hp",
    "after": "0-4 hp",
-   "note": "6 прогонов; в лаву и с края — ни разу"
+   "note": "6 runs; never into lava or off the edge"
   },
   {
    "kind": "text",
-   "title": "Ещё в релизе",
+   "title": "Also in this release",
    "lines": [
-    "на ровном месте: 0 урона от 10 стрел, 3 из 3",
-    "выключенный dodgeProjectiles в настройках — предупреждение в чат",
-    "бакет-портал ищет лавовое озеро по миру, а не среди 40 ближайших блоков",
-    "известно: верхний ряд рамки бакет-портала пока не отливается"
+    "on flat ground: 0 damage from 10 arrows, 3 of 3",
+    "disabled dodgeProjectiles in settings now warns in chat",
+    "the bucket portal searches the whole world for a lava lake instead of the nearest 40 blocks",
+    "known issue: the bucket portal's top frame row does not cast yet"
    ]
   }
  ]

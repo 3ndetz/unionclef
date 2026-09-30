@@ -358,8 +358,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // The other two declines are already handled by the guard below: pdWalking and
             // pdNear both leave TungstenHelper.isActive() true, so those ticks never reach here.
             pdLegacyPath++;
-            // ⛔ THE USER WATCHED A RUN AND SAW THIS: "постоянно активируется баритон и ломает
-            // маршрут". They are right, and a counter I had all along says so -- pdLegacy=9 on a
+            // ⛔ THE USER WATCHED A RUN AND SAW THIS: "baritone keeps kicking in and breaks the
+            // route". They are right, and a counter I had all along says so -- pdLegacy=9 on a
             // twenty-minute playthrough. The comment above this line reasoned that the number was
             // large only because finished tasks poked it on the way out; that was true and it was
             // not the whole story. Nine entries remain where tungsten genuinely declined the tick

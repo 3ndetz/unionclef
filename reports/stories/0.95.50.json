@@ -1,8 +1,8 @@
 {
  "name": "0.95.50",
  "title": "unionclef 0.95.50",
- "subtitle": "ищет еду дальше, копает быстрее",
- "caption": "unionclef 0.95.50: без еды в поле зрения бот уходит по прямой, а не кружит на месте; туннели на четверть быстрее; кровать не ищет за 80 блоков. github.com/3ndetz/unionclef/releases/tag/v0.95.50",
+ "subtitle": "searches farther for food, digs faster",
+ "caption": "unionclef 0.95.50: with no food in sight the bot walks in a straight line instead of circling in place; tunnels a quarter faster; no longer searches for a bed 80 blocks out. github.com/3ndetz/unionclef/releases/tag/v0.95.50",
  "segments": [
   {
    "kind": "clip",
@@ -10,15 +10,15 @@
    "from": 30,
    "to": 90,
    "speed": 4,
-   "title": "Поиск еды: по прямой",
-   "caption": "ноги по 48 блоков, поворот только если путь не идёт; раньше спираль вокруг старта"
+   "title": "Food search: straight line",
+   "caption": "48-block legs, turns only when the path is blocked; used to spiral around the start point"
   },
   {
    "kind": "stat",
-   "title": "Чекпоинт full52, еды нет",
-   "before": "5 минут, ни одного животного",
-   "after": "свиньи через 3 минуты",
-   "note": "за 10 минут ни одной смерти"
+   "title": "Checkpoint full52, no food",
+   "before": "5 minutes, not a single animal",
+   "after": "pigs found in 3 minutes",
+   "note": "no deaths over 10 minutes"
   },
   {
    "kind": "clip",
@@ -26,8 +26,8 @@
    "from": 0,
    "to": 34,
    "speed": 2,
-   "title": "Было: туннель 10 блоков",
-   "caption": "после каждого раскопа пауза 0.6 с на случай падающего песка"
+   "title": "Before: 10-block tunnel",
+   "caption": "0.6 s pause after every dig in case sand falls"
   },
   {
    "kind": "clip",
@@ -35,15 +35,15 @@
    "from": 0,
    "to": 26,
    "speed": 2,
-   "title": "Стало",
-   "caption": "ждёт, только если сверху песок или гравий"
+   "title": "After",
+   "caption": "only waits when there's sand or gravel overhead"
   },
   {
    "kind": "stat",
-   "title": "nav_tunnel, камень 10 блоков",
-   "before": "31 с",
-   "after": "23 с",
-   "note": "по два прогона; копание упирается в ванильные 13 тиков на блок"
+   "title": "nav_tunnel, 10 blocks of stone",
+   "before": "31 s",
+   "after": "23 s",
+   "note": "two runs each; mining is capped by vanilla's 13 ticks per block"
   }
  ]
 }

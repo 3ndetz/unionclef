@@ -120,13 +120,13 @@ N ticks before the LOS window opens (WindMouse needs convergence time).
 - [ ] **Jump waypoints** — precompute advantageous positions to jump to (high ground, safe landing)
 - [ ] **WASD passthrough polish** — allow player manual input in safe situations
 - [~] **Legs system** — sprint-jump, strafe patterns, knockback recovery.
-  ПЕРЕПРОВЕРЕНО 2026-09-01: строка списана целиком под TODO, но strafe-паттерны СУЩЕСТВУЮТ и
-  используются — `CombatController.java:215` держит целый блок «dynamic combat movement state
-  (circle-strafe + range + crit-jumps)» (`strafeDir`, `strafeInterval`, `strafeFarTicks`/
-  `strafeNearTicks`, безопасная проверка стороны `strafeSideSafe`), плюс `crowded`-гейт против
-  толпы (см. `TODOS.md`, раздел G-2, «обход без случайных метаний» — единственная закреплённая
-  находка серии из 16 гипотез). Ни разу не упомянуто и в разделе «Implemented» выше. Sprint-jump
-  часть отдельно НЕ проверялась, поэтому строка не закрыта целиком, только уточнена.
+  RECHECKED 2026-09-01: the line was written off entirely as a TODO, but strafe patterns DO EXIST and
+  ARE used — `CombatController.java:215` holds a whole block of "dynamic combat movement state
+  (circle-strafe + range + crit-jumps)" (`strafeDir`, `strafeInterval`, `strafeFarTicks`/
+  `strafeNearTicks`, the safe-side check `strafeSideSafe`), plus a `crowded` gate against
+  a crowd (see `TODOS.md`, section G-2, "dodging without random flailing" — the one confirmed
+  finding out of a series of 16 hypotheses). Never once mentioned in the "Implemented" section above either. The sprint-jump
+  part was NOT checked separately, so the line isn't fully closed, only clarified.
 - [x] **Danger classification** — DangerLevel enum: NONE / HEIGHT_RELIEF / HEIGHT_HIGH / HEIGHT_DEATH
 - [ ] **Environmental hazards in pathfinding** — currently BFS avoids:
   lava, fire, magma, campfire, cactus, wither rose, berry bush, water,
@@ -144,7 +144,7 @@ N ticks before the LOS window opens (WindMouse needs convergence time).
 
 ⛔ CORRECTED 2026-09-01: the gravity/wind/maxStep/doneThreshold defaults below were the OLD
 values (verified against `TungstenConfig.java`, which is the source of truth, not this table).
-They were retuned in a 2026-07-24 pass after the user complaint "юзеры крутят мышь РЕЗКО" (real
+They were retuned in a 2026-07-24 pass after the user complaint "users jerk the mouse SHARPLY" (real
 players flick the mouse sharply, they don't glide) — see the code comments at each field for the
 tuning history (2.0→12, 0.8→0.35→0.15, 4→7→10→25).
 

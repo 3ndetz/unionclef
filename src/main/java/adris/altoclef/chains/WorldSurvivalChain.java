@@ -422,7 +422,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
             // looking for a way out is the one this condition switches off.
             //
             // TODOS.md records an actual, unexplained drowning death (2026-08-24 entry,
-            // "смерть УТОПЛЕНИЕМ... механизм не установлен") with a live water pathfinder in the
+            // "death by DROWNING... mechanism not established") with a live water pathfinder in the
             // build and no measurement of why the bot never surfaced -- this is a fitting,
             // previously unconsidered mechanism for exactly that gap.
             //

@@ -110,6 +110,7 @@ def main():
             rcon(f"summon minecraft:creeper {bx+6.5} {GROUND+1} {Z+0.5}"); resummoned = True
             print("  second creeper summoned behind")
         ch = [c for c in py4j("chat", n=10)["chat"] if c not in seen]; seen.update(ch)
+        # "взорван" is the ru-client death text ("blown up"); the English forms cover an en client.
         died = died or any(("взорван" in c) or ("blew up" in c) or ("was blown up" in c) for c in ch)
         note = [c for c in ch if any(w in c for w in ("creeper", "Creeper", "Run", "flee"))]
         try:

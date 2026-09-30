@@ -114,7 +114,7 @@ public class DamageTracker extends Tracker {
             mod.getInfoSender().onDamage(amount);
         }
         if (amount > 1 && name.equals(_lastAttackingPlayerName) && !_attackCheckTimer.elapsed()) {
-            Debug.logInternal("Урон по " + _lastAttackingPlayerName + " прошел!");
+            Debug.logInternal("Hit on " + _lastAttackingPlayerName + " landed");
             _attackerCheckHit = false;
         }
         int id = threatTable.get(name);

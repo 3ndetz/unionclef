@@ -9,15 +9,15 @@ import adris.altoclef.tasks.multiplayer.MirrorTask;
 
 /**
  * @mirror — record a player's movement and replay it (the bot reproduces their path + jumps).
- *   @mirror <ник>        record ~8s of the player, then replay it from where you stand
- *   @mirror <ник> rec    only record (replay later with @mirror play)
- *   @mirror <ник> <sec>  record <sec> seconds, then replay
+ *   @mirror <nick>        record ~8s of the player, then replay it from where you stand
+ *   @mirror <nick> rec    only record (replay later with @mirror play)
+ *   @mirror <nick> <sec>  record <sec> seconds, then replay
  *   @mirror play         replay the last recording from your current spot
  * Stop anytime with @stop / @idle.
  */
 public class MirrorCommand extends Command {
     public MirrorCommand() {
-        super("mirror", "Record + replay a player's movement (path + jumps). @mirror <ник> [rec|<sec>] | @mirror play",
+        super("mirror", "Record + replay a player's movement (path + jumps). @mirror <nick> [rec|<sec>] | @mirror play",
                 new StringArg("player", ""),
                 new StringArg("mode", "8"));
     }

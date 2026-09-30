@@ -530,7 +530,7 @@ public class TungstenConfig {
      *
      * <pre>
      *   29.0s  cobble=8   "No tasks. Time to add new!"      the job is DONE
-     *   05:15:04  [Alto Clef] Поставленная задача ЗАВЕРШЕНА за 29.5 сек.
+     *   05:15:04  [Alto Clef] Task finished in 29.5 s.
      *   05:15:06  [Tungsten] MovementQueue: 8 movement(s) 0,-63,0 -> 0,-55,0
      *   33.7s  y=-57.25  cobble=2
      *   36.0s  y=-55.00  cobble=0    and it stands there for the remaining 84 seconds
@@ -2592,7 +2592,7 @@ public class TungstenConfig {
     /**
      * G43 (2026-09-11): a creeper is never engaged at melee range. MobDefenseChain let creepers into
      * its fight list like any hostile, judged one "beatable" with an iron sword and PURSUED it to
-     * striking distance -- which is its fuse distance: "tester1 был взорван Крипер" on the 14:00
+     * striking distance -- which is its fuse distance: "tester1 was blown up by Creeper" on the 14:00
      * recorded run, hp 20 -> 4.5 in 40 s, respawn with an empty pack. A creeper within 6 blocks
      * that sees the bot is fled (the same RunAwayFromCreepersTask the fusing branch uses); a
      * farther one is left alone. Read mdCreeperAvoid; bench: deploy/runner/creeper_avoid_test.py.
@@ -5254,7 +5254,7 @@ public class TungstenConfig {
      *  Bumped 2.0→3.2: the bot was reported "turning slowly" and its aim lagged
      *  a strafing/knocked-back target (trigger gate angle hit 90°); faster ramp
      *  closes the gap so swings actually land. */
-    public double combatWindMouseGravity = 12.0;   // 5.5->12 (user 2026-07-24 round 3: "юзеры крутят мышь РЕЗКО"). Real players flick, they do not glide. Overshoot is handled by the close-range direct-settle zone, so pull hard.
+    public double combatWindMouseGravity = 12.0;   // 5.5->12 (user 2026-07-24 round 3: "users flick the mouse SHARPLY"). Real players flick, they do not glide. Overshoot is handled by the close-range direct-settle zone, so pull hard.
 
     /** WindMouse wind — random perturbation magnitude per frame.
      *  Higher = more jitter/overshoot. */

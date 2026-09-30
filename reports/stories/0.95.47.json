@@ -1,18 +1,18 @@
 {
  "name": "0.95.47",
  "title": "unionclef 0.95.47",
- "subtitle": "ночи: укрытие, кровать, драка в пещере",
- "caption": "unionclef 0.95.47: ночь в укрытии без кровати, кровать из овец днём, сон в поставленной кровати, драка вместо бесполезного бегства в пещере, настройки ;settings по группам. github.com/3ndetz/unionclef/releases/tag/v0.95.47",
+ "subtitle": "nights: shelter, bed, cave fight",
+ "caption": "unionclef 0.95.47: without a bed, night is spent in a shelter; during the day, with an iron pickaxe, a bed is made from sheep; a placed bed gets used right away; fights instead of a useless run in a cave; ;settings visuals route 0 -- settings grouped. github.com/3ndetz/unionclef/releases/tag/v0.95.47",
  "segments": [
   {
    "kind": "text",
-   "title": "В этом релизе",
+   "title": "In this release",
    "lines": [
-    "без кровати ночь пережидает в укрытии",
-    "днём, с железной киркой, делает кровать из овец",
-    "поставленную кровать использует сразу",
-    "в пещере дерётся, если убежать не получается",
-    ";settings visuals route 0 — настройки по группам"
+    "without a bed, night is waited out in a shelter",
+    "during the day, with an iron pickaxe, makes a bed from sheep",
+    "uses a placed bed right away",
+    "fights in a cave if running away doesn't work",
+    ";settings visuals route 0 -- settings grouped"
    ]
   },
   {
@@ -21,8 +21,8 @@
    "from": 285,
    "to": 345,
    "speed": 4,
-   "title": "Было: ночь на склоне",
-   "caption": "мобы на поверхности, здоровье 20 → 1.7 за четыре минуты"
+   "title": "Before: night on a slope",
+   "caption": "mobs on the surface, health 20 -> 1.7 over four minutes"
   },
   {
    "kind": "clip",
@@ -30,8 +30,8 @@
    "from": 688,
    "to": 728,
    "speed": 2,
-   "title": "Стало: укрытие на ночь",
-   "caption": "копает яму в два блока, закрывает голову, ждёт утра"
+   "title": "After: shelter for the night",
+   "caption": "digs a two-block pit, covers its head, waits for morning"
   },
   {
    "kind": "clip",
@@ -39,8 +39,8 @@
    "from": 170,
    "to": 200,
    "speed": 1,
-   "title": "Кровать на закате",
-   "caption": "ставит кровать рядом и ложится; ночь пропущена (кровать выдана командой для проверки)"
+   "title": "Bed at sunset",
+   "caption": "places a bed nearby and sleeps; night skipped (bed given by command for testing)"
   },
   {
    "kind": "clip",
@@ -48,8 +48,8 @@
    "from": 628,
    "to": 656,
    "speed": 1,
-   "title": "Было: бегство в пещере",
-   "caption": "два зомби идут следом и бьют, до драки дело не доходит"
+   "title": "Before: running in a cave",
+   "caption": "two zombies follow and hit; it never comes to a fight"
   },
   {
    "kind": "clip",
@@ -57,22 +57,22 @@
    "from": 12,
    "to": 34,
    "speed": 1,
-   "title": "Стало: драка",
-   "caption": "ударили во время бегства — значит, убежать не выйдет, и бот дерётся"
+   "title": "After: fight",
+   "caption": "hit while running away, so running won't work, and the bot fights"
   },
   {
    "kind": "stat",
-   "title": "Два зомби в той же пещере",
-   "before": "20 → 0 за 45 с",
-   "after": "оба убиты за 15 с",
-   "note": "чекпоинт bedfix1, 10-я минута; здоровье не ниже 14"
+   "title": "Two zombies in the same cave",
+   "before": "20 -> 0 in 45 s",
+   "after": "both killed in 15 s",
+   "note": "checkpoint bedfix1, 10th minute; health never below 14"
   },
   {
    "kind": "stat",
-   "title": "С нуля, чистый прогон",
-   "before": "смерть на 30-й минуте",
-   "after": "41 минута, 0 смертей",
-   "note": "full47 против full51; железные инструменты на 22-й минуте"
+   "title": "From scratch, clean run",
+   "before": "death at minute 30",
+   "after": "41 minutes, 0 deaths",
+   "note": "full47 vs full51; iron tools at minute 22"
   }
  ]
 }

@@ -149,7 +149,10 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 if (title != null && title.getString() != null) {
                     String t = title.getString().toLowerCase();
 
-                    // Check if this is an autojoin menu (server select, minigames, mode select)
+                    // Check if this is an autojoin menu (server select, minigames, mode select).
+                    // Cyrillic literals are Russian server menu/item titles, kept verbatim:
+                    // "выбор сервера" = server select, "мини-игры" = minigames, "выбор режима" /
+                    // "выбери режим" = mode select, "скайварс" / "бедварс" / "МардерМистери" = game names.
                     boolean isAutoJoinMenu = t.contains("выбор сервера") || t.contains("мини-игры")
                             || t.contains("выбор режима") || t.contains("выбери режим");
 
@@ -199,6 +202,8 @@ public class GameMenuTaskChain extends SingleTaskChain {
             boolean isMinigame = isMinigamePipeline(AltoClef.getPipeline());
             if (isMinigame) {
                 if (clickTimer.elapsed() && _worldJoinTimer.elapsed()) {
+                    // Server item names: server select / lobby select / mode select; then
+                    // "new game" / "start game" / "quick play (right click)".
                     if (_lobbyButtonTimer.elapsed() && ItemHelper.clickCustomItem(mod, "Выбор сервера", "Выбор лобби", "Выбор режима")) {
                         clickTimer.reset();
                         _lobbyButtonTimer.reset();
@@ -237,7 +242,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                         _commandDelayTimer.reset();
                         if (_commandDelayTimer.elapsed()) {
                             _commandDelayTimer.reset();
-                            Debug.logMessage("ВАЛИМ! 111");
+                            Debug.logMessage("Bailing out to /hub");
                         }
                     }
                 }

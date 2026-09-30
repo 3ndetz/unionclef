@@ -425,8 +425,8 @@ Read this before building any movement mechanism. See also the rule this produce
 - copy: Change FastPlanner.java:1012 to `if (next.cost - tentative <= 0.01) return;` (baritone's MIN_IMPROVEMENT gate at AStarPathFinder.java:144).
 
 
-> **STATUS, checked 2026-09-02.** `TODOS.md`'s 2026-09-01 entry (top of file, "pathStatus ЛГАЛ
-> про arrived") already covers the "arrived five/six times" half of this section in full detail
+> **STATUS, checked 2026-09-02.** `TODOS.md`'s 2026-09-01 entry (top of file, "pathStatus LIED
+> about arrived") already covers the "arrived five/six times" half of this section in full detail
 > — the `pathStatus`/`FastNavigator.ARRIVE_DIST` fix landed there is ONE of the six independent
 > arrival definitions this section names made consistent, not the `Goal` abstraction itself; see
 > that entry rather than duplicating it here. New checks this pass, on the rest of the section:

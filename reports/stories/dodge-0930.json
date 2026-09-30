@@ -1,8 +1,8 @@
 {
  "name": "dodge-0930",
- "title": "Уклонение от стрел",
- "subtitle": "проверка по жалобе игрока (issue #34)",
- "caption": "unionclef: проверка уклонения от стрел. При запущенной задаче бот уходит из-под всех 6 стрел из 6 (урон 0), с выключенным уклонением получает все 6 (24 hp). В бою со скелетом — 0-2 попадания, скелет убит. Причину жалобы ищем в настройках и в том, была ли задача.",
+ "title": "Arrow dodging",
+ "subtitle": "checking a player complaint (issue #34)",
+ "caption": "unionclef: checking arrow dodging. With the task running, the bot dodges all 6 of 6 arrows (0 damage); with dodging disabled, it takes all 6 (24 hp). Fighting a skeleton: 0-2 hits taken, skeleton killed. Still looking for the cause of the complaint -- in the settings, and in whether the task was even running.",
  "segments": [
   {
    "kind": "clip",
@@ -10,8 +10,8 @@
    "from": 8,
    "to": 44,
    "speed": 2,
-   "title": "Уклонение включено",
-   "caption": "6 стрел с 12 блоков в текущую позицию бота; здоровье не падает"
+   "title": "Dodging enabled",
+   "caption": "6 arrows from 12 blocks aimed at the bot's current position; health doesn't drop"
   },
   {
    "kind": "clip",
@@ -19,15 +19,15 @@
    "from": 8,
    "to": 44,
    "speed": 2,
-   "title": "Уклонение выключено",
-   "caption": "те же стрелы: все шесть попадают"
+   "title": "Dodging disabled",
+   "caption": "same arrows: all six hit"
   },
   {
    "kind": "stat",
-   "title": "Урон от 6 стрел, по 3 прогона",
-   "before": "выключено: 24 hp",
-   "after": "включено: 0",
-   "note": "курс arrow_dodge, бот выполняет задачу @idle"
+   "title": "Damage from 6 arrows, 3 runs each",
+   "before": "disabled: 24 hp",
+   "after": "enabled: 0",
+   "note": "course arrow_dodge, bot running the @idle task"
   },
   {
    "kind": "clip",
@@ -35,16 +35,16 @@
    "from": 6,
    "to": 16,
    "speed": 1,
-   "title": "Бой со скелетом",
-   "caption": "сближается и убивает; в двух прогонах 2 и 0 попаданий"
+   "title": "Fighting a skeleton",
+   "caption": "closes in and kills it; 2 and 0 hits taken across two runs"
   },
   {
    "kind": "text",
-   "title": "Что проверяем дальше",
+   "title": "What we're checking next",
    "lines": [
-    "была ли запущена задача: без неё защита не работает",
-    "dodgeProjectiles в файле настроек игрока",
-    "траектория отскока: безопасная и быстрая, как в PvP"
+    "whether the task was running: without it, the defense does nothing",
+    "dodgeProjectiles in the player's settings file",
+    "dodge trajectory: safe and fast, like in PvP"
    ]
   }
  ]

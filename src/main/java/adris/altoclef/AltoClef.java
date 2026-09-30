@@ -538,6 +538,7 @@ public class AltoClef implements ModInitializer {
             if (!(s instanceof net.minecraft.client.gui.screen.ConfirmScreen)) return;
             String t = s.getTitle().getString().toLowerCase();
             if (t.contains("resource pack") || t.contains("texture")
+                    // ru client title text: "ресурс" / "набор ресурс" = "resource" / "resource pack".
                     || t.contains("ресурс") || t.contains("набор ресурс")) {
                 try {
                     it.unimi.dsi.fastutil.booleans.BooleanConsumer cb =

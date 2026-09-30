@@ -7,7 +7,7 @@ project in `hf/`, rules in `vidsmith/docs/CUT_RULES.md` and `mineswarm/docs/VIDE
 
 ## When
 
-- **Every release** gets one, sent with the release (the caption lists what changed, in Russian,
+- **Every release** gets one, sent with the release (the caption lists what changed, in English,
   and links the GitHub release).
 - **Every visible milestone** in between: a fight that now works, a death that stopped happening, a
   new overlay. Anything that looks good on screen is shown -- that is what the report is for.
@@ -18,8 +18,8 @@ project in `hf/`, rules in `vidsmith/docs/CUT_RULES.md` and `mineswarm/docs/VIDE
 1. **Before / after on the same checkpoint.** The strongest shot is the same situation twice: the
    old build failing, the new one handling it. Resume both from one checkpoint
    (`gamer_smoke.py N --from NAME --raw-resume --record`) and cut the matching moments.
-2. **Every clip names its event.** Title = what happens ("Ночь без кровати"), caption = the measured
-   fact ("здоровье 20 -> 1.7 за четыре минуты"). A viewer who reads nothing else must still know
+2. **Every clip names its event.** Title = what happens ("Night with no bed"), caption = the measured
+   fact ("health 20 -> 1.7 in four minutes"). A viewer who reads nothing else must still know
    what they saw.
 3. **Numbers on a stat card**, not in a caption: was -> now, and where it was measured.
 4. **The bot acting.** Cut standing, menus and loading. Speed up long stretches (x4-x16, the badge

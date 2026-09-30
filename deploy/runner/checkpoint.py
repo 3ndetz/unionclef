@@ -72,7 +72,7 @@ def bot_summary():
     return out
 
 
-# ⛔⛔ DISK HYGIENE (operator, 2026-09-25: "ТВОИ ЧЕКПОИНТЫ ЗАСРАЛИ ДИСК ... 190 ГИГОВ"). A checkpoint
+# ⛔⛔ DISK HYGIENE (operator, 2026-09-25: "YOUR CHECKPOINTS TRASHED THE DISK ... 190 GIGS"). A checkpoint
 # used to be the WHOLE world folder, 2.1 GB, and the periodic series pruned only within one run, so 96
 # of them piled up to about 190 GB and the host disk hit 98%. Now:
 #   * a checkpoint is LIGHT: level.dat (seed, time, spawn), playerdata (position, inventory, health,

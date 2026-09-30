@@ -18,7 +18,7 @@ public class WhisperChecker {
 
     public boolean isVanillaWhisperMessage(String message) {
         return message.matches("^\\[\\w+\\] whispers to you:.*") ||
-                message.matches("^\\[\\w+\\] шепчет вам:.*");
+                message.matches("^\\[\\w+\\] шепчет вам:.*"); // ru: "whispers to you"
     }
 
     public static String escapeRegexChars(String text) {

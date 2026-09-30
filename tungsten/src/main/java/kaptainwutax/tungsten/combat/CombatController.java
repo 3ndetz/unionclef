@@ -587,8 +587,8 @@ public class CombatController {
      * numbers it pressed no forward and no back at all — and 2.0-3.4 centre-to-centre is
      * exactly melee range. The only motion left was the circle-strafe, which was itself
      * suppressed near any drop by setting BOTH strafe keys false, so on a ledge or a 1-wide
-     * bridge the bot pressed literally nothing and stood there. That is the "стоит и смотрит,
-     * почти не двигается когда цель рядом" the user kept reporting. Worse, 3.4
+     * bridge the bot pressed literally nothing and stood there. That is the "it stands and stares,
+     * barely moves when the target is close" the user kept reporting. Worse, 3.4
      * centre-to-centre is ~3.1 eye-to-hitbox, i.e. OUTSIDE {@link TriggerBot#REACH}, so the
      * bot's chosen hold distance was one at which it could never land a hit.
      *

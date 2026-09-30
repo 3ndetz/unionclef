@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """G43 bench: a creeper is avoided, never pursued to its fuse.
 
-The 14:00 recorded run (2026-09-11) ended with "tester1 был взорван Крипер": the mob-defense chain
+The 14:00 recorded run (2026-09-11) ended with "tester1 was blown up by Creeper" (ru client death message): the mob-defense chain
 put the creeper in its fight list, judged it beatable and the duelling controller PURSUED it to
 striking distance, which is its fuse distance. A creeper within 6 blocks that sees the bot is now
 fled (RunAwayFromCreepersTask, keep 10), a farther one is ignored.
@@ -100,6 +100,7 @@ def main():
         time.sleep(3)
         gs = py4j("gs"); hp = float(gs.get("hp") or 0); min_hp = min(min_hp, hp)
         ch = [c for c in py4j("chat", n=10)["chat"] if c not in seen]; seen.update(ch)
+        # "взорван" is the ru-client death text ("blown up"); the English forms cover an en client.
         died = died or any(("взорван" in c) or ("blew up" in c) or ("was blown up" in c) for c in ch)
         note = [c for c in ch if any(w in c for w in ("Creeper", "creeper", "Run", "flee", "COMBAT"))]
         try:

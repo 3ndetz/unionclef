@@ -178,6 +178,7 @@ public class Playground {
                     if (item.getItem() != null) {
                         String itemName = item.getItem().getName().getString().toLowerCase();
                         Debug.logMessage("item" + itemName);
+                        // "воздух" is the ru-client name of air.
                         if (!itemName.equals("воздух") && !itemName.equals("air")) {
                             if (item.contains(DataComponentTypes.CUSTOM_NAME)) {
                                 String itemCustomName = removeMCFormatCodes(item.getName().getString().toLowerCase());
@@ -459,7 +460,7 @@ public class Playground {
                 try {
                     role_int = Integer.parseInt(subArg);
                 } catch (Exception e) {
-                    Debug.logWarning("Не указано значение, значит НЕИЗВЕСТНО");
+                    Debug.logWarning("No value given, so UNKNOWN");
                 }
                 mod.runUserTask(new MurderMysteryTask(role_int));
                 break;
@@ -491,7 +492,7 @@ public class Playground {
                     shiftType = Integer.parseInt(subArg);
                     actualShiftType = ShiftEntityTask.ShiftType.values()[shiftType];
                 } catch (Exception e) {
-                    Debug.logWarning("Не указано значение, значит НЕИЗВЕСТНО");
+                    Debug.logWarning("No value given, so UNKNOWN");
                 }
                 Optional<Entity> closestTarget = mod.getEntityTracker().getClosestEntity(
                         mod.getPlayer().getPos(),

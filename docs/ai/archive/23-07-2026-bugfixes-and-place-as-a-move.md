@@ -33,42 +33,42 @@ never self-falls. Mutual PvP still trades knockback-falls (airborne over void �
 positioning is future work). Nav regression (swap_test) PASS. Released v0.28.0
 (combat) and v0.29.0 (approach-guard completion + flee).
 
-### 2026-07-22 (доп) — @gamer проверка: корень НЕ «нет Movements», а ДРЕЙФ executor'а
+### 2026-07-22 (addendum) — @gamer check: the root is NOT "no Movements", but executor DRIFT
 
-Юзер спросил «gamer работает?». Проверил на survival-стенде (seed 12345, спавн на
-горе y=148). @gamer стартует, срубает лог, ЕДЕТ (спуск 148→143), затем ползёт/встаёт.
-Детерминированный terrain_test поймал точную причину в чистом чате (после гашения
-Searchin-спама): **executor drift-abort**. Пасфайндер НАХОДИТ путь (size 133), но
-физ-реплей (Agent) расходится с реальностью на рельефе на 5+ блоков → при
-drift>driftThreshold (стенд 5.0) `EXECUTOR.stop` (Agent.java:1613). Каждые ~30-90
-тиков abort → re-search (пауза) → рывок. Не MobDefense, не punk-утечка, НЕ регрессия
-combat-работы (VoidGuard гейтится на punk/flee). #20 развёрнут на реальную причину;
-фикс-кандидат №1 — drift-толерантный BlockPathWalker вместо жёсткого стопа. Отдельная
-фокус-задача.
+The user asked "does gamer work?". Checked on the survival bench (seed 12345, spawn on
+a mountain y=148). @gamer starts, chops a log, MOVES (descends 148→143), then crawls/stalls.
+The deterministic terrain_test caught the exact cause in a clean chat (after muting the
+Searchin spam): **executor drift-abort**. The pathfinder FINDS a path (size 133), but
+the physics replay (Agent) diverges from reality on terrain by 5+ blocks → when
+drift>driftThreshold (bench 5.0) `EXECUTOR.stop` (Agent.java:1613). Every ~30-90
+ticks: abort → re-search (pause) → lurch. Not MobDefense, not a punk leak, NOT a regression of
+combat work (VoidGuard is gated on punk/flee). #20 has been reframed to the real cause;
+fix candidate #1 — a drift-tolerant BlockPathWalker instead of a hard stop. Separate
+focus task.
 
-### 2026-07-22 (доп2) — @gamer terrain-затык ИСПРАВЛЕН (v0.30.0/v0.30.1)
+### 2026-07-22 (addendum 2) — @gamer terrain stall FIXED (v0.30.0/v0.30.1)
 
-Корень (уточнён от «нет Movements»): ДРЕЙФ физ-executor'а. Sim расходится с реальной
-позицией на ступенях/склонах → drift>threshold hard-stop; плюс поиск отвергает свой
-путь (`PathFinder:870` «root far from player» >2 бл) → пасфайндер вечно busy → стоп.
-Фикс (директива юзера — робастный tungsten block-путь + drift-иммунное физ-следование,
-БЕЗ импорта baritone): altoclef `driveTungstenPrimary` для рельефа ведёт `BlockPathWalker`
-(спринт от РЕАЛЬНОЙ позиции по block-пути, прыжки на ступени → без sim → без дрейфа).
-Источник пути: cheap `CombatPathfinder` grid BFS (чистый/близкий рельеф) → иначе
-робастный elevation-aware путь из async-поиска (`PathFinder.getComputedBlockPath`).
-Executor только на финал <=4 бл + вода/паркур. Walker форс-стопит дрейфующий пасфайндер.
-Анти-стак-сеть (v0.30.1): 5с без движения → сброс tungsten-состояния (re-plan от факта),
-после 3 сбросов → yield на wander (ломает ловушки/stale-rooted-петли).
+Root cause (refined from "no Movements"): physics-executor DRIFT. The sim diverges from the real
+position on steps/slopes → drift>threshold hard-stop; plus the search rejects its own
+path (`PathFinder:870` "root far from player" >2 blocks) → the pathfinder is forever busy → stop.
+Fix (user's directive — a robust tungsten block-path + drift-immune physics-following,
+WITHOUT importing baritone): altoclef's `driveTungstenPrimary` drives `BlockPathWalker` for terrain
+(sprinting from the REAL position along the block path, jumping on steps → no sim → no drift).
+Path source: cheap `CombatPathfinder` grid BFS (clean/close terrain) → otherwise
+a robust elevation-aware path from the async search (`PathFinder.getComputedBlockPath`).
+The executor is only for the final <=4 blocks + water/parkour. The walker force-stops a drifting pathfinder.
+Anti-stuck net (v0.30.1): 5s without movement → reset tungsten state (re-plan from fact),
+after 3 resets → yield to wander (breaks traps/stale-rooted loops).
 
-ВАЖНО (методология): terrain_test сначала бил `gotoXYZ` = tungsten-`;goto` (минует
-driveTungstenPrimary!). @gamer идёт через altoclef `@goto/@get` → driveTungstenPrimary.
-Исправлено на `@goto`.
+IMPORTANT (methodology): terrain_test was initially hitting `gotoXYZ` = tungsten's `;goto` (bypasses
+driveTungstenPrimary!). @gamer goes through altoclef `@goto/@get` → driveTungstenPrimary.
+Fixed to use `@goto`.
 
-Валидация: swap PASS, 12-ступенчатая лесенка @goto доходит доверха drift-free; на РЕАЛЬНОЙ
-горе (seed 12345) бот прошёл ~40-100 бл естественного рельефа, спустился, срубил ель/дуб
-(held spruce_log/dark_oak_log), hp 20, 0 падений — раньше стоял намертво. Остаётся: паркур
-(прыжки-гэпы/2-блочная стена), выживание против мобов (easy — еда/комбат/шелтер), редкие
-локальные ловушки (анти-стак смягчает). Speed-pipeline идея юзера — TODO #32.
+Validation: swap PASS, a 12-step staircase @goto reaches the top drift-free; on a REAL
+mountain (seed 12345) the bot traversed ~40-100 blocks of natural terrain, descended, chopped spruce/oak
+(held spruce_log/dark_oak_log), hp 20, 0 falls — it used to stand dead still. Remaining: parkour
+(gap jumps/2-block wall), survival against mobs (easy — food/combat/shelter), rare
+local traps (the anti-stuck net softens these). Speed-pipeline — the user's idea — TODO #32.
 
 ---
 

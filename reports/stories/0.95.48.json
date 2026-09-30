@@ -1,17 +1,17 @@
 {
  "name": "0.95.48",
  "title": "unionclef 0.95.48",
- "subtitle": "еда и зомби: либо поесть, либо подраться",
- "caption": "unionclef 0.95.48: голодный бот больше не мечется между едой и бегством от моба. Проверка еды на врагов видела только мобов на расстоянии удара; теперь бот ест, пока враг далеко, а подошедшего побеждаемого моба убивает. github.com/3ndetz/unionclef/releases/tag/v0.95.48",
+ "subtitle": "food and zombies: either eat or fight",
+ "caption": "unionclef 0.95.48: a hungry bot no longer flip-flops between eating and running from a mob. The enemy check for food only saw mobs within melee range; now the bot eats while the enemy is far and kills a winnable mob once it closes in. github.com/3ndetz/unionclef/releases/tag/v0.95.48",
  "segments": [
   {
    "kind": "text",
-   "title": "Курс mob_hungry",
+   "title": "Course mob_hungry",
    "lines": [
-    "меч, еда, 14 здоровья, пустой желудок",
-    "ночь, один зомби в десяти блоках",
-    "правильно: поесть до него или убить и поесть",
-    "неправильно: укус, отбежал, укус, отбежал"
+    "sword, food, 14 health, empty stomach",
+    "night, one zombie ten blocks away",
+    "correct: eat before it arrives, or kill it and eat",
+    "wrong: bite, retreat, bite, retreat"
    ]
   },
   {
@@ -20,8 +20,8 @@
    "from": 10,
    "to": 44,
    "speed": 1.5,
-   "title": "Было: 0.95.47",
-   "caption": "еда в руке, бот бегает от зомби, до драки доходит только через 30 секунд"
+   "title": "Before: 0.95.47",
+   "caption": "food in hand, the bot runs from the zombie, only fights after 30 seconds"
   },
   {
    "kind": "clip",
@@ -29,24 +29,24 @@
    "from": 10,
    "to": 22,
    "speed": 1,
-   "title": "Стало",
-   "caption": "доедает, пока зомби далеко, затем убивает подошедшего"
+   "title": "After",
+   "caption": "finishes eating while the zombie is far, then kills it once it closes in"
   },
   {
    "kind": "stat",
-   "title": "Начато укусов на один приём пищи",
-   "before": "10 и 23",
+   "title": "Bites taken per meal",
+   "before": "10 and 23",
    "after": "1",
-   "note": "mob_hungry, 5 прогонов после правки; урона 0"
+   "note": "mob_hungry, 5 runs after the fix; 0 damage"
   },
   {
    "kind": "text",
-   "title": "Что было не так",
+   "title": "What was wrong",
    "lines": [
-    "проверка врагов видела только тех, кто в досягаемости удара",
-    "пороги 7 и 14 блоков стояли наоборот",
-    "без брони бот убегал даже от зомби, которого побеждает",
-    "инструмент агента getEntitiesInfo видел мир так же узко"
+    "the enemy check only saw mobs within melee range",
+    "the 7 and 14 block thresholds were swapped",
+    "without armor the bot ran even from a zombie it could beat",
+    "the agent's getEntitiesInfo tool saw the world just as narrowly"
    ]
   }
  ]

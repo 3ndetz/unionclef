@@ -2,7 +2,7 @@ package kaptainwutax.tungsten.util;
 
 /**
  * Per-tick ring buffer of the player's yaw — lets a stand test QUANTIFY aim jitter
- * (the "прицел трясёт" shake) instead of eyeballing it: a smooth aim tracking a target
+ * (the "the aim is shaking" shake) instead of eyeballing it: a smooth aim tracking a target
  * turns near-monotonically (few Δyaw sign-reversals); a shaky one flips direction many
  * times per second. Recorded every client tick from MixinClientPlayerEntity; read over
  * py4j via getAimSamples(n). Cheap (one float write per tick), always on.

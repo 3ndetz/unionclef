@@ -62,7 +62,7 @@ def main():
     with open(path, encoding="utf-8") as fh:
         parts = chunks(fh.read())
     for i, part in enumerate(parts, 1):
-        tag = f"{header} (часть {i}/{len(parts)})\n\n" if len(parts) > 1 else ""
+        tag = f"{header} (part {i}/{len(parts)})\n\n" if len(parts) > 1 else ""
         tmp = os.path.join(tempfile.gettempdir(), f"tg_part_{i}.txt")
         with open(tmp, "w", encoding="utf-8") as fh:
             fh.write(tag + part)
