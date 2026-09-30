@@ -14,6 +14,21 @@ the "G-0" migration (2026-08-24), **tungsten is the only compiled pathfinder** �
 baritone stay in the tree as source reference only, not built, not run. No submodules, no
 pre-built JARs, no tears.
 
+## Why tungsten
+
+All the pathfinding now lives in **tungsten**; baritone and shredder stay in the tree only to read
+from. The reason, in the maintainer's words:
+
+> "It is easier to develop. Baritone has grown barnacles: it was written by seasoned mega-hackers,
+> and its code is readable only by superhumans. The future belongs to the young — long live
+> tungsten!"
+
+Practically: tungsten plans on a real physics simulation of the player, so parkour, knockback and
+water are part of the plan rather than special cases, and a change to it is a change to one engine,
+not to a stack of engines handing the body to each other. What baritone got right (hazards, falls,
+mining costs, placement rules) is not thrown away: it is ported into tungsten, with the source line
+it came from cited next to the port.
+
 ## What's inside
 
 | Module | What it does |
@@ -38,7 +53,7 @@ pre-built JARs, no tears.
 | Enderpearl clutch ![alt text](assets/README/EnderClutch.gif) | TP with enderpearl when pursue target. Save self with enderpearl when dropped from edge. | 3/3 ✅ |
 | Arrow dodger ![alt text](assets/README/AutoclefDodging.gif) | Sidesteps incoming arrows: each tick it simulates the possible steps with tungsten's physics and takes the one that clears the arrow without walking into lava, fluid or a drop. Raises a shield if it has one. On by default (`dodgeProjectiles`). | 3/3 ✅ |
 | `@test mace` ![alt text](assets/README/MaceClutch.gif) | Mace landing from a height | 1/1 ✅ |
-| `#bridgingMode jump` ![alt text](assets/README/ShredderBridging256.gif) | Sprint-speed telly bridging. Cancel with `slow`, `standard`, or `back-jump` mode. | 3/3 ✅ |
+| `;bridge [n \| x y z]` ![alt text](assets/README/ShredderBridging256.gif) | Godbridging with tungsten: forward for n blocks or towards a position. Needs a block in the hand. (The gif is from the shredder days; the old `#bridgingMode` command went with it.) | 3/3 ✅ |
 | **PvP** |
 | Attacking bot `@punk` | Handles close target battle. [Wind-mouse](https://github.com/arevi/wind-mouse) based rotations. Brokes shields (axe). Uses own shield. Combines ranging and melee attacks automatically, pursues targets. Using mace from the height | 3/3 ✅ |
 | Shooting bot `@shoot` | Handles ranged target battle with 2 types of angle (rapid-fire, sniper, artillery) | 3/3 ✅ |
@@ -66,7 +81,6 @@ pre-built JARs, no tears.
 | **Comfort** |
 | Command suggestions | Rich chat commands suggestions `@help` | 1/1 ✅ |
 | Monorepo structure | Multi-versioned structured mono-repo with easy-to-work with any of integrated mod | 1/1 ✅ |
-| Removed naughty prints from baritone | | 1/1 ✅ |
 
 > Vote for the new features, report for bugs in the [issues](https://github.com/3ndetz/unionclef/issues).
 
