@@ -5083,6 +5083,12 @@ public class TungstenConfig {
      *  (ProjectileDodge.plan); false drives the chain's heading blind, for the A/B. */
     public boolean dodgeSearch = true;
 
+    /** Diamonds the beat-the-game task wants before the nether: below this, any diamond ore the
+     *  scanner knows outranks the nether step (priority 1050/distance). 5 = a pickaxe and a sword;
+     *  the original 27 (full diamond armour first) kept full58 mining at y=9 for the rest of a
+     *  two-hour run. Beyond it, ore within 5 blocks is still taken on the way. */
+    public int diamondsBeforeNether = 5;
+
     /** Scales the cost of bridging with a placed block. Raise it to make the bot prefer
      *  going around; lower it to make it build more readily. */
     public double placeCostMultiplier = 1.0;

@@ -811,7 +811,11 @@ public class BeatMinecraftTask extends Task {
         gatherResources.add(getOrePriorityTask(Items.COAL, MiningRequirement.STONE, 1050, 250, 5, 4, 7));
         gatherResources.add(getOrePriorityTask(Items.RAW_IRON, MiningRequirement.STONE, 1050, 250, 5, 11, 11));
         gatherResources.add(getOrePriorityTask(Items.RAW_GOLD, MiningRequirement.IRON, 1050, 250, 5, 5, 5));
-        gatherResources.add(getOrePriorityTask(Items.DIAMOND, MiningRequirement.IRON, 1050, 250, 5, 27, 30));
+        // Was minCount 27 (full diamond armour before the nether): any known diamond ore then outranked
+        // the nether for as long as the count was short, and full58 spent its last hour at y=9-13
+        // mining for it. See TungstenConfig.diamondsBeforeNether.
+        int diamondsNeeded = kaptainwutax.tungsten.TungstenConfig.get().diamondsBeforeNether;
+        gatherResources.add(getOrePriorityTask(Items.DIAMOND, MiningRequirement.IRON, 1050, 250, 5, diamondsNeeded, Math.max(diamondsNeeded, 30)));
     }
 
     private PriorityTask getOrePriorityTask(Item item, MiningRequirement requirement, int multiplier, int unneededMultiplier, int unneededThreshold, int minCount, int maxCount) {

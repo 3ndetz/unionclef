@@ -84,6 +84,12 @@ public class CollectFoodTask extends Task {
     private Task currentResourceTask = null;
     private Task surfaceSearchTask;
     private int surfaceSearchY;
+    /** When the current surface search began and how close it has got: it gets SURFACE_PATIENCE_MS
+     *  without closing in before it is dropped for the outward search. */
+    private long surfaceSearchSinceMs;
+    private double surfaceSearchBest;
+    private static final long SURFACE_PATIENCE_MS = 60_000;
+    public static volatile int surfaceSearchGivenUp;
     private static final int SURFACE_SEARCH_RADIUS = 16;
 
     public CollectFoodTask(double unitsNeeded) {
@@ -340,7 +346,25 @@ public class CollectFoodTask extends Task {
             // level until the body can step out, instead of treating open sky as arrival.
             int top = surfaceSearchTask != null ? surfaceSearchY
                     : mod.getWorld().getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, feet.getX(), feet.getZ());
-            if (feet.getY() + 1 < top) {
+            // ⛔ WATER OVERHEAD IS NOT A CEILING (full58 resume, 2026-10-01). The heightmap counts
+            // water as blocking, so a body swimming three blocks down in open water read as
+            // "underground" and was sent to a dry surface it never reached: 45 minutes at 4.8 health
+            // with nothing to eat. Underground means rock over the head.
+            boolean underCover = surfaceSearchTask != null || rockOverhead(mod, feet, top);
+            // And a surface search that stops closing in is given up for the outward search.
+            if (surfaceSearchTask != null) {
+                double d = mod.getPlayer().getPos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(
+                        new BlockPos(feet.getX(), surfaceSearchY, feet.getZ())));
+                if (d < surfaceSearchBest - 2) {
+                    surfaceSearchBest = d;
+                    surfaceSearchSinceMs = System.currentTimeMillis();
+                } else if (System.currentTimeMillis() - surfaceSearchSinceMs > SURFACE_PATIENCE_MS) {
+                    surfaceSearchGivenUp++;
+                    surfaceSearchTask = null;
+                    underCover = false;
+                }
+            }
+            if (underCover && feet.getY() + 1 < top) {
                 // Release within one upward step of the selected surface: the original
                 // endpoint can float one block above its footing after excavation.
                 if (surfaceSearchTask != null && surfaceSearchTask.isActive() && !surfaceSearchTask.isFinished()) {
@@ -351,6 +375,8 @@ public class CollectFoodTask extends Task {
                 if (surface != null) {
                     surfaceSearchTask = new GetToBlockTask(surface);
                     surfaceSearchY = surface.getY();
+                    surfaceSearchSinceMs = System.currentTimeMillis();
+                    surfaceSearchBest = Double.POSITIVE_INFINITY;
                     setDebugState("Searching for food on the surface");
                     return surfaceSearchTask;
                 }
@@ -373,6 +399,16 @@ public class CollectFoodTask extends Task {
             return new adris.altoclef.tasks.movement.ExploreOutwardTask();
         }
         return new TimeoutWanderTask();
+    }
+
+    /** A solid block between the head and the top of the column: rock, not water, overhead. */
+    private static boolean rockOverhead(AltoClef mod, BlockPos feet, int top) {
+        var world = mod.getWorld();
+        for (int y = feet.getY() + 2; y < top; y++) {
+            BlockPos p = new BlockPos(feet.getX(), y, feet.getZ());
+            if (!world.getBlockState(p).getCollisionShape(world, p).isEmpty()) return true;
+        }
+        return false;
     }
 
     /** Choose a loaded dry surface; ordinary navigation owns digging and construction. */
