@@ -172,6 +172,8 @@ public class PlaceObsidianBucketTask extends Task {
             if (!WorldHelper.isSolidBlock(castPos)) {
                 _currentCastTarget = kaptainwutax.tungsten.TungstenConfig.get().castSupports ? supportFirst(mod, castPos) : castPos;
                 if (!_currentCastTarget.equals(castPos)) supportsPlaced++;
+                logOnce("cast " + _pos.toShortString() + ": mould " + castPos.toShortString()
+                        + (_currentCastTarget.equals(castPos) ? "" : " via support " + _currentCastTarget.toShortString()));
                 Debug.logInternal("Building cast frame...");
                 return null;
             }
@@ -183,6 +185,7 @@ public class PlaceObsidianBucketTask extends Task {
             // Would lead to an embarrassing death.
             BlockPos targetPos = _pos.add(-1,1,0);
             if (!mod.getPlayer().getBlockPos().equals(targetPos) && mod.getItemStorage().hasItem(Items.LAVA_BUCKET)) {
+                logOnce("cast " + _pos.toShortString() + ": to the lava stand " + targetPos.toShortString());
                 Debug.logInternal("Positioning player before placing lava...");
                 return new GetToBlockTask(targetPos, false);
             }
@@ -226,6 +229,16 @@ public class PlaceObsidianBucketTask extends Task {
             return new InteractWithBlockTask(new ItemTarget(Items.WATER_BUCKET, 1), Direction.WEST, _pos.add(1,1,0), true);
         }
         return null;
+    }
+
+    private static String lastLog;
+
+    /** Say a step once, not every tick: which mould cell, which support, which stand. */
+    private static void logOnce(String msg) {
+        if (!msg.equals(lastLog)) {
+            lastLog = msg;
+            Debug.logMessage(msg);
+        }
     }
 
     /** Support blocks placed under cast cells that had nothing to be placed against. */
