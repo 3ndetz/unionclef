@@ -1,0 +1,27 @@
+{
+ "name": "0.95.53",
+ "title": "unionclef 0.95.53",
+ "subtitle": "a nether portal from buckets and a lava lake",
+ "caption": "unionclef 0.95.53: the bucket portal gets built. No diamond pickaxe, a lava lake, two buckets: the bot casts the ten frame blocks, lights it and walks into the nether. Portal lit in 5 of 9 runs (0.95.52: 1 of 8), in 125-155 s. github.com/3ndetz/unionclef/releases/tag/v0.95.53",
+ "hook": {"src": "C:/Repos/pet/unionclef/reports/footage/portal_ok.mp4", "from": 151, "to": 161, "speed": 1,
+          "text": "no diamond pickaxe, still in the nether"},
+ "segments": [
+  {"kind": "split", "title": "the top of the frame, same course",
+   "left": {"src": "C:/Repos/pet/unionclef/reports/footage/portal_stuck.mp4", "from": 150, "to": 230, "speed": 4,
+            "label": "0.95.52", "caption": "hops in the cast run-off for six minutes"},
+   "right": {"src": "C:/Repos/pet/unionclef/reports/footage/portal_ok.mp4", "from": 60, "to": 140, "speed": 4,
+             "label": "0.95.53", "caption": "pillars one block and places the mould"}},
+  {"kind": "clip", "src": "C:/Repos/pet/unionclef/reports/footage/portal_ok.mp4", "from": 8, "to": 136, "speed": 8,
+   "title": "ten frame blocks, one cast each", "caption": "mould of cobblestone, lava, water on top, obsidian",
+   "zoom": 1.1},
+  {"kind": "clip", "src": "C:/Repos/pet/unionclef/reports/footage/portal_ok.mp4", "from": 136, "to": 156, "speed": 2,
+   "title": "clearing the opening, then flint and steel", "caption": "the mould inside the frame comes out"},
+  {"kind": "stat", "title": "portal lit on portal_lava_lake", "before": "1 of 8", "after": "5 of 9",
+   "before_n": 12, "after_n": 56, "unit": "%", "note": "0.95.52 against this build; lit in 125-155 s"},
+  {"kind": "text", "title": "what was in the way",
+   "lines": ["a re-sited frame trapped the old obsidian inside",
+             "the cast tried to mine its own obsidian",
+             "the bot swam in water too shallow to swim in",
+             "the wander lived for one tick"]}
+ ]
+}
