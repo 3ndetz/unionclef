@@ -4,6 +4,14 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Night shelter can hold the playthrough in water without a usable site (2026-10-02).**
+  UNIONCLEF-HARD retained a native replay from full59-before-portal. At538s the
+  shelter says "No place to dig in for the night here" near(-89.3,61.3,1062.3);
+  the bot remains there through748s with20hp and no navigation/dig progress.
+  Checkpointcp1002-0229-t656 preserves this entry. The earlier daytime shelter
+  was legitimate thunderstorm waiting and exited normally. Investigate usable
+  shelter-site selection and its approach when the starting body is in water;
+  do not relax flood/hazard checks or label a no-site wait as safe sheltering.
 - [ ] **Physics replay falls at the last gap (healthy nav audit, 2026-10-02).**
   UNIONCLEF-HARD is investigating. The refreshed-client nav-tail campaign completed
   water 3/3 and gaps 3/4, stopping at the first gap failure (29.5 FPS, one void death;

@@ -317,5 +317,42 @@
   forward through later task changes. The previously unrecorded key writer is
   now visible. This is a successful-run observation, not causality for the fatal
   lava entry. Remaining runs and final independent cleanup are pending.
+- Expanded portal campaign finished exit0:6/6 valid completion/survival PASS,
+  FPS28.84/29.57/29.78/29.67/29.76/29.55, all observers exit0. Traces contain
+  3169/3440/2976/2943/2876/3215 events with zero errors/gaps, including explicit
+  final drains of4/4/4/5/3/4 events. Independent cleanup errors=[], lock released.
+  All six clips reviewed at4s. Across55 collector-to-interaction handoffs, the
+  queue remains active at49 and the walker at3; one orphan stop is airborne.
+  These are recorded ownership states; activity alone does not prove which driver
+  wrote each key. No safe-casting fix or comparison with the old fatal entry is claimed.
+- Prepared a guarded native15min replay from full59-before-portal: raw resume,
+  native5min/rung checkpoints, unique end save, retained originallast. It verifies
+  loaded jar, original all-file hash, saved inventory components, client slots
+  and horizontal position before @gamer. A first invocation stopped before any
+  game writes because it compared a world-only digest to the all-file digest;
+  corrected the scope to include meta.json. The corrected invocation is active
+  (session53422), logfull59-before-portal-native-resume-verified.log; entry gates
+  and playthrough outcomes are pending. The native task-string reader still reads
+  the mutable list off-thread; this fixture uses the verifiedgetTaskChain snapshot.
+  Private verbose-gap fixture syntax passed; not run yet.
+- Native entry verified on5516 at30FPS: original inventory components and client
+  slots match, iron pick damage35/stone109,218items in17stacks. Collected iron
+  at73.7s, then shield resources. Held a shelter at172-366s with20hp; this is
+  not evidence of a daytime-condition bug. Original level.dat has raining=1,
+  thundering=1, DayTime50031; periodiccp1002-0229-t322 still has both weather
+  flags and DayTime56999. WorldHelper.canSleep explicitly includes thunderstorms.
+  The shelter ended by391s and portal approach started by415s. A drowned reduced
+  hp to15 at488s; food restored20hp by514s. At538s the task requests another
+  shelter at(-89.3,61.3,1062.3), reports no acceptable site and remains there.
+  The15min run is still active; no actual Nether transition or fix is claimed.
+- Reopened physics root creation: PathFinder.find starts a worker; Agent.of(player)
+  occurs later in search/initializeStartNode, not atomically at the publicfind call.
+  The pfRootMoving counter therefore need not describe the eventual root state.
+  Compare existing exactsim/real logs before attributing the gap fall to residual
+  velocity or native rotation quantization. Prepared verbose-gap run stillNOTRUN.
+- Read-only no-site snapshot confirms30FPS, water in feet/head cells(-90,61/62,1062),
+  20hp, no active walker/pathfinder/executor. This is a real exposed-water hold,
+  not an idle-client or daytime false alarm. Retainedno-site-snapshot.json and
+  periodiccp1002-0229-t656; added the corresponding general openTODO.
 
 Completed and earlier entries: [archive/01-10-2026-completed-progress-history.md](archive/01-10-2026-completed-progress-history.md).
