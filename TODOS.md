@@ -4,6 +4,16 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Physics replay falls at the last gap (healthy nav audit, 2026-10-02).**
+  UNIONCLEF-HARD is investigating. The refreshed-client nav-tail campaign completed
+  water 3/3 and gaps 3/4, stopping at the first gap failure (29.5 FPS, one void death;
+  the remaining two repeats were not run). Task runner was explicitly inactive and
+  the continuous client-tick trace has no errors/gaps. The first preparatory hop
+  passes the platform edge before landing; the next jump is pressed while airborne,
+  then drift abort fires at tick 15. Compare expected versus actual physics states
+  before changing the root handoff or jump execution. Root cause is not established.
+  Evidence: artifacts/task-force-nav-tail-20261002-015409/nav_gaps-4/nav_gaps,
+  artifacts/g108-nav-gap-fatal-ticks.txt. The earlier adjacent-suite fall is retained.
 - [ ] **Lava collection stalls on a column above the source (full59, 2026-10-01).**
   UNIONCLEF-HARD is investigating this pass. The last ~39 minutes of the 90-minute run
   stayed at (-290.7,55,965.4), approaching (-293,53,963) within radius 2. Checkpoint

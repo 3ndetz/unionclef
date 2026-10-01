@@ -292,4 +292,30 @@
   showing underwater crossing then arrival. The first gap replay also passed and
   was reviewed at2s. Campaign remains active; no repaired gap-fall claim.
 
+### 2026-10-02 nav-tail result and expanded portal capture
+- Nav-tail session43423 finished exit1 at the first non-green. Exact results:
+  water3/3 valid PASS, gaps3/4 valid PASS with one valid FAIL; gaps5/6 NOT RUN.
+  Failed gap average29.5FPS, minY=-249.7293, one fall/death followed by respawn and
+  eventual arrival21.4s. All seven clips reviewed (water3s, gaps2s, fatalgap1s).
+  Inactive Task-runner gate and continuous trace assertions passed in every case;
+  cleanup errors=[] and lock released. Direct physics replay, not Task arbitration,
+  owns the failed hop. This cannot erase the preceding35-case campaign's fall.
+- Failed hop ages316-331: executor starts atx17.5426 with residualvx0.0036;
+  jumps without sprint, then sprints forward. Atage327 x18.3068/y-59.8787,
+  the body no longer overlaps the platform ending atx18. It falls belowy-60
+  atage328 and presses the next jump atage329 while airborne. Drift abort at
+  tick15 expects19.22/-59.25/1.09 versus18.83/-61.42/1.12. Successful repeats
+  land the first hop at the lip and then jump. The difference is millimetres at
+  the edge; residual root velocity/rotation precision are hypotheses, not a fix.
+  Existing Agent.compare diagnostics can print simulated/actual states through
+  verboseDebugLogging; use that instrument before adding more Java tracing.
+- Expanded portal campaign session52830 started on unchanged5516 candidate:
+  artifacts/g108-cast-probe-20261002-020451. First two runs validPASS, observers
+  exit0, zero lava entries/deaths,28.84/29.57FPS; both clips reviewed at4s.
+  Run1 trace3169 events, zero gaps/errors. Atseq187 the task selects interaction
+  while MovementTraverse remains active; seq189-200 show the queue continuing
+  forward through later task changes. The previously unrecorded key writer is
+  now visible. This is a successful-run observation, not causality for the fatal
+  lava entry. Remaining runs and final independent cleanup are pending.
+
 Completed and earlier entries: [archive/01-10-2026-completed-progress-history.md](archive/01-10-2026-completed-progress-history.md).
