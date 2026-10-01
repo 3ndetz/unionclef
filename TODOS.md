@@ -105,8 +105,17 @@
   Inspect caster/interaction positioning and the enclosed escape; no root cause established yet.
   A separate Task interruption defect is reproduced by an isolated lifecycle contract:
   a plain wrapper or non-forcing ancestor bypasses a forcing descendant, including the
-  grounded movement and cursor-resource guards. Fix and battle test this core contract;
-  its connection to the fatal entries is not yet established.
+  grounded movement and cursor-resource guards. Implemented active-descendant vetoes
+  and retained-child progression: remapped lifecycle contracts 9/9, explicit airborne
+  user stop 3/3, crafting/pickup/lava-escape regressions 21/21. Wrapped resource vetoes
+  executed during mixed/full-pack crafting. Its connection to the fatal entries remains
+  unestablished; this is not a safe-casting fix.
+  Diagnostic follow-up: getTaskChain streamed the client-owned ArrayList on a py4j
+  thread and threw a null dereference during a portal replay. Marshal the full
+  task-list snapshot now runs on the client thread; six traced portal replays completed
+  with observer exit 0 and no row errors/gaps. The failed diagnostic is retained and
+  excluded from verified survival passes. Opt-in driver tracing is available for the
+  remaining handoff investigation; the earlier fatal replay stays open.
 - [ ] **A 2x2 fill through the build queue places 1 of 4 cells** (found 2026-09-30, already so on
   0.95.52): mcp_test.py `fillSelection` -> dirt 1/4, place_test.py `placed: 1/4`; diag_build (4
   mixed cells) passes. MCP itself works (60 tools, getGameState, auth). Also: schematic FILE loading

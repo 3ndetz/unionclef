@@ -1122,15 +1122,48 @@ public class Py4jEntryPoint {
         return _mod.getPlayer() == null ? 0 : Math.sqrt(Math.pow(_mod.getPlayer().getVelocity().getX(), 2) + Math.pow(_mod.getPlayer().getVelocity().getZ(), 2));
     }
 
+    /** Full ordered descriptions of the current task chain, copied on the client thread.
+     *  Empty if there is no current chain; a timeout returns an explicit error description. */
     public List<String> getTaskChain() {
-        List<String> tasks_list = new ArrayList<>();
-        if (_mod.getTaskRunner().getCurrentTaskChain() != null) {
-            List<Task> tasks = _mod.getTaskRunner().getCurrentTaskChain().getTasks();
-            if (tasks.size() > 0) {
-                tasks_list.addAll(tasks.stream().map(task -> task.toString()).toList());
-            }
-        }
-        return tasks_list;
+        // TaskChain.tick clears/repopulates its ArrayList on the client thread. Reading its
+        // stream from py4j raced that clear and dereferenced a null element during a portal
+        // replay (G108 checkpoint diagnostic, 2026-10-01). Copy full task descriptions
+        // on the owning thread.
+        return onClientThread(() -> {
+            var chain = _mod.getTaskRunner().getCurrentTaskChain();
+            if (chain == null) return List.<String>of();
+            return chain.getTasks().stream().map(Task::toString).toList();
+        }, List.of("error: client thread timeout"));
+    }
+
+    /** Cumulative task child-selection vetoes, including those below a wrapper. Compare deltas
+     *  around a task to verify interruption guards ran; these are not death or success counts.
+     *  Explicit user stop and priority-chain preemption bypass child-selection guards. */
+    public Map<String, Object> getTaskInterruptionStats() {
+        return onClientThread(() -> Map.<String, Object>of(
+                "vetoes", Task.interruptionVetoes,
+                "descendantVetoes", Task.descendantInterruptionVetoes,
+                "lastVeto", Task.lastInterruptionVeto),
+                Map.of("error", "client thread timeout"));
+    }
+
+    /** Start/stop a bounded diagnostic trace of task decisions and end-of-client-tick
+     *  body, keys and route ownership. Off by default; enabling clears previous rows.
+     *  Disabling retains them. Does not change movement or interruption decisions. */
+    public boolean setMovementTrace(boolean enabled) {
+        return onClientThread(() -> {
+            adris.altoclef.tasksystem.TaskMovementTrace.setEnabled(enabled);
+            return true;
+        }, false);
+    }
+
+    /** JSON rows after the given sequence, from the last 2048 movement observations.
+     *  Pass zero for a new trace, then the last row's seq. Read on the client thread;
+     *  a sequence gap means rows were evicted. Error rows and a timeout
+     *  are explicit, so an incomplete recording cannot count as a verified handoff. */
+    public List<String> getMovementTrace(long afterSequence) {
+        return onClientThread(() -> adris.altoclef.tasksystem.TaskMovementTrace.snapshot(afterSequence),
+                List.of("{\"error\":\"client thread timeout\"}"));
     }
 
     public String getThreatStatus() {

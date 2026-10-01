@@ -7,6 +7,18 @@ import java.util.function.Predicate;
 
 public abstract class Task {
 
+    /** Cumulative child-selection vetoes; descendants count separately to expose wrapper bypasses. */
+    public static volatile int interruptionVetoes, descendantInterruptionVetoes;
+    public static volatile String lastInterruptionVeto = "-";
+
+    /** Optional diagnostic sink, installed only while a movement handoff trace is requested. */
+    public static volatile java.util.function.Consumer<String> diagnosticEvents;
+
+    public static void noteDiagnostic(String event) {
+        java.util.function.Consumer<String> sink = diagnosticEvents;
+        if (sink != null) sink.accept(event);
+    }
+
     private String oldDebugState = "";
     private String debugState = "";
 
@@ -39,6 +51,9 @@ public abstract class Task {
         if (newSub != null) {
             if (!newSub.isEqual(sub)) {
                 if (canBeInterrupted(sub, newSub)) {
+                    if (diagnosticEvents != null) noteDiagnostic("select " + getClass().getSimpleName()
+                            + ": " + (sub == null ? "null" : sub.getClass().getSimpleName())
+                            + " -> " + newSub.getClass().getSimpleName());
                     // Our sub task is new
                     if (sub != null) {
                         // Our previous sub must be interrupted.
@@ -53,10 +68,18 @@ public abstract class Task {
             sub.tick(parentChain);
         } else {
             // We are null
-            if (sub != null && canBeInterrupted(sub, null)) {
-                // Our previous sub must be interrupted.
-                sub.stop();
-                sub = null;
+            if (sub != null) {
+                if (canBeInterrupted(sub, null)) {
+                    if (diagnosticEvents != null) noteDiagnostic("select " + getClass().getSimpleName()
+                            + ": " + sub.getClass().getSimpleName() + " -> null");
+                    // Our previous sub must be interrupted.
+                    sub.stop();
+                    sub = null;
+                } else {
+                    // The retained child must keep running to reach a safe cancellation state,
+                    // including finishing a movement or returning a protected cursor item.
+                    sub.tick(parentChain);
+                }
             }
         }
     }
@@ -173,12 +196,22 @@ public abstract class Task {
      */
     private boolean canBeInterrupted(Task subTask, Task toInterruptWith) {
         if (subTask == null) return true;
-        // Our task can declare that is FORCES itself to be active NOW.
-        return (subTask.thisOrChildSatisfies(task -> {
-            if (task instanceof ITaskCanForce canForce) {
-                return !canForce.shouldForce(toInterruptWith);
+        // Upstream PathingControlManager.java:85-110 cancels only a safe segment;
+        // MovementFall.java:173-177 refuses a mid-fall handoff. Preserve our existing
+        // grounded/cursor guards through every wrapper: one descendant veto is enough.
+        // Looking for ANY allowed node let a plain wrapper bypass its protected child.
+        // Explicit stop()/interrupt() remains unconditional for user and chain preemption.
+        for (Task current = subTask; current != null; current = current.sub) {
+            if (current.isActive() && current instanceof ITaskCanForce canForce
+                    && canForce.shouldForce(toInterruptWith)) {
+                interruptionVetoes++;
+                if (current != subTask) descendantInterruptionVetoes++;
+                lastInterruptionVeto = current.getClass().getSimpleName() + " -> "
+                        + (toInterruptWith == null ? "null" : toInterruptWith.getClass().getSimpleName());
+                if (diagnosticEvents != null) noteDiagnostic("veto " + lastInterruptionVeto);
+                return false;
             }
-            return true;
-        }));
+        }
+        return true;
     }
 }

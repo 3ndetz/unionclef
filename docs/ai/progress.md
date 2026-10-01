@@ -3,7 +3,7 @@
 ## 2026-10-01 — full59 lava stall and bucket-portal continuation (in progress)
 
 ### Investigate
-- Main and 1.21.11 are synchronized at 2805a570 (report-only head). The original control used the 0.95.53 jar
+- Main and 1.21.11 are synchronized at c6e4e7ea (tested builder ownership, no release). The original control used the 0.95.53 jar
   built at 01:17; the current candidate binary is identified below. Original full59: 90 minutes,
   zero deaths, final 39 minutes at
   (-290.7,55,965.4), collecting lava through a radius-2 approach.
@@ -139,8 +139,157 @@
   cursor guards must both survive wrappers; explicit stop/chain interruption remains unconditional.
   This defect is established independently of the two fatal lava entries; causality is unknown.
   Artifacts: task-force-contract/baseline.log and src/TaskForceContract.java.
+- Fixed child selection to honor every descendant's veto. When a null child selection is
+  deferred, the old subtree continues ticking so its movement/cursor guard can release.
+  Explicit stop/chain interruption is unchanged. Added cumulative veto counters and a
+  client-thread API for live execution evidence. Baritone safe-handoff references are at the site.
+  Actual-source lifecycle contracts passed 9/9: direct/wrapped/ancestor veto, null selection,
+  retained progression, candidate override, ordinary replacement/user stop, chain interrupt/resume,
+  and stopped-tree restart (only active descendants may veto a fresh selection).
+  Runnable contract: python deploy/runner/task_force_contract.py. Clean build passed in 8m08s,
+  exit 0, including tungsten:clean/build and :1.21.11:build. The same nine contracts passed
+  against Task loaded from the remapped jar (--jar), and javap confirms the active-subtree
+  veto loop/counters. Nested tungsten jar is fresh and byte-identical. Candidate SHA256:
+  50cd309d601abdeeb78978b4ff01547806d86d72967ccd0a708c85cd194ef62c.
+  No claim yet about checkpoint survival or original full59 completion.
+  Reviewed the three disabled diagnosis clips at four-second cadence: two finished/entered,
+  run 2 repeats the upper-mould jumps through the 420 s timeout. No new fatal entry recorded.
+- First new checkpoint replay passed at 29.4 FPS, lit at 112.6 s, zero deaths/entries,
+  veto deltas 113 total / 9 below wrappers. Second reached the portal objective but its
+  observer failed after ~106 s of recorded observations: getTaskChain streamed TaskChain's concurrently cleared ArrayList from
+  py4j and dereferenced a null element. Retained clip/motion/log; second is not counted as
+  a verified survival pass. The conditional adjacent controller was stopped before running.
+  Fixed the read API to snapshot full descriptions on the client thread. This changes the
+  instrument, not task selection; Task guard source remains unchanged. Rebuild/replay next.
+- Reader fix build passed in 7m40s, exit 0. Nine contracts passed against the new remapped
+  jar; getTaskChain bytecode invokes onClientThread. Task.class is byte-identical to the
+  previous 50cd candidate, retained as g108-task-force-before-reader.jar. Nested module
+  jars are fresh/identical. New SHA256:
+  094ed645aaf8dd633b5b53e72192d570415716597ff55f2995023f4dc2d3eb7d.
+- Reader-fixed replays (artifacts/g108-cast-probe-20261002-000144) stopped at the first
+  gameplay failure: run 1 PASS/29.4 FPS, run 2 FAIL/29.8 FPS, complete observer exit 0 in both.
+  Run 2 enters lava at motion t=84.12 s and dies at 86.14 s. Guard deltas 75/16 confirm it
+  executed but did not prevent this entry. No adjacent campaign started and no release.
+  Full clip reviewed at two-second cadence; fatal window retains body/velocity/column/tasks.
+  Before entry, collection approaches (22,-60,0) from the upper frame, then a two-cell BFS
+  route (21,-60,4)->(21,-60,0), maxHop4. Interact becomes the leaf while the body is airborne;
+  the guard had vetoed that same handoff at the prior sample. After pickup, construction
+  resumes while the body falls into (22,-61,2). A navigator route appears after the airborne
+  takeoff, and lava escape runs before the death. Flight/cancellation and route ownership
+  must now be traced from this actual entry; Task guard alone is not a cast hazard fix.
 - Report tooling: HyperFrames pin 0.8.30 -> 0.8.105; existing composition check passed (exit 0,
   runtime/layout/contrast clear, 16 structural lint warnings in the old template). The report
   launcher now reads the project pin and gates rendering on check success. Python syntax passed.
+
+### 2026-10-02 handoff instrumentation follow-up
+- Reopened current Task/grounded guard, interaction click path, drive teardown/orphan
+  cleanup, walker jump gate and SafetySystem landing scan. Upstream MovementParkour:244-249
+  refuses cancellation after movement starts; the local grounded-only contract cannot
+  describe pending jump inputs on the same grounded tick. Interact calls orphan cleanup
+  from its parent's onTick before child arbitration. Both are candidate seams, not an
+  established explanation of the recorded death.
+- Added opt-in bounded TaskMovementTrace: selection/veto, drive stop, reachable interaction
+  and actual orphan cancellation events, plus END_CLIENT_TICK observations. Rows record
+  precise body/velocity/ground, keys, route provenance, task classes and drive age. All
+  recording/reads run on the client thread; off by default. Sequence gaps/errors are
+  explicit. The diagnostic changes no movement decision. Full :1.21.11:build passed
+  in 8m27s, exit 0; remapped Task contracts 9/9 and nested-module freshness passed.
+  javap verifies getMovementTrace(long), snapshot(long) and the enabled setter.
+  Diagnostic candidate SHA256:
+  269d72e8526a7a0e64c95d86e89f467960b241c58659eace9ee4081501109a38.
+  Previous deployed 094ed jar retained as artifacts/g108-handoff-control-094ed.jar.
+  Scoped deployment active; live capture pending.
+- Deployment succeeded (tester1 only), verified by the probe's loaded-JAR hash gate.
+  Six traced replays completed in artifacts/g108-cast-probe-20261002-003746: 6/6 valid
+  completion/survival passes, 28.79-29.75 FPS, observer exit 0 in all six. Every captured
+  trace has zero errors/gaps (3094/3134/3179/3392/3354/2942 events). Each has nine collector
+  GetClose -> Interact handoffs; all 54 are grounded with jump not held at selection.
+  Four runs retain an active walker at one such handoff; two runs cancel an orphan route
+  while airborne. None of these six enters lava. This sample does not erase the earlier
+  fatal replay or establish a safe-casting fix. The final observer poll may omit the last
+  fraction of a second after the objective; the capture is not a complete post-objective trace.
+  In run 1 a concrete GetClose -> Interact handoff at seq1484 was grounded, yet the
+  BFS walker continued advancing from x18.84 to x21.48 over the following 470 ms.
+  Another handoff at seq275 was grounded at x19.295/y-59, then forward returned on
+  five ticks, the body stepped off at seq286 and orphan cleanup fired while airborne
+  at seq287/driveAge312 ms. That entry did not touch lava. These show movement survives
+  a concrete click handoff; they do not establish the earlier fatal entry's cause.
+  The initial trace does not include MovementQueue/build primitive states. Three idle
+  driver fields therefore do NOT prove an idle body: the queue is another key writer.
+  Added those missing fields in source for the next build; current269d binary lacks them.
+  Do not deploy/rebuild during the active healthy checkpoint campaign.
+- First explicit-stop fixture did not observe its airborne-veto precondition within 90 s;
+  it is unmeasured, not a stop failure. Revised the fixture to observe inside one persistent
+  py4j process, start the real bucket-portal task and issue only @stop on a fresh airborne
+  veto. No synthetic lift now. Revised fixture passed 3/3 at 26/26/30 FPS, each
+  observing GetWithinRangeOfBlockTask -> InteractWithBlockTask veto while airborne,
+  then active=false and an empty chain after @stop. Evidence:
+  artifacts/task-force-user-stop-20261002-002729/results.json. This validates user
+  cancellation, not safe casting or adjacent crafting/navigation behavior.
+- Started the 36-case adjacent campaign on the unchanged 269d candidate after the trace
+  campaign released its lock: twelve crafting/pickup/escape/navigation courses, three repeats
+  each, retained recordings, survival/veto deltas and FPS floor/drift gates. Loaded-JAR SHA
+  is checked before starting. Evidence log: artifacts/g108-task-force-adjacent.log;
+  outcomes are pending. No movement-policy patch or release has been made.
+- Reviewed all six trace-series recordings at four-second cadence: casting, mould
+  repositioning, clearing the inside and lighting/entering the portal are visible. No
+  recorded fire/death during construction; phase changes agree with the retained timelines.
+  Prepared repro_checkpoint_task_safe.py for the original survival checkpoint: ownership
+  lock, SIGTERM/finally cleanup covers setup, loaded-JAR/world-hash/position gates, full
+  task-list snapshot, FPS floor and separate recordings. It never clears/re-kits inventory.
+  Syntax/help passed; NOT RUN yet. The older repro_checkpoint_task.py remains unsafe and
+  must not be used. Driver-trace source also records queue movement/from/to and navigator
+  goal/exact/live-walker state for the next build; none of these additions is deployed yet.
+- Adjacent repeats 1 and 2 completed 24/24 valid PASS on269d at29-30 FPS; repeat3 is
+  active. Reviewed every first/second-repeat recording atfour-second cadence. Crafting
+  actually uses the table, goto_then_mine digs at the new position, lava escape starts
+  in lava, gaps use physics and water crosses underwater before arrival. Full-pack craft
+  contains recipe reset messages but finishes with the requested pickaxe; no new hang
+  is established by that message. Direct tungsten nav courses do not exercise Task vetoes.
+- Strengthened the prepared survival-checkpoint diagnostic: offline tester1 UUID is
+  verified against the saved player file; compare the complete restored Inventory NBT
+  (including components/damage) and selected slot after save-all flush, then compare
+  client slot item/count data. `last` contains25 stacks/549 items and stone-pickaxe
+  damage127/131. Retained world hash and candidate must match again on exit. Optional
+  trace rejects row gaps/errors and drains the tail before teardown. Syntax/help passed,
+  but the replay remains NOT RUN. The portal observer's independent teardown now attempts
+  every cleanup action and releases its lock even when an observer/recorder action fails;
+  this revised tail/cleanup path is also not exercised yet.
+- Adjacent campaign stopped at case35:34 valid PASS,1 arena INVALID; final repeat3
+  nav_water was not run. nav_gaps-3 at29.4 FPS missed the last gap, fell toY=-230.3,
+  died once, respawned and eventually reached the goal. Its self-fall/death gates are
+  red even though the harness classifies leaving the arena as INVALID. Do not hide
+  the fall or call this36/36. All35 recordings reviewed, the failing clip at2s.
+  The nav course's own source documents a pre-existing fall rate (2026-08-12), but that
+  history is not a contemporary control. Direct goto uses no Task chain/vetoes here;
+  attribution to the Task fix is unestablished. Next: refresh the client through the
+  required deploy script, repeat gaps/water with expanded driver observations, then
+  resume the portal checkpoint diagnosis. No movement-policy patch guessed.
+- Saved and hash-verified the deployed269d candidate asg108-handoff-control-269d.jar.
+  Full :1.21.11:build of expanded driver-trace source active (session80737,
+  artifacts/g108-complete-driver-trace-build.log). No live benchmark now; three host
+  javaw processes expose neither debug nor IDE markers and versions/*/bin is absent.
+  mod_version remains0.95.53; release0.95.54 remains a draft pending this audit.
+- Expanded trace build completed in 6m56s, exit 0. The remapped jar changes only
+  TaskMovementTrace.class versus the retained269d binary; Task.class and all nested
+  modules are byte-identical. Remapped lifecycle contracts passed9/9, nested freshness
+  passed, and javap confirms queue movement/from/to/safe-cancel, navigator goal/exact,
+  live walker and build/follow driver fields. SHA256:
+  5516d6ea910caab60c0b4bdb0192f7314e5e6c6376560ff5afa9b2f5a88324f2.
+  Required deploy succeeded for tester1 only; tester2 remains stopped. Started the
+  private nav-tail campaign (session43423): water3 then gaps6, retain every run,
+  reject trace errors/gaps or an active Task runner, and stop at the first non-green.
+  This separate campaign cannot erase the preceding nav_gaps-3 death. Results pending.
+- Reopened full59's pre-stall timeline and checkpoint metadata. Only its last four
+  periodic checkpoints survive, all after the stall, but rung-bucket is from this
+  same run at2432s, before the portal approach/casting at2607-3060s. Retained a
+  byte-identical private copy asfull59-before-portal (all-file hash
+  cc4c6c3b368c3c90a1dce9f519c42bb2a9f9e8686fed68115f017970ec7f4801).
+  This avoids a later playthrough overwriting the original rung entry. Its resume
+  has not run yet; it may reconstruct the transition history that restarting at
+  `last` loses. Original `last` and full59-original.mp4 remain unchanged.
+  Nav-tail water passed3/3 at28.3/29.7/29.7 FPS; all three clips reviewed at3s,
+  showing underwater crossing then arrival. The first gap replay also passed and
+  was reviewed at2s. Campaign remains active; no repaired gap-fall claim.
 
 Completed and earlier entries: [archive/01-10-2026-completed-progress-history.md](archive/01-10-2026-completed-progress-history.md).

@@ -491,6 +491,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     @Override
     protected void onStop(Task interruptTask) {
+        if (Task.diagnosticEvents != null) Task.noteDiagnostic("drive-stop "
+                + getClass().getSimpleName() + " -> "
+                + (interruptTask == null ? "null" : interruptTask.getClass().getSimpleName()));
         if (cachedAlto instanceof AltoGoal.FleeLive) Nav.cancelAll();
         Nav.cancel();
         TungstenHelper.stop();
@@ -551,6 +554,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 || kaptainwutax.tungsten.task.BridgeTask.isActive()
                 || kaptainwutax.tungsten.task.SwimOutTask.isActive();
         if (!(nav || queue || walker || build)) return;
+        if (Task.diagnosticEvents != null) Task.noteDiagnostic("orphan-route-stop");
         pdRouteStopped++;
         if (nav) kaptainwutax.tungsten.task.FastNavigator.stop();
         if (build) {

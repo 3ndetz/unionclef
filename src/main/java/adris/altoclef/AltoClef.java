@@ -513,6 +513,8 @@ public class AltoClef implements ModInitializer {
             onClientTick();
             altoClefTickChart.pushTickNanos(System.nanoTime()-nanos);
         });
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK
+                .register(client -> adris.altoclef.tasksystem.TaskMovementTrace.tick());
 
         // Render
         EventBus.subscribe(ClientRenderEvent.class, evt -> onClientRenderOverlay(evt.context));
