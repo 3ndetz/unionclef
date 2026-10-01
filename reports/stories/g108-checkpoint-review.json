@@ -1,0 +1,60 @@
+{
+  "name": "g108-checkpoint-review",
+  "title": "unionclef · portal work",
+  "subtitle": "The frame finishes. Safe casting still needs work.",
+  "caption": "Unionclef portal work, not a release. Builder cleanup now stops its own waypoint walker while retaining an independent follow walk. Earlier interleaved course: portals completed 5/6 with cleanup off, 6/6 on, at 28–30 FPS. Four additional replays from one checkpoint completed 2/2 in each arm, but each arm had one lava death; automatic respawn and keep-inventory hid that in the old completion gate. The course now also requires zero deaths. Adjacent checks: navigation 18/18, cancellation 6/6, pursuit 3/3, mixed placement 3/3. Cast safety and the original full59 lava stall remain open. Continuing the diagnosis. HyperFrames CLI updated from 0.8.30 to 0.8.105; validation passed.",
+  "hook": {
+    "src": "deploy/runner/artifacts/g108-checkpoint-replay/enabled-4/enabled-4.mp4",
+    "from": 96, "to": 101, "speed": 1,
+    "text": "A portal, with a caveat"
+  },
+  "segments": [
+    {
+      "kind": "split", "title": "Upper mould · same entry checkpoint",
+      "left": {
+        "src": "deploy/runner/artifacts/g108-checkpoint-replay/control-3/control-3.mp4",
+        "from": 44, "to": 76, "speed": 2, "label": "cleanup off",
+        "caption": "Positioning and casting · this run survived"
+      },
+      "right": {
+        "src": "deploy/runner/artifacts/g108-checkpoint-replay/enabled-4/enabled-4.mp4",
+        "from": 32, "to": 64, "speed": 2, "label": "cleanup on",
+        "caption": "Positioning and casting · this run survived"
+      }
+    },
+    {
+      "kind": "stat", "title": "Observed portal completions",
+      "before": "5 / 6", "after": "6 / 6",
+      "before_n": 5, "after_n": 6, "unit": "of 6 runs",
+      "note": "Earlier interleaved course · cleanup off → on · 28–30 FPS"
+    },
+    {
+      "kind": "clip",
+      "src": "deploy/runner/artifacts/g108-checkpoint-replay/enabled-4/enabled-4.mp4",
+      "from": 12, "to": 76, "speed": 8, "zoom": 1,
+      "title": "Casting the frame",
+      "caption": "Water, lava and a mould · no diamond pickaxe"
+    },
+    {
+      "kind": "clip",
+      "src": "deploy/runner/artifacts/g108-checkpoint-replay/enabled-1/enabled-1.mp4",
+      "from": 52, "to": 60, "speed": 1, "zoom": 1,
+      "title": "Lava casting can still kill",
+      "caption": "One death · this course keeps inventory and respawns immediately"
+    },
+    {
+      "kind": "stat", "title": "Same-checkpoint survival",
+      "before": "1 / 2", "after": "1 / 2",
+      "note": "Cleanup off → on · both completed 2/2 · survival scored from full timelines"
+    },
+    {
+      "kind": "text", "title": "Checks and remaining work",
+      "lines": [
+        "Navigation 18/18 · cancellation 6/6",
+        "Pursuit 3/3 · mixed placement 3/3",
+        "Course now also requires zero deaths",
+        "Cast safety and full59 lava stall remain open"
+      ]
+    }
+  ]
+}

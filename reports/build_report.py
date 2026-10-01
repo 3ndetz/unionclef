@@ -45,7 +45,10 @@ ROOT = Path(__file__).resolve().parent
 HF = ROOT / "hf"
 VIDEOS = HF / "videos"
 OUT = ROOT / "out"
-HF_CLI = "hyperframes@0.8.30"
+# Use the project's render pin so a CLI upgrade also reaches this launcher.
+HF_CLI = next(token for token in
+              json.loads((HF / "package.json").read_text(encoding="utf-8"))["scripts"]["render"].split()
+              if token.startswith("hyperframes@"))
 
 TITLE_S, TEXT_S, STAT_S, END_S, WIPE_S = 3.0, 5.0, 5.0, 3.0, 0.45
 ACCENT = "#3fd0c9"
@@ -338,7 +341,7 @@ def main() -> int:
     (HF / "index.html").write_text(doc, encoding="utf-8")
     print(f"composition: {total:.1f} s, {len(story['segments'])} segments")
     npx = shutil.which("npx") or "npx"
-    subprocess.run([npx, "--yes", HF_CLI, "check"], cwd=HF, check=False)
+    subprocess.run([npx, "--yes", HF_CLI, "check"], cwd=HF, check=True)
     OUT.mkdir(exist_ok=True)
     out = OUT / f"{story.get('name', 'report')}.mp4"
     r = subprocess.run([npx, "--yes", HF_CLI, "render", "--output", str(out)], cwd=HF)

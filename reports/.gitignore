@@ -1,5 +1,7 @@
 hf/videos/
 hf/renders/
+hf/.hyperframes/
+hf/.media/
 hf/index.html
 out/
 footage/
