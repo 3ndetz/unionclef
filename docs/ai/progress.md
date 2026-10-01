@@ -1,5 +1,23 @@
 # Progress
 
+## 2026-10-01 — English subtitles for the 3ndetz Labs investor pitch
+
+### Investigate
+- Recovered the finished 170.3 s pitch, 14 chosen voice takes and word timings.
+  Original Telegram delivery: @mineswarmbot, message 9551, 2026-09-30 around 20:02.
+  Evidence: legacy video subagent agent-aad891fb98ddaa527, lines 736-737.
+
+### Plan
+- Caption the existing master using the saved narration timings and corrected script spelling.
+  Keep the original audio and picture timing; place captions clear of designed graphics.
+
+### Implement
+- Added reports/pitch/add_subtitles.py: 65 English cues, SRT/ASS exports and a 1080p Telegram render.
+- Checked every cue midpoint on contact sheets and adjusted tool/graph/closing-card placement.
+  Verified all 14 lines, non-overlapping cue intervals, valid decode and unchanged audio hash.
+- Sent the checked 30.9 MB, 1920x1080 export through @mineswarmbot: Telegram message 9568.
+  Original master and audio are retained; generated media remain ignored by Git.
+
 Format: Investigate → Plan → Implement. Completed investigation history is preserved in
 `docs/ai/archive/15-09-2026-clearance-and-survival.md` (488 lines before archiving).
 

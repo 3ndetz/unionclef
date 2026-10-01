@@ -3,6 +3,7 @@
     python reports/pitch/build_pitch.py            # cut + compose + render + mix -> out/pitch.mp4
     python reports/pitch/build_pitch.py --compose  # write hf/index.html only (no render)
     python reports/pitch/build_pitch.py --mix      # remix the audio onto the last silent render
+    python reports/pitch/add_subtitles.py --render # caption the finished master for Telegram
 
 Inputs: voice/pick/lXX.wav (chosen takes, see lines.json and tts.py), words.json (word timings of
 those takes from POST /stt), data.json (git history), hf/assets (fonts, images, grain), the footage
