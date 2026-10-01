@@ -56,6 +56,8 @@ public class BlockPathWalker {
     private static boolean liveMode = false;
     /** The caller asked to keep this walk even while the executor runs — see startBFS(path, true). */
     private static boolean owningMovement = false;
+    /** Route provenance survives the navigator ending, until this walker is stopped/replaced. */
+    private static boolean navigatorLeg = false;
     private static Vec3d liveStuckAnchor = null;
     private static int liveStuckTicks = 0;
     // true when the last DIRECT stop was a BAIL (no LOS / stall / danger) rather than a
@@ -159,6 +161,16 @@ public class BlockPathWalker {
         startBFS(blockPath, false);
     }
 
+    /** A waypoint leg owned by FastNavigator, distinct from a chase or the altoclef drive. */
+    public static void startNavigatorLeg(List<BlockPos> blockPath) {
+        if (blockPath == null || blockPath.size() < 2) return;
+        startBFS(blockPath);
+        navigatorLeg = true;
+    }
+
+    /** Whether cancelling a navigator-owned positioning walk may release this walker. */
+    public static boolean isNavigatorLeg() { return active && navigatorLeg; }
+
     /**
      * @param ownsMovement the caller keeps this walk even while the executor runs.
      *
@@ -199,6 +211,7 @@ public class BlockPathWalker {
             if (ex != null) ex.onWalkerStopped();
         }
         active = false;
+        navigatorLeg = false;
         path = null;
         directTarget = null;
         waypointIdx = 0;

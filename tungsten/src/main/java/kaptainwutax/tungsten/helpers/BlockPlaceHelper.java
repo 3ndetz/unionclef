@@ -175,6 +175,9 @@ public final class BlockPlaceHelper {
     private static BlockPos lastWalkCell;
     private static int walkAttempts;
     public static volatile int walkStarted;
+    /** Positioning walks ended while their waypoint walker still drove the body. Counted in
+     *  both A/B arms; the fix flag controls cleanup, not observation. Cumulative per client. */
+    public static volatile int buildWalkWalkerAtStop, buildWalkWalkerStopped;
     /** The cell being walked for and the cell being walked TO. Reported by buildQueue(), because
      *  "it deferred after two walks" does not say whether it picked a bad destination or picked a
      *  good one and never arrived — and those need opposite fixes. */
@@ -252,6 +255,8 @@ public final class BlockPlaceHelper {
     }
 
     public static synchronized void clearQueue() {
+        // End the positioning walk before forgetting which movement belongs to this batch.
+        stopWalking(false);
         QUEUE.clear();
         scaffoldFor = null;
         idleTicks = 0;
@@ -683,8 +688,28 @@ public final class BlockPlaceHelper {
     /** End a walk, if one is running: the navigator stops steering and the builder takes the
      *  body back. Idempotent, so the placing path can call it unconditionally. */
     private static void stopWalking() {
+        stopWalking(true);
+    }
+
+    /** A cancelled batch also ends its positioning walk. With the A/B flag off, preserve
+     *  the old clearQueue/deferRest behavior (forget the walk without cancelling navigation),
+     *  but observe the walker in that arm too. */
+    private static void stopWalking(boolean cancelNavigation) {
         if (walkingFor == null) return;
-        kaptainwutax.tungsten.task.FastNavigator.stop();
+        boolean walkerRunning = kaptainwutax.tungsten.task.BlockPathWalker.isNavigatorLeg();
+        if (walkerRunning) buildWalkWalkerAtStop++;
+        boolean stopWalker = kaptainwutax.tungsten.TungstenConfig.get().buildWalkStopsWalker;
+        if (cancelNavigation || stopWalker) kaptainwutax.tungsten.task.FastNavigator.stop();
+        // BuilderProcess.java:622,734-745 clears movement and CANCEL_AND_SET_GOAL when it
+        // takes the aim to place. FastNavigator.stop() only cancels planning/MovementQueue;
+        // its waypoint walker is independent. G108 control: nav=false, walker=BFS at its
+        // last waypoint, mouse targetPitch=0 while the upper mould aims and then wanders.
+        // End this builder-owned walk too, before the placer/pillar takes the camera.
+        // A chase/drive can replace the leg before cleanup; its independent walk is retained.
+        if (stopWalker && walkerRunning) {
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            buildWalkWalkerStopped++;
+        }
         walkingFor = null;
         walkTicks = 0;
     }
@@ -698,6 +723,7 @@ public final class BlockPlaceHelper {
 
     /** Hand the whole remaining queue back to the caller. */
     private static void deferRest() {
+        stopWalking(false);
         for (Cell c : QUEUE) {
             DEFERRED.add(c.pos());
             deferNoFace++;

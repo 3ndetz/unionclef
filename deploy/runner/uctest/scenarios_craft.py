@@ -1622,7 +1622,8 @@ class PortalLavaLake(Scenario):
     real world are lava falls and puddles; ConstructNetherPortalBucketTask looked for its lake only
     among them and found "depth 1" 1606 times in an hour. Here: 48 single lava sources in the floor
     within 12 blocks, a 5x5 lake 22-26 blocks off, buckets, water, flint and steel, cobblestone.
-    Gate: the first frame block of obsidian is cast within MAX_S. Portal completion is recorded.
+    Gates: first obsidian within MAX_S, a lit portal within the full course duration, no deaths.
+    A first cast alone previously passed G108's indefinitely unfinished upper mould.
     """
     id = "portal_lava_lake"
     tier = "gate"
@@ -1651,6 +1652,10 @@ class PortalLavaLake(Scenario):
         ctx.rcon.cmd("time set day")
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         ctx.geo["t0"] = time.time()
+        ok, bq = ctx.bot.py.try_call("buildQueue")
+        if ok and bq is not None:
+            ctx.geo["walk_stops_start"] = {k: bq.get(k, 0) for k in
+                                           ("walkWalkerAtStop", "walkWalkerStopped")}
         ctx.bot.cmd("@test portalbucket")
 
     def _present(self, ctx, block, y0=FLOOR_Y):
@@ -1667,14 +1672,17 @@ class PortalLavaLake(Scenario):
 
     def drive_tick(self, ctx, elapsed):
         # ABOVE THE GROUND ONLY. Water from a cast reaching the floor lava (or the lake) makes
-        # obsidian too, and counting it read as a first cast at 7.9 s on 2026-09-30. The eight frame
-        # cells above the ground are the sides and the top; the bottom row is in the floor.
+        # obsidian too, and counting it read as a first cast at 7.9 s on 2026-09-30. Count the
+        # upper frame above the floor rather than the flooded lake or the buried bottom row.
+        # Their count varies with pad height, so a lit portal is the completion gate.
         n = self._present(ctx, "obsidian", STAND_Y)
         if elapsed - ctx.geo.get("bq_t", -99) >= 20:
             ctx.geo["bq_t"] = elapsed
             ok, bq = ctx.bot.py.try_call("buildQueue")
             if ok and bq is not None:
-                snap = {k: bq.get(k) for k in ("queued", "placed", "deferNoFace", "blockedByOwnBody", "walkStarted")}
+                snap = {k: bq.get(k) for k in ("queued", "placed", "deferNoFace", "deferTimeout",
+                                             "blockedByOwnBody", "walkStarted",
+                                             "walkWalkerAtStop", "walkWalkerStopped")}
                 snap["t"] = round(elapsed)
                 snap["walk"] = str(bq.get("walkDebug"))[-160:]
                 okc, chain = ctx.bot.py.try_call("getTaskChainString")
@@ -1700,11 +1708,22 @@ class PortalLavaLake(Scenario):
     def judge(self, ctx):
         t = ctx.geo.get("first_obsidian")
         yield Criterion(f"first obsidian cast within {self.MAX_S} s", t is not None and t <= self.MAX_S,
-                        f"t={None if t is None else round(t, 1)} frame_above_ground={ctx.geo.get('obsidian', 0)}/8")
+                        f"t={None if t is None else round(t, 1)} obsidian_above_ground={ctx.geo.get('obsidian', 0)}",
+                        load_sensitive=True)
         for snap in ctx.geo.get("bq", [])[-8:]:
-            yield Criterion("build queue (recorded)", True, str(snap))
+            yield Criterion("build queue (recorded)", True, str(snap), gate=False)
         p = ctx.geo.get("portal_at")
-        yield Criterion("portal lit (recorded, not gated)", True, f"t={None if p is None else round(p, 1)}")
+        yield Criterion(f"portal lit within {self.duration} s", p is not None and p <= self.duration,
+                        f"t={None if p is None else round(p, 1)}", load_sensitive=True)
+        # A keep-inventory respawn can finish the frame after a lethal cast. Completion alone
+        # hid this in the common-entry replay (2026-10-01), in both cleanup flag arms.
+        yield ctx.survival_criterion()
+        ok, bq = ctx.bot.py.try_call("buildQueue")
+        if ok and bq is not None:
+            start = ctx.geo.get("walk_stops_start", {})
+            counts = {k: bq.get(k, 0) - start.get(k, 0) for k in
+                      ("walkWalkerAtStop", "walkWalkerStopped")}
+            yield Criterion("builder walk ownership (recorded)", True, str(counts), gate=False)
 
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,

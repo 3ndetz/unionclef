@@ -99,6 +99,11 @@ public class TungstenConfig {
      *  Toggle live: ;settings fastBlockFirst false — or py4j setFastBlockFirst. */
     public boolean fastBlockFirst = true;
 
+    /** Stop the builder's waypoint walker when its positioning walk ends. Turning this off
+     *  reproduces G108's orphaned walk, which overrides placement aim after navigation stops.
+     *  Kept for same-client A/B measurements of the ownership handoff. */
+    public boolean buildWalkStopsWalker = true;
+
     /**
      * Guide the physics engine with an INCOMPLETE fast route (default OFF).
      *

@@ -4,6 +4,16 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Lava collection stalls on a column above the source (full59, 2026-10-01).**
+  UNIONCLEF-HARD is investigating this pass. The last ~39 minutes of the 90-minute run
+  stayed at (-290.7,55,965.4), approaching (-293,53,963) within radius 2. Checkpoint
+  `last` and periodic `cp1001-0119-*` preserve the world, not the task's cached state.
+  Unchanged-code controls: isolated lava pickup at 13.75 s; portal-context pickup at
+  112.93 s with the client capped at 10 FPS, then 15.34 s at 28-30 FPS. None reproduces
+  the original persistent stall. The saved stone pickaxe has damage 127/131 and breaks
+  during the controls; the fresh `@gamer` then correctly asks for a new wooden pickaxe.
+  The original client log survives in `2026-09-30-7.log.gz`; compare the inherited
+  behaviour/task state and portal origin before attributing the stall to navigation.
 - [x] **FIXED 2026-09-24 (baritone BlockBreakHelper fresh clickBlock; nav_cliff 3/3). nav_cliff 1/3 (control without the powder-snow changes 0/3 -- pre-existing).** Freeze on the
   first step of the detour descent, feet (10.5,-50,15.6), `breakQ=1` with 230 break ticks: the
   executor digs instead of stepping down two blocks. Reproduce live with the overlay (the red/orange
@@ -83,6 +93,20 @@
   above a side) is walked at and never climbed -- investigating (throwaways left? planner pillar?).
   Also failing on 0.95.52 already, not from this work: place_test.py (placed 1/4) and
   nether_portal_test.py (no portal in 180 s).
+- [ ] **Death inside the upper lava cast (G108 checkpoint replay, 2026-10-01).**
+  The cleanup-enabled arm lit its portal at 108.6 s, but died in lava near the upper cast
+  at about 53 s (`tester1 tried to swim in lava`, client log 19:29:52 UTC).
+  The replay used the earlier completion-only judge with keep_inventory/immediate_respawn;
+  future `portal_lava_lake` runs also require zero deaths. This replay is a completion pass,
+  not safe construction. Retained entry
+  `g108-portal-entry-20261001`, enabled-1 video/timeline. Compare the cleanup-disabled arms
+  from that same entry before attributing the death. First cleanup-disabled replay also died
+  in lava at about 19 s (19:32:20 UTC), so the death is not exclusive to enabled cleanup.
+  Inspect caster/interaction positioning and the enclosed escape; no root cause established yet.
+  A separate Task interruption defect is reproduced by an isolated lifecycle contract:
+  a plain wrapper or non-forcing ancestor bypasses a forcing descendant, including the
+  grounded movement and cursor-resource guards. Fix and battle test this core contract;
+  its connection to the fatal entries is not yet established.
 - [ ] **A 2x2 fill through the build queue places 1 of 4 cells** (found 2026-09-30, already so on
   0.95.52): mcp_test.py `fillSelection` -> dirt 1/4, place_test.py `placed: 1/4`; diag_build (4
   mixed cells) passes. MCP itself works (60 tools, getGameState, auth). Also: schematic FILE loading

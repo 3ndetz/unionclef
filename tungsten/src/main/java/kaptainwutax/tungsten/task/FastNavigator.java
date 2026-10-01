@@ -1317,7 +1317,7 @@ public final class FastNavigator {
                     kaptainwutax.tungsten.task.BridgeTask.startTo(
                             legTail.getX(), legTail.getY(), legTail.getZ());
                 } else {
-                    BlockPathWalker.startBFS(leg);
+                    BlockPathWalker.startNavigatorLeg(leg);
                 }
                 // immediately begin planning the leg after this one, from its tail
                 planAhead(legTail);

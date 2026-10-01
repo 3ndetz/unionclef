@@ -5679,6 +5679,8 @@ public class Py4jEntryPoint {
         out.put("deferTimeout", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferTimeout);
         out.put("deferProtected", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferProtected);
         out.put("walkStarted", kaptainwutax.tungsten.helpers.BlockPlaceHelper.walkStarted);
+        out.put("walkWalkerAtStop", kaptainwutax.tungsten.helpers.BlockPlaceHelper.buildWalkWalkerAtStop);
+        out.put("walkWalkerStopped", kaptainwutax.tungsten.helpers.BlockPlaceHelper.buildWalkWalkerStopped);
         out.put("walkDebug", kaptainwutax.tungsten.helpers.BlockPlaceHelper.walkDebug);
         // The two reasons that are NOT "stand somewhere else": the block cannot survive in that
         // cell, and the named block is not in the hotbar at all.
@@ -5765,8 +5767,11 @@ public class Py4jEntryPoint {
 
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */
     public Map<String, Object> buildQueueClear() {
-        kaptainwutax.tungsten.helpers.BlockPlaceHelper.clearQueue();
-        return Map.of("ok", true, "queued", 0);
+        // Clearing now also releases the batch's movement keys and navigator state.
+        return onClientThread(() -> {
+            kaptainwutax.tungsten.helpers.BlockPlaceHelper.clearQueue();
+            return Map.<String, Object>of("ok", true, "queued", 0);
+        }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
     /** Compact battle game-state for a cognitive agent (TODO 6.1) — one call
