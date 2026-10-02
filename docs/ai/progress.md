@@ -183,6 +183,79 @@
 - Traced same-entry approach95746 active, shelter-native-site-20261002-070326;
   observer records callback class/captured target, global/search/native goal and
   actual client coordinates. No source/build/redeploy alongside the frozen probe.
+- Traced95746 completedexit0: exact stable arrival21.1s, health20 throughout,
+  no deaths/lava entries,64 samples14-29FPS (average24.22). Native site still safe
+  after the approach; originalCP unchanged, cleanup errors=[]. Full23.1s clip
+  viewed2s. Callback class isnull throughout, navigator endpoint matches the request.
+  This proves this site is reachable, not a rate improvement or the descent's root.
+- Candidate shelter pass now implements immutable AnyBlock goals (upstream
+  GoalComposite:43-61), searched through the existing FastPlanner movement graph.
+  Night discovery covers loaded ±16 in all axes instead of ±6 horizontal/±1 vertical,
+  passes the unchanged live safety predicate, and revalidates before the first dig.
+  Current safe feet remain the immediate choice; an approach that invalidates its
+  destination is rescanned. No-site discovery is refreshed once per20 world ticks.
+  Condition routes have caller identity so a danger-region search cannot adopt
+  a shelter route. This expands the affected tests to flee and breathable-air ownership.
+  Candidate scan counters will measure actual client cost. Build/live tests pending;
+  version remains0.95.54; no candidate release or TODO closure.
+- Clean candidate build9116 passedexit0 in7m49s, including Tungsten clean/build
+  and1.21.11 remap/build. Initial attempt exited1 because an unquoted PowerShell
+  JVM option left the Windows JDK override active; the quoted retry succeeded.
+  Tester1-only canonical deployment34010 passed: loaded candidateSHA256
+  06652cfdb86d9e088ad0a7252c903740b4d09db4c776509370b3678ec4383391,
+  nested module freshness verified. Published54SHA00e866 is archived separately.
+  Actual saved-entry NightShelterTask probe80495 is active with a sealed10s-hold
+  gate and scan/FPS instrumentation. No candidate publication or live result yet.
+- Saved-entry80495 exited1 on FPS validity, shelter-native-site-20261002-072502.
+  Actual Task/observer exited0: selected(-84,66,1059), capped dry shaft, body at
+  bottom, continuous10.279s hold by24.992s.68samples, HP20 throughout, no deaths/
+  lava entries; scan61 destinations in22.160ms. FPS4-28/mean20.868, six samples
+  below14; this is not a healthy route-rate/timing comparison. Original invalid
+  verdict remains unchanged. Full27.1s recording actually viewed at2s cadence.
+  motion-analysis.json verifies unchanged originalCP after the run, cleanup[].
+  Repeat68771 active on the identical loaded06652c candidate and retained entry.
+  Prepared blocked-nearest fixture first verifies actual native predicates:
+  safe inaccessible bedrock cavity, reachable shaft, rejected water/lava neighbors.
+  Its36-case shelter/exit/air/nav/craft campaign is prepared, NOTRUN.
+- Same-entry repeat68771 completedexit0, shelter-native-site-20261002-073041:
+  dry sealedshaft(-84,66,1059), continuous10.434s hold by21.363s, HP20 all64samples,
+  zero death/lava deltas,23-29FPS/mean27.016, no below14 samples. Discovery76
+  loaded candidates in8.630ms; loaded-chunk coverage differs from the cold run.
+  OriginalCP unchanged afterrun, cleanup[]. Full23.5s recording viewed2s.
+  The trace includes a real GetToAir interruption and shelter continuation.
+  One healthy result establishes behavior, not the repeated rate. Campaign79145
+  now active: blocked-nearest first, then flat/exit/air/nav/craft, stopfirstred.
+- Campaign79145 first6cases validPASS at29-30FPS: blocked-nearest, flat shelter,
+  morning exit5.9s, drowned tunnelHP20/air217, flat and staircase. Firstfive fullclips
+  actually viewed2s (both drown pages); remaining repeats are still running.
+  Native blocked fixture confirms [entryFALSE, enclosedsafeTRUE, accessiblesafeTRUE,
+  lavaneighborFALSE, waterneighborFALSE], then seals the accessible shaft, not the
+  diagnostic nearest cavity. Generic freeze warnings inside sealed shelter are
+  expected waiting, not failed movement gates. Tester2 remains stopped; no victim
+  is needed by these courses. No controller/COMPLEX change.
+- Adjacent source concern, NOT yet a native failure: siteHolds checks fluids below
+  and beside the shaft but not the fluid in top itself. PlayerFit.standable checks
+  collision, not dryness; WorldHelper.canBreak only inherits lava exclusion here.
+  Upstream MovementHelper.java:96-137 rejects fluid directly above a planned break.
+  Prepared check_shelter_fluid_top.py with contained water/lava and a dry control;
+  syntax passed, NOTRUN. Measure after campaign teardown before publication; do
+  not change the predicate based only on this read or claim a current regression.
+- Campaign79145 first round9/9 validPASS at29-30FPS, zero deaths. All nine full
+  recordings actually reviewed2s, including both drown sheets. Four navigation
+  courses have no self-falls/freezes; mixed-plank craft fires15 descendant vetoes
+  and obtains the pickaxe. Repeats remain active; no final36-case verdict yet.
+  Checkpoint budget8170MB/15GB, disk free193GB; no cleanup deletion needed.
+- Campaign79145 first19 cases validPASS: both complete nine-course rounds and
+  the third blocked-nearest repeat. All nineteen full recordings actually viewed
+  at2s cadence, including both pages of each drown clip. Third blocked fixture
+  again seals the reachable shaft rather than the enclosed nearest cell;
+  morning exits in the first two rounds take5.9/5.5s. Mixed craft obtains the
+  pickaxe and records15 descendant vetoes in each round. Remaining repeats run
+  on the unchanged06652c payload; no build/deploy or concurrent live probe.
+- Prepared reports/hf/BRIEF.md from the existing report project and the owner's
+  autonomous/report instructions. General-video skill update reports up-to-date.
+  The delivered54-second landing report/message9570 is preserved. No new shelter
+  composition/render/send yet; final rates and version depend on completed tests.
 
 ### Assess
 - The retained fatal landing is now rejected by actual-class simulation, and one
