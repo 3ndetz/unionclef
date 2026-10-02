@@ -100,3 +100,26 @@
   The51-case series remains live; no completed repeated rate claimed. Fresh
   fetch confirms main/1.21.11 and both remotes0/0 atc0f74803, sole worktree,
   owner3ndetz credentials. Chronological426-line evidence archived exactly.
+- Reentry confirms wiki run36983163446 SUCCESS on60c6a8fa. Exact-e03 campaign
+  first37 validPASS, all37 complete recordings actually viewed at2s. Round4
+  new-site reaches a sealed shaft but circles beside the started shaft before
+  descending: timeline moves around the rim at25.5-43.2s, bottom at50.1s,
+  HP20 throughout. Preserve this outcome and investigate alignment/approach
+  separately; do not claim a speed improvement from behavioral gates alone.
+- Actual Minecraft1.21.11 named bytecode retained in shelter-minecraft-entity-
+  javap.txt and shelter-minecraft-living-entity-javap.txt: isClimbing uses
+  getBlockStateAtPos, which conditionally fills stateAtPos then rereads it;
+  baseTick and block-position changes invalidate that field to null. A client
+  tick between the check/fill and final read can produce the retained worker
+  NPE. This supports the snapshot fix; the exact interleaving was not captured.
+  Correct the CalculationContext citation to97-108 before the final build.
+- Exact-e03 campaign17649 completed51/51 validPASS, independent analyzer exit0:
+  six each new-site/blocked/flat/exit/Flee/air, three each flat/stair/descent/water
+  navigation and protected mixed pickaxe craft. All51 complete recordings
+  actually viewed at2s, every sheet page; review ledger retained separately.
+  Per-case planning-error windows clean, fixture counts zero, cleanup[]. Prior
+  finalAir199 and entity-obstructed fatal remain retained, not retrospectively green.
+- Saved-entry series31386 is live with persistent snapshot-saved-console.log:
+  six exact-payload native shelter holds from cp1002-0229-t656, original inventory
+  and checkpoint fingerprint. Stop first red/invalid; raw15min gamer remains pending.
+  Prepared ignored existing-API rim trace wrapper, syntaxPASS/NOTRUN; no motion fix.
