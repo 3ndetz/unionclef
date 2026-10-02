@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Probe: start ;punk tester2, poll bot pose/yaw + recent chat to see WHY frozen."""
-import functools,json,subprocess,sys,time
+import functools, json, sys, time
+from uctest import process as subprocess
 print=functools.partial(print,flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"; VICTIM="tester2"
 SNIP=r"""

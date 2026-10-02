@@ -5,7 +5,8 @@ Same 10-high pillar as unreachable_test, but the bot has blocks. @goto its top:
 the pathfinder should PILLAR up (place blocks under itself, adjacent to the pillar)
 and step onto the top — REACH it, instead of giving up. Exit 0 = reached.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 SNIP = r"""

@@ -11,7 +11,8 @@ goal" 434 times, nobody moved. A body on the ground plans from its feet cell.
 Flat server: a 1x1 hole three deep, a raw_iron at its bottom, the bot placed on the rim with its
 hitbox straddling the edge, `@get raw_iron 1`. PASS = raw_iron in the inventory within the window.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 800, 300

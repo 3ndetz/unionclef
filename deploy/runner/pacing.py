@@ -6,7 +6,8 @@ were retired by counters, so the next honest step is to watch the trajectory its
 
 Usage: pacing.py [seconds] [interval]
 """
-import collections, json, math, re, subprocess, sys, time
+import collections, json, math, re, sys, time
+from uctest import process as subprocess
 
 CLIENT, PORT = "uctest-mc-tester1", 25333
 src = open("deploy/runner/gamer_smoke.py", encoding="utf-8").read()

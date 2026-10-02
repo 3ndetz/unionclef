@@ -13,7 +13,8 @@ Flat server: a stone slab, the bot at the bottom of a one-wide shaft three deep 
 item, raw beef, coal and a pickaxe in the pack, `@get cooked_beef 1`. PASS = cooked beef in the
 pack within the window (the furnace was placed somewhere reachable and used).
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 2800, 300

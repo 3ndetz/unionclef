@@ -3,7 +3,8 @@
 cobblestone, confirm getHeldItem() after selectHotbar, then bridgeForward and poll
 bridgeActive/bridgePlaced + the bot's position to see if it actually paves across the void.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

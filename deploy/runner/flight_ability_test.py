@@ -7,7 +7,7 @@ creative-to-survival transition. Does not change terrain or inventory.
 """
 import argparse
 import json
-import subprocess
+from uctest import process as subprocess
 import time
 from pathlib import Path
 from uctest.harness import Py4jClient, Rcon

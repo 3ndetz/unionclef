@@ -19,7 +19,8 @@ for the lid's cell) the lid is pulled and the item falls to the shaft's floor, t
 PASS = the cobblestone is in the pack within the window (the bot re-targets, drops into the shaft,
 collects it).
 """
-import functools, json, math, os, subprocess, sys, time
+import functools, json, math, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BY, BZ = 2500, -60, 300          # the bot's start; the flat world's floor is at BY

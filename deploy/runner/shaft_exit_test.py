@@ -18,7 +18,8 @@ blocks to the +Z side.
 PASS if the feet reach surface level within TIMEOUT. Prints navPartialBuild, navTowerAllowedFar,
 navPhysicsGaveUp and the pillar counters either way.
 """
-import functools, json, re, subprocess, sys, time
+import functools, json, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"

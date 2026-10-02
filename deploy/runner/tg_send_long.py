@@ -11,7 +11,7 @@ can tell at a glance whether one went missing.
     python deploy/runner/tg_send_long.py <file> [header]
 """
 import os
-import subprocess
+from uctest import process as subprocess
 import sys
 import tempfile
 

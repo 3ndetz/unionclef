@@ -4,7 +4,8 @@
 Task ticks pause during reload to model replacement between two task evaluations.
 The live client still receives entity packets; geometry is opened after replacement.
 """
-import argparse,json,select,subprocess,time
+import argparse, json, select, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

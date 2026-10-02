@@ -18,7 +18,8 @@ death, health never below 16, and the chain actually took the avoid branch at le
 nothing (the first draft of this bench "passed" with the bot on the landing and the creeper
 wandering below, mdRet all zero).
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 2300, 300

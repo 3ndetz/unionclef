@@ -10,7 +10,7 @@ Use --ascent false as the control. The switch is restored after the probe.
 import argparse
 import json
 import math
-import subprocess
+from uctest import process as subprocess
 import time
 from pathlib import Path
 

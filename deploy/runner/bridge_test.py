@@ -7,7 +7,8 @@ floor blocks were actually placed in the gap.
 
 Exit code 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 CLIENT="uctest-mc-tester1"; SERVER="uctest-server"; BOT="tester1"; PORT=25333
 SNIP=r"""

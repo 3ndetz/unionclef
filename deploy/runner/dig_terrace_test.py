@@ -13,7 +13,8 @@ Builds a dirt terrace stepping down 6 blocks over 12, with a stone slab 3 under 
 (9 below the start). Bot on top with an iron pickaxe. `@get cobblestone 1`: walk the terrace,
 dig the last 3. PASS = cobblestone within the window, no "walking dead-ends", no shimmy.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 760, 300

@@ -23,7 +23,7 @@ Exit code 0 = all courses passed.
 
 import functools
 import json
-import subprocess
+from uctest import process as subprocess
 import sys
 import time
 

@@ -11,7 +11,8 @@ with planPlaceMoves OFF should still be handled by normal move-gen (no regressio
   sky islands y=100: near x=-4..1 | gap x=2..5 (void) | far x=6..12  (z=-4..4)
 PASS if with planPlaceMoves ON the bot crosses AND left blocks in the gap. Exit 0.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

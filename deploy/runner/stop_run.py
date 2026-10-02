@@ -11,7 +11,7 @@ recording (SIGINT to its ffmpeg) and copies it to reports/footage/<footage-name>
 """
 from __future__ import annotations
 
-import subprocess
+from uctest import process as subprocess
 import sys
 import time
 from pathlib import Path

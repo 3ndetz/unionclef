@@ -5,7 +5,8 @@ Two clients in an arena. Verify getGameState returns self (hp/pos/blocks/held)
 and the other player in players[] with a sane distance. Requires pvp profile.
 Exit 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 FC="uctest-mc-tester1"; VC="uctest-mc-tester2"; SERVER="uctest-server"; PORT=25333
 F="tester1"; V="tester2"

@@ -14,7 +14,8 @@ Flat server: a chest one below the surface, sand on top of it, the bot standing 
 (phase 1) and then five blocks away (phase 2); `@goto X Y Z` at the sand cell. PASS = the feet
 end up IN the sand cell (on the chest) in both phases, no "arrived" without arrival.
 """
-import functools, json, math, subprocess, sys, time
+import functools, json, math, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 840, 300

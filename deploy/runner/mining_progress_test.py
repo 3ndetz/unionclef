@@ -3,7 +3,8 @@
 Requires the fed, idle flat client near the food_pursuit_test arena (4200,2200).
 The controller fields and two initially empty fixture cells are restored afterwards.
 """
-import argparse,json,subprocess,sys
+import argparse, json, sys
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 ap=argparse.ArgumentParser();ap.add_argument('--output',type=Path,required=True);ap.add_argument('--expect-bug',action='store_true');args=ap.parse_args();p=Py4jClient('uctest-mc-tester1');r=Rcon();p.call('stopPathing')

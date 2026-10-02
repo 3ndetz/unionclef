@@ -18,7 +18,8 @@ Layout (flat world, surface block at FY, bot feet at FY+1):
 PASS if both blocks are gone within TIMEOUT and breakMissWhy's transit count stays under 10.
 Prints breakMissWhy, execDigYieldMiner, dbAimWait, breakAim either way.
 """
-import functools, json, re, subprocess, sys, time
+import functools, json, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"

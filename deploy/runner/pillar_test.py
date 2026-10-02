@@ -4,7 +4,8 @@
 Give the bot a stack of stone, put it on flat ground, pillarTo 5 blocks up.
 PASS: the bot rises ~5 blocks (places blocks under itself), no crash. Exit 0.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 SNIP = r"""

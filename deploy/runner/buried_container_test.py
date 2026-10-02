@@ -4,7 +4,8 @@
 The fixture reproduces a false adjacency arrival above a buried container.
 --open removes the cap as a control. Geometry/settings reset for each run.
 """
-import argparse,json,subprocess,time
+import argparse, json, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

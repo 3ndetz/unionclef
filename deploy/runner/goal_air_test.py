@@ -13,7 +13,8 @@ Cases (pure tungsten ;goto = gotoXYZ, the path with no altoclef snap):
      genuinely unreachable -> the search stall-cap gives up.
 PASS if tungsten goes INACTIVE (search stopped) within the window for all three. Exit 0.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

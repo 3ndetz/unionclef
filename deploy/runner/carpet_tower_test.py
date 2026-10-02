@@ -22,7 +22,8 @@ tower off the carpet. PASS = the bot stands at rim level within 2.5 blocks of th
 the feet cell was cleared before a tower (navFeet cleared >= 1), and no more than two towers ran
 past the rung timeout.
 """
-import functools, json, math, os, subprocess, sys, time
+import functools, json, math, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BY, BZ = 2300, -60, 300          # the pit's centre column; the flat world's floor is at -60

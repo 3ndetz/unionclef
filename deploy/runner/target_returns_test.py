@@ -17,7 +17,8 @@ Phase B -- the reachable one wins: an unreachable drop (sealed in bedrock, two b
 reachable one of the same item twenty blocks off. PASS = the reachable drop is picked up.
 Flat server, peaceful, the bot with a stone sword.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z, GROUND = 1000, 300, -61

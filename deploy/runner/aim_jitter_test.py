@@ -6,7 +6,8 @@ excessive high-frequency reversals. Validates the v0.47/0.48 aim smoothing.
 
 PASS: reversal rate below MAX_REV_PER_S (smooth). Requires the pvp profile. Exit 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; FC="uctest-mc-tester1"; F="tester1"; VC="uctest-mc-tester2"; V="tester2"
 PORT=25333

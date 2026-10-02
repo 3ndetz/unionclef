@@ -5,7 +5,8 @@ Start a long pillar (task active), then force a reconnect. After re-joining, the
 pillar task must be STOPPED (resetAllState fired on DISCONNECT). PASS if the task
 is cleared and the client is back in game. Exit 0.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 SNIP = r"""

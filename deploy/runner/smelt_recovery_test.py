@@ -11,7 +11,8 @@ reproduces a full seven-ingot batch with surplus fuel, as in the survival save. 
 seven ingots in inventory, an empty cursor and normal task completion.
 The disposable fixture is restored every trial; the natural save is untouched.
 """
-import argparse,json,subprocess,sys,time
+import argparse, json, sys, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 ap=argparse.ArgumentParser();ap.add_argument('--output-dir',type=Path,required=True);ap.add_argument('--record',action='store_true');ap.add_argument('--ready',action='store_true');ap.add_argument('--mine-ore',action='store_true');ap.add_argument('--supply-drop',action='store_true');ap.add_argument('--loaded',action='store_true');ap.add_argument('--batch',type=int,default=1);ap.add_argument('--fuel-count',type=int,default=1);ap.add_argument('--repeat',type=int,default=1);ap.add_argument('--tag',required=True);ap.add_argument('--connected',action='store_true');a=ap.parse_args()

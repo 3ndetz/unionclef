@@ -15,7 +15,8 @@ Flat server: the bot standing STILL on the ground, a one-deep hole in the next c
 cobblestone item lying in it (the drop 1.3 blocks from the body's centre, one block down),
 `@get cobblestone 1`. PASS = the cobblestone is picked up within the window.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BY, BZ = 2200, -60, 300          # the bot's column; the flat world's floor is at -60

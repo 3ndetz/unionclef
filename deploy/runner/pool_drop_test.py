@@ -15,7 +15,8 @@ Flat server: a 3-deep pool, 14 long; the bot dropped in at the west end, an iron
 pool bed 6 blocks east. `@get iron_ingot 1`. PASS = the ingot within the window, and no
 "MovementSwim ... FAILED" line.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z, GROUND = 1600, 300, -61          # surface block; feet at GROUND+1 on land

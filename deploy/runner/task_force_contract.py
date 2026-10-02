@@ -6,7 +6,7 @@ or ITaskCanForce. Generated files stay under ignored artifacts.
 """
 import argparse
 import pathlib
-import subprocess
+from uctest import process as subprocess
 import tempfile
 
 

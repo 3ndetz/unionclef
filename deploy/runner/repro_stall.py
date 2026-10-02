@@ -14,7 +14,7 @@ what stops the next one being built the same way.
 Prints the scene and the counters, and says plainly whether the bot got there.
 """
 import json
-import subprocess
+from uctest import process as subprocess
 import sys
 import time
 

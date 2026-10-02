@@ -18,7 +18,8 @@ the bottom. A player breaks straight up and surfaces; the current task cannot an
 PASS = the bot's air is replenished (it reached/created air) within TIMEOUT and it did not die.
 FAIL = air stays drained / hp falls / it dies. Prints the min air and min hp seen.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"

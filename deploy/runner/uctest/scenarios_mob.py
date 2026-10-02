@@ -14,7 +14,7 @@ a floor, laid the same way every run.
 """
 import json
 import re
-import subprocess
+from . import process as subprocess
 import time
 
 from .actors import KIT_SWORD

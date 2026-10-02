@@ -14,7 +14,8 @@ Builds a 6-high spruce trunk with a leaf crown on the flat server, drops the bot
 with an EMPTY inventory, `@get spruce_log 1`. PASS = a spruce log in the inventory within the
 window and no pillar attempt logged.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 700, 300

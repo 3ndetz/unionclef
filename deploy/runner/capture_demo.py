@@ -14,7 +14,8 @@ to the op (never truncated). Verification FRAMES are extracted so footage is LOO
 it's ever sent (checklist rule 2026-07-24 — never ship an unwatched clip).
 Usage: capture_demo.py <slime|bridge|worldedit|pvp|bedwars>
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 CLIENT="uctest-mc-tester1"; SERVER="uctest-server"; C2="uctest-mc-tester2"; BOT="tester1"; VICTIM="tester2"
 SCEN = sys.argv[1] if len(sys.argv)>1 else "slime"

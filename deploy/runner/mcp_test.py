@@ -6,7 +6,8 @@ compose.test.yml) exactly as a cognitive agent (Claude) would over the LAN:
   initialize -> tools/list -> tools/call (getGameState read + a real action).
 Proves the control surface works end-to-end without py4j/docker-exec. Exit 0=pass.
 """
-import functools, json, subprocess, sys, time, urllib.request
+import functools, json, sys, time, urllib.request
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; BOT="tester1"; MCP="http://127.0.0.1:25350/mcp"
 # The server wants "Authorization: Bearer <mcpAuthToken>"; the mod mints the token on first start

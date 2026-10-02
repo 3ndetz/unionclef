@@ -8,7 +8,8 @@ The exact bedwars micro-scenario, driven purely through agent levers:
 Verifies the composed workplace (perception -> movement -> building) works as a
 whole, not just each lever in isolation. Exit 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 CLIENT="uctest-mc-tester1"; SERVER="uctest-server"; BOT="tester1"; PORT=25333
 SNIP=r"""

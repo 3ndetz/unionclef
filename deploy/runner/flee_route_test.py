@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Measure a real retreat from multiple or already-close creepers on disposable terrain."""
-import argparse,json,math,re,statistics,subprocess,sys,time
+import argparse, json, math, re, statistics, sys, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

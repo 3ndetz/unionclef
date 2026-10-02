@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise completed versus missing iron output through the real gamer priority provider."""
-import sys,subprocess,time,json,argparse,textwrap
+import sys, time, json, argparse, textwrap
+from uctest import process as subprocess
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 ap=argparse.ArgumentParser(description='Iron smelting must only run while its output target is unmet.');ap.add_argument('--tag',required=True);ap.add_argument('--output-dir',type=Path,required=True);ap.add_argument('--ingots',type=int,choices=[0,1,2],required=True);ap.add_argument('--expect-bug',action='store_true');args=ap.parse_args()

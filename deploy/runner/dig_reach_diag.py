@@ -3,7 +3,8 @@
 are doing while the dig fails (task chain, recent chat, executor place/break counters, guide).
     python3 deploy/runner/dig_reach_diag.py [seconds=35]
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 620, 300; STONE_TOP = -58; DIRT_TOP = -53; FEET = DIRT_TOP + 1

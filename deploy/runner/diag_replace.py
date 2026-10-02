@@ -4,7 +4,8 @@ poll replaceStatus until done, verify the cells are cobblestone. Bot has a picka
 break) + cobblestone in the hotbar (to place). Validates the break-then-place composition
 on the mineBlocks break primitive.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

@@ -20,7 +20,8 @@ landing inside the window. FAIL = it stalls on a snow step (position stuck, "gav
 
 exit 0 = PASS.
 """
-import functools, json, math, os, subprocess, sys, time
+import functools, json, math, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BZ = 2340, 340                    # staircase centre-x, top-edge z

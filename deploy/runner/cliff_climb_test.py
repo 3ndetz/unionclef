@@ -6,7 +6,8 @@ cannot route up a sheer 6-high face, so the drive escalates to FastNavigator, wh
 staircases up and walks onto the ledge. PASS only if the bot reaches the ledge top.
     python3 deploy/runner/cliff_climb_test.py
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 FLOOR=-60; TOP=-54                       # ledge solid FLOOR..TOP (6 tall), top surface walkable at TOP+1

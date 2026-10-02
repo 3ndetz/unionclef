@@ -4,6 +4,10 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [x] **Bench subprocesses must not open Windows console windows (2026-10-02).**
+  Shared quiet process adapter covers all test wrappers; real Windows Session1
+  Docker chain and Linux checks pass. Intentional interaction remains available.
+  Evidence: docs/ai/archive/02-10-2026-quiet-windows-processes.md.
 - [ ] **A mob occupying the breathing shaft can prevent underwater escape (2026-10-02).**
   The shelter refresh audit accidentally retained its stationary NoAI zombie from
   the preceding Flee fixture in the air course's only shaft at(4.5,-60,.5).

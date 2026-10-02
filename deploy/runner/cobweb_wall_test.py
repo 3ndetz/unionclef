@@ -25,7 +25,8 @@ against.
     python deploy/runner/cobweb_wall_test.py             # build the scene and measure
     python deploy/runner/cobweb_wall_test.py --no-build  # reuse the scene
 """
-import functools, json, math, subprocess, sys, time
+import functools, json, math, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"

@@ -8,7 +8,8 @@ chain)? If yes -> the default-path B failure is only the degenerate-2-wp-stub ro
 B steps: setblock (12+2i, -61+i, 0) for i=0..5 -> tops at x=12..22, y=-61..-56.
 Start below the chain at (8,-60,0); goal the top (22,-56,0).
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

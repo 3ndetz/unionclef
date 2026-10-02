@@ -7,7 +7,7 @@ disconnected after testing the actual menu boundary.
 """
 import argparse
 import json
-import subprocess
+from uctest import process as subprocess
 import time
 from pathlib import Path
 

@@ -7,7 +7,8 @@ Assumes the bridge arena is already built and both bots in-game (run a
 bedwars_combat_test bridge first, or it builds nothing — pure observation).
 Usage: fall_trace.py [seconds]  (default 40)
 """
-import functools, json, re, subprocess, sys, time
+import functools, json, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; C2="uctest-mc-tester2"; BOT="tester1"; VICTIM="tester2"
 SECS=int(sys.argv[1]) if len(sys.argv)>1 else 40

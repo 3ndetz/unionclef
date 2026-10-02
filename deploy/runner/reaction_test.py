@@ -6,7 +6,8 @@ With the drift-immune walker the first segment is a cheap instant grid BFS, so
 the bot should start moving almost immediately. Run on the flat test-server.
 Usage: reaction_test.py [runs]  (default 5)
 """
-import functools, json, re, subprocess, sys, time
+import functools, json, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 C="uctest-mc-tester1"; G="uctest-server"
 RUNS=int(sys.argv[1]) if len(sys.argv)>1 else 5

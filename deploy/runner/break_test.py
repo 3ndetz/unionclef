@@ -18,7 +18,7 @@ Exit code 0 = both pass.
 
 import functools
 import json
-import subprocess
+from uctest import process as subprocess
 import sys
 import time
 

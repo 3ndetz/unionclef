@@ -22,7 +22,8 @@ PASS if a cobblestone is in the inventory within TIMEOUT; FAIL otherwise. Prints
 that name the mechanism either way: execDigYieldMiner (the dig yielded to a miner that mines),
 dbBlocked (self-floor refusals), navBreak (the navigator's own dig runs).
 """
-import functools, json, re, subprocess, sys, time
+import functools, json, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"

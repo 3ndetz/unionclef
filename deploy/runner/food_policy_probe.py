@@ -1,5 +1,6 @@
 """Read or scope food reservations on the client thread for live tests."""
-import json,subprocess
+import json
+from uctest import process as subprocess
 CODE=r'''
 import json,sys
 from py4j.java_gateway import JavaGateway,GatewayParameters

@@ -9,7 +9,7 @@ is polled from a background thread.
 """
 import argparse
 import json
-import subprocess
+from uctest import process as subprocess
 import time
 from pathlib import Path
 from uctest.harness import Py4jClient, Rcon

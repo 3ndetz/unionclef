@@ -19,7 +19,8 @@ The pocket is walled on the far side so the ONLY standable cell adjacent to the 
 PASS if the pig dies within KILL_TIMEOUT (the bot reaches/hits it); FAIL if it stalls. Prints the
 guide dump + lockAnat either way, so a FAIL says WHICH branch (idle/search/exec) held the tick.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 640, 640                      # fresh spot, clear of older benches

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Measure navigation beneath a submerged ceiling without water-breathing effects."""
-import argparse,json,statistics,subprocess,time
+import argparse, json, statistics, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

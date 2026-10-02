@@ -6,7 +6,8 @@ unreserved dirt, the pillar must climb three blocks using dirt. --unprotected is
 negative control: the initially selected cobblestone remains eligible and is consumed.
 The behaviour stack is restored after each trial. Requires the normal test stand.
 """
-import argparse,json,subprocess,sys,time
+import argparse, json, sys, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 ap=argparse.ArgumentParser(description=__doc__)

@@ -16,7 +16,8 @@ Flat server: a stone slab, an iron ore seven blocks under the bot, a stone picka
 raw_iron 1`. PASS = raw iron in the pack within the window (the bot dug down to it); the counters
 say how the planner and the drive behaved (navBudgetBoost, pdRouteRefused).
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 2600, 300

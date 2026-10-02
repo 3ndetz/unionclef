@@ -7,7 +7,8 @@ CURRENT state (reactive PillarTask / place-as-a-move) before building the pillar
 Build: floor y=-61 (top -60). Wall at x=20: blocks y=-60,-59 (top -58). Landing platform
 x=21..23 at top -58. Bot starts at (14,-60,0) with cobblestone; goto the platform (22,-58,0).
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

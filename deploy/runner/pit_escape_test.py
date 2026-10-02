@@ -16,7 +16,7 @@ rises out of the shaft within the window. Needs uctest-server + uctest-mc-tester
 """
 import functools
 import json
-import subprocess
+from uctest import process as subprocess
 import sys
 import time
 

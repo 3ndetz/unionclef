@@ -11,7 +11,7 @@ player is never left exposed in the live world.
 import argparse
 import json
 import signal
-import subprocess
+from uctest import process as subprocess
 import time
 from pathlib import Path
 

@@ -4,7 +4,8 @@ hunts+fights tester2 (;punkPlayer); we record tester2's screen with its camera k
 onto tester1 (re-aimed every tick), so the clip shows tester1 rushing in and swinging at the
 viewer. tester1's own combat camera is too jittery to film; the victim POV is stable.
 Extracts verification frames. Output: /mc-data on tester2 (deploy/run/data/tester2)."""
-import functools, subprocess, time, threading
+import functools, time, threading
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; C2="uctest-mc-tester2"; BOT="tester1"; VICTIM="tester2"
 DUR=14

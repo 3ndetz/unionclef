@@ -20,7 +20,8 @@ about a minute, the bot keeps playing in memory meanwhile. `restore` kicks the b
 server, replaces /data/world, fixes the ownership (docker cp writes as root, the server runs as
 the `minecraft` user), starts the server and waits for rcon; the caller reconnects the bot.
 """
-import functools, json, os, pathlib, shutil, subprocess, sys, time
+import functools, json, os, pathlib, shutil, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = os.environ.get("UC_GAMER_SERVER", "uctest-gamer-server")

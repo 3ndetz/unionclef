@@ -13,7 +13,8 @@ Output (in this repo, via the tester1 bind mount):
   deploy/run/data/tester1/iron_stall.mp4   — the raw screen recording
   deploy/runner/iron_stall_log.txt         — the per-sample rotation/position/task log
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 CLIENT = "uctest-mc-tester1"; GSERVER = "uctest-gamer-server"; PORT = 25333
 DUR = float(sys.argv[1]) if len(sys.argv) > 1 else 420.0

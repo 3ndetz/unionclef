@@ -11,7 +11,8 @@ Measures isTungstenActive over time + whether the bot ends pinned to the wall fa
 Diagnostic (informs whether #48 needs a walker stuck-detector or the existing anti-stuck
 net already handles it).
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

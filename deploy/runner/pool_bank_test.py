@@ -15,7 +15,8 @@ cell just east of the pool at surface level -- the body must rise half a block a
 
 PASS if the feet are on the bank cell within TIMEOUT. Prints mqLost/mqSteps/navStall either way.
 """
-import functools, json, re, subprocess, sys, time
+import functools, json, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"

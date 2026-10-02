@@ -18,7 +18,8 @@ Reports, per fight: whether the zombie died, how long it took, and kaTung -- the
 spent inside tungsten's controller. kaTung == 0 with a dead zombie would mean the kill came from
 somewhere else and this rewiring is still unproven.
 """
-import json, subprocess, sys, time, pathlib
+import json, sys, time, pathlib
+from uctest import process as subprocess
 
 CLIENT = "uctest-mc-tester1"
 SERVER = "uctest-server"

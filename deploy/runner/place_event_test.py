@@ -1,5 +1,6 @@
 """A server block change is not a failed player placement."""
-import argparse,json,subprocess,sys,time,statistics
+import argparse, json, sys, time, statistics
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

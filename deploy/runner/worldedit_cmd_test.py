@@ -3,7 +3,8 @@
 ;;pos1 / ;;pos2 (corners at player block) -> ;;set stone -> ;;replace stone cobblestone.
 Verifies the command handler wraps the primitives correctly.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

@@ -33,7 +33,8 @@ sees the clip appear there directly. Verification FRAMES are extracted for the s
 capture_demo.py extracts them -- look at them before anything gets cut or sent (checklist rule,
 2026-07-24: never ship an unwatched clip).
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 CLIENT = "uctest-mc-tester1"
 GSERVER = "uctest-gamer-server"

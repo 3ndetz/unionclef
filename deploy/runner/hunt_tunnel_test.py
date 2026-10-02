@@ -9,7 +9,8 @@ video. The open variant verifies that weapon pre-equipping remains available.
 and finishing any needed meal; hunger values, active eating and combat counters
 are recorded. Sampling ends at death to avoid measuring subsequent respawns.
 """
-import argparse,json,select,subprocess,time
+import argparse, json, select, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

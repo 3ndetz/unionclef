@@ -8,7 +8,8 @@ converge between steps — arrows have travel time and the release only fires on
 PASS: victim takes >= MIN_DAMAGE over the window and at least one arrow lands.
 Requires the pvp profile. Exit 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER="uctest-server"; F="tester1"; FC="uctest-mc-tester1"; V="tester2"; VC="uctest-mc-tester2"

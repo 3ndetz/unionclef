@@ -21,7 +21,7 @@ Needs the flat stand up (uctest-server + uctest-mc-tester1). Talks py4j through
 import functools
 import json
 import re
-import subprocess
+from uctest import process as subprocess
 import sys
 import time
 

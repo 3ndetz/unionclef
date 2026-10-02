@@ -16,7 +16,8 @@ cobblestone item at the bottom, `@get cobblestone 1`. Phase B: the same shaft th
 that hurts a little but is planned). PASS = the cobblestone in the inventory in both phases within
 the window; intoHole reported, no "not getting closer" line.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z, GROUND = 1800, 300, -61

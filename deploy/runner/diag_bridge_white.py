@@ -11,7 +11,8 @@ If a FAIL shows "needs bridging" but then abort/drift -> the EXECUTOR failed. Th
 Sky islands y=100: near x=-4..1 | 7-wide gap x=2..8 | far x=9..16 (z=-4..4). gotoXYZ(13,101,0)
 with planPlaceMoves ON + cobblestone in hand. Runs N times, dumps the bridge chat per run.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 N_RUNS=6

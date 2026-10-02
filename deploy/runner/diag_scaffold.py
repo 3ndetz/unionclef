@@ -3,7 +3,8 @@
 in ScaffoldRegistry), then cleanupScaffold mines them back out — verify the pillar is GONE,
 scaffoldCount back to 0, and the cleanup does NOT loop (bounded time). Bot has cobblestone.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

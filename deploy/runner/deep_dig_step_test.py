@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Descend beside a ledge before mining a lower floor, preserving the launch support."""
-import argparse,json,subprocess,time
+import argparse, json, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

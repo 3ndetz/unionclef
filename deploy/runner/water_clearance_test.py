@@ -8,7 +8,8 @@ this is not a survival-policy test. The effect and movement settings restore
 in finally. Slab goals use the planner's upper-cell surface representation;
 exact arrival to the slab's containing cell is not covered.
 """
-import argparse,json,subprocess,sys,time
+import argparse, json, sys, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

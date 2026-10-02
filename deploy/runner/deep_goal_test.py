@@ -9,7 +9,8 @@ Flat server: a 30-deep solid stone block, the bot on top with an iron pickaxe, `
 25 below and 6 blocks to the side. PASS = feet within 2 blocks of the goal within the window and
 zero "physics owns the rest" / "Ran out of nodes" lines.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 460, 430

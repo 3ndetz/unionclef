@@ -15,7 +15,8 @@ item sealed in a one-block cavity eleven blocks under it, `@get cobblestone 1`. 
 cobblestone in the pack within the window AND the body never went more than two blocks down
 (it mined the surface instead of digging for the deep one); dropDeep >= 1.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 2500, 300

@@ -8,7 +8,8 @@ executes. Bring up the victim first:
   docker compose -f deploy/compose.test.yml --profile pvp up -d
 Exit 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; C2="uctest-mc-tester2"
 BOT="tester1"; VICTIM="tester2"; PORT=25333

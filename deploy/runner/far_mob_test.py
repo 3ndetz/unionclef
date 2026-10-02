@@ -12,7 +12,8 @@ Flat server: a chicken (NoAI, so it stays put) forty blocks east across open gro
 two-block ledge halfway, the bot with a stone sword, `@get chicken 1`. PASS = raw chicken in the
 inventory within the window and zero "Failed to get to target" lines.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 820, 360

@@ -14,7 +14,8 @@ the progress checker) or held a thirty-second physics lock that moved it zero.
 Flat server, difficulty peaceful, the bot with a stone sword, `@get porkchop 1`. PASS = a porkchop
 in the inventory within the window in both phases, and no "Failed to get to target".
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 900, 300

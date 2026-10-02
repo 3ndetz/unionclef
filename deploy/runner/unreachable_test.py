@@ -8,7 +8,8 @@ stays responsive).
 
 PASS: give-up fired, bot did NOT reach the top, client still alive. Exit 0.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 SNIP = r"""

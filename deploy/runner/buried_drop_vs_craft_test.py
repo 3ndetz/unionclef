@@ -18,7 +18,8 @@ PASS = a wooden pickaxe is in the pack within TIMEOUT AND the bot never descende
 buried drop (min Y stayed at surface). FAIL = it dug down for the drop (min Y well below the
 floor) or produced nothing. Prints min Y and the pickaxe state.
 """
-import functools, json, re, subprocess, sys, time
+import functools, json, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"

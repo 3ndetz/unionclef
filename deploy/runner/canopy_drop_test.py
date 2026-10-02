@@ -14,7 +14,8 @@ Flat server: a 7x7 oak-leaf canopy one block thick, four above the ground, a raw
 it, the bot three blocks outside the canopy's edge with 8 cobblestone, `@get raw_iron 1`.
 PASS = raw_iron in the inventory within the window and zero "has taken too long" lines.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 760, 300

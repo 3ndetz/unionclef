@@ -10,7 +10,8 @@ The test gives the bot TWO dirt in the held slot and a full stack of cobblestone
 asks for a bridge longer than two blocks. Passing means the bridge continued into the cobblestone
 — i.e. it re-equipped instead of stopping. Exit 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 # "raised": the same bridge, but from a pad ten blocks above the world floor, which is the case

@@ -2,7 +2,8 @@
 """Break primitive (mineBlocks) autotest: a 3-block dirt wall in reach, mineBlocks it, poll
 mineStatus, verify the blocks are gone. Bot with a shovel (fast dirt) next to the wall.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

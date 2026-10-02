@@ -1,5 +1,5 @@
 """Shared finalisation for suite and survival recordings."""
-import subprocess
+from . import process as subprocess
 
 
 def finish_recording(container):
@@ -35,5 +35,4 @@ while pending:
 """
     subprocess.run(["docker", "exec", container, "python3", "-c", code],
                    check=True, timeout=40, capture_output=True)
-
 

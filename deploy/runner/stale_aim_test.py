@@ -8,7 +8,8 @@ auto-release, the aim must clear itself within ~1s even though nothing refreshes
 
 PASS: hasTarget True right after the poke, False after waiting past STALE_MS. Exit 0.
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 C1 = "uctest-mc-tester1"
 SNIP = r"""

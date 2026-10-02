@@ -9,7 +9,7 @@ for its policy refusal control. --vine-tip-offset selects head or jump-eye heigh
 import argparse
 import json
 import math
-import subprocess
+from uctest import process as subprocess
 import statistics
 import signal
 import time

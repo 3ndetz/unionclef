@@ -6,7 +6,8 @@ already-at-wall shortcut. --expect-bug requires the old out-of-reach abort.
 The raw physics entry needs resumeUsesSearchTarget to continue beyond its dig;
 this fixture enables and restores it. Each run records executor state and video.
 """
-import argparse,json,subprocess,time
+import argparse, json, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

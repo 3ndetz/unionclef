@@ -13,7 +13,8 @@ Bring up the victim container first:
   docker compose -f deploy/compose.test.yml --profile pvp up -d
 Usage: bedwars_combat_test.py [seconds] [mutual|solo]   (default 60 mutual)
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; C2="uctest-mc-tester2"; BOT="tester1"; VICTIM="tester2"
 SECS=int(sys.argv[1]) if len(sys.argv)>1 else 60

@@ -11,7 +11,8 @@ is copied out and uploaded.
 Telegram creds come from mineswarm/.env (TG_BOT_TOKEN, OPERATOR_CHAT_ID); the token is never
 printed. Set UC_CLIENT / UC_ENV to override the container / env path.
 """
-import json, os, re, subprocess, sys, uuid, urllib.request, urllib.error
+import json, os, re, sys, uuid, urllib.request, urllib.error
+from uctest import process as subprocess
 
 CLIENT = os.environ.get("UC_CLIENT", "uctest-mc-tester1")
 ENV_PATH = os.environ.get("UC_ENV", r"C:/repos/pet/mineswarm/.env")

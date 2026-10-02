@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Mine an elevated ore while the approach must pillar inside a narrow shaft."""
-import argparse,json,subprocess,time
+import argparse, json, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

@@ -19,7 +19,8 @@ Then `@get dark_oak_planks 4`, which must pick the log up out of that very slot.
 after the burst is at most the single-cancel four seconds, and four planks are in the pack within
 the window.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, GROUND, Z = 2400, -60, 300

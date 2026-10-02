@@ -17,7 +17,8 @@ five blocks from the bot and `@get raw_iron 1`:
 PASS = raw_iron in the inventory in both phases within the window, zero "Failed exploring",
 zero "Failed to pick up drop", zero "Walking straight at it".
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 740, 300

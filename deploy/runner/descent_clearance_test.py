@@ -6,7 +6,8 @@ included in the plan and removed before descent; bedrock and disabled breaking
 must reject that route. Depths 1..3 cover all ordinary fall moves. landing_slab
 checks that the support inside the landing cell survives. All settings restore.
 """
-import sys,time,json,subprocess,argparse
+import sys, time, json, argparse
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

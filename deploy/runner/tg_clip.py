@@ -11,7 +11,8 @@ Telegram credentials are read from mineswarm/.env (TG_BOT_TOKEN, OPERATOR_CHAT_I
 only those two keys are parsed and the token is never printed. Set UC_ENV to point at a
 different .env. Exit 0 on a delivered video, non-zero otherwise.
 """
-import json, os, re, subprocess, sys, time, urllib.request, urllib.error, uuid
+import json, os, re, sys, time, urllib.request, urllib.error, uuid
+from uctest import process as subprocess
 
 CLIENT = os.environ.get("UC_CLIENT", "uctest-mc-tester1")
 ENV_PATH = os.environ.get("UC_ENV", r"C:/repos/pet/mineswarm/.env")

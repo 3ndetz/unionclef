@@ -9,7 +9,8 @@ one_high reproduces premature final-waypoint completion. Those controls return
 nonzero when the bot fails to finish. --connected assumes the client is already
 on test-server. Other runs connect explicitly.
 """
-import argparse,json,subprocess,sys,time
+import argparse, json, sys, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

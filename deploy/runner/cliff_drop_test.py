@@ -17,7 +17,8 @@ iron ingot on it four blocks out from the foot of the cliff. The bot starts on t
 `@get iron_ingot 1`. PASS = the ingot in the inventory within the window, with no "giving the
 route up" and no blacklisting of the drop.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 1200, 300

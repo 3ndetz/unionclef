@@ -16,7 +16,8 @@ crown), the bot standing on the crown, a stick lying on the skirt five below and
 `@get stick 1`. PASS = stick in the inventory within the window and no "not getting closer" or
 "giving the route up" line.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 800, 300

@@ -4,7 +4,8 @@ game's schematics/ dir, loadSchem it anchored at the bot, verify the platform is
 Validates the mod-side schematic loader (baritone SpongeSchematic parser -> buildBlocks).
 Real .schem files download from minecraft-schematics.com into <gamedir>/schematics/.
 """
-import base64, functools, gzip, json, struct, subprocess, time
+import base64, functools, gzip, json, struct, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""

@@ -9,7 +9,8 @@ stall vs fall) before fixing.
 Staircase: floor y=-61 (top -60); step i(1..12): setblock (1+i)(-61+i) 0 -> tops x=2..13, y=-59..-48.
 Target = top of last step (13,-48,0).
 """
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 N_RUNS=8

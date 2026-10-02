@@ -10,7 +10,8 @@ the full playthrough is nightly-scale. Bring up the server first:
 Exit 0 = the bot started @gamer and made early progress (items gained), stayed
 responsive and not permanently stuck.
 """
-import atexit, functools, json, os, pathlib, re, subprocess, sys, time
+import atexit, functools, json, os, pathlib, re, sys, time
+from uctest import process as subprocess
 from uctest.recording import finish_recording
 import checkpoint as _cp
 print = functools.partial(print, flush=True)

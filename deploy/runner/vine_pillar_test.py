@@ -18,7 +18,8 @@ Flat server: a one-wide stone shaft five deep, vines on its north wall from the 
 at the bottom with a stack of cobblestone, `@goto` a point on the surface four blocks away. PASS =
 the bot's Y rises out of the shaft within the window; pillarVine=ticks/met reports the climb.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BY, BZ = 2000, -60, 200          # shaft floor block; the flat world's floor is at -60

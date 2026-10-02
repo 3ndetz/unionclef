@@ -33,7 +33,8 @@ give-ups in a row -- marking it unreachable" only cost failure 1 of 5 and the bl
 excluded -> indefinite wedge. Fixed by `requestBlockUnreachableNow` (a decisive verdict that
 excludes at once, still cools off and retries).
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 import os

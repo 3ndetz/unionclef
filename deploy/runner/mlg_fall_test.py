@@ -9,7 +9,7 @@ Partial surfaces and an optional full-block bank exercise landing selection.
 import argparse
 import json
 import re
-import subprocess
+from uctest import process as subprocess
 import time
 from pathlib import Path
 from uctest.harness import Py4jClient, Rcon

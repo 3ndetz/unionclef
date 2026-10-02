@@ -29,7 +29,7 @@ import datetime
 import functools
 import os
 import re
-import subprocess
+from uctest import process as subprocess
 import tempfile
 import shutil
 

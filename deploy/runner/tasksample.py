@@ -4,7 +4,8 @@ A freeze dump is one frame, and three passes of this session were spent reasonin
 single frames that did not survive. This polls instead, so the answer is a distribution.
 Usage: tasksample.py [seconds] [interval]
 """
-import json, re, subprocess, sys, time, collections
+import json, re, sys, time, collections
+from uctest import process as subprocess
 
 CLIENT, PORT = "uctest-mc-tester1", 25333
 src = open("deploy/runner/gamer_smoke.py", encoding="utf-8").read()

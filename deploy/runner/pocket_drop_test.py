@@ -17,7 +17,8 @@ pocket and collects it). With --nopick the round-46 trap is the subject: the pic
 first" diversion used to ask for a STONE pickaxe -- three cobblestone, the very drop -- and the
 chain closed on itself for seven minutes; now it asks for a WOODEN one, which the pack can make.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BY, BZ = 2900, -60, 300          # the bot stands on (BX,BY,BZ); the flat world's floor is at BY

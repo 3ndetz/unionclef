@@ -25,7 +25,8 @@ Three phases in the same shaft on the flat server:
 PASS = the bot leaves the shaft in all three phases, and "out of blocks" / "Pillar stuck" is
 never said.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BY, BZ = 240, -60, 240

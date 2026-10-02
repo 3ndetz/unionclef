@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check recovery overlap against live collision geometry, including an embedded fence."""
-import argparse,json,subprocess,time
+import argparse, json, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--output',type=Path,required=True);a=ap.parse_args()

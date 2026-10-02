@@ -13,7 +13,8 @@ take turns clearing each other's grid.
 Flat server: the bot on open ground with a crafting table, two spruce logs and one iron ingot in
 the pack, `@get shield 1`. PASS = a shield in the pack within the window.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 2400, 300

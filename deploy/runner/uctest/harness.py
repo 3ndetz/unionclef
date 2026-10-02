@@ -7,7 +7,7 @@ No host-side dependencies beyond python3 + docker CLI.
 """
 import json
 import os
-import subprocess
+from . import process as subprocess
 import time
 
 SERVER_CONTAINER = "uctest-server"

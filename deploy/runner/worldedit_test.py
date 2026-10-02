@@ -10,7 +10,8 @@ them inside the call — a placement costs 4 ticks (BlockPlaceHelper), so the
 test waits on buildQueue().done instead of assuming instant walls.
 Exit 0 = pass.
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 CLIENT="uctest-mc-tester1"; SERVER="uctest-server"; BOT="tester1"; PORT=25333
 SNIP=r"""

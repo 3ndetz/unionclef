@@ -8,7 +8,8 @@ The fixture waits for teleport and grounding before task startup. Videos, raw
 inventory snapshots, health and FPS are recorded; no lazy inventory counts are
 queried on the sampling thread. These are functional gates, not speed estimates.
 """
-import argparse,json,subprocess,sys,time
+import argparse, json, sys, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

@@ -2,7 +2,8 @@
 """Why is @gamer stuck? Print the current task (@status), the bot's surroundings,
 and probe whether basic nav works here (@get log 1) on the survival terrain.
 Usage: gamer_diag2.py"""
-import functools, json, subprocess, time
+import functools, json, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 CLIENT="uctest-mc-tester1"; GSERVER="uctest-gamer-server"
 SNIP=r"""

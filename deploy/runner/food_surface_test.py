@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Observe food exploration in a foodless underground chamber."""
-import argparse,json,math,statistics,subprocess,sys,time
+import argparse, json, math, statistics, sys, time
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

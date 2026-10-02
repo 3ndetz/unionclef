@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Separate high-animal routing from food selection on disposable terrain."""
-import argparse,json,statistics,subprocess,sys,time,math,re
+import argparse, json, statistics, sys, time, math, re
+from uctest import process as subprocess
 from pathlib import Path
 from uctest.harness import Py4jClient,Rcon
 from gamer_smoke import rec_start,rec_stop

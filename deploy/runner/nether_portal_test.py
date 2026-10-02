@@ -33,7 +33,8 @@ bot bugs, and both bite a real run's OPPOSITE way:
 The FLOOD mechanic itself, the frame BUILD, and the light are all faithfully exercised here; a real
 @gamer run is still the final confirmation for natural (chaotic) terrain.
 """
-import functools, json, os, re, subprocess, sys, time
+import functools, json, os, re, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BZ = 2360, 360                     # platform centre

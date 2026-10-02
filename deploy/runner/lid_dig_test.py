@@ -18,7 +18,8 @@ layer down, three blocks to the side, a grass lid over it. The bot gets a stone 
 `@get cobblestone 1`. PASS = cobblestone within the window, no "unreachable"/"Costing" line for
 the target, and dbLid=dug greater than zero (the lid really was the thing in the way).
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z, GROUND = 1400, 300, -61      # surface block at GROUND, feet at GROUND+1

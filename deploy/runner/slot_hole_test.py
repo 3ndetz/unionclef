@@ -18,7 +18,8 @@ cell inside. PASS = within the window the navigator reports the route given up a
 engine failed twice (navPhysics=failed/gaveUp with gaveUp >= 1), the first give-up within 25 s of
 the goto, and no search ever ran to the old twenty-second cap.
 """
-import functools, json, os, subprocess, sys, time
+import functools, json, os, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 BX, BY, BZ = 2100, -60, 300          # the bot's start column; the flat world's floor is at -60

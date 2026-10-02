@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check that public task commands cannot mutate the runner across a paused client."""
-import argparse,json,subprocess
+import argparse, json
+from uctest import process as subprocess
 from pathlib import Path
 ap=argparse.ArgumentParser();ap.add_argument('--tag',required=True);ap.add_argument('--output-dir',type=Path,required=True);ap.add_argument('--expect-bug',action='store_true');args=ap.parse_args()
 from uctest.harness import Rcon

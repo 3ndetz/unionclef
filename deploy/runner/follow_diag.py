@@ -6,7 +6,8 @@ stuck-bails? LOS loss?). Not pass/fail — prints the per-tick decision distribu
 Arena has a FLOOR (the plain follow arena only clears air, so a wandering bot can fall
 into natural-terrain holes — seen as y=101 respawns).
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 
 SERVER="uctest-server"; F="tester1"; FC="uctest-mc-tester1"; V="tester2"; VC="uctest-mc-tester2"

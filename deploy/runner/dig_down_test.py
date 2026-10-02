@@ -6,7 +6,8 @@ Builds a solid stone block, hollows a 1x2 air pocket at the bottom, puts the bot
 iron pickaxe, and drives @goto to the pocket. PASS if the bot descends to it by mining.
     python3 deploy/runner/dig_down_test.py
 """
-import functools, json, subprocess, sys, time
+import functools, json, sys, time
+from uctest import process as subprocess
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 TOP=-52; FLOORY=-63; X,Z=430,430             # solid stone TOP..FLOORY; bot digs its own shaft
