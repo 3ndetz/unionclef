@@ -241,3 +241,36 @@
   construction first, then six neighbouring navigation cases, six repeats.
   Stop first unexpected red/invalid/runtime. No build/render/extraction runs
   concurrently. Native2b cohort remains prospective/unexecuted; no release yet.
+- Adjacent32534 has completed the firstfive full repeats35/35 plus sixth water
+  construction, all valid/healthy without runtime matches. The sixth remaining
+  navigation prefix is LIVE; no terminal42 or actual film-review claim yet.
+  Source-water post-completion rest is not an unfinished climb. Pre-recording
+  recovery after removing a preceding arena is separate from measured falls;
+  inspect actual films before accepting that distinction. Jar remains exact2b.
+- Fresh source review found a native coverage defect: record_start's300+8s cap
+  ends before slow final polls/diagnostics/end save while the gamer is still
+  active. Old092 recordings are308s versus~350s observer windows; their unseen
+  tails remain explicitly unreviewed. Standalone cleanup did not finalize the
+  recorder. Do not use those recordings as full-window visual evidence.
+- OWN gamer_smoke.py WIP now starts an explicitly owned recording before task
+  activation, confirms stop through a later client-thread FutureTask immediately
+  after the observation loop, and finalizes driver/recorder from main'sfinally
+  on failed/catchably terminated exits. Other short callers retain their finite
+  duration. Syntax/diff checks ONLY: live ownership and native-boundary tests
+  remain pending after the adjacent campaign. Forced OS termination is a gap.
+- Ignored native observer now stops/drains at the timestamped end marker; its
+  helper verifies required capture span against actual clip duration and trace
+  start. Analyzer retains/audits every sequence, excluding post-marker drain
+  ticks from measured metrics. These additions are syntax-only/unexecuted too.
+- Prospective actual lifecycle fixture uses a live idle task and recorder for
+  normal-return/catchableSystemExit cleanup plus finite short-caller expiry;
+  it is not a gamer-progress test. Prepared post-build proof requires all2212
+  tested2b classes identical except the validated branch-default bytecode, with
+  waterfalse. Prepared36 neighbouring-course audit reads actual reset defaults
+  without branch/water overrides. None of these planned gates has run yet.
+- Report outline targets50s of actual events, silentEnglish/local frozen assets,
+  six scenes inline. Re-opened prespecified pair1 tip1 sheets for trim selection:
+  OFF17.2s/ON14.3s recordings, common action8.2..14.2 supports6s real-time split.
+  Cached words-tier catalog/386items finds animated-bar-chart; installation,
+  fresh project, final checks/render/report are pending. No extra GPU/container
+  changes. Checkpoint budget8977MB/15GB, diskfree173GB; no evidence deleted.
