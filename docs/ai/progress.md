@@ -422,3 +422,16 @@
   cause/baseline reproduction unverified, no regression attributed. Hostobserver
   naturally ends0/37samples/noerrors, no extra game calls/services stopped.
   Budget9626MB/free169GB. Waterdefaultfalse; remaining pairs3-6 prospective.
+- Prespecified pair3 OFF->ON naturally finishes0 at21:07:21UTC. OFF28FPS/no new
+  food/wetpillar6011JUMP+SNEAK/316.046s exact hold; ON26FPS/new cooked chicken6
+  and pork3/29JUMP-only, no wetJUMP+SNEAK. Both gamerFAIL/observer0/cleanup[],
+  deaths0/lava0/runtime matches[]. OFF initialtraceHP9.766668 versusON20 prevents
+  survival attribution. Two healthy pairs of three attempted, not a native rate;
+  pair1 FPS-invalid observation retained. Source/helper/pins/gates unchanged.
+- All16 actual pair3 film pages inspected at2s/hash-journalled after both arms
+  terminate. ON escapes/hunts/cooks but later has25.789s smoker-approach hold,
+  then42.173s in smoker item transfer near(-48.964,99,1078.887). Output changes
+  near the end; not proof of an unconditional freeze/new water regression.
+  Preserve235718-end/cp1003-0001-t309. Cause/baseline verification pending,
+  food140/full59/fullgame open. Host observer naturally0/37samples/noerrors.
+  Budget9867MB/free169GB; waterdefaultfalse; remaining pairs4-6 prospective.

@@ -95,3 +95,41 @@
   CPU43.44-82.78%. No extra game API calls, no container/service changes. This
   does not establish per-thread contention or explain the past pair1 FPS19.
 - Budget9626MB of15GB,169GB free. Pairs3-6 remain prospective, water default=false.
+
+## Follow-up: second healthy pair, with unfinished later cooking retained
+
+- Prespecified pair3 OFF->ON completes naturally/parent0 at21:07:21UTC,
+  `logged-job-20261002-234649`. Original helperSHAa3fe7cee, published365e,
+  sourcecp582e, branchtrue, tick-only observation and gates remain unchanged.
+  Both gamerFAIL/observer0/cleanup[], deaths0/lava0/runtime matches[].
+- OFF `food-bank-trace-20261002-234650`: median28FPS/13polls; no new food/rung,
+  original cooked mutton3->1. Wet pillar6014ticks/6012grounded/6011 JUMP+SNEAK,
+  zero JUMP-only; longest exact fixed-body hold316.046s. Initial traceHP9.766668
+  recovers20. Capture335.688s/video341.736264s, SHA
+  `3e9344fc7a08cf2722e2da92b4005ab8d71b117c3775ef25a903a2b1336304f3`.
+- ON `food-bank-trace-20261002-235718`: median26FPS/13polls; new cooked chicken6
+  and cooked porkchop3, original cooked mutton3->2. Wet pillar31ticks/29 JUMP-only,
+  zero JUMP+SNEAK/grounded; initial/min traceHP20. Unequal activationHP prevents
+  survival attribution. Capture333.332s/video340.066667s, SHA
+  `a3030da026bf90adb73cf1af2f9489bd42e87430648104a516c2a01ea91605f3`.
+- Review100688 exits0 at21:08:21UTC (`logged-job-20261003-000736`). All8 OFF and
+  all8 ON pages actually inspected at2s and hash-journalled. OFF approaches then
+  stays submerged from roughly22s through336s. ON leaves around30-33s, gathers
+  wood/climbs, kills a pig66-68s and crafts/cooks72-96s; further animal kills and
+  clearing114-226s. No sampled death/fire; both final stop/chain disappearances
+  retained. Coverage is every sampled page, not every frame or moving playback.
+- ON later pauses25.789s during the smoker approach, resumes the route, then
+  holds42.173s near(-48.964,99,1078.887) in the smoker interface. Actual trace
+  chain includes SmeltInSmokerTask/DoSmeltInSmokerTask/MoveItemToSlotFromInventoryTask;
+  measured movement drivers are inactive there. Retained diagnostic chat includes
+  MOVEMISMATCH holding cooked_chicken versus requested coal. Output changes near
+  the end, so this is an unfinished cooking/transfer interval, not proof of an
+  unconditional permanent freeze or a new water regression. Preserve
+  `food-bank-trace-20261002-235718-end` and `cp1003-0001-t309` for investigation;
+  causal/baseline reproduction remains unverified. Food140 stays open.
+- Host observer146684 exits0 naturally at21:07:31UTC:37samples/no errors,
+  aggregate CPU34.87-82.64%. These aggregate samples cannot establish per-thread
+  contention. No services, useful tests or human windows stopped/hidden.
+- Two healthy pairs of three attempted; original pair1 FPS-invalid outcome still
+  excluded. Pairs4-6 remain prospective, water default=false. Budget9867MB of15GB,
+ 169GB free. Wiki37062623387 succeeded on prior exact head8d566680.
