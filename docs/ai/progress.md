@@ -168,6 +168,21 @@
   Corrected approach4704 active on the same release/retained entry. No shelter
   Java fix yet. Next validate actual arrival/safety, then implement reachable
   multi-site selection using the existing planner and upstream GoalComposite.
+- Corrected4704 exited1, shelter-native-site-20261002-065337. First route sample
+  now has20hp; no effects/healing used. The route does not arrive in60s: it climbs
+  out, then mines down at(-85,*,1054) toY28.5 despite requestedY64. All61.9s of
+  recording viewed2s.180 samples average24.85FPS, minimum11, so this run is not a
+  healthy-route comparison. No deaths/lava entries, original checkpoint unchanged,
+  cleanup errors=[]. Retain the unexpected descent as evidence, not a proved cause.
+- Actual log contains GotoCommand retry callbacks during the unrelated @goto.
+  Source audit: TungstenMod.stopNavigation/resetAllState leave executor.cb intact;
+  GotoCommand's delayed retry only tests the shared stop flag, which a new search
+  resets. This makes stale ownership plausible, not yet established for this descent.
+  Also inspect post-mining search target and actual navigator goal before fixing.
+  Upstream PathingBehavior:331-370 cancels the owning processes and current/next path.
+- Traced same-entry approach95746 active, shelter-native-site-20261002-070326;
+  observer records callback class/captured target, global/search/native goal and
+  actual client coordinates. No source/build/redeploy alongside the frozen probe.
 
 ### Assess
 - The retained fatal landing is now rejected by actual-class simulation, and one
