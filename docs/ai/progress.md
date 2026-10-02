@@ -274,3 +274,25 @@
   Cached words-tier catalog/386items finds animated-bar-chart; installation,
   fresh project, final checks/render/report are pending. No extra GPU/container
   changes. Checkpoint budget8977MB/15GB, diskfree173GB; no evidence deleted.
+- Adjacent32534 is TERMINAL0 with all42/42 executed/valid, runtime matches[]
+  and cleanup errors[]. Extraction40387 terminal0 independently checks the
+  exact2b payload, readback, clip hashes/durations and sampledHP20/no deaths.
+  All42 recordings now actually inspected at2s/every contact-sheet page and
+  individually journalled. Stairs/descent/water/ledge/bridge end supported;
+  water construction replaces the source and holds the completed rung. Setup
+  recovery text predates the measured courses; no death/fire/opened interface
+  seen at sampled cadence. This is not every-frame coverage or native food
+  closure. Both flags stay experimental false-default; no new release/report.
+- Actual gamer lifecycle fixture77035 is LIVE: normal return, catchable
+  SystemExit and finite short-caller expiry. No terminal outcome yet. Its
+  idle driver tests ownership/cleanup; native capture boundaries remain a
+  separate prospective original-checkpoint gamer test.
+- Lifecycle77035 TERMINAL0/cleanup[]:all3 actual checks pass. Owned recorders
+  are still live after9s without a cap; normal return and catchableSystemExit
+  leave runner active=false and no recorder. Actual clips12.33/12.20s exceed
+  the hold and both pages inspected at2s. The idle task is preemptible by
+  Unstuck; this is an ownership check, not an idle-policy/progress result.
+  Finite0s caller still expires at its8s cap. Forced OS kill remains uncovered.
+- New native boundary diagnostic10310 is LIVE on exact2b, originalcp1002-1301
+  fingerprint582e, raw resume/tick-only, constant branchtrue/waterfalse. Its
+  five-minute observation is prospective; no progress or coverage verdict yet.
