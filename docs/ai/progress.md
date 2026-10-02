@@ -327,7 +327,7 @@
   Parent and observer both exited0; cleanup errors[], checkpoint unchanged.
   Full sequence1-8149 contains7273 client ticks and51 separately timed geometry
   snapshots, with no gaps/errors. Actual trace minHP19 (polls/endHP20), no lava
-  ticks/deaths, damage counter1.0; measured client-log window15:02:33-15:08:37
+  ticks/deaths, damage counter1.0; measured client-log window12:02:33-12:08:37 UTC
   has no exceptions/planning failures. Median22FPS over13 parent samples.
 - This replay is a successful counterexample, not a food repair: no movement
   code changed. After repeated pillar attempts at(-94.5,62,1099.7), a swim
@@ -348,3 +348,7 @@
   shipped defaults, raw5min, recording/dense saves; only existing tick trace is
   observed, without the extra geometry/state API sampling. Its end checkpoint
   has a unique run name. No build/render or other bench runs during measurement.
+- Corrected the runtime-window reader's timezone: Minecraft logs use UTC,
+  while the initial helper used host Moscow time and matched an empty window.
+  Re-read actual12:02:33-12:08:37 UTC lines; no runtime matches. Retain this
+  instrument correction explicitly rather than trusting the earlier empty scan.
