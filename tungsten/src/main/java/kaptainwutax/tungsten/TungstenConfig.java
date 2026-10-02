@@ -5153,6 +5153,11 @@ public class TungstenConfig {
     public boolean moveDigDown       = true;   // G1: mine the floor and drop one (reach ore)
     public boolean moveStaircase     = true;   // G2: cut a step up/down through blocks
     public boolean movePillar        = true;   // place a block under yourself and rise
+    /** Carry planned interaction clearance into subsequent pillar steps instead
+     * of rejecting the already-cleared source cell or charging its break again.
+     * False is the unchanged-world control. Validated on72 balanced dry trials
+     * and42 adjacent navigation/construction checks. */
+    public boolean pillarUsesBranchClearance = true;
     public boolean movePlaceBridge   = true;   // place a floor across a gap and step on
 
     /** Swim aiming the FULL rotation (pitch included) at the destination, not the land pitch.
@@ -5170,6 +5175,12 @@ public class TungstenConfig {
      *  kaptainwutax.tungsten.task.SwimOutTask} instead — hold JUMP (rise) + FORWARD aimed at the
      *  ledge until standing on it. Default ON. (G24, 2026-09-11) */
     public boolean swimOutOfWaterNotPillar = true;
+
+    /** Use swimming ascent input while PillarTask's body touches water, then resume
+     * land sneak/jump input for actual placement. False retains the old input for
+     * same-client A/B tests. Experimental until wet construction, dry placement
+     * and the retained natural food-bank checkpoint have been validated. */
+    public boolean pillarUsesSwimInputInWater = false;
 
     /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
      *  that holds heading and sprint across the whole bounce chain, instead of the walker

@@ -312,6 +312,8 @@ public final class FastPlanner {
          * chain stops the moment it meets a node that has placed nothing.
          */
         int placedDepth;
+        /** Explicit removals inherited by this branch, like placedDepth. */
+        int brokenDepth;
         int heapPosition = -1;
 
         Node(int x, int y, int z, double heuristic) {
@@ -1702,6 +1704,8 @@ public final class FastPlanner {
         // Price that break here and list the cell, so the route is honest about the dig; the
         // navigator's hand-off mines it before PillarTask starts (FastNavigator, G82).
         net.minecraft.block.BlockState feetSt = cachedState(world, from.x, from.y, from.z, scratch);
+        boolean branchClearance = TungstenConfig.get().pillarUsesBranchClearance;
+        boolean feetCleared = branchClearance && branchCleared(from, feet);
         List<BlockPos> clear = null;
         double clearTicks = 0;
         if (!feetSt.getCollisionShape(world, feet).isEmpty()) {
@@ -1729,14 +1733,22 @@ public final class FastPlanner {
         // goes): MovementPillar.costOfPlacingAt asks PlaceRules.canPlace for this exact cell
         // (MovementPillar.java:459-467) and prices a refusal COST_INF. A cell that is cleared
         // first is air by the time the block goes in, so only the policy half applies to it.
-        if (clear == null
-                ? !kaptainwutax.tungsten.path.PlaceRules.canPlace(world, feet)
-                : !kaptainwutax.tungsten.path.PlaceRules.allowedByPolicy(feet)) return;
+        if (clear == null && !feetCleared) {
+            if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, feet)) return;
+        } else if (branchClearance) {
+            if (!kaptainwutax.tungsten.path.PlaceRules.canPlaceAfterClearing(world, feet)) return;
+        } else if (!kaptainwutax.tungsten.path.PlaceRules.allowedByPolicy(feet)) return;
 
         // The body can fit through a plant while its outline blocks the placement ray.
         // Price and execute that clearance before handing the column to PillarTask.
         for (int dy = 1; dy <= 2; dy++) {
             BlockPos cell = feet.up(dy);
+            // Baritone MovementPillar.java:258-266 clears a non-replaceable source
+            // before placing. Our previous step already scheduled these explicit
+            // outline removals: carry them forward just as branchPlaced carries
+            // its new support. Frozen tip-at-head/jump-eye probes reject the next
+            // step on the old world and charge the same plant twice without this.
+            if (branchClearance && branchCleared(from, cell)) continue;
             if (!kaptainwutax.tungsten.helpers.RealPlacement.obstructsPillarRay(world, cell)) continue;
             var player = TungstenMod.mc.player;
             var state = world.getBlockState(cell);
@@ -1848,6 +1860,16 @@ public final class FastPlanner {
                 BlockPos b = placed.get(i);
                 if (b.getX() == x && b.getY() == y && b.getZ() == z) return true;
             }
+        }
+        return false;
+    }
+
+    /** An explicit removal on this route is empty before a later pillar uses it.
+     * This only affects interaction clearance; body collision remains checked
+     * against the actual world, so it does not admit pillars through solid rock. */
+    private static boolean branchCleared(Node from, BlockPos cell) {
+        for (Node n = from; n != null && n.brokenDepth > 0; n = n.parent) {
+            if (n.toBreak != null && n.toBreak.contains(cell)) return true;
         }
         return false;
     }
@@ -2055,6 +2077,7 @@ public final class FastPlanner {
         next.toBreak = toBreak;
         next.toPlace = toPlace;
         next.placedDepth = from.placedDepth + (toPlace == null ? 0 : toPlace.size());
+        next.brokenDepth = from.brokenDepth + (toBreak == null ? 0 : toBreak.size());
         // Judged at GENERATION, as baritone does: a dug cell that is never popped within the
         // budget still counts as the best partial for a greedy coefficient (see PARTIAL_COEFS).
         PARTIAL.get().offer(next, tentative);

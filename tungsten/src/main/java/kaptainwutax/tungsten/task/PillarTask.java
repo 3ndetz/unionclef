@@ -350,18 +350,28 @@ public class PillarTask {
         if (climbing && !climbingLastTick) pillarVineMet++;
         if (climbing) pillarVineTicks++;
         climbingLastTick = climbing;
+        // Baritone Movement.java:125-127 retains JUMP in liquid; its MovementPillar.java:
+        // 187-200 separates swimming from land placement. The ordinary land branch also
+        // sneaks initially, but full source water needs different input here: published055
+        // wet-task at30FPS held JUMP+SNEAK for100 grounded ticks with zero vertical rise.
+        // Vanilla water sneak sinks while jump rises (Agent.java:459,506); their impulses
+        // cancel. Hold swimming JUMP without SNEAK until the body leaves water, then
+        // re-arm the existing land pose. The actual sneak-pose/cell/ray click gates below
+        // still apply; swimming alone must not count as constructing a rung.
+        boolean swimmingPillar = kaptainwutax.tungsten.TungstenConfig.get()
+                .pillarUsesSwimInputInWater && player.isTouchingWater();
         // Stay centred over the column (no horizontal drift) and aim straight down.
         opts.forwardKey.setPressed(false);
         opts.sprintKey.setPressed(false);
-        // Arm sneak before the jump and retain it through the placement window.
+        // On land, arm sneak before the jump and retain it through the placement window.
         // ClientPlayerEntity updates its cached sneak pose before sampling new input;
         // requesting it only at the apex misses the short window below a low roof.
-        opts.sneakKey.setPressed(true);
+        opts.sneakKey.setPressed(!swimmingPillar);
         WindMouseRotation.INSTANCE.setTarget(player.getYaw(), 89f); // pitch +89 = down
 
         // Jump off the ground; release jump while airborne (single hop per block) -- unless the
-        // body is climbing, where JUMP held is the climb itself.
-        boolean jump = player.isOnGround() || climbing;
+        // body is climbing or swimming, where JUMP held is the ascent itself.
+        boolean jump = player.isOnGround() || climbing || swimmingPillar;
         opts.jumpKey.setPressed(jump);
         jumpAsked = jump;
 
@@ -409,8 +419,8 @@ public class PillarTask {
                     return;
                 }
                 // Keep the actual-pose gate: a smoker or crafting table otherwise
-                // opens its GUI instead of supporting a new block. Sneak is already
-                // held through the jump so the pose is ready before this window.
+                // opens its GUI instead of supporting a new block. On land sneak is
+                // held through the jump; after swimming it must be re-armed first.
                 // THIS DID NOT EVEN AIM. It forged a hit on the top face of the block below
                 // and clicked, so a tower went up with the camera pointing anywhere at all —
                 // a placement through geometry, not a placement. Now: look DOWN at that face

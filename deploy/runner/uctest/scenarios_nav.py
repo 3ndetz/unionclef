@@ -298,6 +298,57 @@ class NavBreak(NavCourse):
         return (24, STAND_Y, 0)
 
 
+class NavWaterPillar(Scenario):
+    """Build and rest on one rung from source water above solid footing.
+
+    Experimental: dedicated probes explicitly opt in to the water input flag.
+    Keep outside SCENARIOS while pillarUsesSwimInputInWater defaults to false.
+    The retained food-bank stall held JUMP+SNEAK while grounded in water.
+    Height alone would pass a swim that later falls back into the basin, so
+    require a new server-side block, spent material and grounded final height.
+    Rebuild the source water before every repeat; never hand over the rung.
+    """
+    id = "nav_water_pillar"
+    needs_victim = False
+    duration = 15
+    arena_half = 5
+    bot_kit = ["item replace entity {name} hotbar.0 with cobblestone 64"]
+
+    def build(self, arena, ctx):
+        arena.floor(-4, -4, 4, 4, "stone")
+        arena._fill(-1, STAND_Y, -1, 1, STAND_Y, 1, "stone")
+        ctx.rcon.cmd(f"setblock 0 {STAND_Y} 0 water")
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 0 89"
+
+    def drive_start(self, ctx):
+        before = ctx.bot.py.call("getGameState")["self"]
+        source_water = "passed" in ctx.rcon.cmd(
+            f"execute if block 0 {STAND_Y} 0 water").lower()
+        position = [float(n) for n in before["pos"].split(",")]
+        assert source_water and before["onGround"] and before["blocks"] == 64, before
+        assert abs(position[0] - .5) < .1 and abs(position[1] - STAND_Y) < .1
+        assert abs(position[2] - .5) < .1, before
+        ctx.geo["before"] = before
+        assert ctx.bot.py.call("pillarTo", STAND_Y + 1)
+
+    def judge(self, ctx):
+        final = ctx.bot.py.call("getGameState")["self"]
+        placed = "passed" in ctx.rcon.cmd(
+            f"execute if block 0 {STAND_Y} 0 cobblestone").lower()
+        height = float(final["pos"].split(",")[1])
+        yield Criterion("constructed source-water rung", placed,
+                        f"source_cell_cobblestone={placed}", load_sensitive=True)
+        yield Criterion("resting on constructed rung", final["onGround"]
+                        and abs(height - (STAND_Y + 1)) < .05,
+                        f"onGround={final['onGround']} height={height}", load_sensitive=True)
+        yield Criterion("spent exactly one scaffold block", final["blocks"] == 63,
+                        f"blocks={final['blocks']}", load_sensitive=True)
+        yield ctx.survival_criterion()
+        health = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        yield Criterion("no sampled health loss", bool(health) and min(health) >= 20,
+                        f"min_hp={min(health) if health else None}")
+
+
 class NavWall2(NavCourse):
     """A 2-block vertical wall onto a ledge with cobblestone in the hotbar and
     planPlaceMoves ON: the route needs a PLACE (pillar) to get up. This is the

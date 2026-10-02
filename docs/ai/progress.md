@@ -341,3 +341,28 @@
   wrapper corrected toUTF8. Managed Studio3003 returnsHTTP200. Final render,
   full rendered-motion inspection/publication/Telegram stillpending, and render
   waits for the FPS-sensitive campaign to finish. No prospective36 rate in film.
+- Original default44763 subsequently terminated after25 validPASS rows. The
+  next repeat5 staircase retains OSError22Invalidargument instead of a full
+  verdict; cleanup[]/originalPID absent, original exit/traceback unavailable.
+  Actual14.9s film inspected at2s shows supported arrival, but that does not
+  supply the missing criteria/log/default verdict. Never score it asPASS.
+- Isolated Windows output-reader closure reproduces that exact errno atprint;
+  an explicitly duplicated output file remains writable afterparent closes its
+  handle. This supports the output-lifetime diagnosis, not a confirmed original
+  instruction address. No Docker/game state was changed by the reproducer.
+- Eleven explicitly missing trials are now a separate same365e/default/gate
+  continuation, with durable file stdout/stderr and retained source25/error.
+  Session82376/childPID129668/loglogged-job-20261002-220303 isLIVE. Final cohort
+  must disclose two phases and the extra original instrument failure. All18
+  first-three-repeat films actually inspected and journalled with hashes; final
+  metadata and the remaining films are stillpending. Budget9095MB/free172GB.
+- Durable continuation129668 finished naturally:11/11 validPASS, exit0 and
+  cleanup[]. Terminal two-phase audit222254 independently verifies36 unique
+  scored trials (6courses x6repeats) on the exact365e candidate, defaultbranch
+  true/waterfalse, unchanged gates, minimum average28.5FPS, sampledHP20/deaths0,
+  no measured runtime matches. Original extra staircase OSError22 remains
+  unscored:37 attempts,36 full verdicts, not an uninterrupted36-run campaign.
+  All remaining18 films actually inspected at2s/every page and journalled;
+  sheets.json now records all36 complete. No death/fire/opened interface seen
+  at this cadence; not every-frame coverage or native food closure. Release
+  notes updated to actual evidence; publication/render/Telegram remain pending.

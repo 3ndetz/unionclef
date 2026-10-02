@@ -27,10 +27,16 @@ native food acquisition and water-input experiments remain separate evidence.
   missing entrance. Final moving-render inspection remains required.
 - The first map wrapper exited1 while printing a Unicode timeline to cp1251;
   its actual helper and saved map exited0. The wrapper now uses UTF-8 output.
+- Git's whitespace check reports original whitespace in frozen GSAP and font
+  licence files. Those vendor bytes match the cited sources and are preserved;
+  this is not a clean full-tree whitespace result. Authored composition and
+  documentation changes pass the scoped check.
 
-The final36 actual-default navigation audit, finished render, full rendered-film
-inspection, release publication and Telegram delivery are pending. No prospective
-course rate is included in the composition.
+The final actual-default navigation audit passed36 valid scored trials, in two
+phases (25+11) with one separately retained unscored output-reader failure. All36
+recordings were inspected at2s. Finished render, rendered-film inspection, release
+publication and Telegram delivery are pending. No prospective course rate is
+included in the composition.
 
 ## Commands
 
