@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"></head><body><template>
+<style>#shelter-refresh-root {position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-rows:132px 1fr 110px;gap:20px;padding:40px 64px;background:#0b0f14;color:#e8eef2;overflow:hidden;} #shelter-refresh-title, #shelter-refresh-context {opacity:0;}</style>
+<div id="shelter-refresh-root" data-composition-id="shelter-refresh" data-duration="14" data-width="1920" data-height="1080">
+<header><h1 id="shelter-refresh-title" class="event-title">A new safe site appears.</h1><p id="shelter-refresh-context" class="context">Separate arena · @test shelter · general idle rescue off</p></header>
+<div class="stage"><div class="split"><div class="pane"><p class="pane-label">Earlier candidate · 06652c</p><div class="picture"><video id="refresh-old-video" class="clip" src="assets/refresh-before.mp4" muted playsinline data-start="0" data-duration="14" data-media-start="10" data-playback-rate="4" data-track-index="0"></video></div><p class="pane-result">Keeps the obsolete destination.</p></div><div class="pane"><p class="pane-label">Current candidate · e03ed747</p><div class="picture"><video id="refresh-new-video" class="clip" src="assets/refresh-after.mp4" muted playsinline data-start="0" data-duration="14" data-media-start="10" data-playback-rate="2" data-track-index="0"></video></div><p class="pane-result">Refreshes destinations, then digs and seals.</p></div></div></div>
+<footer><p id="shelter-refresh-caption" class="caption">Reachability chooses the site. Live checks still guard the first dig.</p><span id="shelter-refresh-badge" class="badge">4× / 2×</span></footer>
+</div>
+<script>
+const tl=gsap.timeline({paused:true});
+// Waterfall-entry: binary reveal, one direction, overlap at the lighter line.
+tl.set('#shelter-refresh-title',{opacity:1,y:80},0.1).to('#shelter-refresh-title',{y:0,duration:0.18,ease:'power4.out'},0.1);
+tl.set('#shelter-refresh-context',{opacity:1,y:45},0.263).to('#shelter-refresh-context',{y:0,duration:0.15,ease:'power4.out'},0.263);
+// Smooth spring-pop-entrance: no overshoot and no loop on the held measurement.
+tl.fromTo('#shelter-refresh-caption',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.45,ease:'power3.out'},0.18);
+tl.fromTo('#shelter-refresh-badge',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power3.out'},0.24);
+window.__timelines['shelter-refresh']=tl;
+</script></template></body></html>

@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"></head><body><template>
+<style>#shelter-close-root {position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-rows:132px 1fr 110px;gap:20px;padding:40px 64px;background:#0b0f14;color:#e8eef2;overflow:hidden;} #shelter-close-title, #shelter-close-context {opacity:0;}</style>
+<div id="shelter-close-root" data-composition-id="shelter-close" data-duration="4" data-width="1920" data-height="1080">
+<header><h1 id="shelter-close-title" class="event-title">Unionclef</h1><p id="shelter-close-context" class="context">Released · 0.95.55 · Minecraft 1.21.11</p></header>
+<div class="stage"><div class="closing"><p>github.com/3ndetz/unionclef</p><p>Food pursuit, lava-column stall and the full game remain open.</p></div></div>
+<footer><p id="shelter-close-caption" class="caption">The next pass continues from its saved checkpoint.</p><span id="shelter-close-badge" class="badge">Next pass</span></footer>
+</div>
+<script>
+const tl=gsap.timeline({paused:true});
+// Waterfall-entry: binary reveal, one direction, overlap at the lighter line.
+tl.set('#shelter-close-title',{opacity:1,y:80},0.1).to('#shelter-close-title',{y:0,duration:0.18,ease:'power4.out'},0.1);
+tl.set('#shelter-close-context',{opacity:1,y:45},0.263).to('#shelter-close-context',{y:0,duration:0.15,ease:'power4.out'},0.263);
+// Smooth spring-pop-entrance: no overshoot and no loop on the held measurement.
+tl.fromTo('#shelter-close-caption',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.45,ease:'power3.out'},0.18);
+tl.fromTo('#shelter-close-badge',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power3.out'},0.24);
+window.__timelines['shelter-close']=tl;
+</script></template></body></html>

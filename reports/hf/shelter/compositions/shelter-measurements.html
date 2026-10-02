@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"></head><body><template>
+<style>#shelter-measurements-root {position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-rows:132px 1fr 110px;gap:20px;padding:40px 64px;background:#0b0f14;color:#e8eef2;overflow:hidden;} #shelter-measurements-title, #shelter-measurements-context {opacity:0;}</style>
+<div id="shelter-measurements-root" data-composition-id="shelter-measurements" data-duration="10" data-width="1920" data-height="1080">
+<header><h1 id="shelter-measurements-title" class="event-title">What was checked.</h1><p id="shelter-measurements-context" class="context">Final candidate · healthy FPS · recordings reviewed</p></header>
+<div class="stage"><div class="measurements"><div class="measure"><div class="measure-heading"><strong>51 / 51</strong><p>Arena checks</p></div><div class="bar"><span></span></div><p>Shelter, exit, Flee, air, navigation, crafting.</p></div>
+<div class="measure"><div class="measure-heading"><strong>6 / 6</strong><p>Saved-entry shelter checks</p></div><div class="bar"><span></span></div><p>Original inventory. Ten-second sealed holds. HP 20.</p></div>
+<div class="scope"><p>Player inputs captured on the client thread before planning.</p><p>Live-world and mining thread safety remain open.</p></div></div></div>
+<footer><p id="shelter-measurements-caption" class="caption">15min gamer replay: shelter and morning exit; no new food or rung.</p><span id="shelter-measurements-badge" class="badge">Coverage</span></footer>
+</div>
+<script>
+const tl=gsap.timeline({paused:true});
+// Waterfall-entry: binary reveal, one direction, overlap at the lighter line.
+tl.set('#shelter-measurements-title',{opacity:1,y:80},0.1).to('#shelter-measurements-title',{y:0,duration:0.18,ease:'power4.out'},0.1);
+tl.set('#shelter-measurements-context',{opacity:1,y:45},0.263).to('#shelter-measurements-context',{y:0,duration:0.15,ease:'power4.out'},0.263);
+// Smooth spring-pop-entrance: no overshoot and no loop on the held measurement.
+tl.fromTo('#shelter-measurements-caption',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.45,ease:'power3.out'},0.18);
+tl.fromTo('#shelter-measurements-badge',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power3.out'},0.24);
+window.__timelines['shelter-measurements']=tl;
+</script></template></body></html>

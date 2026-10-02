@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"></head><body><template>
+<style>#shelter-morning-root {position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-rows:132px 1fr 110px;gap:20px;padding:40px 64px;background:#0b0f14;color:#e8eef2;overflow:hidden;} #shelter-morning-title, #shelter-morning-context {opacity:0;}</style>
+<div id="shelter-morning-root" data-composition-id="shelter-morning" data-duration="10" data-width="1920" data-height="1080">
+<header><h1 id="shelter-morning-title" class="event-title">Morning: leave the shelter.</h1><p id="shelter-morning-context" class="context">Actual @gamer replay · recorded source 402–422s</p></header>
+<div class="stage"><video id="morning-video" class="clip" src="assets/gamer.mp4" muted playsinline data-start="0" data-duration="10" data-media-start="402" data-playback-rate="2" data-track-index="0"></video></div>
+<footer><p id="shelter-morning-caption" class="caption">The main task resumes. Later food pursuit is still stuck.</p><span id="shelter-morning-badge" class="badge">2×</span></footer>
+</div>
+<script>
+const tl=gsap.timeline({paused:true});
+// Waterfall-entry: binary reveal, one direction, overlap at the lighter line.
+tl.set('#shelter-morning-title',{opacity:1,y:80},0.1).to('#shelter-morning-title',{y:0,duration:0.18,ease:'power4.out'},0.1);
+tl.set('#shelter-morning-context',{opacity:1,y:45},0.263).to('#shelter-morning-context',{y:0,duration:0.15,ease:'power4.out'},0.263);
+// Smooth spring-pop-entrance: no overshoot and no loop on the held measurement.
+tl.fromTo('#shelter-morning-caption',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.45,ease:'power3.out'},0.18);
+tl.fromTo('#shelter-morning-badge',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power3.out'},0.24);
+window.__timelines['shelter-morning']=tl;
+</script></template></body></html>

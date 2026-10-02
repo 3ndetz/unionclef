@@ -1,0 +1,37 @@
+[
+  {
+    "path": "native.mp4",
+    "source": "deploy/runner/artifacts/shelter-native-site-20261002-132018/approach/shelter-site-approach.mp4",
+    "scope": "e03 native saved-entry repeat1",
+    "sha256": "6bcd8132b0daffca3b30f0ec7192135acc5f462fd976fb816ebed96a81311267",
+    "bytes": 2658095
+  },
+  {
+    "path": "published-baseline.mp4",
+    "source": "deploy/runner/artifacts/shelter-native-site-20261002-135040/approach/shelter-site-approach.mp4",
+    "scope": "Published0.95.54 same CP/defaults/command; one90s no-site control",
+    "sha256": "54e54a4c264d37b766f66105c1b07fe9a6cb5f05c14e5333f634fe0830eb0c0f",
+    "bytes": 12176188
+  },
+  {
+    "path": "refresh-before.mp4",
+    "source": "deploy/runner/artifacts/shelter-world-change-isolated-20261002-083204/night_shelter_new_site/night_shelter_new_site.mp4",
+    "scope": "Earlier066 candidate, destination refresh arena, Unstuckoff",
+    "sha256": "57d52de6794daf1e40984ecb6187fa15262fcf35776d5e34fa7a96212c5fca43",
+    "bytes": 8942232
+  },
+  {
+    "path": "refresh-after.mp4",
+    "source": "deploy/runner/artifacts/shelter-rim-trace-20261002-134453/night_shelter_rim_trace/night_shelter_rim_trace.mp4",
+    "scope": "e03 same new-site arena/Unstuckoff; trace wrapper",
+    "sha256": "806618609613c41468922e938344fae168dd4d0421a4be576969cb6ccc06e109",
+    "bytes": 6487848
+  },
+  {
+    "path": "gamer.mp4",
+    "source": "reports/footage/shelter-refresh-gamer-e03-20261002.mp4",
+    "scope": "e03 raw15min integration; actual shelter/morning, overallFAIL",
+    "sha256": "4325192b28e4a6dff0e07593af830334b03ec11402e1f7c01eba5452f353804a",
+    "bytes": 124308497
+  }
+]
