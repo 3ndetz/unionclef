@@ -352,3 +352,33 @@
   while the initial helper used host Moscow time and matched an empty window.
   Re-read actual12:02:33-12:08:37 UTC lines; no runtime matches. Retain this
   instrument correction explicitly rather than trusting the earlier empty scan.
+- Tick-only replay15438 finished: diagnostic wrapper exit0, gamer exit1,
+  observer exit0, cleanup[], unchanged original checkpoint fingerprint582e74bd.
+  Retained food-bank-trace-20261002-151535 contains7142 continuous sequence
+  rows/7122 ticks/zero geometry snapshots/no gaps or errors. Measured runtime
+  window12:19:44-12:25:40 UTC has1122 actual log lines and no exceptions or
+  planner failures; minHP20/no lava ticks/zero deaths. Median22FPS/12 polls,
+  no new food/rung,12 responsive/busy polls but only5 distinct positions. Bot
+  remains at(-94.5,62,1099.4) after155s. Parent FAIL is a retained food failure,
+  not an observer failure. Unique end checkpoint preserves that stopped entry.
+- Actual308s negative clip SHA643ebe952ee7d999e5320d156e748e13d0f1530a5c23062862573a2ae5087144
+  fully viewed at8s cadence, both sheets; long stationary bank hold is visible.
+  Separately captured216 immutable block states AFTER stop, before switching
+  worlds; cells-after-stop.json is not simultaneous with the movement trace.
+  Published055 now has one positive and one negative diagnostic replay, with
+  different observer sampling; do not pool these into a claimed success rate.
+- Re-read the complete PillarTask and upstream MovementPillar cost/update paths.
+  The successful trace still records four pillar failures: air0/placeAt0/
+  jumpStolen0, onGround true. PillarTask holds sneak throughout; Agent water
+  physics subtracts0.04 for sneak and adds0.04 for submerged jump. This suggests
+  an input/medium mismatch, not failed placement rays. It remains a hypothesis
+  until isolated from navigation and measured. MovementQueue already dispatches
+  water before land/pillar classes; FastNavigator's separate build handoff must
+  be inspected with that fact, rather than duplicating an existing water rule.
+- Initial synthetic diagnostic27078 exited1 before any cases: the harness
+  rejected obsolete gamerule doMobSpawning on1.21.11. Cleanup errors[], no
+  bot outcome measured. Changed only the ignored probe to the existing arena
+  helper's spawn_monsters spelling and retained the first instrument failure.
+  Next compare existing PillarTask with queue execution on rebuilt dry/wet
+  one-cell basins, recording each12s window. Synthetic mechanism isolation
+  is not an original-checkpoint test or a food fix.
