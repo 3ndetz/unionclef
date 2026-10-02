@@ -16052,7 +16052,10 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   FastPlanner.planInternal:606. Artifact shelter-air-isolation-20261002-094852/3/
   shelter_flee_condition_owner/client.log. The start flags/position/box and initial
   block budget now have a client-thread immutable request snapshot; clean build
-  passed, live validation pending. This does not close live world, mining-tool or global-budget
+  passed; exact snapshot candidate validated51 arena cases with clean per-case
+  planning-error windows and native immutable capture on both caller threads.
+  Default-setting saved-entry repetition/integration remain pending. This does
+  not close live world, mining-tool or global-budget
   thread-safety debt. Preserve the runtime error alongside the behavioral PASS.
   RECONFIRMED 2026-09-01 — the same `VoxelWorld` already checked for C1.3 in this
   same re-read of the register: the fill loop in `MixinWorldChunk.loadFromPacket` is entirely

@@ -123,3 +123,41 @@
   six exact-payload native shelter holds from cp1002-0229-t656, original inventory
   and checkpoint fingerprint. Stop first red/invalid; raw15min gamer remains pending.
   Prepared ignored existing-API rim trace wrapper, syntaxPASS/NOTRUN; no motion fix.
+- Saved-entry31386 stopped after its first child, exit1/cleanup[]: sealed hold
+  reached withHP20, but minFPS13 (mean22.19) fails the unchanged14FPS floor.
+  Full recording reviewed2s. Native helper also enabled experimental smartMoves
+  through setTungstenPathing(true), so it is not shipped-default coverage. Removed
+  that toggle; before restore assert primary=true/readFlag smartMoves="false",
+  retain settings in the result and enforce them in the six-run judge. SyntaxPASS.
+  Prior healthy066 saved entry has the same experimental-setting limitation.
+  Attempted parent-stop identity check found it already gone; no process was killed.
+- Corrected shipped-default series93712 is live, directory
+  shelter-saved-repeats-20261002-122513. First child122514 validPASS: primary=true/
+  smartMoves=false, original inventory/checkpoint, HP20, zero deaths/lava entries,
+  minFPS15/mean26.75, sealed10.05s hold, runtime window clean/cleanup[]. Complete
+  recording viewed2s. Remaining five native repeats and raw gamer pending.
+- Preserved the122,510,827-byte original gamer_run1.mp4 before integration in
+  reports/footage/full59-before-shelter-snapshot-20261002.mp4; source/copy SHA256
+  2019038de6c7f29e184aad61a085f869fa6f10cce0f25e48d0cc090574ca3f83 match.
+- Corrected default series93712 stopped on child122909, exit1/cleanup[]:
+  actual sealed hold10.17s and HP20, but three samples at4.22-4.80s read13FPS.
+  Mean21.42; unchanged14FPS floor invalidates the run. Whole22.5s recording
+  reviewed2s. Preserve first validPASS and the invalid second, not a six-run rate.
+  Canonical tester1-only refresh68232 exited0 with the same exact e03 payload;
+  fresh six-run series started separately. No controller/peer changes.
+- Prepared rim trace now inherits the actual NewlyAvailable scenario and pins
+  general idle-goal rescue off, matching the retained rim detour; syntax check
+  follows, not yet run on the bench. Wiki push run36989256438 SUCCESS oned9019af.
+- Fresh-client series14844 stopped at first child124318, exit1/cleanup[]:
+  hold10s reached/HP20, but first recorded FPS2/4 and min2/mean13.76; not valid.
+  Whole39s recording reviewed2s. Canonical refresh alone did not warm the client.
+  Native helper now waits for six consecutive >=20FPS readings in the stopped
+  prior world BEFORE restoring the water checkpoint (no healing/teleport/time
+  change). The measured14FPS floor remains unchanged. Retain both invalid series.
+- HyperFrames skills update is current/noop. Read-only pin probe105->111 followed
+  by upgrade and browsercheck20416 exit0 on the existing landing composition:
+  runtime/layout zero errors/warnings, contrast12/12; structural lint warnings
+  remain in the old monolith. No new rendering/sending, no bench overlap. New
+  six-scene outline recorded with source/count gates and local-font decisions;
+  footage assembly waits for native/integration evidence. Warmed series44450
+  started separately in shelter-saved-repeats-20261002-125023.

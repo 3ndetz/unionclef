@@ -39,10 +39,37 @@ state differences in commands, task context and coverage when they matter.
 
 ## 2026-10-02 — shelter-site report preparation
 
-The proposed next report concerns a no-site wait in water and a search among
-reachable shelter cells. Sources include the retained full59-before-portal clip,
-the actual saved-entry NightShelterTask replay, and the blocked-nearest/morning
-exit fixtures. One healthy saved-entry result is currently established; the
-36-case regression campaign remains active. Final rates, release version and
-report source selection must follow the completed evidence, including any new
-failures. This brief does not declare the shelter item closed.
+The next report concerns a no-site wait in water, a search among reachable
+shelter cells, destination refresh and client-thread player inputs before a
+planner worker starts. Preserve the original no-site wait and matched new-site
+discovery control with general idle-goal rescue disabled. The comparison names
+its actual command and arena; it does not claim a measured speed improvement.
+
+The final unpublished e03ed747 candidate completed its 51-case campaign with
+valid passes and clean per-case planning-error windows. Six native saved-entry
+checks and raw @gamer integration from cp1002-0229-t656 remain pending. The first
+default-setting series retained one valid pass and an FPS-invalid second run;
+a fresh-client series is separate evidence. Sources include full59-before-portal, the matched discovery
+controls, final-payload saved-entry recordings and morning exit. Earlier 36-case
+results and one healthy saved entry belong to older payloads. Final rates,
+release version and source selection must follow completed evidence, retaining
+any new failures. This brief does not declare the shelter item closed.
+
+## Production decisions
+
+Keep the existing report palette (#0b0f14 background, #e8eef2 text, #3fd0c9
+accent) because it identifies these test reports. Use local Montserrat900
+headlines and IBM Plex Mono400 labels: plain statements and precise measurements.
+The focal element is the recorded bot action. Put short event labels along the
+top edge and result captions in a separate band, leaving the game's HUD visible.
+Supporting detail is limited to source scope, playback speed and measured counts.
+Preserve deliberate silence. Use modular scenes for the new report and keep the
+published landing video, its source storyboard and output intact.
+
+Concept: finding a safe hole for the night, shown against the same saved entry
+and a separately labelled destination-refresh control. Final shot ranges and
+counts follow the completed integration and native measurements. The CLI pin
+was probed and upgraded0.8.105 ->0.8.111. Browser verification passed after the
+invalid native series ended, before the warmed series began. The old monolithic
+report retains structural lint warnings; runtime/layout and12/12 contrast checks
+pass. The new report uses modular scenes.
