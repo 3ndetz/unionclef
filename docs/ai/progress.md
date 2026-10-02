@@ -317,6 +317,65 @@
   Duplicate heuristic Javadoc/GoalComposite reference comment corrected. New
   source is not yet built/deployed/tested; all earlier greens cover06652c only.
 
+- Refresh build23625 completedexit0 in6m40s; clean Tungsten/build and1.21.11
+  build/remap passed. Javap of the final remapped NightShelterTask confirms
+  ownsRoute -> bounded pickSites -> preserve-equal-owner logic. Nested freshness
+  passed; all2211 classes compared against archived06652c: ONLY NightShelterTask
+  and GetToAnyBlockTask differ, including nested module classes in the comparison.
+  Tester1-only canonical deployment7540 completedexit0; loadedSHA256
+  f8caef3762315604eab75ea0eb834054408598ad85ec4469b472ee52560f9313 verified.
+  Same isolated new-site probe now active. Prepared48-case repeated refresh/
+  shelter/exit/flee/air/nav/craft campaign, syntaxPASS/NOTRUN. Main and both
+  version branch heads a56c2ead, docs-only failure evidence committed/pushed;
+  six Java files remain uncommitted until live validation. No candidate release.
+
+- Same isolated discovery47880 completedexit0, artifact084606 onf8caef: native
+  new shaft safe at11.784s, actual Task approaches/digs/caps it and holds10s;
+  HP20 all6samples/no deaths/29.67FPS/cleanup[]. Full recording actually viewed
+  2s on both pages; actual client.log shows no general shimmy during the Task.
+  This refutes the stale-snapshot behavior for this input, not a repeated rate.
+  Refresh campaign24675 now active, planned48 cases on frozenf8caef; first
+  isolated-new-site, then blocked/flat/exit/flee/air/nav/craft. No build, redeploy,
+  checkpoint restore or heavy video render alongside the campaign.
+
+- Refresh campaign24675 exited1 after5 validPASS and one healthy-FPS drown red,
+  artifacts/shelter-refresh-audit-20261002-084838. Planned48, only6 executed;
+  42 NOTRUN. Drown deaths1/minHP6/29.78FPS; original result unchanged. Cleanup[].
+  Both pages of its full52.5s recording viewed2s. A stationary tagged zombie from
+  the preceding FleeOwner fixture occupies the shaft at4.5,-60,.5 and physically
+  blocks the swim exit; the client repeatedly fails MovementSwim3->4. The owned
+  harness only removed that mob in the campaign-level finally, so this is an
+  unintended combined fixture, not an isolated air-course comparison. No Java
+  edit or candidate publication based on this result. Five other clips still
+  need completion of visual review (new-site already viewed; four remain).
+- Prepared and launched73831 check_shelter_air_isolation.py, planned six actual
+  Flee-to-drown pairs on unchangedf8caef. Per-Flee finally removes only its tagged
+  fixture; scoreboard result verifies zero tagged entities before each case and
+  after cleanup. All original death/HP gates retained; exact payload checked,
+  per-case client logs/results retained, first red/invalid stops. SyntaxPASS;
+  no pair outcome yet. No build/deploy/other live work during this control.
+
+- All six24675 recordings now fully viewed at2s; both drown pages. The four
+  previously pending shelter/exit/Flee clips confirm their measured outcomes.
+- Isolation73831 is terminal after the deliberate session interruption: three
+  validPASS (Flee twice, air once), fourth result is infrastructure error
+  '[Errno22] Invalid argument', not an air survival verdict. Its timeline retains
+  HP20/no deaths through44.7s; no final gates were produced. Original result and
+  cleanup error('stop') preserved. Win32 process enumeration confirms no helper
+  remains, tool handle missing. Bot.stop_all logs before issuing stop commands;
+  a closed output channel therefore prevented that cleanup. Explicit owned
+  recorder/task/queue/config cleanup now exit0, tagged fixture absent. Recovered
+  the second air recording and current client log; the latter covers the later
+  remaining flat-world Task activity, not only the original test window.
+- First clean air clip viewed2s, both pages: reaches shaft/breathes around6s,
+  HP20/no deaths,29.8FPS, air300 at judge. This supports fixture contamination
+  for the red input, not a general guarantee against mobs blocking air exits.
+- Prepared48campaign now cleans its tagged Flee mob in a per-case finally and
+  asserts zero tagged entities before each case; analyzer verifies those controls.
+  SyntaxPASS, NOTRUN after repair. New six-pair isolation12730 running with
+  console output redirected to a persistent file, avoiding the interrupted-pipe
+  failure. Log: artifacts/shelter-air-isolation-console.log. No new Java edits.
+
 ### Assess
 - The retained fatal landing is now rejected by actual-class simulation, and one
   live enabled gap run refused a plan before takeoff, replanned and arrived.
@@ -326,10 +385,13 @@
 - One shared vanilla model and a client-thread feasibility check fix the root;
   no special-course coordinates or timeout recovery added. Current failure evidence
   is retained separately from the green rebuilt arenas and fixed portal entry.
-- Candidate reaches/seals one native saved water entry and passes36 arena checks;
-  its stale-destination failure is now reproduced without Unstuck. Rebuild the
-  refresh fix, validate the isolated control and repeats, then rerun the saved
-  entry/full @gamer integration on that exact payload before publication.
+- Old06652c reaches/seals one healthy native water entry and passes36 arena
+  checks; its stale destination was reproduced without Unstuck. Newf8caef is
+  built/deployed and passes the matched isolated discovery control. The repeated
+  refresh audit is incomplete following the owned mob-fixture leak; validate
+  clean transitions and repeat48, then native saved-entry repeats/full @gamer
+  integration on that exact payload before publication. Mob-occluded air exits
+  have a retained fatal counterexample and no repair established by this pass.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
