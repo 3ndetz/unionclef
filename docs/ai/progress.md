@@ -112,3 +112,45 @@
   cooking during that hold. Missing43.449s observer tail has no visual claim.
   Host83% sample, only tester1 up; no unrelated container stopped. Check arena
   regressions/health before resuming the remaining prospective balanced pairs.
+- Interaction88652 stopped at first unexpected red:3/4 executed gates pass,
+ 32 planned cases unexecuted, cleanup[]. Furnace/vine/ceiling29-30FPS; cave-tip1
+ fails29FPS/HP20/no GUI. All4 actual8.9-23.5s films viewed2s/every page. The
+ navigator chooses a partial detour and builds away from the requested column;
+ its tested column has0 actual rungs. Do not call this a water-input regression.
+- Same-prefix false-pin control64934 also stops at cave-tip1:3/4 pass29FPS,
+ cleanup[]/zero runtime matches. All4 actual8.9-15.2s films viewed2s/every page.
+ The second navigator reports arrival while a separate pillar still runs; the
+ test's exact requested column remains unbuilt. Preserve both as-run reds.
+- Read-only post-stop client-thread policy probe finds cave vines in the FEET
+ cellY-60, although the fixture originally placed its tipY-59. All plants are
+ breakable/outline-obstructing at2ticks; water=false, break/place allowed.
+ This late snapshot proves growth occurred, not when it occurred relative to
+ either plan. Inspect exact pre-plan cells and separate random growth from
+ the controlled head/jump-eye clearance case before assigning the mechanism.
+ Water input remains false-default experimental; no new release/report yet.
+- Frozen false-prefix71994 also fails cave-tip1:3/4 pass,29-30FPS/HP20,
+ cleanup[]/zero runtime matches. Pre-plan feetY-60 are air, tipY-59 age0;
+ fixture_valid=true. Random ticks restored to3. All4 actual films viewed2s/
+ every page. Plant growth does not sufficiently explain this retained red.
+- The original completion sampler watched only FastNavigator. It now journals
+ both navigator and PillarTask and waits until both finish, without relaxing
+ the actual requested-column gate. Same frozen false-prefix70931 remains3/4:
+ tip1 has0 requested rungs after both finish, body restsY-57 inZ979,28-30FPS,
+ HP20/noGUI/runtime matches, cleanup[]. All4 actual9.2-17.8s films viewed2s/
+ every page. SIGTERM is catchable in the helper; forced OS kill remains a gap.
+- Loaded092 isolated generator39776 terminal0: fresh frozen air makes all3
+ pillar children/complete plan; tip1 emits the first clearance(-59,-58), then
+ refuses the next source at-59 solely on unchanged-world replaceability with
+ branch support=true, body clearance=true and policies=true. Tip2 emits two
+ steps, charges removal of-58 twice and refuses the third. These are direct
+ loaded generator facts, not a natural acquisition rate. Earlier diagnostic
+ invocations8706/27190 stopped on probe boxing/private-field errors; no motion
+ verdict came from them. Their cleanup ran before the corrected probe.
+- Experimental pillarUsesBranchClearance=false now carries explicit ancestral
+ removals into later interaction-only pillar steps and skips duplicate removal
+ cost. Solid-body clearance remains actual-world based. Virtual placement keeps
+ policy/world-border/recent-failure checks through PlaceRules. Baritone source
+ MovementPillar258-266 clears a non-replaceable source before placing.
+ No stable behavior claim yet; fresh clean tungsten/scoped packaging38352 is
+ LIVE. Water/default/branch flags remainfalse. Dry/native/adjacent audits and
+ release/report remain pending; remaining native pairs2-6 are not executed.

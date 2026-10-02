@@ -10,10 +10,13 @@ import argparse
 import json
 import subprocess
 import statistics
+import signal
 import time
 from pathlib import Path
 from uctest.harness import Py4jClient, Rcon
 from gamer_smoke import rec_start, rec_stop
+
+signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
 
 ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument('--support', choices=['stone', 'smoker', 'furnace', 'crafting_table'], required=True)
@@ -27,6 +30,8 @@ terrain.add_argument('--cave-vines', action='store_true')
 ap.add_argument('--navigator', action='store_true')
 ap.add_argument('--no-break', action='store_true')
 ap.add_argument('--vine-tip-offset', type=int, choices=[1,2], default=2)
+ap.add_argument('--freeze-random-ticks', action='store_true',
+                help='Keep the controlled plant geometry fixed; restore the server rule afterward')
 terrain.add_argument('--ceiling', action='store_true')
 terrain.add_argument('--low-roof', action='store_true', help='One valid rung below a three-block-high roof')
 args = ap.parse_args()
@@ -41,6 +46,7 @@ r = Rcon()
 old_idle = p.call('tungstenSetting', 'botFpsNoIdleThrottle', '').split('=', 1)[1]
 old_break = p.call('tungstenSetting', 'allowBreak', '').split('=', 1)[1]
 recording = False
+old_random_ticks = None
 target_y = -59 if args.low_roof else -57
 rungs = (-60,) if args.low_roof else (-60, -59, -58)
 start_z = 980.8 if args.off_center else 980.5
@@ -55,6 +61,10 @@ try:
         time.sleep(1)
     else:
         raise RuntimeError('flat server login not confirmed')
+    if args.freeze_random_ticks:
+        old_random_ticks = int(r.cmd('gamerule random_tick_speed').rsplit(':', 1)[1].strip())
+        r.cmd('gamerule random_tick_speed 0')
+        assert r.cmd('gamerule random_tick_speed').rsplit(':', 1)[1].strip() == '0'
     p.call('stopPathing')
     p.call('closeOpenScreen')
     p.call('tungstenSetting', 'botFpsNoIdleThrottle', 'true')
@@ -99,23 +109,32 @@ def on_client(h):
 empty=g.new_array(j.java.lang.Class,0)
 cls=j.java.lang.Class.forName('kaptainwutax.tungsten.TungstenMod');on_client(lookup.unreflect(cls.getMethod('resetAllState',empty)))
 f=c.getClass().getDeclaredField('field_1755');f.setAccessible(True);screen=lookup.unreflectGetter(f).bindTo(c)
-cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.PillarTask');active=lookup.unreflect(cls.getMethod('isActive',empty))
+cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.PillarTask');active=lookup.unreflect(cls.getMethod('isActive',empty));pillar_active=active
 g.entry_point.selectHotbar(0)
 before=dict(g.entry_point.getGameState()['self'])
 assert before['onGround'] and before['held']=='minecraft:cobblestone',before
+f=c.getClass().getDeclaredField('field_1687');f.setAccessible(True)
+world=on_client(lookup.unreflectGetter(f).bindTo(c))
+read_state=next(m for m in world.getClass().getMethods() if m.getName()=='method_8320' and m.getParameterCount()==1)
+initial_cells={str(y):str(on_client(lookup.unreflect(read_state).bindTo(world).bindTo(j.net.minecraft.class_2338(2700,y,980)))) for y in range(-60,-54)}
 plan = None
 assert g.entry_point.pillarTo(TARGET_Y)
 rows=[];started=time.monotonic()
 while time.monotonic()-started<15:
  # Read completion first so the final position cannot predate completion.
- running=bool(on_client(active));state=dict(g.entry_point.getGameState()['self']);gui=on_client(screen)
- rows.append({'t':round(time.monotonic()-started,2),'state':state,'screen':None if gui is None else str(gui.getClass().getName()),'active':running,'fps':g.entry_point.getPerfStats().get('fps',0)})
+ driver_running=bool(on_client(active));pillar_running=bool(on_client(pillar_active))
+ running=driver_running or pillar_running
+ state=dict(g.entry_point.getGameState()['self']);gui=on_client(screen)
+ rows.append({'t':round(time.monotonic()-started,2),'state':state,'screen':None if gui is None else str(gui.getClass().getName()),'active':running,'driver_active':driver_running,'pillar_active':pillar_running,'fps':g.entry_point.getPerfStats().get('fps',0)})
  if not running and time.monotonic()-started>.7:break
  time.sleep(.1)
-print(json.dumps({'before':before,'plan':plan,'samples':rows}))
+print(json.dumps({'before':before,'initial_cells':initial_cells,'plan':plan,'samples':rows}))
 '''
     if args.navigator:
-        code=code.replace("cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.PillarTask')","cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.FastNavigator')")
+        # A navigator can report arrival while its pillar still owns input.
+        # Keep observing until both finish; retain the exact-column outcome gate.
+        code=code.replace("cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.PillarTask');active=lookup.unreflect(cls.getMethod('isActive',empty));pillar_active=active",
+                          "pillar_cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.PillarTask');pillar_active=lookup.unreflect(pillar_cls.getMethod('isActive',empty));cls=j.java.lang.Class.forName('kaptainwutax.tungsten.task.FastNavigator');active=lookup.unreflect(cls.getMethod('isActive',empty))")
         code=code.replace("assert g.entry_point.pillarTo(TARGET_Y)",r"""
 f=c.getClass().getDeclaredField('field_1687');f.setAccessible(True);world=f.get(c)
 planner=j.java.lang.Class.forName('kaptainwutax.tungsten.path.fast.FastPlanner')
@@ -151,6 +170,19 @@ m=next(m for m in cls.getMethods() if m.getName()=='startExact' and m.getParamet
         data['pass'] = data['protected_intact'] and not data['arrived'] and not data['opened_gui'] and all(row['state']['hp'] == 20 for row in data['samples'])
     data['vine_tip_offset'] = args.vine_tip_offset
     data['no_break'] = args.no_break
+    data['freeze_random_ticks'] = args.freeze_random_ticks
+    data['fixture_valid'] = True
+    if args.cave_vines:
+        # Growth can lower the non-replaceable tip into the feet cell before
+        # planning. That is a different input from this head-clearance fixture.
+        initial = data['initial_cells']
+        tip_y = -60 + args.vine_tip_offset
+        data['fixture_valid'] = (all(initial[str(y)].startswith('Block{minecraft:air}')
+                                          for y in range(-60, tip_y))
+                                 and initial[str(tip_y)].startswith('Block{minecraft:cave_vines}'))
+        if not data['fixture_valid']:
+            data['invalid_reason'] = 'Plant geometry changed before the planning probe'
+    data['pass'] = data['pass'] and data['fixture_valid']
     data['median_fps'] = statistics.median(row['fps'] for row in data['samples'])
     data['pass'] = data['pass'] and data['median_fps'] >= 14
     data['expected_bug'] = args.expect_bug
@@ -168,7 +200,11 @@ finally:
             if recording:
                 rec_stop(str(root / f'{args.tag}.mp4'))
         finally:
-            p.call('tungstenSetting', 'allowBreak', old_break)
-            p.call('tungstenSetting', 'botFpsNoIdleThrottle', old_idle)
-            r.cmd('gamemode survival tester1')
-            r.cmd('forceload remove 2697 977 2703 983')
+            try:
+                p.call('tungstenSetting', 'allowBreak', old_break)
+                p.call('tungstenSetting', 'botFpsNoIdleThrottle', old_idle)
+                r.cmd('gamemode survival tester1')
+                r.cmd('forceload remove 2697 977 2703 983')
+            finally:
+                if old_random_ticks is not None:
+                    r.cmd(f'gamerule random_tick_speed {old_random_ticks}')
