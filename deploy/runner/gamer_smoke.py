@@ -7,8 +7,8 @@ Boots the survival gamer-server, connects the bot, enables tungsten-primary
 make PROGRESS (gather items) without crashing or freezing? A bounded baptism —
 the full playthrough is nightly-scale. Bring up the server first:
   docker compose -f deploy/compose.test.yml --profile gamer up -d
-Exit 0 = the bot started @gamer and made early progress (items gained), stayed
-responsive and not permanently stuck.
+Exit 0 = the bot started @gamer and climbed a new ladder rung, stayed
+responsive and survived the observation window.
 """
 import atexit, functools, json, os, pathlib, re, sys, time
 from uctest import process as subprocess
@@ -1587,7 +1587,15 @@ def _run():
     order = [name for name, _ in LADDER]
     deepest = max((order.index(r) for r in reached), default=-1)
     satisfied = want in reached or (want in order and deepest >= order.index(want))
-    ok = responsive>=3 and busy_cnt>=2 and (satisfied if want else bool(reached))
+    # A respawn can climb the early rungs again after losing the original pack.
+    # Published056 native pair6 did exactly that after a Drowned trident death,
+    # reporting PASS on crafting/wood tools while the outer safety gate failed.
+    # Keep both server-log causes and the existing independent death watch;
+    # progress after a survival failure cannot satisfy this run's verdict.
+    died = bool(deaths) or _lava_died[0]
+    ok = not died and responsive>=3 and busy_cnt>=2 and (satisfied if want else bool(reached))
+    if died:
+        print("  survival failed: the run died; ladder progress cannot count as PASS")
     if want:
         how = ("reached" if want in reached else
                ("passed (got as far as '%s')" % order[deepest]) if satisfied else "NOT reached")
@@ -1612,7 +1620,7 @@ def _run():
     if fps_samples:
         ordered = sorted(fps_samples)
         med_fps = ordered[len(ordered) // 2]
-    if not ok and med_fps is not None and med_fps < HEALTHY_FPS_MIN:
+    if not ok and not died and med_fps is not None and med_fps < HEALTHY_FPS_MIN:
         print(f"  client fps (median): {med_fps:.1f} over {len(fps_samples)} samples")
         raise StandDown(f"client starved: median {med_fps:.1f} fps < {HEALTHY_FPS_MIN}"
                         f" — this measured the MACHINE, not the bot")

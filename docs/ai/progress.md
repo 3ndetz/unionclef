@@ -62,3 +62,35 @@
 - Documentation/cohort sources committed15134f91 and pushed to both canonical
   branches, local1.21.11 fast-forwarded. Latest wiki check still pending.
   Last checkpoint budget10570MB of15GB/free167GB.
+- Fixture101436 naturallyTERMINAL0 at22:58:36UTC/log014649. Real generic damage
+  confirms ucDeaths9->10, then crafting@48.6s; deaths1/FPS27/4 responsive+busy
+  polls, gamerFAIL/exit1. Adjacent same-entry no-death crafting@47.2s/FPS28/
+  4 responsive+busy polls, gamerPASS/exit0. Original308item entry in both;
+  cleanup[] and originalcp582e fingerprint unchanged. Injected table/damage
+  verify only harness semantics, never natural food/crafting rates.
+- Captures106.066667/103.266667s cover confirmed100.116/97.282s windows,
+  SHA317dfb0b2bf388aab0ccc01313d814315ee1b2d479ebe85b3b233469fd050a2c
+  and a3a0390101f27abdb972b2780d6276a2905565f38787ca75eed436e7eee21fc3.
+  Review157100 naturally0 at22:59:14UTC/log015901; all6 fixed2s pages actually
+  inspected/hash-journalled. Death arm transitions to bare-handed tree respawn
+  between28.5-30.5s, then table/wood/craft/dig; no sampled death-screen claim.
+  Zero-death arm retains pack and submerged bank hold; no natural food closure.
+  Final chain disappearance inspected in both. Not moving/everyframe coverage.
+- ASSESS:retained natural falsePASS becomesFAIL under the actual production
+  verdict; real injected death/new-rung FAIL and zero-death new-rung PASS prove
+  whole-run dispatch without relaxing gates. This advances trustworthy full-game
+  measurement, not combat or food completion. The common verdict consumes the
+  existing observations; no reactive gameplay script or Java change.
+- No mod release/video for this invisible Python harness correction; public056
+  and its delivered report9676 remain unchanged. Water default remainsfalse.
+  Native cohort safetyRED and original falsePASS source remain retained.
+  Next focus returns to medium-specific water input/default validation and
+  original playthrough blockers. Latest a1ae58f1 Wiki37074785036 actuallySUCCESS.
+
+STOP CONDITION CHECK:
+- Is the work actually finished?        -> no
+- Is the END GOAL reached?              -> no  (@gamer plays the whole game on
+                                           tungsten, baritone deleted)
+- Did the customer say to stop?         -> no
+VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
+         immediately and the next iteration starts at once.
