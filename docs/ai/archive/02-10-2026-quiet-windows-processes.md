@@ -53,3 +53,25 @@
   regression audit. Existing invalid-escape SyntaxWarning is unrelated and
   unchanged. Deliberately visible launches are checked with mocked dispatch,
   avoiding opening interactive test windows on the operator's desktop.
+
+## Follow-up: inherited output is also an OS contract
+
+- An actual nested Bash/Docker probe found that CREATE_NO_WINDOW loses inherited
+  default output when Windows Popen receives stdin/stdout/stderr allNone. Local
+  Python3.14 subprocess source confirms the allNone fast path supplies no handles
+  or STARTF_USESTDHANDLES. Captured and redirected-output tests already passed;
+  this was a separately missing inherited-stream case.
+- The adapter now explicitly passes valid CRT stdout/stderr descriptors only on
+  that Windows fast path. Stdlib still duplicates/owns the handles. Absent pythonw
+  descriptors and caller-provided STARTF_USESTDHANDLES remain untouched.
+  run's automatic input/capture pipes and check_output's owned stdout are retained;
+  POSIX and intentionally interactive launches are unchanged.
+- Expanded regression checks:14 cases, actual Windows13 passed/one skip and
+  actual Linux12 passed/two skips. Nested run/call/Popen output and exit7 are
+  tested without child redirection arguments. Read-only Bash and Docker probes
+  independently retain inherited stdout/stderr and codes. Session1 console probe
+  repeated:197 samples/no new visible console, child GetConsoleWindow()==0.
+- Actual final365e1fdb candidate deployment completed through the canonical
+  script with captured diagnostics (exit0 and loaded SHA verified). Its first
+  inherited-stream attempt exited1 before deployment; retained as a process/
+  harness limitation, not a Java/course failure. No benchmark was killed.

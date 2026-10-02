@@ -74,6 +74,21 @@ class ProcessTests(unittest.TestCase):
             self.assertEqual(output.read().splitlines(), [b"out", b"err"])
             self.assertIsNone(result.stdout)
 
+    def test_nested_child_inherits_output_without_redirection_arguments(self):
+        # The outer process supplies OS pipes, while the inner call uses the
+        # default inherited-stream API. CREATE_NO_WINDOW must retain those pipes.
+        directory = str(Path(__file__).resolve().parent)
+        child = "import sys;print('inherited-out');print('inherited-err',file=sys.stderr);sys.exit(7)"
+        command = f"[sys.executable,'-c',{child!r}]"
+        for expression in (f"process.run({command}).returncode", f"process.call({command})",
+                           f"process.Popen({command}).wait()"):
+            with self.subTest(api=expression):
+                code = (f"import sys;sys.path.insert(0,{directory!r});from uctest import process;"
+                        f"result={expression};print('return='+str(result))")
+                result = process.run(python(code), capture_output=True, text=True, check=True)
+                self.assertEqual(result.stdout.splitlines(), ["inherited-out", "return=7"])
+                self.assertEqual(result.stderr, "inherited-err\n")
+
     def test_older_apis(self):
         self.assertEqual(process.call(python("raise SystemExit(6)")), 6)
         self.assertEqual(process.check_call(python("pass")), 0)
@@ -116,6 +131,12 @@ class ProcessTests(unittest.TestCase):
                 expected = {k: v for k, v in options.items() if k != "interactive"}
                 launch.assert_called_once_with(["intentional-interactive-child"], **expected)
         self.assertEqual(startup.dwFlags, stdlib.STARTF_USESHOWWINDOW)
+        handles = stdlib.STARTUPINFO()
+        handles.dwFlags |= stdlib.STARTF_USESTDHANDLES
+        with patch.object(stdlib, "run") as launch:
+            process.run(["caller-owned-handles"], startupinfo=handles)
+            launch.assert_called_once_with(["caller-owned-handles"], startupinfo=handles,
+                                           creationflags=stdlib.CREATE_NO_WINDOW)
 
     def test_stdlib_is_not_globally_patched(self):
         self.assertIsNot(process.Popen, stdlib.Popen)
