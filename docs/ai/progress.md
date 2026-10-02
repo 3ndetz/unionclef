@@ -6,7 +6,7 @@
 - Earlier full59/casting/Task/physics evidence is preserved verbatim in
   [archive/02-10-2026-full59-landing-investigation.md](archive/02-10-2026-full59-landing-investigation.md).
   This supersedes its final "audit running" entry; historical failures remain retained.
-- HEAD main0a13c9d8, mod_version0.95.53, unpublished release0.95.54 draft.
+- Published release0.95.54 at main/tag73b78e19; assetSHA25600e866 verified.
   Candidate SHA25622795721788d682aac1e3da06ec55d329f64ce5e973b3b9ec288b30708fe27c0.
 - Compiled retained-input checker accepts the recorded green and rejects the fatal
   landing atindex24; max actual pos/vel errors2.79e-8/6.53e-8 after the vanilla fix.
@@ -128,3 +128,14 @@
 - All2209 rebuilt release classes and nested freshness passed; final remapped
   Task lifecycle contract9/9. No version bins exist. Source ready for narrow
   owner-authored commit/push and canonical release; publication still pending.
+- Canonical scoped publication79744 passedexit0 in2m22s. GitHubv0.95.54 points
+  to73b78e19, identical main/remote1.21.11; uploaded asset is the correctMC1.21.11
+  jar,6368066 bytes, digest00e866 identical to the verified rebuild. Rechecked all
+  2209 classes after publication: unchanged from the audited frozen candidate.
+- UTF-8 HF check20647 passedexit0. Animation-map20311 passedexit0:36tweens,
+  no deadzones;8 offscreen wipe flags and2 overlap flags are the intended cut
+  transitions,5 slow zoom/progress flags deliberate. The uneven-stagger heuristic
+  combines the bridge label exit with the next text-card entrance; each actual
+  text-card step is400ms. Reviewed the corrected split plus all five middle-card
+  snapshots, including ladder/title/stat/end. Delivery render54463 active.
+  No post-release deployment/audit or Telegram delivery yet.

@@ -12,14 +12,14 @@
   was legitimate thunderstorm waiting and exited normally. Investigate usable
   shelter-site selection and its approach when the starting body is in water;
   do not relax flood/hazard checks or label a no-site wait as safe sheltering.
-- [ ] **Physics replay falls at the last gap (healthy nav audit, 2026-10-02).**
-  UNIONCLEF-HARD is investigating. The refreshed-client nav-tail campaign completed
+- [x] **FIXED 0.95.54: physics replay falls at the last gap (2026-10-02).**
+  Historical failure: the refreshed-client nav-tail campaign completed
   water 3/3 and gaps 3/4, stopping at the first gap failure (29.5 FPS, one void death;
   the remaining two repeats were not run). Task runner was explicitly inactive and
   the continuous client-tick trace has no errors/gaps. The first preparatory hop
   passes the platform edge before landing; the next jump is pressed while airborne,
   then drift abort fires at tick 15. Compare expected versus actual physics states
-  before changing the root handoff or jump execution. Root cause is not established.
+  before changing the root handoff or jump execution.
   Evidence: artifacts/task-force-nav-tail-20261002-015409/nav_gaps-4/nav_gaps,
   artifacts/g108-nav-gap-fatal-ticks.txt. The earlier adjacent-suite fall is retained.
   Quiet post-vanilla capture also reproduced a fatal last-leg landing on repeat2
@@ -27,7 +27,16 @@
   Its preparatory hop lands; the actual long jump trails the plan by~0.077m
   and hits the destination's side. Root velocity is already stale before takeoff.
   Evidence: artifacts/physics-gap-quiet-20261002-031135/nav_gaps-2.
-  Validate feasibility from the live client-thread state before replay; still OPEN.
+  Shipped: vanilla1.21.11 horizontal vector deadzone and live client-thread landing
+  feasibility before a supported takeoff, with refusal and caller continuation.
+  Detached actual-class replay accepts the old green and rejects the fatal landing24;
+  max recorded position/velocity errors2.79e-8/6.53e-8. Balanced six-pair gap audit:
+  off6/6/on6/6, zero deaths/falls at29-30FPS; enabled repeat2 refuses one plan and
+  replans to actual arrival. Both arms include the velocity repair; no speed or
+  mortality-rate delta established. Adjacent navigation30/30, active mixed27/27,
+  same-entry portal6/6, all recordings reviewed. Release2209 class payloads are
+  byte-identical to the frozen candidate; GitHub asset SHA00e866 verified.
+  Generated terrain and the complete playthrough remain separate open coverage.
 - [ ] **Lava collection stalls on a column above the source (full59, 2026-10-01).**
   UNIONCLEF-HARD is investigating this pass. The last ~39 minutes of the 90-minute run
   stayed at (-290.7,55,965.4), approaching (-293,53,963) within radius 2. Checkpoint
