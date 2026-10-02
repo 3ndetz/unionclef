@@ -139,3 +139,30 @@
   text-card step is400ms. Reviewed the corrected split plus all five middle-card
   snapshots, including ladder/title/stat/end. Delivery render54463 active.
   No post-release deployment/audit or Telegram delivery yet.
+- Delivery render54463 passedexit0:54.0s/1620frames/1920x1080/30FPS,
+  drawElement hardwareGPU,1m59s. Full rendered recording reviewed2s on both
+  sheet pages, including actual ladder climb/water exit/bridge continuation.
+  Telegram copy4.72MB, same54s, delivered successfully asmessage9570 with the
+  actual release link and coverage limits; receiptg108-report-telegram-receipt.json.
+  Next: tester1-only canonical deployment, focused release audit, native saved-site
+  approach. No shelter change yet; this milestone is not the end goal.
+
+### Assess
+- The retained fatal landing is now rejected by actual-class simulation, and one
+  live enabled gap run refused a plan before takeoff, replanned and arrived.
+  Balanced current gaps remain6/6 in both arms; no speed or mortality delta proved.
+- This advances safe Tungsten execution; the full game is not completed. Night-site
+  selection, original lava-column stall and earlier casting deaths remain open.
+- One shared vanilla model and a client-thread feasibility check fix the root;
+  no special-course coordinates or timeout recovery added. Current failure evidence
+  is retained separately from the green rebuilt arenas and fixed portal entry.
+- Next unknown is actual travel from the no-site water entry to a native safe site.
+  Measure that route before changing site selection or the navigation core.
+
+STOP CONDITION CHECK:
+- Is the work actually finished?        -> no
+- Is the END GOAL reached?              -> no  (@gamer plays the whole game on
+                                           tungsten, baritone deleted)
+- Did the customer say to stop?         -> no
+VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
+         immediately and the next iteration starts at once.
