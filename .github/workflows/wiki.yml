@@ -5,8 +5,18 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - '.github/workflows/wiki.yml'
+      - '.github/scripts/export-wiki.ps1'
+      - '.github/scripts/test-wiki-export.ps1'
 
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
 
 jobs:
   sync-wiki:
@@ -16,10 +26,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify wiki export
+        shell: pwsh
+        run: ./.github/scripts/test-wiki-export.ps1
+
       - name: Sync docs to wiki
-        uses: cmbrose/github-docs-to-wiki@v0.20
-        with:
-          githubToken: ${{ secrets.WIKI_TOKEN }}
-          rootDocsFolder: docs
-          convertRootReadmeToHomePage: true
-          customWikiFileHeaderFormat: "> Source: [{sourceFileLink}]({sourceFileLink})"
+        shell: pwsh
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Invoke-Git {
+            & git @args
+            if ($LASTEXITCODE -ne 0) { throw "Git failed with exit code $LASTEXITCODE" }
+          }
+          if (-not $env:WIKI_TOKEN) { throw 'WIKI_TOKEN is required to publish the wiki.' }
+          $auth = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:WIKI_TOKEN"))
+          Write-Output "::add-mask::$auth"
+          $env:GIT_CONFIG_COUNT = '1'
+          $env:GIT_CONFIG_KEY_0 = 'http.https://github.com/.extraheader'
+          $env:GIT_CONFIG_VALUE_0 = "AUTHORIZATION: basic $auth"
+          $wikiPath = Join-Path $env:RUNNER_TEMP 'unionclef-wiki'
+          $stagedPath = Join-Path $env:RUNNER_TEMP 'unionclef-wiki-pages'
+          # Export and validate before touching the cloned wiki's tracked files.
+          & ./.github/scripts/export-wiki.ps1 -SourceRoot $env:GITHUB_WORKSPACE `
+            -OutputDirectory $stagedPath -Repository $env:GITHUB_REPOSITORY -Branch main
+          Invoke-Git clone --single-branch "https://github.com/$env:GITHUB_REPOSITORY.wiki.git" $wikiPath
+          # '--' keeps a historical page named '----.md' from becoming a Git option.
+          Invoke-Git -C $wikiPath rm -rf --ignore-unmatch -- .
+          Get-ChildItem -LiteralPath $stagedPath -File | Copy-Item -Destination $wikiPath
+          Invoke-Git -C $wikiPath add --all
+          & git -C $wikiPath diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { Write-Output 'Wiki already matches docs.'; exit 0 }
+          if ($LASTEXITCODE -ne 1) { throw 'Could not inspect the staged wiki changes.' }
+          Invoke-Git -C $wikiPath config user.name '3ndetz'
+          Invoke-Git -C $wikiPath config user.email 'jayrawrr3@gmail.com'
+          Invoke-Git -C $wikiPath commit -m "docs: sync wiki from $env:GITHUB_SHA"
+          Invoke-Git -C $wikiPath push
