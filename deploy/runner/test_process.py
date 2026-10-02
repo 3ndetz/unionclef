@@ -20,6 +20,43 @@ def python(code):
     return [sys.executable, "-c", code]
 
 
+def hidden_console_parent(output):
+    """Noninteractive fixture: own hidden console and real console output handles."""
+    import ctypes
+    from ctypes import wintypes
+    kernel = ctypes.windll.kernel32
+    kernel.GetConsoleWindow.restype = wintypes.HWND
+    kernel.GetStdHandle.argtypes = [wintypes.DWORD]
+    kernel.GetStdHandle.restype = wintypes.HANDLE
+    window = kernel.GetConsoleWindow()
+    assert window and not ctypes.windll.user32.IsWindowVisible(window)
+    codes = []
+    for name in ("run", "call", "Popen"):
+        command = python("import ctypes,sys;print(" + repr(name + "-out")
+            + ",flush=True);print(" + repr(name + "-err")
+            + ",file=sys.stderr,flush=True);sys.exit(7 if ctypes.windll.kernel32.GetConsoleWindow()=="
+            + str(window) + " else 9)")
+        if name == "run":
+            codes.append(process.run(command).returncode)
+        elif name == "call":
+            codes.append(process.call(command))
+        else:
+            with process.Popen(command) as child:
+                codes.append(child.wait(timeout=10))
+    partial = process.run(python("import sys;print('captured-out');print('partial-err',file=sys.stderr)"),
+                          stdout=process.PIPE, text=True, check=True)
+    class COORD(ctypes.Structure):
+        _fields_ = [("X", wintypes.SHORT), ("Y", wintypes.SHORT)]
+    kernel.ReadConsoleOutputCharacterW.argtypes = [wintypes.HANDLE, wintypes.LPWSTR,
+        wintypes.DWORD, COORD, ctypes.POINTER(wintypes.DWORD)]
+    buffer = ctypes.create_unicode_buffer(4096)
+    count = wintypes.DWORD()
+    assert kernel.ReadConsoleOutputCharacterW(kernel.GetStdHandle(-11), buffer, 4096,
+                                             COORD(0, 0), ctypes.byref(count))
+    output.write_text(json.dumps(dict(codes=codes, text=buffer.value[:count.value],
+        captured=partial.stdout, window_visible=bool(ctypes.windll.user32.IsWindowVisible(window)))))
+
+
 class ProcessTests(unittest.TestCase):
     def test_text_input_environment_cwd_and_separate_output(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -104,19 +141,42 @@ class ProcessTests(unittest.TestCase):
             process.run(["uctest-nonexistent-executable-908ab4"])
 
     @unittest.skipUnless(os.name == "nt", "Windows console contract")
-    def test_windows_children_have_no_console_and_keep_existing_flags(self):
+    def test_windows_children_keep_parent_console_and_existing_flags(self):
+        import ctypes
+        parent_console = str(ctypes.windll.kernel32.GetConsoleWindow())
         command = python("import ctypes; print(ctypes.windll.kernel32.GetConsoleWindow())")
-        self.assertEqual(process.check_output(command, text=True).strip(), "0")
+        self.assertEqual(process.check_output(command, text=True).strip(), parent_console)
         with process.Popen(command, stdout=process.PIPE, text=True,
                            creationflags=process.CREATE_NEW_PROCESS_GROUP) as child:
-            self.assertEqual(child.communicate(timeout=10)[0].strip(), "0")
+            self.assertEqual(child.communicate(timeout=10)[0].strip(), parent_console)
         # Exercise positional creationflags, not just the common keyword form.
         defaults = list(inspect.signature(stdlib.Popen).parameters.values())
         index = next(i for i, value in enumerate(defaults) if value.name == "creationflags")
         positional = [command] + [p.default for p in defaults[1:index]] + [0]
         positional[4] = process.PIPE
         with process.Popen(*positional, text=True) as child:
-            self.assertEqual(child.communicate(timeout=10)[0].strip(), "0")
+            self.assertEqual(child.communicate(timeout=10)[0].strip(), parent_console)
+
+    @unittest.skipUnless(os.name == "nt", "Windows console intent")
+    def test_windows_existing_console_is_inherited_without_a_new_window(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "result.json"
+            startup = stdlib.STARTUPINFO()
+            startup.dwFlags |= stdlib.STARTF_USESHOWWINDOW
+            startup.wShowWindow = stdlib.SW_HIDE
+            # The fixture is hidden from creation, not a human's interactive window.
+            with stdlib.Popen([sys.executable, str(Path(__file__).resolve()),
+                               "--hidden-console-parent", str(output)],
+                               creationflags=stdlib.CREATE_NEW_CONSOLE, startupinfo=startup) as child:
+                self.assertEqual(child.wait(timeout=30), 0)
+            result = json.loads(output.read_text())
+            self.assertEqual(result["codes"], [7, 7, 7])
+            self.assertFalse(result["window_visible"])
+            self.assertEqual(result["captured"], "captured-out\n")
+            for name in ("run", "call", "Popen"):
+                self.assertIn(name + "-out", result["text"])
+                self.assertIn(name + "-err", result["text"])
+            self.assertIn("partial-err", result["text"])
 
     @unittest.skipUnless(os.name == "nt", "Windows console intent")
     def test_explicit_console_intent_is_preserved_without_opening_a_test_window(self):
@@ -135,8 +195,11 @@ class ProcessTests(unittest.TestCase):
         handles.dwFlags |= stdlib.STARTF_USESTDHANDLES
         with patch.object(stdlib, "run") as launch:
             process.run(["caller-owned-handles"], startupinfo=handles)
-            launch.assert_called_once_with(["caller-owned-handles"], startupinfo=handles,
-                                           creationflags=stdlib.CREATE_NO_WINDOW)
+            import ctypes
+            expected = {"startupinfo": handles}
+            if not ctypes.windll.kernel32.GetConsoleWindow():
+                expected["creationflags"] = stdlib.CREATE_NO_WINDOW
+            launch.assert_called_once_with(["caller-owned-handles"], **expected)
 
     def test_stdlib_is_not_globally_patched(self):
         self.assertIsNot(process.Popen, stdlib.Popen)
@@ -172,4 +235,7 @@ class ProcessTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    if len(sys.argv) == 3 and sys.argv[1] == "--hidden-console-parent":
+        hidden_console_parent(Path(sys.argv[2]))
+    else:
+        unittest.main(verbosity=2)

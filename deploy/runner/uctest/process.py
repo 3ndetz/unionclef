@@ -37,6 +37,15 @@ def _quiet_args(args, kwargs, interactive, inherit_output=True):
             and startup.wShowWindow != _subprocess.SW_HIDE):
         return args, kwargs
 
+    # A console child already inherits an attached parent's console without
+    # opening a new window. CREATE_NO_WINDOW gives it another hidden buffer,
+    # losing ordinary console stdout/stderr even when their handles are passed.
+    # Keep normal inheritance for this case; detached bench parents need the
+    # flag below. Explicit caller flags remain untouched in either case.
+    import ctypes
+    if ctypes.windll.kernel32.GetConsoleWindow():
+        return args, kwargs
+
     replace_option("creationflags", flags | _subprocess.CREATE_NO_WINDOW)
     # With all three streams None, Windows Popen deliberately supplies no
     # STARTF_USESTDHANDLES. CREATE_NO_WINDOW then drops the usual inherited

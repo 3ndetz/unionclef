@@ -386,3 +386,16 @@
   cp582e/rawinventory restored everyarm, tick-only observation and healthyFPS.
   Old092/2b diagnostics are not pooled. Budget9095MB/free171GB; no evidence
   deleted. END GOAL not reached, no stop requested; autonomous work continues.
+- Native published056 pair1 is actuallyLIVE147180 (OFF->ON), originalcp582e,
+  constantbranchtrue, tick-only and owned full-window capture. OFF observer is
+  active; no terminal paired score or review claim yet. Only this first pair
+  launched; remaining five are prospective and old092/2b stay separate.
+- A real hidden noninteractive parent console exposed another bench contract:
+  CREATE_NO_WINDOW loses console-buffer stdout/stderr despite successful writes.
+  Inherited-pipe/file proofs do not cover that. Adapter now inherits an already
+  attached console normally (no new window); detachedparents still add the flag.
+  Real run/call/Popen streams/exit7/sameHWND and partial captured/console streams
+  pass. Full15-case suite passes actualWindows14/one skip from both detached and
+  attachedhidden parents; actualLinux12/three skips. Current native process
+  continues with its already loaded policy; no test/container stopped for hiding.
+  Archive retains exact evidence and original observation coverage limit.

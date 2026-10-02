@@ -75,3 +75,23 @@
   script with captured diagnostics (exit0 and loaded SHA verified). Its first
   inherited-stream attempt exited1 before deployment; retained as a process/
   harness limitation, not a Java/course failure. No benchmark was killed.
+
+## Follow-up: attached parent consoles retain their output too
+
+- Actual hidden noninteractive console fixture found a separate contract gap:
+  CREATE_NO_WINDOW child exits7 and writes without error, but neither stream
+  reaches the parent's real console buffer. Earlier inherited-pipe/file checks
+  do not cover this. Original observation retained separately; no human window
+  was hidden and the fixture was hidden from creation.
+- An already attached parent's child normally inherits the existing console
+  without creating another window. The adapter now retains that normal launch;
+  detached bench parents still add CREATE_NO_WINDOW. Explicit caller flags and
+  intentional interaction remain unchanged. The real fixture verifies run,
+  call and Popen output/exit7, the same console HWND, and captured stdout with
+  inherited console stderr. No stdout forwarding threads or global patching.
+- Expanded15-case suite: actual Windows14 passed/one skip; actual Linux12
+  passed/three Windows skips. The real private console remains invisible.
+  Evidence: quiet-console-inheritance-windows.log/linux.log and the original
+  quiet-hidden-console-original-observation.json. The currently running native
+  pair retains its loaded adapter; this correction takes effect on later starts.
+  No gamer/Docker/container was terminated to hide windows.
