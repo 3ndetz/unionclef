@@ -172,3 +172,41 @@
   Budget10129MB of15GB/free168GB. Three healthy pairs of four attempted;
   pair1 FPS-invalid result retained/excluded, pairs5-6 prospective. Waterdefault
   remainsfalse. Wiki37065363489 succeeds on fa9bf261 before this append.
+
+## Follow-up: fourth healthy pair retains the long smoker return
+
+- Prespecified pair5 OFF->ON finishes naturally/parent0 at22:00:17UTC,
+  `logged-job-20261003-004013`. Same helper a3fe7cee/published365e/cp582e,
+  constantbranchtrue, tick-only observation, full capture and unchanged gates.
+  OFF gamerFAIL and ON gamerPASS for furnace; both observer0/cleanup[],
+  deaths0/lava0/runtime[]. Food140/full59/fullgame remain open.
+- OFF `food-bank-trace-20261003-004014`: median24FPS/13polls, no new endfood,
+  original cooked mutton3->1; wetpillar5716ticks/5714grounded/5713 JUMP+SNEAK,
+  zero JUMP-only. Exact-body hold305.713s; initial traceHP9.766668 recovers20.
+  Capture338.926s/video346.133333s, SHA
+  `52bb3f419693fc22d063edf7a009af658a1e5859f9d6eef957b542f4e45f5237`.
+- ON `food-bank-trace-20261003-005036`: median25FPS/13polls, new cooked pork3
+  and chicken3, original cooked mutton3->1; wetpillar68ticks/zero grounded,
+  63 JUMP-only/zero JUMP+SNEAK. Initial/min traceHP13.566668 recovers20;
+  unequal activation injury prevents survival attribution. Capture332.467s/
+  video338.466667s, SHA
+  `f6b1e2f52ca9c678e7dbeceb6cffe38d1abab3469a80655c6555395e8cdbd910`.
+- Review147564 naturally0 at22:01:47UTC (`logged-job-20261003-010100`), all16
+  actual2s pages inspected/hash-journalled. OFF cycles submerged from roughly36s
+  through338s. ON leaves24-32s, kills pig38-40s, gathers wood/crafts44-64s,
+  smoker cooks64-82s, then hunts chickens102-120s. No sampled death/fire; both
+  final chain disappearances retained. This is not every-frame/moving coverage.
+- Actual ON film120-284s is a long return to the smoker, with route searches,
+  wandering, refused takeoffs and terrain detours, NOT continuous hunting.
+  It eventually cooks chicken286-300s, then resumes wood/animal approaches.
+  The longest20.867s fixed-body hold overlaps the pig-to-wood/craft phase;
+  next18.636s overlaps smoker cooking. Neither duration proves a new water
+  regression. Retain `food-bank-trace-20261003-005036-end` and
+  `cp1003-0054-t313`; later-return mechanism/baseline verification stays open.
+- Read-only host157068 naturally0 at22:00:36UTC:37samples/no errors.
+  The first immediate interval reads0%;36 subsequent30s intervals range
+  50.04-79.70% aggregate CPU. No per-thread contention or past19FPS cause
+  established; no services/useful tests/human windows stopped or hidden.
+- Four healthy pairs of five attempted; pair1 invalid and pair4 food-positive
+  control remain retained. Pair6 is prospective; water default=false.
+  Budget10370MB of15GB/free168GB. Wiki37068107613 succeeds on0b52397c.

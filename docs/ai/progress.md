@@ -447,3 +447,16 @@
   No sampled death/fire; every final chain disappearance retained. Food140/
   full59/fullgame remainopen. Host39samples/noerrors/natural0. Budget10129MB/
   free168GB; waterdefaultfalse; pairs5-6 prospective; priorfa9WikiSUCCESS.
+- Prespecified pair5 OFF->ON naturally0 at22:00:17UTC:OFF24FPS/no newfood,
+  ON25FPS/new cookedpork3/chicken3. OFF gamerFAIL/ON furnacePASS; both observer0/
+  cleanup[], deaths0/lava0/runtime[]. Wetpillar5713JUMP+SNEAK OFF versus63JUMP-only
+  ON. InitialtraceHP9.766668 vs13.566668 prevents survival attribution. Four
+  healthy pairs/five attempted; pair1 invalid and pair4 food-positive control kept.
+- All16 actual2s pair5 pages inspected/hash-journalled after terminal review147564.
+  OFF305.713s submerged hold; ON leaves24-32s/hunts/cooks, then120-284s long
+  smoker return with wandering/route searches/refused takeoffs, NOT continuous
+  hunting. Cooking finally succeeds286-300s. Retain005036-end/cp1003-0054-t313;
+  later-return mechanism/baseline unverified, food140/full59/fullgame stillopen.
+  Host37samples/noerrors/natural0; first immediateCPU0 is not a30s interval,
+  subsequent36 intervals50.04-79.70%. Budget10370MB/free168GB. Waterdefaultfalse;
+  pair6 prospective. Prior0b Wiki37068107613 actuallySUCCESS.
