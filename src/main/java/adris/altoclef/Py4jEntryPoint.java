@@ -2729,6 +2729,10 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdPlanNoReset = 0;
         kaptainwutax.tungsten.path.PathExecutor.execArrived = 0;
         kaptainwutax.tungsten.path.PathExecutor.execRanOut = 0;
+        kaptainwutax.tungsten.path.PathExecutor.replayLiveChecks = 0;
+        kaptainwutax.tungsten.path.PathExecutor.replayLiveUnsafe = 0;
+        kaptainwutax.tungsten.path.PathExecutor.replayLiveRefused = 0;
+        kaptainwutax.tungsten.path.PathExecutor.replayLiveMaxNanos = 0;
         // THE PUNK TALLIES WERE NEVER RESET, so every punkStats() ever read was a container-lifetime
         // sum wearing a per-run label — the exact failure the note fifteen lines above describes for
         // the nav branch. It matters right now: allround's `voidHold=406` was read as "this run held

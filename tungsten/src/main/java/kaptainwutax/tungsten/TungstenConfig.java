@@ -5136,6 +5136,10 @@ public class TungstenConfig {
      * ({@code --pin physicsHandoffFromRest=false}).
      */
     public boolean physicsHandoffFromRest = true;
+    /** Re-simulate recorded landings from the live client-thread body before takeoff.
+     * Unsafe plans are returned to their owner for replanning. Observations run in
+     * both arms; false retains the old execution for bench A/B comparisons. */
+    public boolean replayChecksLiveLandings = true;
     public boolean planPlaceMoves = true;   // shipping placement on — see C5.5
 
     // ── Per-move toggles (in-game bisect switches) ────────────────────────────────────────────

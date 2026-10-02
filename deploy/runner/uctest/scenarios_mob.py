@@ -12,6 +12,7 @@ fight.
 Building the course through the arena helper removes that whole class of error: a flat field is
 a floor, laid the same way every run.
 """
+import json
 import re
 import subprocess
 import time
@@ -1571,6 +1572,10 @@ class ArrowDodge(Scenario):
 
     def drive_start(self, ctx):
         b = ctx.bot.name
+        # MobDefense deliberately stands down on Peaceful before inspecting arrows.
+        # The flat server can inherit that difficulty from another course; summoned
+        # arrows still hurt there, so without normalization this tests a disabled chain.
+        ctx.rcon.cmd("difficulty normal")
         ctx.rcon.cmd("time set day")
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         ctx.rcon.cmd("kill @e[type=arrow]")
@@ -1583,6 +1588,32 @@ class ArrowDodge(Scenario):
         ctx.bot.py.try_call("resetRunCounters")
         ctx.bot.cmd("@idle")
         time.sleep(2)
+        probe = r'''
+import json
+from py4j.java_gateway import JavaGateway, GatewayParameters
+g = JavaGateway(gateway_parameters=GatewayParameters(port=25333))
+m = g.jvm.adris.altoclef.AltoClef.getInstance()
+w = m.getWorld()
+# Resolve the difficulty getter by its enum, independent of remapped method names.
+getters = [x for x in w.getClass().getMethods() if x.getParameterCount() == 0
+           and x.getReturnType().isEnum()
+           and {"PEACEFUL", "NORMAL"}.issubset(
+               {str(v) for v in x.getReturnType().getEnumConstants()})]
+assert len(getters) == 1, "Cannot identify the client difficulty getter"
+print(json.dumps({"difficulty": str(getattr(w, getters[0].getName())()),
+                  "mobDefense": m.getModSettings().isMobDefense(),
+                  "dodgeProjectiles": m.getModSettings().isDodgeProjectiles(),
+                  "runner": g.entry_point.getRunnerStatus()}))
+g.close()
+'''
+        result = subprocess.run(["docker", "exec", ctx.bot.container, "python3", "-c", probe],
+                                capture_output=True, text=True, check=True, timeout=30)
+        environment = json.loads(result.stdout.strip().splitlines()[-1])
+        ctx.art.write_json("dodge-environment.json", environment)
+        if (environment["difficulty"] != "NORMAL" or not environment["mobDefense"]
+                or environment["dodgeProjectiles"] != self.DODGE
+                or not environment["runner"].startswith("active=true")):
+            raise RuntimeError("Arrow course preconditions failed: " + json.dumps(environment))
         ctx.geo["fired"] = 0
         ctx.geo["next"] = time.time()
 
@@ -1611,6 +1642,12 @@ class ArrowDodge(Scenario):
         yield Criterion("damage taken (recorded; gate on the dodge arm)", True,
                         f"damage_taken={dmg} (tenths of hp) {dodge}")
         if self.DODGE:
+            stats = ctx.bot.py.call("dodgeStats")
+            ctx.art.write_json("dodge-stats.json", stats)
+            counts = dict(re.findall(r"(\w+)=(\d+)", str(stats)))
+            yield Criterion("physics dodge actually searched and drove inputs",
+                            int(counts.get("searches", 0)) > 0
+                            and int(counts.get("drive", 0)) > 0, str(stats))
             yield Criterion("dodged most arrows: under 3 hits (60 tenths)", dmg < 60, f"damage_taken={dmg}")
 
 

@@ -483,9 +483,19 @@ public class Agent {
         this.jumping = this.input.playerInput.jump();
 
         
-        if(Math.abs(this.velX) < 0.003) this.velX = 0.0;
+        //#if MC < 12111
+        //$$ if(Math.abs(this.velX) < 0.003) this.velX = 0.0;
+        //$$ if(Math.abs(this.velZ) < 0.003) this.velZ = 0.0;
+        //#else
+        // 1.21.11 LivingEntity.tickMovement treats PLAYER horizontal velocity as
+        // a vector. A small strafe component persists while the other axis moves;
+        // snapping each axis separately changes a parkour landing by centimetres.
+        if (this.velX * this.velX + this.velZ * this.velZ < 9.0E-6) {
+            this.velX = 0.0;
+            this.velZ = 0.0;
+        }
+        //#endif
         if(Math.abs(this.velY) < 0.003) this.velY = 0.0;
-        if(Math.abs(this.velZ) < 0.003) this.velZ = 0.0;
 
         if(this.jumping) {
             double k = this.isInLava() ? this.getFluidHeight(FluidTags.LAVA) : this.getFluidHeight(FluidTags.WATER);

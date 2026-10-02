@@ -1,0 +1,64 @@
+{
+  "name": "g108-live-landings",
+  "title": "unionclef 0.95.54 · replay landings",
+  "subtitle": "Check the body's current state before replaying a jump.",
+  "caption": "Unionclef 0.95.54 — check the jump from the body's current state before replay. A retained fatal jump used stale velocity and missed the lip. The simulation now matches vanilla's horizontal velocity deadzone; the executor checks landings before takeoff. Balanced gap audit: refusal off 6/6, on 6/6; enabled repeat 2 refused one plan, replanned and arrived. Both arms include the velocity repair; no speed or mortality-rate delta established. Adjacent navigation 30/30; active-Task/crafting/dodge 27/27; identical-entry portal replays 6/6 without deaths or new lava entries, all at 29-30 FPS. Recordings reviewed and cleanup passed. Gap clips show rebuilt arena runs. Earlier casting deaths, the original full59 stall and the water shelter hold remain open.\nhttps://github.com/3ndetz/unionclef/releases/tag/v0.95.54",
+  "hook": {
+    "src": "deploy/runner/artifacts/live-landing-ab-20261002-034843/nav_gaps-2-true/nav_gaps/nav_gaps.mp4",
+    "from": 14, "to": 20, "speed": 1,
+    "text": "Check the jump first"
+  },
+  "segments": [
+    {
+      "kind": "split", "title": "Rebuilt gap arena · recorded miss and checked retry",
+      "left": {
+        "src": "deploy/runner/artifacts/physics-gap-quiet-20261002-031135/nav_gaps-2/nav_gaps/nav_gaps.mp4",
+        "from": 5, "to": 17, "speed": 1, "label": "captured old miss",
+        "caption": "Missed destination lip · one fatal fall"
+      },
+      "right": {
+        "src": "deploy/runner/artifacts/live-landing-ab-20261002-034843/nav_gaps-2-true/nav_gaps/nav_gaps.mp4",
+        "from": 8, "to": 20, "speed": 1, "label": "live check and retry",
+        "caption": "One plan refused · replan and arrival"
+      }
+    },
+    {
+      "kind": "stat", "title": "Enabled repeat 2 · observed continuation",
+      "before": "1 unsafe plan", "after": "arrival",
+      "note": "Refused before takeoff · replanned · zero falls"
+    },
+    {
+      "kind": "clip",
+      "src": "deploy/runner/artifacts/live-landing-ab-20261002-034843/nav_water-3-true/nav_water/nav_water.mp4",
+      "from": 4, "to": 12, "speed": 1,
+      "title": "Water route · enter the pool and reach dry ground",
+      "caption": "3/3 valid completions · zero deaths or falls",
+      "zoom": 1.04
+    },
+    {
+      "kind": "clip",
+      "src": "deploy/runner/artifacts/live-landing-ab-20261002-034843/nav_ladder-3-true/nav_ladder/nav_ladder.mp4",
+      "from": 3, "to": 8, "speed": 1,
+      "title": "Ladder route · climb to the upper platform",
+      "caption": "3/3 valid completions · zero deaths or falls",
+      "zoom": 1.04
+    },
+    {
+      "kind": "clip",
+      "src": "deploy/runner/artifacts/live-landing-ab-20261002-034843/nav_bridge-3-true/nav_bridge/nav_bridge.mp4",
+      "from": 4, "to": 11, "speed": 1,
+      "title": "Bridge route · placement and continuation",
+      "caption": "3/3 valid completions · zero deaths or falls",
+      "zoom": 1.08
+    },
+    {
+      "kind": "text", "title": "What the audit establishes",
+      "lines": [
+        "Gap A/B: refusal off 6/6 · on 6/6.",
+        "Both arms include the vanilla velocity repair.",
+        "No speed or mortality-rate delta established.",
+        "Adjacent navigation: 30/30 valid PASS."
+      ]
+    }
+  ]
+}

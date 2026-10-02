@@ -21,18 +21,10 @@ import java.util.List;
 
 public class PathExecutor {
 
-    // ⛔ TODOS.md C4.2: written by the PathFinder worker thread, read by the client thread
-    // replaying the route, with no synchronisation. `volatile` fixes the VISIBILITY half (a
-    // writer's assignment is guaranteed seen by the next read on another thread) -- it does NOT
-    // fix two other shapes of the same defect, both left undone (C8.1, no stand this session to
-    // verify a change this central under real concurrency):
-    //   1. a check-then-act race across several reads of the same field in one method (a second
-    //      thread can still reassign the field between two reads here);
-    //   2. `tick` is a compound read-modify-write (`tick++`, tick.java:557) on one path and a
-    //      plain reset (`tick = 0`/`tick = path.size()`) from `startBreaking()` on another --
-    //      `startBreaking`'s own doc says it is called by the search thread handing over a job,
-    //      so an increment and a reset can interleave and lose an update. `volatile` makes each
-    //      individual write visible; it does not make increment-vs-reset atomic across threads.
+    // C4.2: path-mutating methods share the replay tick's monitor, so the worker
+    // cannot replace/append a trajectory while its live feasibility is checked.
+    // External reads of several fields and direct writes to public queues/stop
+    // are still not a single atomic snapshot; this does not close all of C4.2.
     protected volatile List<Node> path;
     protected volatile int tick = 0;
     public volatile boolean stop = false;
@@ -78,15 +70,15 @@ public class PathExecutor {
      *  string. Added because //replace alternates pass/fail run after run, which is not noise —
      *  it is state carried across runs, and the only way to name it is to look at it. */
     public String debugState() {
-        return String.format("stop=%b path=%d tick=%d breakQ=%s placeQ=%s breakTicks=%d",
+        return String.format("stop=%b path=%d tick=%d breakQ=%s placeQ=%s breakTicks=%d liveLanding=%d/%d/%d liveLandingMaxNs=%d",
                 stop, path == null ? -1 : path.size(), tick,
                 breakQueue == null ? "null" : String.valueOf(breakQueue.size()),
                 placeQueue == null ? "null" : String.valueOf(placeQueue.size()),
-                breakingTicks);
+                breakingTicks, replayLiveChecks, replayLiveUnsafe, replayLiveRefused, replayLiveMaxNanos);
     }
 
     /** Queue mining after the current replay, preserving its index and armed state. */
-    public void queueBreakingAfterPath(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
+    public synchronized void queueBreakingAfterPath(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
         breakQueue = blocks == null ? null : new java.util.ArrayList<>(blocks);
         breakingTicks = 0;
         breakBudgetTarget = null;
@@ -95,7 +87,7 @@ public class PathExecutor {
     }
 
     /** Start a dig at the current position without an approach replay. */
-    public void startBreaking(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
+    public synchronized void startBreaking(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
         queueBreakingAfterPath(blocks);
         // AND PUT THE EXECUTOR WHERE IT WILL ACTUALLY RUN THE JOB. Mining only happens inside
         // the "segment finished" branch (tick == path.size()), and the caller only ticks this
@@ -120,7 +112,7 @@ public class PathExecutor {
      * this also cancels empty-path mining/placing jobs and their completion callback.
      * Returns false without touching inputs when there is no block work to cancel.
      */
-    public boolean cancelBlockWork() {
+    public synchronized boolean cancelBlockWork() {
         if (!isBreakingNow() && !isPlacingNow()) return false;
         breakQueue = null;
         placeQueue = null;
@@ -166,6 +158,9 @@ public class PathExecutor {
     public static volatile int execArrived=0, execRanOut=0;
     /** Ticks the executor replayed, and how many of them requested SPRINT — see the tick loop. */
     public static volatile int execTicks=0, execSprintTicks=0;
+    /** Observations run in both A/B arms; only refusing an unsafe replay is gated. */
+    public static volatile int replayLiveChecks, replayLiveUnsafe, replayLiveRefused;
+    public static volatile long replayLiveMaxNanos;
     /** Post-mining resumes driven by the search's own goal instead of the hand-driven global. */
     public static volatile int gotoResumedFromSearch = 0;
 
@@ -246,7 +241,7 @@ public class PathExecutor {
 	/** Replay ticks stopped because the body's own motion headed into a lethal column. */
 	public static volatile int execMotionLethal = 0;
 
-	public void setPath(List<Node> path) {
+	public synchronized void setPath(List<Node> path) {
 		// NOTE: the completion callback is deliberately PRESERVED. This used to do
 		// `this.cb = null`, which destroyed the ;goto retry callback the moment the very
 		// first physics path was emitted — so MAX_RETRIES never ran, "Finished!" never
@@ -278,12 +273,12 @@ public class PathExecutor {
 	/** True while a spliced path waits for the bot to reach its root. */
 	public boolean isArmed() { return armed; }
 	
-	public void addToPath(Node n) {
+	public synchronized void addToPath(Node n) {
 		this.path.add(n);
     	RenderHelper.renderPathCurrentlyExecuted();
 	}
 	
-	public void addPath(List<Node> path) {
+	public synchronized void addPath(List<Node> path) {
 		if (stop) {
 			setPath(path);
 			return;
@@ -349,7 +344,7 @@ public class PathExecutor {
 	 * whatever is now driving. Dropping hands the problem back to the planner, which is what the
 	 * file already wanted — "a stale splice cannot pin the executor forever".
 	 */
-	public void onWalkerStopped() {
+	public synchronized void onWalkerStopped() {
 		if (this.path != null && this.armed) {
 			kaptainwutax.tungsten.Debug.logMessage(
 					"Armed path dropped: the walker that was to reach its root has stopped");
@@ -407,7 +402,8 @@ public class PathExecutor {
     // Server-side tick disabled: requires ServerPlayerEntity.setPlayerInput() (MC 1.21.4+ only)
     // public void tick(ServerPlayerEntity player) { ... }
     
-    public void tick(ClientPlayerEntity player, GameOptions options) {
+    public synchronized void tick(ClientPlayerEntity player, GameOptions options) {
+        if (this.path == null) return;
     	if(TungstenMod.pauseKeyBinding.isPressed() || stop) {
     		// A MINING/BRIDGING segment runs with an EMPTY path (the "At the wall" and
     		// "At the gap" shortcuts): there is no recorded replay, so a drift abort —
@@ -493,6 +489,51 @@ public class PathExecutor {
     			return;
     		}
     	}
+
+        if (this.tick == 0 && !this.path.isEmpty() && player.isOnGround()
+                && !player.isTouchingWater() && !player.isClimbing()
+                // Vanilla can keep onGround for one tick after moving beyond a
+                // lip. That flag alone is not permission to cancel a jump:
+                // Baritone MovementParkour.java:244-248 cancels only before it runs.
+                && !player.getEntityWorld().isSpaceEmpty(player,
+                        player.getBoundingBox().offset(0.0, -1.0E-5, 0.0))
+                && !kaptainwutax.tungsten.task.BowShooter.isActive()
+                && !TungstenModDataContainer.minerOwnsAim()) {
+            // Read all player fields on the client thread, before any replay input.
+            // Do not merely tighten G91's rest-speed threshold: the body can move
+            // while a search runs, and a worker can sample different tick phases.
+            PathInput currentKeys = new PathInput(options.forwardKey.isPressed(),
+                    options.backKey.isPressed(), options.rightKey.isPressed(),
+                    options.leftKey.isPressed(), options.jumpKey.isPressed(),
+                    options.sneakKey.isPressed(), options.sprintKey.isPressed(),
+                    player.getPitch(), player.getYaw());
+            long started = System.nanoTime();
+            int missed = ReplayFeasibility.firstMissedLanding(player.getEntityWorld(),
+                    Agent.of(player), this.path, currentKeys,
+                    TungstenConfig.get().enableNativeRotation,
+                    options.getMouseSensitivity().getValue());
+            replayLiveChecks++;
+            replayLiveMaxNanos = Math.max(replayLiveMaxNanos, System.nanoTime() - started);
+            if (missed >= 0) {
+                replayLiveUnsafe++;
+                if (TungstenConfig.get().replayChecksLiveLandings) {
+                    replayLiveRefused++;
+                    Debug.logMessage("Replay refused before takeoff: live state misses landing at tick " + missed);
+                    releaseMovementKeys(options);
+                    // No block work has started: preserve the queues, but abandon
+                    // this approach so its owner can replan from the actual body.
+                    this.path = null;
+                    this.armed = false;
+                    // Goto's callback checks actual arrival and retries an
+                    // unfinished goto. Notify it on rejection too; otherwise
+                    // a direct physics caller has no navigator to request a retry.
+                    Runnable completion = this.cb;
+                    this.cb = null;
+                    if (completion != null) completion.run();
+                    return;
+                }
+            }
+        }
 
     	if(this.tick == this.path.size()) {
     		// mine the planned wall before declaring the segment finished —
@@ -1652,8 +1693,7 @@ public class PathExecutor {
         double deltaPitch = targetPitch - player.getPitch();
 
         double sens = MinecraftClient.getInstance().options.getMouseSensitivity().getValue();
-        double f = sens * 0.6 + 0.2;
-        double sensScale = f * f * f * 8.0;
+        double sensScale = ReplayFeasibility.nativeScale(sens);
         double degreesPerPixel = sensScale * 0.15;
 
         long pixelsX = Math.round(deltaYaw / degreesPerPixel);
