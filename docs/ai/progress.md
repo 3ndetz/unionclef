@@ -366,3 +366,23 @@
   sheets.json now records all36 complete. No death/fire/opened interface seen
   at this cadence; not every-frame coverage or native food closure. Release
   notes updated to actual evidence; publication/render/Telegram remain pending.
+- Milestone delivered:scoped Gradle githubRelease143576 exits0,17tasks/one
+  executed, publicv0.95.56. Actual downloadedassetSHA365e1fdb and all2212
+  recursiveclasses equal the fully audited final candidate; tagtargetb72b2364
+  matches syncedcanonicalbranches. Benchalreadyruns this exactSHA, so a fresh
+  recreate solely for an unchanged archive would not add binary coverage.
+- Final50.0s silent1920x1080/30FPS report rendered in90.8s, hardwareGPU/
+  drawelementcapture/oneworker,32,978,112bytes, SHA426706745f339730657d13aecb549dd7038dd2c2b617ad8ec0c598a8a208cda2.
+  Both whole-film2s pages and both dense sceneentrance pages actually inspected;
+  hashes/journal retained. HAPI rejects the full file for size; separately
+  encoded720p preview displayed. Full report delivered asTelegram9676; caption
+  corrected in place to distinguish72 comparison trials from42/36 passed gates.
+  No duplicate video sent. Waterdefaultfalse/nativefood/full59 remainopen.
+- ASSESS:single-tip requestedcolumn score0/6->6/6, two-tip6/6unchanged. The
+  route now reuses scheduled removals without duplicate price or policy bypass;
+  coreplacement semantics advance realterrain construction, not a speed claim.
+  Stablebranchclearance milestone closed; nextpass is a new balanced native
+  waterOFF/ON comparison on exactpublished056, constantbranchtrue, original
+  cp582e/rawinventory restored everyarm, tick-only observation and healthyFPS.
+  Old092/2b diagnostics are not pooled. Budget9095MB/free171GB; no evidence
+  deleted. END GOAL not reached, no stop requested; autonomous work continues.

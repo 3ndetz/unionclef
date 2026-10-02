@@ -34,9 +34,17 @@ native food acquisition and water-input experiments remain separate evidence.
 
 The final actual-default navigation audit passed36 valid scored trials, in two
 phases (25+11) with one separately retained unscored output-reader failure. All36
-recordings were inspected at2s. Finished render, rendered-film inspection, release
-publication and Telegram delivery are pending. No prospective course rate is
-included in the composition.
+recordings were inspected at2s. The final delivery render is50.0s,1920x1080,
+30FPS,H.264,silent,32,978,112bytes; SHA256
+`426706745f339730657d13aecb549dd7038dd2c2b617ad8ec0c598a8a208cda2`.
+Both whole-film2s pages and both dense scene-entrance pages actually inspected.
+No sampled blank footage or clipping; not every-frame coverage. The render
+used hardware GPU/drawelement capture and completed in90.8s with one worker.
+Published0.95.56 tag targetsb72b2364; its downloaded365e1fdb asset and all2212
+classes match the final tested candidate. Full report delivered asTelegram9676.
+HAPI's size limit rejects the full file; a separately encoded720p preview is
+displayed in chat. Exact render/preview hashes, inspected-page hashes and delivery
+receipt live in ignored `renders/`. No prospective course rate is in the film.
 
 ## Commands
 

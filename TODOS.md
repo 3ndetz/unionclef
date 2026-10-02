@@ -507,14 +507,20 @@ taken on your behalf.
 - [x] Natural food pursuit climbed17 blocks then repeatedly failed to place beneath the body:
   cave vines at feet+2 intercept the placement ray despite having no body collision.
   Model the required interaction clearance, respecting break policy and climbable vines.
-- [ ] **Planned pillar clearance must remain cleared on subsequent steps (2026-10-02).**
+- [x] **FIXED 0.95.56: planned pillar clearance remains cleared on subsequent steps (2026-10-02).**
   UNIONCLEF-HARD retained healthy frozen dry tip-at-head/jump-eye inputs. The
   loaded generator schedules explicit removals, then rejects a later feet cell
   as non-replaceable in the unchanged world; jump-eye clearance is also charged
   twice. The exact-column interaction gate remains red after both navigator and
   child pillar finish. Carry the planned removals through the route, preserving
-  break/place policy, border and failed-placement memory. Validation is open;
-  this is separate from the experimental water-input fix and natural food rate.
+  break/place policy, border and failed-placement memory. Six balanced dry
+  comparison pairs (72 trials) change single-tip exact-column arrivals0/6->6/6;
+  two-tip arrivals remain6/6 in both arms. Eight actual policy checks pass.
+  Adjacent42/42 and final-default36/36 valid gates pass; the latter uses two
+  phases with one retained extra unscored output error. Every recording inspected
+  at2s. Downloaded published365e SHA/all2212 classes match the final candidate.
+  Edited50s report delivered asTelegram9676. Experimental water input remains
+  OFF; native food acquisition and the full playthrough stay separately open.
 
 <!-- TASK-DISPATCH-THREAD-2026-09-16 -->
 ## External task lifecycle commands must serialize with the game tick (2026-09-16)
