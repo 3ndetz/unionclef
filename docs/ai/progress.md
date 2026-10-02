@@ -296,3 +296,29 @@
 - New native boundary diagnostic10310 is LIVE on exact2b, originalcp1002-1301
   fingerprint582e, raw resume/tick-only, constant branchtrue/waterfalse. Its
   five-minute observation is prospective; no progress or coverage verdict yet.
+- Native10310 TERMINAL0 wrapper/observer0, gamer1FAIL, cleanup[]. Capture
+  spans321.313s to confirmed active=false before final diagnostics/end save;
+  actual video329.267s, all7 pages now inspected at2s (not every frame).
+  Stop chat/chain disappearance visible near322.5s. Trace6431 sequences is
+  continuous,6389 measured ticks and21 post-window ticks retained separately,
+  runtime matches[] over523 UTC-window lines. MedianFPS23/12polls, initial
+  sampledHP17.27 recovers20/deaths0/lava0; original kit308->307/mutton3->2.
+  Gamer remains red:290.232s fixed-body hold in water,5500 wet JUMP+SNEAK
+  ticks, zero wet JUMP-only, no new rung/food. This confirms capture ownership
+  and the known false-water control, not a food fix or paired native rate.
+- Removed experimental NavWaterPillar from ordinary SCENARIOS while the water
+  input defaultsfalse; explicit ignored helper imports the same measured class
+  and validates jar-name. Syntax/diff checks pass; ordinary six-course default
+  audit remains prospective after the final branchtrue/waterfalse build.
+- Operator's additional Windows desktop request completed separately in5ec7248d:
+  all157 bench subprocess imports use the shared quiet adapter,55 ignored active
+  helpers updated too. Actual Windows12pass/Linux11pass and Session1 gamer.sh
+  Docker chain verify preserved output/exit7 with no new visible console window.
+  Both canonical branches pushed/synced; detail in the quiet-process archive.
+  Native benchmark had already terminated naturally; no Docker/test stopped.
+- Gamer recording lifetime code now has actual idle ownership/normal-return/
+  SystemExit/finite-caller and native boundary evidence above. Forced OS kill
+  remains outside coverage. Scope remains capture ownership, not native progress.
+- Branch clearance default nowtrue and mod_version056 prepared; water input
+  remainsfalse. Final clean build/payload proof/default36/video/release still
+  prospective, with no experimental water course in the ordinary suite.

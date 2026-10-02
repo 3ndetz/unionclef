@@ -67,6 +67,17 @@ elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
 elif op=="swapstate": out=dict(mc.pathingMode())
 elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
+elif op=="stop-confirmed":
+    # ExecuteCommand queues the stop on the client thread. Read status through
+    # a later task on that same queue, rather than trusting the enqueue result.
+    mc.ExecuteCommand("@stop")
+    j=gw.jvm; client=j.net.minecraft.class_310.method_1551()
+    method=next(m for m in mc.getClass().getMethods() if m.getName()=="getRunnerStatus" and m.getParameterCount()==0)
+    handle=j.java.lang.invoke.MethodHandles.lookup().unreflect(method).bindTo(mc)
+    handle=handle.asType(j.java.lang.invoke.MethodType.methodType(j.java.lang.Class.forName('java.lang.Object')))
+    work=j.java.lang.invoke.MethodHandleProxies.asInterfaceInstance(j.java.lang.Class.forName('java.util.concurrent.Callable'),handle)
+    future=j.java.util.concurrent.FutureTask(work); client.execute(future)
+    out={"runner":str(future.get(20,j.java.util.concurrent.TimeUnit.SECONDS))}
 elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
 elif op=="gs":
     gs=mc.getGameState()
@@ -419,11 +430,13 @@ def rec_start(secs):
     anybody actually wants to watch was the one with no picture. Fragmented mp4 with a keyframe a
     second, because the capture is stopped by a signal and a plain mp4 only writes its index on a
     clean exit -- a killed capture is an unplayable "moov atom not found".
+    None gives the owning gamer run an explicit recorder lifetime; main's
+    finally must stop it. Other short probes retain their bounded duration.
     """
     finish_recording(CLIENT)
     subprocess.run(["docker", "exec", "-d", CLIENT, "ffmpeg", "-y",
                       "-f", "x11grab", "-framerate", "15", "-i", ":0",
-                      "-t", str(int(secs) + 8),
+                      *([] if secs is None else ["-t", str(int(secs) + 8)]),
                       "-c:v", "libx264", "-preset", "ultrafast", "-g", "15",
                       "-b:v", "1100k", "-maxrate", "1400k", "-bufsize", "2M",
                       "-pix_fmt", "yuv420p",
@@ -443,7 +456,7 @@ def rec_stop(dst):
     return None
 
 
-def main():
+def _run():
     phase("rcon"); print("[1] wait gamer-server rcon...")
     try:
         wait_for("gamer rcon", lambda: "players" in grcon("list"), 120, 6)
@@ -1132,7 +1145,15 @@ def main():
     # runs both reported pdNoVec=238, which is what gave it away. run_suite.py has always done
     # this; the smoke did not.
     print("  zero counters:", py4j("zero"))
+    _recording = any(a == "--record" for a in sys.argv)
+    if _recording:
+        # The old MINUTES*60+8 deadline cut off a still-active gamer during
+        # slow final polls/diagnostics. Capture before activation and retain it
+        # until the confirmed end; the owner finalizes it on exceptional exits.
+        rec_start(None)
+        print("GAMER_CAPTURE_START", json.dumps({"epochMs": int(time.time()*1000)}))
     inv0 = py4j("inv"); print("  start inv:", inv0)
+    log_since = time.time()
     py4j("cmd", c="@gamer")
 
     # WHAT THE RUN ACHIEVED, NOT JUST HOW MUCH IT CARRIED.
@@ -1186,11 +1207,7 @@ def main():
     # conclusion drawn about that run -- "the ladder stops after wood tools" -- was drawn without
     # knowing the bot had been killed six times.
     # Mark the TIME instead; docker logs --since is not affected by how much the server says.
-    log_since = time.time()
     phase("watch"); print(f"[4] watching {MINUTES} min for progress...")
-    _recording = any(a == "--record" for a in sys.argv)
-    if _recording:
-        rec_start(MINUTES * 60)
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     fps_samples = []
     _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M"); _cp_series = []
@@ -1467,6 +1484,13 @@ def main():
             print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} food={_me.get('food')}/{_me.get('saturation')} eat={_fd} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
+    # The window ends before diagnostics and checkpoint copying. Otherwise the
+    # bot keeps playing while its verdict and recording describe an earlier state.
+    _stopped = py4j("stop-confirmed")
+    if not _stopped.get("runner", "").startswith("active=false"):
+        raise RuntimeError(f"gamer did not stop at the observation boundary: {_stopped}")
+    print("GAMER_WINDOW_END", json.dumps({"epochMs": int(time.time()*1000),
+                                         "runner": _stopped["runner"]}))
     # WHAT DID IT ACTUALLY END UP HOLDING? "Ten items gathered" and "no materials to craft"
     # are only contradictory if those ten are logs. Print the list rather than assume.
     # DID IT DIE, AND TO WHAT? A run that ends with an empty pack has usually lost it on death,
@@ -1596,16 +1620,30 @@ def main():
         print(f"  client fps (median): {med_fps:.1f} over {len(fps_samples)} samples")
     phase_report()
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
-    # ⛔ THE BOT STOPS WHEN THE WINDOW ENDS (2026-09-25). It used to keep playing after the verdict,
-    # in a world the next run was about to replace, and a death there was booked to nothing: a
-    # "nether lava death" chased for a day turned out to happen between two runs -- the next run's
-    # reconnect found the bot still digging down its own pillar over lava. Watching a live bot after
-    # a run is what --record and the checkpoints are for.
-    try:
-        py4j("cmd", c="@stop")
-    except Exception:
-        pass
     return ok
+
+def main():
+    """Own the gamer and recorder lifetime, including failed/terminated runs."""
+    try:
+        return _run()
+    finally:
+        _pending_error = sys.exc_info()[0]
+        _cleanup_errors = []
+        try:
+            _stopped = py4j("stop-confirmed")
+            if not _stopped.get("runner", "").startswith("active=false"):
+                raise RuntimeError(f"gamer stop not confirmed: {_stopped}")
+        except Exception as _error:
+            _cleanup_errors.append(f"gamer stop: {_error}")
+        if "--record" in sys.argv:
+            try:
+                finish_recording(CLIENT)
+            except Exception as _error:
+                _cleanup_errors.append(f"recorder stop: {_error}")
+        if _cleanup_errors:
+            print("GAMER_CLEANUP_ERRORS:", _cleanup_errors)
+            if _pending_error is None:
+                raise RuntimeError("gamer cleanup failed")
 
 # ONE RUN OF THIS IS A COIN, NOT A CRITERION.
 # With the start point pinned to a tenth of a block, two consecutive runs still went FAIL then
