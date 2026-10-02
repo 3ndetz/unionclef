@@ -213,3 +213,37 @@
   shelter-saved-repeats-20261002-132017. Raw recording review completed before
   launch; no browser/build/render/deploy overlaps. Runtime and sealed-hold gates
   unchanged; stop first red/invalid. Rim trace/final build/release/report pending.
+- Prospective series80877 terminalexit0: six validPASS from the original CP,
+  exact e03/default primary=true/smartMoves=false, inventory/fingerprint gates,
+  sampledHP20, zero deaths/lava, sealed10.01-10.37s holds and clean runtime/
+  cleanup. Approach time9.58-13.25s; separate phase means22.48-28.21FPS approach,
+  26.01-28.75FPS hold. Complete six22.2/22.9/25.9/23.3/21.5/25.3s recordings
+  actually reviewed2s/every page; video-review.json retained in132017 series.
+  Prior strict-minimum invalids remain unchanged and outside this denominator.
+- Owner docs commite600ff0c pushedatomic main/1.21.11; all four heads identical.
+  Seventh actual wiki push36995296019 SUCCESS. Isolated HyperFrames scaffold
+  reports/hf/shelter created with pinned0.8.111/initexit0; generated instructions
+  read, no custom HTML/assets/render yet. Preserve the delivered landing project.
+- Rim trace3067 is live with actual NewlyAvailable fixture/Unstuckoff and exact
+  e03, existing continuous movement API. Prepared published00e866 native wrapper
+  syntaxPASS/NOTRUN; only missing old scan counters become diagnostic nulls.
+  Same CP/defaults/command90s; no-site timeout must stay original nonzero outcome.
+  Matched baseline, final build/scoped release/report and subsequent food pass pending.
+- Rim3067 terminalexit0, PASS/29.5FPS, sampledHP20/zero deaths,872 trace rows/
+  errors[]/gaps[], planning window clean/cleanup[]. Entire54.1s clip reviewed2s
+  on both pages. Trace uses its first tick as zero, not recorder zero: region
+  refresh13.55s, repeated short routes/jumps by the goal until23.33s first dig,
+  bottom25.28s/cap25.58s. FastNavigator already gates arrival on settledBody;
+  do not diagnose the jumping as a missing settled-arrival guard from memory.
+  Retain approach settling under the existing G65 precise-entry family.
+- Frozen e03 JAR copied/hashverified to shelter-candidate-e03ed747.jar before
+  replacing the local build artifact with verified published00e866. Canonical
+  tester1-only baseline deploy86860 LIVE, deliberate UCTEST_ALLOW_STALE=1,
+  GPU0; nested freshness guard reports the intended old payload explicitly.
+  No source rollback, manual client-mod copy or controller change.
+- Baseline deploy86860 terminalexit0; saved-entry replay55695 is live and
+  restores the original CP. Tagv0.95.55 currentlyabsent (GitHub ref404); recheck
+  before publication. Report headline catalog searched386items: top3D reveal,
+  horizontal line slide and camera pull-back; spring-pop result overshoots.
+  None matches the planned quiet vertical cascade/no-overshoot rules exactly;
+  use their already-read recipe bodies, not a new effect. No report HTML yet.

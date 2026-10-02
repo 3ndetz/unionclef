@@ -1,3 +1,7 @@
+---
+mode: autonomous
+---
+
 # Shelter report — production outline
 
 Concept: a safe hole for the night, shown through actual bot action and retained
@@ -11,8 +15,9 @@ focal element. Event names at the top, captions below the footage, visible game
 HUD. Scene slots are separate sub-compositions. No artificial tracking boxes,
 generated gameplay or unsupported speed/mortality claims.
 
-Coverage gate: six default-setting native repeats and raw @gamer integration
-are pending. Do not replace those requirements with the51-case arena result.
+Coverage: six default-setting native repeats completed6/6 valid; raw @gamer
+showed shelter/morning continuation but overallFAIL/no food or rung progress.
+Matched published-baseline shelter comparison remains pending.
 FPS-invalid native runs remain retained evidence, not passes. Confirm source
 ranges and settings before adopting assets or building footage scenes.
 
@@ -30,11 +35,11 @@ status: outline
 src: compositions/shelter-saved-entry.html
 duration: 16s
 rules: waterfall-entry; spring-pop-entrance
-beat: Same checkpoint, before/after side by side. Original full59-before-portal
-no-site wait versus the completed raw @gamer candidate replay. Verify the original
-time range against cp1002-0229-t656; if the commands differ, label them explicitly
-and do not present the comparison as a matched gameplay rate. Do not use the
-experimental-smartMoves native control as a shipping-default baseline.
+beat: Same checkpoint, before/after side by side. Use published0.95.54 and the
+completed e03 native replay, both actual @test shelter fromcp1002-0229-t656,
+shipped primary/smartMovesfalse and original inventory. Retain the baseline's
+actual outcome and FPS, not a presumed failure. Original full59 is historical
+context, not the matched arm. No experimental-smartMoves control in this comparison.
 
 ## Frame 3
 status: outline

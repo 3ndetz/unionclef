@@ -1470,6 +1470,12 @@ test + full nav-suite regression before it counts done.
       destination's centre at walking pace with its aim on it. Now: waypoint below and close ->
       no sprint, an 8-degree bearing, no hop, waypoint held until the body drops (`intoHole`).
       Bench `narrow_shaft_test.py` (two deep, three deep); buried_goal phase two is the same shape.
+      Retained2026-10-02 shelter approach input: e03 rim trace completes safely
+      at29.5FPS/HP20, but short region routes repeatedly jump past the goal
+      before the first dig. Trace872 rows/no gaps; first-tick-relative dig23.33s,
+      bottom25.28s/cap25.58s. Evidence:shelter-rim-trace-20261002-134453.
+      FastNavigator's settled-body guard already exists; inspect the actual
+      walker/drive handoff before attributing the repeated hops to arrival.
 - [ ] **G66 a vine in the tower's column turns the jump into a climb** (operator, live: the bot
       hopping and turning for ever beside a vine in a narrow space). Vanilla treats a body inside
       a vine as climbing; the tower's place window never opens. Baritone's MovementPillar has a

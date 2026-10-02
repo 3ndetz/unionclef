@@ -47,8 +47,10 @@ discovery control with general idle-goal rescue disabled. The comparison names
 its actual command and arena; it does not claim a measured speed improvement.
 
 The final unpublished e03ed747 candidate completed its 51-case campaign with
-valid passes and clean per-case planning-error windows. Six native saved-entry
-checks and raw @gamer integration from cp1002-0229-t656 remain pending. The first
+valid passes and clean per-case planning-error windows. A new default-setting
+native series completed six valid saved-entry checks; all six recordings were
+reviewed. Raw @gamer integration showed shelter and morning exit but failed the
+overall progress gate. Matched published-baseline shelter comparison is pending. The first
 default-setting series retained one valid pass and an FPS-invalid second run;
 a fresh-client series is separate evidence. Sources include full59-before-portal, the matched discovery
 controls, final-payload saved-entry recordings and morning exit. Earlier 36-case
