@@ -8,6 +8,7 @@ for its policy refusal control. --vine-tip-offset selects head or jump-eye heigh
 """
 import argparse
 import json
+import math
 import subprocess
 import statistics
 import signal
@@ -159,7 +160,15 @@ m=next(m for m in cls.getMethods() if m.getName()=='startExact' and m.getParamet
                          for y in rungs)
     data['opened_gui'] = any(row['screen'] is not None for row in data['samples'])
     final = data['samples'][-1]['state']
-    data['arrived'] = final['onGround'] and float(final['pos'].split(',')[1]) >= target_y - .05
+    final_pos = [float(n) for n in final['pos'].split(',')]
+    data['at_target_height'] = final['onGround'] and final_pos[1] >= target_y - .05
+    # startExact is a cell goal, not a goal to stand at this height anywhere.
+    # RotationHelper.playerFeet uses +0.1251 before flooring the vertical cell.
+    data['in_requested_cell'] = (math.floor(final_pos[0]) == 2700
+                                 and math.floor(final_pos[1] + .1251) == target_y
+                                 and math.floor(final_pos[2]) == 980)
+    data['arrived'] = data['at_target_height'] and data['in_requested_cell']
+    data['arrival_predicate'] = 'Grounded in the requested cell at the requested height'
     data['pass'] = ((not data['opened_gui'] if args.low_roof or args.cave_vines else data['opened_gui']) and not data['arrived'] and data['placed'] == 0) if args.expect_bug else (
         data['arrived'] and data['placed'] == len(rungs) and not data['opened_gui']
         and all(row['state']['hp'] == 20 for row in data['samples']))
@@ -167,7 +176,7 @@ m=next(m for m in cls.getMethods() if m.getName()=='startExact' and m.getParamet
         data['pass'] = not data['arrived'] and data['placed'] == 0 and not data['opened_gui']
     if args.no_break:
         data['protected_intact'] = 'passed' in r.cmd(f'execute if block 2700 {-60 + args.vine_tip_offset} 980 cave_vines').lower()
-        data['pass'] = data['protected_intact'] and not data['arrived'] and not data['opened_gui'] and all(row['state']['hp'] == 20 for row in data['samples'])
+        data['pass'] = data['protected_intact'] and data['placed'] == 0 and not data['arrived'] and not data['opened_gui'] and all(row['state']['hp'] == 20 for row in data['samples'])
     data['vine_tip_offset'] = args.vine_tip_offset
     data['no_break'] = args.no_break
     data['freeze_random_ticks'] = args.freeze_random_ticks
@@ -179,7 +188,10 @@ m=next(m for m in cls.getMethods() if m.getName()=='startExact' and m.getParamet
         tip_y = -60 + args.vine_tip_offset
         data['fixture_valid'] = (all(initial[str(y)].startswith('Block{minecraft:air}')
                                           for y in range(-60, tip_y))
-                                 and initial[str(tip_y)].startswith('Block{minecraft:cave_vines}'))
+                                 and initial[str(tip_y)].startswith('Block{minecraft:cave_vines}')
+                                 and all(initial[str(y)].startswith('Block{minecraft:cave_vines_plant}')
+                                         for y in range(tip_y + 1, -55))
+                                 and initial['-55'].startswith('Block{minecraft:stone}'))
         if not data['fixture_valid']:
             data['invalid_reason'] = 'Plant geometry changed before the planning probe'
     data['pass'] = data['pass'] and data['fixture_valid']

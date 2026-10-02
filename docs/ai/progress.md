@@ -30,18 +30,21 @@
   pillarUsesSwimInputInWater remainsfalse by default pending full validation.
 
 ### Plan
-- Finish first candidate true-pin raw5min food replay, then its matched false
-  arm from the identical original checkpoint, with tick-only observation.
-  Repeat balanced pairs; retain all results and independently observe input
-  in both arms. Check actual food, survival, FPS and the recordings.
-- Prepared but NOT EXECUTED:36 existing interaction/clearance/refusal trials
-  (furnace, vine, ceiling, two cave-vine ray heights, break-policy refusal),
-  and42 navigation gates (water construction, flat, stairs, descend, water,
-  wall2, bridge). Each fixture is rebuilt, flags read back, exact candidate
-  checked, first unexpected red/invalid/runtime failure stops the campaign.
-- Clean final tungsten build and fresh packaging are still required after
-  source comment corrections. Never override/bless a stale nested jar.
-  Recheck live human debug sessions and stale versions/*/bin before building.
+- Finish the prospective72 dry interaction/clearance/refusal trials on2b112366:
+  six balanced branch-clearance pairs, water=false constant, all six cases in
+  each arm. Rebuilt fixtures, exact cells, frozen growth, pin readback, no retry.
+  Review every actual recording and retain old-arm reds separately.
+- Then run42 navigation gates (water construction, flat, stairs, descend,
+  water, wall2, bridge) with both experimental flagsON. First unexpected
+  red/invalid/runtime failure stops for diagnosis; do not rerun away a red.
+- Native water comparison must use the same branch pin in both arms on the
+  new candidate and restore originalcp582e/inventory/ground every time.
+  Old092 pair1 is retained but health-invalid; oldpairs2-6 never ran. Do not
+  silently pool different candidates. Independently observe input, actual
+  food, survival, FPS and recordings with tick-only observation.
+- Before a release default change, clean final tungsten/scoped packaging,
+  prove actual payload, recheck human debug sessions/stale versions/*/bin.
+  Never override/bless a stale nested jar.
 - Publish only stable measured behavior through scoped :1.21.11:githubRelease,
   verify branch/tag/assets/payload, edited English HyperFrames report and
   Telegram delivery, then canonical deployment/audit and the next focused pass.
@@ -154,3 +157,52 @@
  No stable behavior claim yet; fresh clean tungsten/scoped packaging38352 is
  LIVE. Water/default/branch flags remainfalse. Dry/native/adjacent audits and
  release/report remain pending; remaining native pairs2-6 are not executed.
+- Build38352 terminal0: tungsten clean1m34s, fresh scoped build8m29s/all18
+ tasks executed, no build cache. Candidate2b11236656542ecaf2eb46c527c45242e95a007494696a16d46c7a9588c49506
+ frozen separately. Recursive2212 classes, added[]/removed[];8 differ from055,
+ 7 fromwater092. Heap/NodeMap/StartState normalized method bytecode matches092
+ exactly (actual javap16697 terminal0); their hashes reflect debug line shifts.
+ Nested freshness guard passes without override. Canonical tester1-only deploy
+12549 is LIVE. No motion trial on this new candidate yet. Docs/harness83734a79
+ atomically pushedmain/1.21.11; Wiki37023169592 actualSUCCESS, verified green19.
+- Canonical deploy12549 terminal0/exact loaded2b112366. Frozen loaded generator
+54286 terminal0:air/tip1/tip2 all complete and emit all3 children; tip1 removals
+ are4 unique cells, cost52.236543;tip2 are3 unique cells, cost50.236543. Actual
+ world source plants stay non-replaceable; the later child now uses ancestral
+ clearance rather than rewriting the world. This is a generator probe, not rate.
+- First new-candidate dry81928 stops at sixth case:5/6 gates pass (both plant
+ heights actual3 requested rungs, HP20/noGUI); protected-vine is red despite
+ intact plant and0 requested rungs. Final bodyX2701.5/Y-57/Z980.5 is a neighbour,
+ not the exact goal2700,-57,980; navigator is still active in the final sample
+ and later gives up. Existing helper calls ANY grounded body at target height
+ arrived, ignoringX/Z. Preserve this as-run red and compare old branchfalse
+ full six-case prefix before changing the criterion. Films not yet reviewed.
+- Actual virtual-placement policy probe terminal0: after explicit clearance
+ allows the non-replaceable source, but placement disabled, external deny hook,
+ actual world border and recent failure all deny. Exact hook/config/refusal
+ state restored; no driver or placement started. Seven predicate checks are
+  specific guards, not an arena success-rate claim. No release/report yet.
+- Same-prefix old-arm84841 terminal1/cleanup[]:4/6 gates pass; tip1 and
+  protected-vine are red. Tip2 actually builds3 requested rungs through runtime
+  clearing/replanning, so the old arm does not always fail both plant heights.
+  Protected plant is intact,0 requested rungs, body2701.5,-57,980.5 again:
+  the old height-only arrival predicate is the test defect. Both six-case
+  pilot/control recordings were actually viewed at2s/every page (12 films),
+  with review journals retained; runtime matches[]/HP20/noGUI in both arms.
+- Corrected the helper arrival to grounded target height AND requested feet
+  cell (floorX2700, floor(Y+.1251)==target, floorZ980), matching the navigator.
+  Retained the old height observable and every original red JSON. Protected
+  refusal additionally requires0 requested rungs; complete pre-plan plant
+  stems/stone are checked. Syntax/diff checks pass; prospective bench validation
+  is now LIVE5287, balanced6 OFF/ON pairs x6cases=72planned on exact2b112366,
+  constant water=false, frozen random ticks, rebuilt geometry per case. Odd
+  pairs OFF->ON, even ON->OFF. No automatic retry; only healthy normal old-arm
+  tip reds may continue, retaining their actual verdicts. Other red/invalid
+  stops the campaign. Planned trials are not completed outcomes.
+- Last checkpoint budget8977MB/15GB, diskfree176GB. Native pairs2-6 and42nav
+  remain unexecuted. Both source flags are false-default; no new release/TG.
+- First corrected-helper protected control on5287 actually passes29FPS:
+  height=true, exact cell=false, arrived=false, plant intact/0requested rungs.
+  Earlier furnace/vine/ceiling positive/refusal gates pass and tip1 retains
+  its actual red. This checks the correction on the bench, not the full72
+  campaign or its recordings, which remain in progress/unreviewed.
