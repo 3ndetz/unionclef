@@ -82,3 +82,33 @@
   version branch fast-forwarded. Three remaining source/scenario edits are OWN.
   Wiki37015549344 actualSUCCESS on63018b3e, verified green16. Only two specific
   historical failing logs were reviewed; not the entire historical action log.
+- First true-pin native10796 terminal:wrapper0/observer0/gamer1/cleanup[],
+  original checkpoint fingerprint unchanged. Median24FPS/13 polls, sampledHP20,
+  trace minHP19/zero deaths/lava ticks. Final cooked_mutton7/porkchop3/chicken3
+  versus initial cooked_mutton3. General gamer verdict staysFAIL: no new rung.
+  7174 ticks/8043 continuous sequence records/zero geometry snapshots or gaps;
+  water-pillar36 ticks, grounded5, JUMP+SNEAK0, JUMP without SNEAK30. Actual UTC
+  13:52:26-13:58:25 has2241 log lines/zero runtime matches. Actual308s capture
+  SHAdfda1d565a04938a096223ec790208791b484c66610a5bbd82a5b8708c81ce67 reviewed
+  at8s/all2 pages, first80s at2s/all2 pages,78-98s and260-308s at2s/all3 pages.
+  Both dense holds show crafting/cooking; fixed308s capture does not cover the
+  entire358.628s observer window. No visual claim about that missing tail.
+  Matched false-pin native95373 is LIVE; no rate or broad food closure yet.
+- Archive090ae2fb atomically pushedmain/1.21.11; real export177 unique pages.
+  Wiki37016377063 actualSUCCESS on090ae2fb, verified green17. Checkpoint budget
+  after this native run8858MB/15GB, disk free169GB; no evidence deleted.
+- Matched false-pin95373 terminal:wrapper0/observer0/gamer1/cleanup[], original
+  checkpoint unchanged; final cooked_mutton1 versus initial3, no newfood/rung,
+  zero actual deaths/lava ticks. All6184 wetPillar ticks grounded JUMP+SNEAK;
+  no JUMP-only ticks. Continuous7092 sequence records/7031 ticks/no geometry or
+  gaps; actual UTC14:06:38-14:12:29 has566 log lines/zero runtime matches.
+  Median19FPS/12 polls fails the prospective comparison floor20: retain this
+  as-run failure, do not count pair1 as healthy or quote a natural success rate.
+  PollsHP20 miss initial traceHP9.766668; the early injury predates the long
+  pillar hold and requires attribution separate from water input.
+  Actual308s filmSHA7d8da6c7f543b613c76a659fa3de843e3fcc85925310093e5ba8c0f121b94992
+  viewed8s/all2 pages,0-52s/22-308s/260-308s at2s/all10 pages. Fixed body in
+  source water is visible through the capture end; no food construction/kill/
+  cooking during that hold. Missing43.449s observer tail has no visual claim.
+  Host83% sample, only tester1 up; no unrelated container stopped. Check arena
+  regressions/health before resuming the remaining prospective balanced pairs.
