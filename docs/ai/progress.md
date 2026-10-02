@@ -399,3 +399,15 @@
   attachedhidden parents; actualLinux12/three skips. Current native process
   continues with its already loaded policy; no test/container stopped for hiding.
   Archive retains exact evidence and original observation coverage limit.
+- Published056 native pair1 now TERMINAL1:OFF22FPS/no newfood and ON19FPS/
+  actual cookedpork3/cookedchicken3/rawmutton5. The unchanged20FPS gate excludes
+  the entire pair from healthy comparison rates. Both traces beginHP9.766668,
+  then recover20/deaths0; no survival benefit attributed. Originalcp582e intact.
+  Full captures333.8/342.667s cover confirmed run stops; all15 actual2s pages
+  inspected and hash-journalled. Details and exact sources in
+  archive/02-10-2026-published-water-pair.md. Waterdefaultfalse remains unchanged.
+- Post-run stand probes establish negligible current Studio CPU, no tester
+  resource quota, and stationary26-29FPS with the existing bench throttle pin;
+  its originalfalse is restored. Idle10FPS was the restored limiter. No cause
+  for the past active19FPS established; no unrelated service or preview stopped.
+  Further balanced pairs remain prospective; original red is never retried away.
