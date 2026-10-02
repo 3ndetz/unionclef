@@ -256,6 +256,66 @@
   autonomous/report instructions. General-video skill update reports up-to-date.
   The delivered54-second landing report/message9570 is preserved. No new shelter
   composition/render/send yet; final rates and version depend on completed tests.
+- Campaign79145 first27/36 validPASS: three complete nine-course rounds, all
+  twenty-seven fullclips actually reviewed2s (both pages for each drown clip).
+  Third morning exit5.7s; all drown runs retainHP20, last air300. Remaining nine
+  cases repeat the three shelter courses. No final campaign verdict yet.
+- The wet-top source hypothesis is weakened by the full call chain:
+  WorldHelper.plausibleToBreak -> MovementHelperB.getMiningDurationTicks:758-760
+  -> getRequiredMiningDurationTicks:774-775 -> avoidBreaking:184-209, which
+  already rejects liquid directly above the first dig. The native top-fluid
+  control remains NOTRUN and will verify this inherited protection.
+- Prepared ignored check_shelter_world_change.py and check_shelter_flee_owner.py;
+  syntax passed, NOTRUN. The former exposes a new dry diggable site10s into the
+  same actual shelter Task while its initial sole candidate is bedrock-enclosed.
+  The latter starts a real RunAwayFromHostilesTask, atomically installs/verifies
+  an unrelated AnyBlock condition owner, then requires actual Flee takeover and
+  body separation16 from an occluded NoAI zombie. Native mechanics still need
+  live validation. Both enforce the candidate payload and exclusive bench lock.
+
+- Campaign79145 completedexit0:36/36 validPASS on the unchanged06652c payload.
+  Six repeats each of blocked-nearest/flat/exit and three each of air/flat/stair/
+  descent/water/craft; all36 fullclips actually viewed2s, both drown pages.
+  Morning exits5.5-5.9s, zero measured deaths, averages29-30FPS. Final analyzer
+  verifies payload, native fixture controls, repetition counts and cleanup[].
+  The fluid-top native control is now running; new-site and flee probes remain
+  NOTRUN. Generated checkpoint integration and publication remain pending.
+
+- Fluid-top control99994 completedexit0, artifact082628: native actual predicate
+  rejects water/lava above the first dig and the bedrock entry, accepts the dry
+  shaft.30FPS, no deaths, cleanup[]. Full8.9s recording viewed2s. The inherited
+  mining-safety guard is confirmed; no fluid-policy source change is needed.
+- New-site control98843 completedexit0, artifact082801: exposes the dry site at
+  11.058s without reissuing @test shelter, then the body seals it and holds10s;
+  29.7FPS, HP20, cleanup[]. Full70.1s recording viewed2s on both pages. However,
+  Unstuck Chain interrupts/restarts shelter state before the candidate count rises
+  from1 to2. This does not prove native destination refresh during one uninterrupted
+  approach. Original verdict retained; probe wording now distinguishes command
+  reissue from internal chain restart. Prepared --without-unstuck control pins
+  only unstuckWhenGoalButNoPath=false, with actual pin readback and final reset.
+  Flee-owner49792 is now active; the isolated discovery control remains NOTRUN.
+
+- Flee-owner49792 completedexit0, artifact083037: actual unrelated AnyBlock
+  condition installed and verified atomically on the client, actual FleeLive
+  reclaimed it, takeover counter+1; body reached17.48 horizontal separation,
+  HP20/no deaths/29FPS/cleanup[]. Full recording viewed2s. This validates the
+  native harness and this changed ownership branch once, not a repeated rate.
+  Isolated new-site72638 is active with unstuckWhenGoalButNoPath=false read back.
+
+- Isolated discovery72638 completedexit1, artifact083204: validFAIL at29.58FPS,
+  HP20 all samples, cleanup[]. The new dry shaft passes the native predicate at
+  11.743s, but the uninterrupted approach retains one enclosed candidate through
+  82.1s and never seals. Nav repeatedly ends/restarts; no Unstuck takeover is
+  present with the flag actuallyfalse. Full93.0s clip viewed2s, both pages;
+  retained client.log confirms one @test start and no shimmy during its window.
+  This is an isolated capability failure, not proof the default recovery failed.
+- Added source fix: when the condition route ends, rediscover destinations at
+  the existing bounded scan cadence, preserve an ongoing route and keep the
+  same Task/owner for an unchanged cell set. Based on upstream GetToBlockProcess
+  :103-108; no elapsed-motion timeout or safety relaxation. Original06652c jar
+  archived with fullSHA before rebuilding. Tester1 stopped after probe cleanup.
+  Duplicate heuristic Javadoc/GoalComposite reference comment corrected. New
+  source is not yet built/deployed/tested; all earlier greens cover06652c only.
 
 ### Assess
 - The retained fatal landing is now rejected by actual-class simulation, and one
@@ -266,8 +326,10 @@
 - One shared vanilla model and a client-thread feasibility check fix the root;
   no special-course coordinates or timeout recovery added. Current failure evidence
   is retained separately from the green rebuilt arenas and fixed portal entry.
-- Next unknown is actual travel from the no-site water entry to a native safe site.
-  Measure that route before changing site selection or the navigation core.
+- Candidate reaches/seals one native saved water entry and passes36 arena checks;
+  its stale-destination failure is now reproduced without Unstuck. Rebuild the
+  refresh fix, validate the isolated control and repeats, then rerun the saved
+  entry/full @gamer integration on that exact payload before publication.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
