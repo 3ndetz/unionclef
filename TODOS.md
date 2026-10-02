@@ -12,7 +12,7 @@
   This combined fixture does not establish an isolated air regression. Keep its
   fatal input for deliberate entity-obstructed air-route testing; reproduce on
   the baseline before assigning a new source regression or choosing a repair.
-- [ ] **Night shelter can hold the playthrough in water without a usable site (2026-10-02).**
+- [x] **FIXED 0.95.55: night shelter held the playthrough in water without a usable site (2026-10-02).**
   UNIONCLEF-HARD retained a native replay from full59-before-portal. At538s the
   shelter says "No place to dig in for the night here" near(-89.3,61.3,1062.3);
   the bot remains there through748s with20hp and no navigation/dig progress.
@@ -20,6 +20,15 @@
   was legitimate thunderstorm waiting and exited normally. Investigate usable
   shelter-site selection and its approach when the starting body is in water;
   do not relax flood/hazard checks or label a no-site wait as safe sheltering.
+  Loaded3D discovery and exact AnyBlock destinations now find reachable dry
+  shafts; the same Task refreshes destinations when its approach ends. The
+  candidate passed51 arena cases and6 original-checkpoint sealed holds, with
+  every recording reviewed. Published0.95.54 finds no site in one90s same-entry
+  control. Published0.95.55 has all2212 candidate classes byte-identical and
+  passed5 canonical post-deploy checks plus another original-inventory sealed
+  hold (HP20, no deaths/lava entries; phaseFPS27.36/29.04). Edited60s report
+  sent asTelegram9619. Food pursuit, precise rim entry, entity-obstructed air
+  and remaining world/mining/global-budget thread safety stay separately open.
 - [x] **FIXED 0.95.54: physics replay falls at the last gap (2026-10-02).**
   Historical failure: the refreshed-client nav-tail campaign completed
   water 3/3 and gaps 3/4, stopping at the first gap failure (29.5 FPS, one void death;

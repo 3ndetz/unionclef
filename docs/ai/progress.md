@@ -1,6 +1,6 @@
 # Progress
 
-## 2026-10-02 — shelter reachability and player snapshot (in progress)
+## 2026-10-02 — shelter and player-input slice released; food-bank investigation continues
 
 ### Investigate
 - Full chronological landing/shelter/failure evidence is preserved in
@@ -298,3 +298,27 @@
   actual wiki sync37000315997 SUCCESS onb247dd54. Published audit66754 is active;
   first three checks passed at29.5-30FPS/HP20/clean runtime. Next food-bank
   observer prepared/syntax checked only, not executed during the shelter audit.
+- Published audit66754 exit0,5/5 valid PASS,29.5-30FPS, no planner failure,
+  owned fixture count0 before each case and cleanup errors[]. Native40181
+  exit0 from originalcp1002-0229-t656/SHA041ec8dd with original inventory and
+  default pathing: actual sealed10.35s hold at(-84,66,1059), sampledHP20,
+  zero deaths/lava entries, approach11.20s/FPS27.36 and holdFPS29.04.
+  The stopped dry arena was warmed before restoring the original checkpoint;
+  no healing, inventory replacement or underwater warm-up of the measured entry.
+  All5 arena clips plus23.4s native recording actually reviewed at2s cadence,
+  every page. The specific no-site shelter TODO is closed; rim movement and
+  wider C4 debt remain open. Tenth wiki sync37003048571 SUCCESS ona5c48393.
+- ASSESS: matched previous-release control waits90s without a site; repeated
+  candidate6/6 and published saved-entry audit hold a sealed dry shelter. This
+  advances one night-survival step toward the full game, not the whole game.
+  Loaded geometry, reusable exact destinations and immutable player input are
+  core changes; no server-specific policy or hazard relaxation. Food acquisition
+  remains red on both published versions. Next pass observes the retained
+  food-bank input before selecting one core repair, rather than changing flags.
+- Native food-observer preflight initially failed on missing inventory slots:
+  an extra client FutureTask wrapped APIs that already dispatch internally,
+  making their nested supplier time out. No gamer run was launched. Corrected
+  observer calls those existing safe APIs directly, dispatches only raw getters;
+  corrected preflight exit0/inGame true/567 blocks/20 entities/43 slots.
+  Retain this instrument failure separately from any bot failure. The observer
+  changes no movement decisions; its geometry snapshots are separate from ticks.
