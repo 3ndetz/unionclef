@@ -4,6 +4,12 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Gamer smoke must reject post-death progress (2026-10-03).**
+  Published056 native pair6 OFF reports one trident death (was impaled by Drowned),
+  loses the original pack, then counts crafting/wood tools after respawn as PASS.
+  The outer native safety gate correctly rejects it. Repair the common verdict
+  without weakening FPS/rung gates; validate real death and zero-death controls.
+  Evidence: docs/ai/archive/02-10-2026-published-water-pair.md.
 - [x] **Bench subprocesses must not open Windows console windows (2026-10-02).**
   Shared quiet process adapter covers all test wrappers; real Windows Session1
   Docker chain and Linux checks pass. Intentional interaction remains available.

@@ -210,3 +210,53 @@
 - Four healthy pairs of five attempted; pair1 invalid and pair4 food-positive
   control remain retained. Pair6 is prospective; water default=false.
   Budget10370MB of15GB/free168GB. Wiki37068107613 succeeds on0b52397c.
+
+## Final prespecified pair: FPS-valid control death and false gamer PASS
+
+- Pair6 ON->OFF finishes naturally with parent exit1 at22:26:23UTC,
+  logged-job-20261003-010620. Original helper a3fe7cee and its death assertion
+  remain unchanged; no terminal.json is supplied. Both observers exit0, cleanup[],
+  lava0/runtime matches[]. The failure is a bot death, not an FPS-invalid stand.
+- ON food-bank-trace-20261003-010620:27FPS/13polls, gamerFAIL, new cooked pork3
+  and raw chicken4, deaths0; initial/min traceHP15.466667. Wetpillar201ticks,
+  zero grounded,186 JUMP-only/zero JUMP+SNEAK. Capture328.847s/video335.0s,
+  SHA709db64eb5e7b0c3355e9da7d071a01765b199e448fe2862ba1b74af6676392c.
+- OFF food-bank-trace-20261003-011621:23FPS/13polls, initial traceHP18,
+  minimum0/death1. Server cause is "was impaled by Drowned": trident death.
+  No new endfood; original308items become52 after respawn. Wetpillar288ticks,
+  268grounded/244 JUMP+SNEAK/zero JUMP-only. Capture336.171s/video342.4s,
+  SHA4260f2e1a9a98b7b87928c8d672b61707b4263ffcecbaa4a72d460393e38cf0f.
+- All7ON+8OFF actual2s pages inspected and hash-journalled after review146004
+  naturally exits0 at22:29:29UTC/log012843. ON retries the original bank until
+  roughly170s, leaves172-180s, kills pig204-208s, crafts212-216s, cooks218-232s,
+  hunts further234-286s and returns toward the smoker292-328s. It is not uniformly
+  quick; longest19.919s exact hold overlaps craft/cook, not a water stall.
+- OFF wet-bank attempts give way to MobDefense/Drowned approach around90s.
+  Death occurs between sampled164.5-166.5s; subsequent bare-handed wood/craft
+  at spawn is a new attempt. Its stock GAMER PASS is a retained false positive:
+  reached[] counts post-respawn rungs but its verdict has no death guard.
+  Longest30.734/21.035/15.888s holds and cp1003-0120-t315 are POSTDEATH,
+  not predeath bank reproductions. Preserve original cp1002-1301-t644 instead.
+- Host64168 naturally exits0 at22:26:36UTC/log010643:37samples/no errors,
+  36 non-null aggregate CPU intervals44.38-74.56%; no per-thread causal claim.
+  Budget10570MB of15GB/free167GB. No containers/tests/human windows stopped.
+
+## Cohort assessment
+
+- Independent audit published056-water-cohort-audit-20261003-014130/proof.json
+  verifies all six unique original helper executions, published365e/cp582e,
+  constant branchtrue/tick-only observation, complete capture and all94 actually
+  inspected sampled pages with hashes. No retry or old092/2b pooling.
+- Six attempted pairs/twelve observed arms: five FPS-valid pairs, FOUR successful
+  paired terminals. Pair1 is FPS-invalid; pair6 is safety-failed. Campaign safety
+  is RED. FPS-valid endfood observations: ON5/5 versusOFF1/5, including the retained
+  death failure separately; all attempts ON6/6 versusOFF1/6. These inventory
+  observations are not a5/5 safety success rate or completion of food140.
+- ON removes contradictory wet JUMP+SNEAK in all five FPS-valid observations
+  (JUMP-only96/29/24/63/186). OFF has900/6011/400/5713/244 JUMP+SNEAK ticks.
+  The ordinary-input food-positive pair4 remains: failure is intermittent.
+  Unequal activation health prevents survival attribution; no FPS speed claim.
+- Water default remainsfalse. Native food140/full59/fullgame remain open.
+  Next focused pass repairs gamer death false positives, preserving the original
+  red campaign. Drowned combat and later bank/smoker routes require causal and
+  baseline validation, not attribution from one death or a fixed-body counter.

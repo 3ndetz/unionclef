@@ -460,3 +460,22 @@
   Host37samples/noerrors/natural0; first immediateCPU0 is not a30s interval,
   subsequent36 intervals50.04-79.70%. Budget10370MB/free168GB. Waterdefaultfalse;
   pair6 prospective. Prior0b Wiki37068107613 actuallySUCCESS.
+- Final prespecified pair6 ON->OFF naturallyTERMINAL1 at22:26:23UTC/log010620.
+  ON27FPS/new cookedpork3/rawchicken4/death0; OFF23FPS/death1, server cause
+  was impaled by Drowned. OFF's stock GAMER PASS counts post-respawn crafting/
+  tools: false positive, not safety success. Original outer death assertion
+  correctly fails; no terminal.json fabricated. Observers0/cleanup[]/lava0/
+  runtime[]. InitialHP15.466667 ON vs18 OFF prevents survival attribution.
+- All15 pair6 actual2s pages inspected/hash-journalled after review146004/log012843.
+  ON original-bank retries continue~170s, leaves172-180s, hunts/cooks, later
+  returns toward smoker. OFF MobDefense/Drowned approach~90s, death164.5-166.5s,
+  then bare-handed restart. Longest OFF holds/checkpointcp1003-0120-t315 are
+  POSTDEATH. Host37samples/noerrors/natural0; CPU44.38-74.56% aggregate.
+  Budget10570MB/free167GB. Originalcp582e preserved; no services stopped.
+- Cohort014130 independently hashes all six unique original executions and94
+  actually viewed sampled pages. Six attempts, five FPS-valid pairs, FOUR
+  successful pair terminals: invalidFPS1/safetyfailure6 retained, campaignRED.
+  FPS-valid endfood ON5/5 versusOFF1/5 includes OFF death explicitly; all attempts
+  ON6/6/OFF1/6. Food-positive ordinarycontrol4 retained; no survival/speed claim.
+  Waterdefaultfalse; food140/full59/fullgame stayopen. Exact sources/limits in
+  archive/02-10-2026-published-water-pair.md; nextpass fixes gamer false PASS.
