@@ -161,3 +161,55 @@
   six-scene outline recorded with source/count gates and local-font decisions;
   footage assembly waits for native/integration evidence. Warmed series44450
   started separately in shelter-saved-repeats-20261002-125023.
+- Warmed series44450 stopped first child125024, exit1/cleanup[]: before restore
+  six consecutive20-25FPS readings, but actual movement min9/mean22.42;
+  sealed hold reached/HP20. Full recording reviewed2s, unchanged14FPS gate.
+  Pre-restore warmup did not eliminate restore/movement contention; no six-run
+  default rate claimed. Reprioritized raw15min @gamer integration on the same
+  CP, with its existing per-run reference/median diagnostics, then return to the
+  native measurement problem. No floor lowered, no source repair inferred.
+  Persistent shelter-snapshot-raw-gamer-console.log; dense checkpoints and
+  distinct shelter-refresh-gamer-end. Original full59 recording already preserved.
+- Measurement correction before any further native repeats: the ignored helper
+  incorrectly required every FPS sample >=14, whereas CHECKLIST4d and run_suite
+  judge average FPS. Future runs require time-weighted average >=14 separately
+  for approach/dig and sealed hold, positive samples, and >=75% of the best
+  preceding series average for each phase. Retain minima diagnostically. All
+  original directories/verdicts stay unchanged; no old run enters the new rate.
+  Offline phase analysis only:122514 approach24.03/hold29.27;12290919.86/23.20;
+  12431811.86/16.88 (cold approach still invalid);12502418.05/26.34. Both revised
+  ignored helpers syntaxPASS; six fresh repeats remain NOTRUN.
+- Raw integration88994 is still live: fresh gamer first spends its sleep budget
+  wandering in water with a bed, then food pursuit moves it. At123s the main
+  task selects NightShelter and holds at(-89.7,60,1076.3), HP20 through382s.
+  After morning it resumes food pursuit and moves by432s, HP20. This is actual
+  main-task routing, not forced @test shelter; final recording/runtime review
+  and complete15min outcome remain pending.
+- Sixth actual wiki push run36992331585 SUCCESS on3edaee5f. Source reentry
+  confirms the renewed food chase is a separate vertical-routing input: pig
+  around(-63.76,84,1099.71), body near(-92.6,61,1092.5), repeated one-step
+  swim queue, swim-out failure and pillar center stalls. Existing vertical food
+  TODO is marked closed; retain this new input and check the baseline before
+  attributing it to the shelter/snapshot change or choosing a repair.
+- Raw88994 terminalexit1: sampledHP20/zero measured deaths, medianFPS25 over36
+  samples,21 distinct positions, no new rung/items gained; GAMER_SMOKE FAIL.
+  Watch phase936s with periodic checkpoint pauses; preserved908s capture,
+  124308497bytes/SHA4325192b28e4a6dff0e07593af830334b03ec11402e1f7c01eba5452f353804a
+  in reports/footage/shelter-refresh-gamer-e03-20261002.mp4, copy hash verified.
+  Complete capture viewed36s cadence and every page, plus2s entry90-145 and
+  morning380-450 windows. Video shows digging/cap, held shelter, morning exit
+  and subsequent water/bank pursuit loops. Polls are not continuous health:
+  damage counter4.5 is nonzero; do not claim no damage over the whole replay.
+  From actual gamer-start client line687: no planning errors/Exception lines.
+  Earlier reconnect/voicechat errors are setup noise, not a clean-all-log claim.
+- The stopped body drowned AFTER the measured end/checkpoint (client10:17:04);
+  respawn returned an empty inventory. Retain this outside-run loss separately.
+  Prior-world warm fixture: first fill failed because chunks were unloaded;
+  teleport before retry allowed a fall. Retried fill succeeded,25 stone blocks
+  atY99; body at(-89.5,100,1076.5),HP9.33/onGround/runnerinactive. No healing,
+  and this altered prior world is discarded by original checkpoint restore;
+  the measured checkpoint/fingerprint/inventory/HP20 assertions stay unchanged.
+- Prospective average-gated six native repeats80877 are live in
+  shelter-saved-repeats-20261002-132017. Raw recording review completed before
+  launch; no browser/build/render/deploy overlaps. Runtime and sealed-hold gates
+  unchanged; stop first red/invalid. Rim trace/final build/release/report pending.

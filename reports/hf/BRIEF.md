@@ -21,8 +21,9 @@ Use short, dry English descriptions and measured facts. Avoid promotional claims
 
 This is the shared report project. The existing 54-second landing report was
 delivered as Telegram message9570. Preserve its published output and storyboard.
-The project currently pins HyperFrames0.8.105; check freshness before the next
-render-affecting command, then perform the required checks and visual review.
+The project currently pins HyperFrames0.8.111, upgraded from0.8.105 and checked
+on the existing composition. Perform affected checks and visual review for the
+new report; the upgrade does not establish frame-identical rendered output.
 
 ## Assets
 
@@ -73,3 +74,13 @@ was probed and upgraded0.8.105 ->0.8.111. Browser verification passed after the
 invalid native series ended, before the warmed series began. The old monolithic
 report retains structural lint warnings; runtime/layout and12/12 contrast checks
 pass. The new report uses modular scenes.
+
+Native measurement correction: future repeats use separate time-weighted
+approach/dig and sealed-hold FPS averages >=14 plus75% preceding-best drift.
+The earlier every-sample minimum was a helper mistake; original invalid
+verdicts are preserved and do not enter the fresh six-run rate. Raw integration
+completed with actual main-task shelter selection and morning continuation,
+sampledHP20 and zero measured deaths; full footage and focused entry/exit
+windows were reviewed. Overall gamer verdict FAIL: no new rung or food acquired
+at median25FPS. The damage counter is nonzero; do not claim no damage. Later
+vertical food pursuit is a separate observed obstacle, not a full-game success.

@@ -472,6 +472,13 @@ taken on your behalf.
 - [x] After clearing the cave-vine blocker, natural food pursuit climbed fromY7 toY47,
   then repeatedly revisitedY39–47 while switching among surface animals aroundY84–89.
   Isolate vertical routing from target reselection; require actual food acquisition.
+- [ ] **New retained water-to-bank input (2026-10-02):** after a successful night
+  shelter and morning continuation, raw gamer stays near(-92.5,61,1092.5) chasing
+  pigs aroundY78-84. Repeated one-step swim queues, swim-out failures and pillar
+  center stalls; no food acquired/no new rung in the15min window (median25FPS).
+  Checkpointcp1002-1301-t644 and shelter-refresh-gamer-end preserve the ground;
+  recording and source details in docs/ai/progress.md. Reproduce on the baseline
+  before assigning a regression; require sustained approach and actual food.
 
 <!-- PILLAR-INTERACTION-CLEARANCE-2026-09-16 -->
 ## Pillar placement must account for non-colliding interaction obstructions (2026-09-16)
