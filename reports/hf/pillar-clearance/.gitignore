@@ -1,0 +1,10 @@
+assets/*.mp4
+.hyperframes/
+.media/
+renders/
+videos/
+*.log
+snapshots/
+contact-sheet.jpg
+assets/*-review*.png
+.thumbnails/

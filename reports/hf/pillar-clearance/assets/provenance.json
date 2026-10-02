@@ -1,0 +1,158 @@
+[
+  {
+    "asset": "before.mp4",
+    "source": "deploy/runner/artifacts/water-pillar-interaction-20261002-182729/1/false/cave-tip1/trial.mp4",
+    "sha256": "c6589ba6936f47c4b2c0950f4c5fa8089981e2c7083e3eadffb71f904b8899ca",
+    "arm": "false",
+    "case": "cave-tip1",
+    "pair": 1,
+    "media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480
+        }
+      ],
+      "format": {
+        "duration": "17.200000"
+      }
+    }
+  },
+  {
+    "asset": "after.mp4",
+    "source": "deploy/runner/artifacts/water-pillar-interaction-20261002-182729/1/true/cave-tip1/trial.mp4",
+    "sha256": "08ff0b88b4e02892c13f8abf73a2a050ef01a6bd5a084a7d0b9bd9e7f3a4f5d6",
+    "arm": "true",
+    "case": "cave-tip1",
+    "pair": 1,
+    "media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480
+        }
+      ],
+      "format": {
+        "duration": "14.333333"
+      }
+    }
+  },
+  {
+    "asset": "furnace.mp4",
+    "source": "deploy/runner/artifacts/water-pillar-interaction-20261002-182729/1/true/furnace/trial.mp4",
+    "sha256": "7dda7f66838c058d2389d804e905a66640740a3da1c6a25f1665762be6c6489d",
+    "arm": "true",
+    "case": "furnace",
+    "pair": 1,
+    "media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480
+        }
+      ],
+      "format": {
+        "duration": "9.466667"
+      }
+    }
+  },
+  {
+    "asset": "vine.mp4",
+    "source": "deploy/runner/artifacts/water-pillar-interaction-20261002-182729/1/true/vine/trial.mp4",
+    "sha256": "3800273af8adb1acd3e1d769bea7b923e9e846b0f4944604dd6ffe59462fae08",
+    "arm": "true",
+    "case": "vine",
+    "pair": 1,
+    "media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480
+        }
+      ],
+      "format": {
+        "duration": "9.600000"
+      }
+    }
+  },
+  {
+    "asset": "ceiling.mp4",
+    "source": "deploy/runner/artifacts/water-pillar-interaction-20261002-182729/1/true/ceiling/trial.mp4",
+    "sha256": "6bde190ef0db0949a54f715edf2eef15fb6e29ccece374ac8fcb0275de445a49",
+    "arm": "true",
+    "case": "ceiling",
+    "pair": 1,
+    "media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480
+        }
+      ],
+      "format": {
+        "duration": "8.600000"
+      }
+    }
+  },
+  {
+    "asset": "protected.mp4",
+    "source": "deploy/runner/artifacts/water-pillar-interaction-20261002-182729/1/true/protected-vine/trial.mp4",
+    "sha256": "f9db66d073ba8eab846506061951e0ef8c5cbc5377c143b9c2d38225cc7f427b",
+    "arm": "true",
+    "case": "protected-vine",
+    "pair": 1,
+    "media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480
+        }
+      ],
+      "format": {
+        "duration": "27.427400"
+      }
+    }
+  },
+  {
+    "asset": "montserrat-900.ttf",
+    "source": "reports/hf/shelter/assets/montserrat-900.ttf",
+    "sha256": "9d9bb42bdc0defdf103a4f41c4ec775c4bfc77014b0e2f4ecc69be874b10d58b"
+  },
+  {
+    "asset": "montserrat-900-OFL.txt",
+    "source": "reports/hf/shelter/assets/montserrat-900-OFL.txt",
+    "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e"
+  },
+  {
+    "asset": "ibm-plex-mono-400.ttf",
+    "source": "reports/hf/shelter/assets/ibm-plex-mono-400.ttf",
+    "sha256": "a7fdc993f9f0387caedba4e42521136fa97e4c0837ae6239bf0413ccf8af00c2"
+  },
+  {
+    "asset": "ibm-plex-mono-400-OFL.txt",
+    "source": "reports/hf/shelter/assets/ibm-plex-mono-400-OFL.txt",
+    "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+  },
+  {
+    "asset": "gsap.min.js",
+    "source": "reports/hf/shelter/assets/gsap.min.js",
+    "sha256": "c174bfce53a729418d57a8ad8625e7247c793a22fef8e2851e3cfa3de9cd8280"
+  },
+  {
+    "asset": "GSAP-README.md",
+    "source": "reports/hf/shelter/assets/GSAP-README.md",
+    "sha256": "36224e521bdd9b79dc74ef262effc1a636d960b9be918bc2412ed69f9eee27b0"
+  }
+]

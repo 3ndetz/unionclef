@@ -322,3 +322,22 @@
 - Branch clearance default nowtrue and mod_version056 prepared; water input
   remainsfalse. Final clean build/payload proof/default36/video/release still
   prospective, with no experimental water course in the ordinary suite.
+- Final build12334 is TERMINAL0:clean tungsten and scoped056 build,10m7s/
+  18 executed tasks. Frozen365e1fdb candidate has2212 recursive classes matching
+  tested2b exceptTungstenConfig. Actual constructor defaults branchtrue/waterfalse
+  verified with javap. Canonical captured deployment exits0; loaded SHA matches.
+- First default audit72737 retained its nav_flatPASS30FPS but stopped on the
+  voicechat missing headless audio-device error from initial server join. Its
+  exact log and film remain; actual film reviewed at2s. Fresh44763 completes
+  server join before measured course windows, with unchanged runtime gates.
+  Currently14/36 pass, minimum average28.5FPS; LIVE/no terminal rate yet.
+- Prepared50s English silent report reports/hf/pillar-clearance, CLI0.8.112:
+  same rebuilt pair1 ground/one binary OFF-ON, real-time trims, precise rates,
+  guards and limits. Six frozen clips/fonts/GSAP sources and hashes recorded.
+  Final check0/runtime-layout0/contrast42 of42; reviewed montage track warning.
+  Both comparison panels corrected after actual sheet inspection; all7 final
+  snapshot cells viewed. Animation helper0/43tweens/13mapped, reviewed moving
+  proof and deliberate reading holds. Wrapper Unicode-print failure retained,
+  wrapper corrected toUTF8. Managed Studio3003 returnsHTTP200. Final render,
+  full rendered-motion inspection/publication/Telegram stillpending, and render
+  waits for the FPS-sensitive campaign to finish. No prospective36 rate in film.

@@ -1,0 +1,28 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><template><style>@font-face{font-family:Montserrat;src:url("assets/montserrat-900.ttf");font-weight:900}
+@font-face{font-family:"IBM Plex Mono";src:url("assets/ibm-plex-mono-400.ttf");font-weight:400}
+#root{position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;background:#101b1a;color:#edf5ef;overflow:hidden}
+header{position:absolute;top:38px;left:64px;right:64px;display:flex;align-items:center;justify-content:space-between;gap:30px}
+h1{font:900 64px/1.1 Montserrat;margin:0;max-width:1570px}
+.tag{font:400 24px/1.3 "IBM Plex Mono";color:#a7e4cb;white-space:nowrap}
+footer{position:absolute;bottom:38px;left:64px;right:64px;display:flex;justify-content:space-between;gap:30px;font:400 27px/1.4 "IBM Plex Mono";color:#b8c9c3}
+video{position:absolute;object-fit:contain;background:#1d302b}
+.hero{left:200px;top:150px;width:1520px;height:820px}
+.half{top:220px;width:872px;height:690px}
+.left{left:64px;right:auto}.right{right:64px;left:auto}
+.arm{position:absolute;top:164px;font:900 38px/1.2 Montserrat;color:#a7e4cb}
+.entry{opacity:0;display:block}
+.proof{position:absolute;left:1050px;right:70px;top:245px;font:400 38px/1.5 "IBM Plex Mono"}
+.proof p{margin:0 0 38px}.proof strong{font:900 78px/1 Montserrat;color:#a7e4cb;display:block;margin:0 0 18px}
+.small-game{left:60px;top:215px;width:920px;height:665px}
+.event{position:absolute;left:225px;top:150px;padding:12px 18px;background:#101b1a;font:400 28px/1.3 "IBM Plex Mono";color:#a7e4cb}
+.limits{position:absolute;left:90px;right:90px;top:230px;display:flex;flex-direction:column;gap:44px;font:400 44px/1.4 "IBM Plex Mono"}
+.limits p{margin:0}.limits strong{color:#a7e4cb;font-weight:400}
+.chart{position:absolute;left:80px;right:80px;top:190px;bottom:235px;display:flex;gap:80px}
+.hf-catalog-animated-bar-chart{padding:30px 42px;background:#1d302b;width:740px;display:flex;flex-direction:column;gap:28px;font:400 29px/1.3 "IBM Plex Mono";--hf-grow:1}
+.hf-catalog-animated-bar-chart h2{font:900 42px/1.2 Montserrat;margin:0;color:#a7e4cb}
+.bars{height:345px;display:flex;align-items:end;gap:40px}
+.bar-slot{height:345px;width:280px;display:flex;flex-direction:column;justify-content:end;gap:18px}
+.bar{height:calc(var(--h)*var(--hf-grow));width:100%;background:#a7e4cb;display:block;border-radius:5px}
+.value{font:900 64px/1 Montserrat}.bar-label{color:#b8c9c3}
+.denominator{position:absolute;left:90px;bottom:155px;font:400 32px/1.3 "IBM Plex Mono";color:#a7e4cb}
+#root{position:absolute;inset:0;width:100%;height:100%}</style><div data-hf-id="hf-9554" id="root" data-composition-id="pc-comparison" data-width="1920" data-height="1080" data-duration="6"><header data-hf-id="hf-0drs"><h1 data-hf-id="hf-c72f" class="entry">Same ground. One setting.</h1><div data-hf-id="hf-btdv" class="tag">unionclef</div></header><div data-hf-id="hf-80li" class="arm left entry">Branch clearance OFF</div><div data-hf-id="hf-kflv" class="arm right entry">Branch clearance ON</div><video data-hf-id="hf-2uh8" id="pc-compare-off" class="clip half left" src="assets/before.mp4" muted playsinline data-start="0" data-duration="6" data-media-start="8.2" data-track-index="0"></video><video data-hf-id="hf-h4c8" id="pc-compare-on" class="clip half right" src="assets/after.mp4" muted playsinline data-start="0" data-duration="6" data-media-start="8.2" data-track-index="0"></video><footer data-hf-id="hf-d3ia"><span data-hf-id="hf-zakl">Pair 1 · same binary · same rebuilt geometry · source 8.2–14.2s</span><span data-hf-id="hf-b0dy">1x / 1x</span></footer></div><script>const tl=gsap.timeline({paused:true});const entries=document.querySelectorAll('#root .entry');let at=.08;entries.forEach((el,i)=>{const d=i===0?.2:.14;tl.set(el,{opacity:1,y:i===0?65:40},at);tl.to(el,{y:0,duration:d,ease:'power4.out'},at);at+=d-1/30;});tl.fromTo('#root .tag',{scale:0,opacity:0},{scale:1,opacity:1,duration:.5,ease:'power3.out'},.12);window.__timelines['pc-comparison']=tl;</script></template></body></html>
