@@ -58,3 +58,40 @@
   FPS, then proves original=false restored. Both samples are explicitly post-run;
   the earlier native19FPS cause remains unresolved. Other projects remain untouched.
 - Budget after these arms:9360MB of15GB;170GB disk free. All outcomes retained.
+
+## Follow-up: first healthy pair, not a native rate
+
+- Prespecified pair2 ran ON then OFF without changing the helper, jar, source
+  checkpoint, branch pin, observation mode or gates. Parent94548 exits0 at
+  20:37:07UTC (`logged-job-20261002-231632`); both native instruments finish0,
+  gamerFAIL/cleanup[], deaths0/lava0/runtime matches[]. Pair1 remains excluded.
+- ON `food-bank-trace-20261002-231633`: median25FPS/13polls; new cooked pork3,
+  cooked chicken2, raw mutton3/raw chicken2, original cooked mutton3->1.
+  Wet pillar103ticks/96 JUMP-only/zero JUMP+SNEAK, longest exact hold24.592s.
+  First traceHP13.466667 on GetToAirTask, then recovers20.
+  Capture329.744s/video336.066667s, SHA
+  `29d9f707c947c6fd02242dcbad2d86ea09a13fa562c70db6e1cfac42b83f410f`.
+- OFF `food-bank-trace-20261002-232637`: median27FPS/13polls; no new food/rung,
+  original cooked mutton3 retained. Wet pillar1082ticks/1047grounded/900
+  JUMP+SNEAK/zero JUMP-only. First trace/minHP20. Longest exact hold4.759s;
+  repeated body jitter around the same bank is not pair1's225s fixed-body hold.
+  Capture335.655s/video342.133333s, SHA
+  `386e0d3aa655155bfef9e1e7c8b8c544f16f683313076fe584103be680997a04`.
+- Review147860 exits0 (`logged-job-20261002-233744`). All8 ON and all8 OFF
+  pages actually inspected at2s and hash-journalled. ON leaves the initial bank
+  around30-35s, hunts/crafts/cooks; OFF repeatedly tries the original bank.
+  Both final stop/chain disappearances remain visible. Unequal initial traceHP
+  prevents survival attribution. This is one healthy pair of two attempted,
+  never a six-pair success rate or food140/fullgame completion.
+- **Retained later input:** ON hunts successfully, then approaches an animal
+  below another bank around240-330s without finishing the food goal. End body
+  near(-45.5,66,1004.7), not the original water site. Preserve
+  `food-bank-trace-20261002-231633-end` and `cp1002-2320-t309`; the cause and
+  baseline reproduction are unverified. This limit stays open independently
+  of whether the initial water pillar improves. Do not classify it as a new
+  water-input regression without measuring the previous behavior there.
+- Read-only host observer27936 exits0 naturally when the pair ends.37 retained
+  samples,36 CPU intervals (initial interval null), no errors; aggregate Windows
+  CPU43.44-82.78%. No extra game API calls, no container/service changes. This
+  does not establish per-thread contention or explain the past pair1 FPS19.
+- Budget9626MB of15GB,169GB free. Pairs3-6 remain prospective, water default=false.

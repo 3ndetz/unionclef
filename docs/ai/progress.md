@@ -411,3 +411,14 @@
   its originalfalse is restored. Idle10FPS was the restored limiter. No cause
   for the past active19FPS established; no unrelated service or preview stopped.
   Further balanced pairs remain prospective; original red is never retried away.
+- Prespecified pair2 ON->OFF completes naturally/parent0:ON25FPS/new cooked
+  pork3/chicken2/rawmutton3/rawchicken2; OFF27FPS/no newfood. Both gamerFAIL,
+  observer0/cleanup[]/death0/lava0/runtime[]. Actual wetpillar traces expose
+  96 JUMP-only ON vs900 JUMP+SNEAK OFF. All16 film pages actually inspected at2s
+  and hash-journalled. One healthy pair of two attempted, not a native rate;
+  initialtraceHP13.466667 ON vs20 OFF prevents survival attribution.
+- ON then approaches another bank near(-45.5,66,1004.7) around240-330s without
+  completing food140. Original end/checkpointcp1002-2320-t309 retain this input;
+  cause/baseline reproduction unverified, no regression attributed. Hostobserver
+  naturally ends0/37samples/noerrors, no extra game calls/services stopped.
+  Budget9626MB/free169GB. Waterdefaultfalse; remaining pairs3-6 prospective.
