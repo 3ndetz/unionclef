@@ -382,3 +382,73 @@
   Next compare existing PillarTask with queue execution on rebuilt dry/wet
   one-cell basins, recording each12s window. Synthetic mechanism isolation
   is not an original-checkpoint test or a food fix.
+- Completed probe31796 on the published055 asset, four12s dry/wet task/queue
+  cases. All ran at10FPS because the probe omitted the stand's idle-throttle
+  pin; dry placement happened, but these are not comparable healthy runs.
+  Its first dry queue cancelled on stale pre-teleport lastTickFeet, so that
+  case says nothing about dry pillar execution. Cleanup errors[].
+- Corrected diagnostic12273 in water-pillar-probe-20261002-153429 exited0:
+  botFpsNoIdleThrottle pinned/restored, first queue explicitly excluded as
+  world-transition warm-up. Four measured cases ran at30FPS,249-250 ticks,
+  HP20; cleanup errors[]. Dry task and dry queue both placed cobblestone,
+  spent one block and rested atY-59. Wet task stayed exactlyY-60 throughout,
+  holding JUMP+SNEAK for all100 active pillar ticks; no cell placement.
+  Wet queue uses existing MovementSwim, reachesY-58.879 transiently, then
+  returns toY-60 with all64 blocks and source water still present. This is
+  ascent without construction, not completed standing arrival. All five
+  actual13.3-13.5s recordings, including warm-up, viewed at2s on every page.
+- Native tick-only failed replay has2895 consecutive ticks at the exact
+  fixed body(-94.49930889108592,62,1099.4219606931506), all touching water
+  and grounded:2704 pillar ticks with JUMP+SNEAK,191 idle ticks. Separate
+  post-stop immutable cells show dirtY60/61, source water[level=0]Y62,
+  airY63-65 in column(-95,1099); not simultaneous tick geometry. This
+  supports testing medium-specific pillar input before changing the planner.
+  Upstream Movement.update125-127 holds submerged JUMP; MovementPillar
+  187-200 separates swimming from its land SNEAK/actual-pose placement path.
+  No production change or food fix has yet been validated.
+
+## 2026-10-02 — medium-specific pillar input experiment (not yet validated)
+
+### Investigate
+- The healthy isolated source-water task repeats the native fixed-body
+  JUMP+SNEAK hold. Dry construction and existing swimming are separately live.
+  Upstream swimming holds JUMP; its normal land placement branch initially
+  sneaks. The measured grounded source-water hold justifies separating ascent
+  input by the actual body's water contact while retaining placement checks.
+
+### Plan
+- Compare false/true on one deployed build with rebuilt dry/wet fixtures,
+  balanced repeated order and read-back pins. Require actual blocks and rested
+  height, then multi-rung/interactive-support/roof/vine/bridge regressions.
+- Repeat the original food checkpoint with unchanged inventory and ground;
+  no food-coverage closure from a synthetic ascent. Audit and release only
+  stable measured behavior, with the required edited English video report.
+
+### Implement
+- Added experimental false-default pillarUsesSwimInputInWater: PillarTask
+  holds JUMP without SNEAK while touching water, then restores land input.
+  Actual-pose, clearance, crosshair, protection and placement-rate gates remain.
+- Added nav_water_pillar, a full15s source-water construction test checking
+  actual server block, one spent block, grounded final height and survival.
+  Python syntax and git diff checks pass; no behavioral verdict yet.
+- Build17162 exit0/7m43s, scoped1.21.11 build,9 actual tasks/9 up-to-date.
+  Recursive payload proof:2212 classes, only PillarTask/TungstenConfig changed,
+  added[]/removed[]. Nested freshness/byte identity guard passes. Frozen
+  experimental09232aab2ab8fecbed2c6632337b639fc871ea8d3a4664d03647f5900ad22feb
+  retained separately from the published055 asset. Canonical tester1-only
+  deployment90782 is live; no measurement runs during deployment.
+- Fourteenth actual wiki sync37006969095 SUCCESS onaef8c9bd.
+- Canonical deployment90782 finished exit0, actual loaded09232aab verified.
+  Smoke29828 exited0 in water-pillar-probe-20261002-155713, cleanup[]. Both
+  settings read back exactly. Wet-off holds100 pillar ticks JUMP+SNEAK at
+  Y-60, no placement/all64 blocks; wet-on has13 active pillar ticks/10 wet
+  ticks, no JUMP+SNEAK, places cobblestone and restsY-59 with63 blocks.
+  Both dry arms also build and restY-59. All measured cases29-30FPS/HP20;
+  excluded queue warm-up29.5FPS. Actual five13.7-15.7s recordings fully
+  viewed at2s/every page. One pair supports the mechanism, not a success rate.
+- Corrected the source comment's Agent citation to459,506 and qualified land
+  sneak-pose wording after this build; functional classes are unchanged, but
+  final packaging must satisfy freshness again. Repeated balanced diagnostic
+  34523 is live: six pairs in each medium, rebuilt fixtures/read-back flags,
+  stop first unexpected outcome or unhealthy FPS, cleanup in finally.
+  No build or rendering during its measured windows. Food remains open.
