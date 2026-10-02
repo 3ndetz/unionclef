@@ -146,6 +146,28 @@
   actual release link and coverage limits; receiptg108-report-telegram-receipt.json.
   Next: tester1-only canonical deployment, focused release audit, native saved-site
   approach. No shelter change yet; this milestone is not the end goal.
+- Tester1-only canonical deployment54166 passed with loaded releaseSHA00e866.
+  Post-deployment42784 audit completed4/4 validPASS: gap/flat/stair/descent,
+  29-30FPS, zero deaths/falls/freezes, independent cleanup errors=[]. All four
+  fullclips viewed2s; analyzer verifies448/252/235/245 continuous trace events.
+  Cold-client max landing check12.35ms; the earlier warm maximum is not universal.
+  Evidence: live-landing-release-audit-20261002-063648/analysis.json.
+  Actual HF history end entry is2ebb1136-1810-4439-bef1-f82ebb1551f4.
+- Native approach40445 exited1, artifact shelter-native-site-20261002-064251.
+  All91.9s of recording viewed2s on both sheets. Actual @goto reports completion
+  about15s, then the runner is inactive; the observer times out at90s. This is
+  an observer defect: exact end(-82.699999988,64,1056.983847948) occupies the target
+  (-83,64,1056), while getGameState rounds Z to1057.0 before the old judge floors it.
+  Passive client-thread native readback confirms the target still passes siteHolds,
+  body grounded/dry, air300. No death/new lava entry;270 samples14-29FPS.
+  Setup left an idle underwater body too long: entry health20 before settings,
+  first motion sample9.4. This is not evidence of damage caused by the route.
+  Original result is retained unchanged; checkpoint unchanged and cleanup errors=[].
+- Probe now judges unrounded coordinates and performs expensive settings calls
+  before checkpoint restoration, without adding water-breathing or healing effects.
+  Corrected approach4704 active on the same release/retained entry. No shelter
+  Java fix yet. Next validate actual arrival/safety, then implement reachable
+  multi-site selection using the existing planner and upstream GoalComposite.
 
 ### Assess
 - The retained fatal landing is now rejected by actual-class simulation, and one
