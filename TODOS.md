@@ -491,6 +491,11 @@ taken on your behalf.
   Published0.95.54 replay from the same food checkpoint also stalls: raw5min,
   median27FPS, sampledHP20/zero deaths, no new food/rung (2026-10-02). Retain
   the existing input independently of the shelter fix; no rate from one control.
+  One published0.95.55 diagnostic replay escapes and acquires/cooks food without
+  movement changes (2026-10-02, food-bank-trace-20261002-145821): median22FPS,
+  minHP19/zero deaths, final cooked chicken5/mutton5/porkchop3. Tick sequence
+  has no gaps, but extra geometry sampling can perturb timing. This refutes an
+  unconditional stall; it does not close the intermittent input or prove a fix.
 
 <!-- PILLAR-INTERACTION-CLEARANCE-2026-09-16 -->
 ## Pillar placement must account for non-colliding interaction obstructions (2026-09-16)

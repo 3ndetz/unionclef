@@ -322,3 +322,29 @@
   corrected preflight exit0/inGame true/567 blocks/20 entities/43 slots.
   Retain this instrument failure separately from any bot failure. The observer
   changes no movement decisions; its geometry snapshots are separate from ticks.
+- Food observation95260 exited0 in food-bank-trace-20261002-145821, using the
+  original cp1002-1301-t644 fingerprint582e74bd and exact published055 asset.
+  Parent and observer both exited0; cleanup errors[], checkpoint unchanged.
+  Full sequence1-8149 contains7273 client ticks and51 separately timed geometry
+  snapshots, with no gaps/errors. Actual trace minHP19 (polls/endHP20), no lava
+  ticks/deaths, damage counter1.0; measured client-log window15:02:33-15:08:37
+  has no exceptions/planning failures. Median22FPS over13 parent samples.
+- This replay is a successful counterexample, not a food repair: no movement
+  code changed. After repeated pillar attempts at(-94.5,62,1099.7), a swim
+  queue at trace48.71s moves around the bank to(-95.68,63,1102.48) at54.99s;
+  pillar reachesY66 by58.12s, then ordinary ascends reachY75 by63.83s. The
+  chain starts cooking at73.78s; final inventory has5 cooked chicken,5 cooked
+  mutton and3 cooked porkchop, compared with3 cooked mutton initially. The
+  parent reports furnace@98.4s and PASS; it does not establish140 food units.
+- Actual308s clip SHA8c0e83904a3c6914bd48b2d1efef2638dde38ced92b1d2f327e21673d8c0db21
+  reviewed over its full length at8s cadence and first80s at2s, all four sheets
+  viewed. Trace window363.47s includes parent/save overhead beyond recording.
+  Preserve food-bank-trace-end63MB; checkpoint budget8593MB/free170GB. Previous
+  candidate15min and published054 five-minute stalls remain valid retained reds.
+  Different FPS and additional client-thread sampling prevent a speed comparison;
+  instrumentation may alter timing. No target/entity identity or fluid block-state
+  capture proves why this particular replay escapes. Food TODO stays open.
+- Next focused experiment15438 is live: same original checkpoint, published055,
+  shipped defaults, raw5min, recording/dense saves; only existing tick trace is
+  observed, without the extra geometry/state API sampling. Its end checkpoint
+  has a unique run name. No build/render or other bench runs during measurement.
