@@ -4,6 +4,8 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.tasks.movement.CustomBaritoneGoalTask;
 import com.google.gson.Gson;
 import kaptainwutax.tungsten.TungstenModDataContainer;
+import kaptainwutax.tungsten.agent.Agent;
+import kaptainwutax.tungsten.mixin.AccessorLivingEntity;
 import kaptainwutax.tungsten.task.BlockPathWalker;
 import kaptainwutax.tungsten.task.FastNavigator;
 import net.minecraft.client.MinecraftClient;
@@ -38,6 +40,7 @@ public final class TaskMovementTrace {
             sequence = 0;
         }
         Task.diagnosticEvents = value ? TaskMovementTrace::record : null;
+        Agent.comparisonObserver = value ? TaskMovementTrace::recordPhysics : null;
     }
 
     /** Client thread only; the caller receives a copy rather than the mutable ring. */
@@ -54,6 +57,17 @@ public final class TaskMovementTrace {
     }
 
     private static void record(String event) {
+        record(event, null);
+    }
+
+    private static void recordPhysics(Agent expected) {
+        // Agent.compare receives path[currentTick - 1] after vanilla movement.
+        // Reading getCurrentNode here would instead record the NEXT planned state;
+        // reading the path again would also race its worker-thread replacement.
+        record("physics-compare", expected);
+    }
+
+    private static void record(String event, Agent expected) {
         if (!enabled) return;
         try {
             MinecraftClient mc = MinecraftClient.getInstance();
@@ -72,6 +86,25 @@ public final class TaskMovementTrace {
             row.put("hp", player.getHealth());
             row.put("yaw", player.getYaw());
             row.put("pitch", player.getPitch());
+            row.put("sprinting", player.isSprinting());
+            if (expected != null) {
+                row.put("replayTick", TungstenModDataContainer.EXECUTOR.getCurrentTick());
+                row.put("expectedPos", List.of(expected.posX, expected.posY, expected.posZ));
+                row.put("expectedVel", List.of(expected.velX, expected.velY, expected.velZ));
+                row.put("expectedGround", expected.onGround);
+                row.put("expectedYaw", expected.yaw);
+                row.put("expectedPitch", expected.pitch);
+                row.put("expectedSprinting", expected.sprinting);
+                row.put("expectedJumpCooldown", expected.jumpingCooldown);
+                row.put("jumpCooldown", ((AccessorLivingEntity) player).getJumpingCooldown());
+                row.put("expectedKeys", "" + (expected.keyForward ? "F" : ".")
+                        + (expected.keyBack ? "B" : ".")
+                        + (expected.keyLeft ? "L" : ".")
+                        + (expected.keyRight ? "R" : ".")
+                        + (expected.keySprint ? "S" : ".")
+                        + (expected.keyJump ? "J" : ".")
+                        + (expected.keySneak ? "C" : "."));
+            }
             row.put("keys", "" + (mc.options.forwardKey.isPressed() ? "F" : ".")
                     + (mc.options.backKey.isPressed() ? "B" : ".")
                     + (mc.options.leftKey.isPressed() ? "L" : ".")

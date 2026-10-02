@@ -354,5 +354,63 @@
   20hp, no active walker/pathfinder/executor. This is a real exposed-water hold,
   not an idle-client or daytime false alarm. Retainedno-site-snapshot.json and
   periodiccp1002-0229-t656; added the corresponding general openTODO.
+- Native replay finished exit0 with verified entry/checkpointunchanged and cleanup
+  errors=[]. Actual outcome:0deaths, iron/bed/shield acquired, allOverworld,
+  no portal or Nether entry. The native smokePassed=true only means its weak
+  progress gate passed; the last~6min no-site water hold remains red. Original
+  checkpoint andlast protected, uniqueendCP retained. Copied recording under the
+  private run directory and reviewed completeclip at36s cadence (908s real-time).
+  Shelter hold and later water hold visibly match the task records. Budget8170MB
+  of15GB, diskfree194GB. After cleanup/lockrelease started verbose-gap campaign
+  session66100 on unchanged5516, logg108-gap-verbose.log; outcomes pending.
+- Verbose-gap66100 finished exit0:6/6 validPASS,29.67FPS each, no trace gaps/errors,
+  inactiveTask runner and independent cleanup errors=[]. All six clips reviewed2s.
+  Exactstdout vectors joined85/87/83/87/87/87 executor ticks to body age/position
+  within1e-7. Last-gap initialvx simulation0.010407/0.006506 versus actual0.001694/
+  0.001940 in examples; the historical failed hop was not reproduced. Successful
+  repeats retain root/rotation errors too, so these errors alone are not a cause.
+  Verbose logging can alter search timing; no physics-handoff fix is claimed.
+- Added a null-by-default Agent.compare observer feeding the existing boundedtrace
+  with exact expected position/velocity/ground/yaw/sprint/jump cooldown/input and
+  actual post-vanilla state. It observes the same executednode the stdout diagnostic
+  uses, avoiding a second worker-racing path read or next-node indexing. No movement
+  policy changed. Full clean-tungsten/:1.21.11:build active(session40455); notdeployed.
+  Private one-case verbose calibration and six quiet-gap replay modes prepared;
+  syntaxpassed, notrun. Calibration must match new vectors to existing exactstdout
+  before interpreting a quiet failure. Validator also requires nonempty/contiguous
+  trace and uniquephysics ages; the old fatal failures remain retained.
+- Full clean-tungsten/:1.21.11:build passed6m38s exit0. Remapped observer and
+  expected-vector trace fields verified withjavap; nestedmodulefreshness passed.
+  Task.class is byte-identical to5516, so its existing9/9 contracts still apply.
+  Changed classes areAgent andTaskMovementTrace; their syntheticinner classes
+  also differ due source line tables (Agent$1 instructions are byte-for-byte
+  equivalent in javap output). New candidateSHA256:
+  77b547b6d6267bf4aed25ecbd69860a818339ce07ec4efae35a4cc955a868556.
+  Required deployment started for tester1only; no runtime calibration yet.
+  The no-site checkpoint contains a whitebed. The parent's exhausted-sleep-budget
+  branch can request shelter while carrying a bed; its label does not prove an
+  inventory failure. Keep site selection/approach distinct from that timer policy.
+- Deployment39674 finished exit0. Single-case calibration44110 passed29.67FPS,
+  trace432events/86physics comparisons, noerrors/gaps, cleanupempty. All342logged
+  actual/expected vectors match new post-vanilla rows within1e-7; zero ground/sprint
+  disagreements, maxposition error0.03836. Fullclip reviewed2s. This establishes
+  the observer's sampling point, not a movement fix. Started six --quiet-gaps
+  repeats on77b547 with verboseDebugLogging=false; each pins/readbacks the flag,
+  requires nonempty physics rows and retains everyfailure.
+- Quiet60381 stopped exit1 on the second run:1/2 validPASS, one validFAIL,
+  repeats3-6 NOTRUN. FPS30.0/29.25, cleanup errors=[]; both fullclips reviewed
+  (green2s/fatal1s). Traces426/636events and87/173physics rows are contiguous,
+  error-free and Taskinactive. Validator finds zero sprint disagreements. The
+  fatal lastleg starts atage306 with simvx0.019043 versus real0.003100; its
+  root position/velocity match different phases of the earlier clienttick.
+  The preparatory hop lands, but atage329 realx21.648819 trails sim21.725477.
+  Atage330 vanilla collides with the next platform's side atx21.7/y-60.323529,
+  while the plan lands atx22.009595/y-60. Ground disagrees; the next jump fails.
+  This differs from the preceding fatal which missed the preparatory landing.
+  Both expose stale-root replay across a support boundary. Baritone's executor
+  recalculates current/future movement feasibility before starting it (lines197-218).
+  Next pass: validate the recorded trajectory from the actual client-thread state
+  before takeoff, including native yaw quantization. Do not patch the settle speed
+  or weaken collision/fall guards. No navigation repair or release claimed.
 
 Completed and earlier entries: [archive/01-10-2026-completed-progress-history.md](archive/01-10-2026-completed-progress-history.md).

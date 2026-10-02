@@ -87,6 +87,11 @@ public class Agent {
 
     public static Agent INSTANCE;
 
+    /** Optional client-thread observer of the exact replay state compared after vanilla
+     *  movement. Read-only: the observer must not mutate this agent or player control.
+     *  Null by default; bounded diagnostic recording does not require verbose logging. */
+    public static java.util.function.Consumer<Agent> comparisonObserver;
+
     public static final EntityDimensions STANDING_DIMENSIONS = EntityDimensions.changing(0.6f, 1.8f);
     public static final EntityDimensions SLEEPING_DIMENSIONS = EntityDimensions.fixed(0.2f, 0.2f);
 
@@ -1630,6 +1635,7 @@ public class Agent {
     }
 
     public void compare(PlayerEntity player, TungstenPlayerInput playerInput, boolean executor) {
+        if (executor && comparisonObserver != null) comparisonObserver.accept(this);
         List<String> values = new ArrayList<>();
         double logThreshold = TungstenConfig.get().mismatchLogThreshold;
 
