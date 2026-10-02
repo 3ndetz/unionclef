@@ -452,3 +452,38 @@
   34523 is live: six pairs in each medium, rebuilt fixtures/read-back flags,
   stop first unexpected outcome or unhealthy FPS, cleanup in finally.
   No build or rendering during its measured windows. Food remains open.
+- Balanced six-pair diagnostic34523 finished exit0/cleanup[] in
+  water-pillar-probe-20261002-160351:24 measured cases plus excluded warm-up.
+  All measured medians30FPS/minHP20; exact pins and rebuilt source cells.
+  Wet-off0/6 constructed (100 active pillar JC ticks every time, Y-60/all64
+  blocks), wet-on6/6 constructed/restedY-59/63 blocks (13 pillar ticks,
+  9-10 touching-water ticks, zero JC). Dry off6/6/on6/6 constructed/rested.
+  Both wet orders agree. All25 actual13.4-13.7s films fully viewed at2s,
+  every page; review.json records actual reviewed hashes. Fifty actual client
+  log lines across the25 UTC windows, zero runtime failure matches.
+  This establishes the isolated source-water construction mechanism only;
+  natural food acquisition and broader adjacent coverage remain unvalidated.
+- Fifteenth actual wiki sync37010991593 SUCCESS onb07ed289. The durable new
+  nav_water_pillar is registered and listed by the real runner. Next experiment
+  rebuilds a three-rung column above a smoker, comparing both settings in
+  each medium; require all three actual cells, spent materials and no GUI.
+- Three-rung smoker diagnostic31209 finished exit0/cleanup[] in
+  water-pillar-probe-20261002-162126:12 measured cases plus excluded warm-up,
+  all30FPS/minHP20. Wet-on3/3 filled all three cobblestone cells, spent three
+  blocks and restedY-57; wet-off0/3 stayedY-60 with64 blocks. Both dry arms
+  constructed3/3. All13 actual13.6-14.1s films viewed at2s/every page;
+  actual UTC runtime windows contain26 lines, zero failure matches.
+  GUI was closed in final snapshots and sampled frames; these observations
+  do not establish absence of brief intermediate opening. Next balanced
+  off-center/low-roof crafting-table experiment adds separate half-second
+  GUI polls to both arms, with timeout/error treated as instrument failure.
+- Off-center low-roof crafting-table45127 finished exit0/cleanup[] in
+  water-pillar-probe-20261002-163915:12 measured cases30FPS/minHP20 plus warm-up.
+  Wet-on3/3 constructed/restedY-59/63blocks, wet-off0/3 stayed below; dry3/3
+  in each arm. All22-23 separate GUI observations per measured case were closed,
+  no API errors. All13 actual13.1-15.4s films viewed at2s/every page;25 actual
+  UTC log lines/zero runtime failure matches. GUI coverage remains sampled.
+- First true-pin candidate raw food replay10796 is live, original checkpoint
+  cp1002-1301-t644/fingerprint582e74bda330ac87f5e28c3ac91322307f78181a61a17818eaa1cd7bc533df64,
+  tick-only observation/original inventory/unique end save. Full36 interaction
+  and42 navigation campaigns are prepared, not yet executed. Default remainsfalse.
