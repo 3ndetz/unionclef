@@ -74,6 +74,42 @@ public interface AltoGoal {
         }
     }
 
+    /**
+     * Any of several exact feet cells. The planner chooses a reachable destination;
+     * there is no representative point to snap onto unrelated ground.
+     * Port of baritone/src/main/java/baritone/api/pathing/goals/GoalComposite.java:43-61 (any goal,
+     * minimum heuristic). Cells are immutable because the planner reads them on its worker.
+     */
+    final class AnyBlock implements AltoGoal {
+        private final java.util.Set<BlockPos> cells;
+
+        public AnyBlock(java.util.Collection<BlockPos> positions) {
+            java.util.Set<BlockPos> copy = new java.util.HashSet<>();
+            for (BlockPos pos : positions) copy.add(pos.toImmutable());
+            if (copy.isEmpty()) throw new IllegalArgumentException("No destination cells");
+            cells = java.util.Set.copyOf(copy);
+        }
+
+        public java.util.Set<BlockPos> cells() { return cells; }
+
+        @Override
+        public Vec3d target() { return null; }
+
+        @Override
+        public boolean reached(BlockPos at) { return cells.contains(at); }
+
+        /** Same point estimate as ordinary Tungsten routes, minimized across destinations. */
+        public double remaining(int x, int y, int z) {
+            double result = Double.POSITIVE_INFINITY;
+            for (BlockPos cell : cells) result = Math.min(result,
+                    kaptainwutax.tungsten.path.fast.FastPlanner.pointEstimate(x, y, z, cell));
+            return result;
+        }
+
+        @Override
+        public String toString() { return "anyBlock(" + cells.size() + " cells)"; }
+    }
+
     /** A goal that is a block, satisfied from anywhere within {@code range} of it. */
     record Near(BlockPos pos, int range) implements AltoGoal {
         @Override

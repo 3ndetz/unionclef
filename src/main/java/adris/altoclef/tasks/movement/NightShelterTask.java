@@ -43,7 +43,8 @@ import java.util.List;
  */
 public class NightShelterTask extends Task {
 
-    private static final int SITE_SEARCH_RADIUS = 6;
+    /** Loaded nearby terrain, including banks above a pool; not a one-level surface slice. */
+    private static final int SITE_SEARCH_RADIUS = 16;
     /** Cells dug under the feet: the body takes the lower two, the cap goes in the top one. */
     private static final int DEPTH = 3;
     private static volatile boolean holding;
@@ -53,6 +54,11 @@ public class NightShelterTask extends Task {
      *  the first version took a 186-block shaft down from y 155 to -31 (each dug site stopped
      *  passing siteHolds, the next one was picked under the feet). */
     private boolean committed;
+    private GetToAnyBlockTask approach;
+    private long nextSiteScanTick;
+    /** Last discovery cost and destination count, to verify the client scan on the bench. */
+    public static volatile long siteScanNanos;
+    public static volatile int siteScanCandidates;
 
     public static boolean holding() {
         return holding;
@@ -68,6 +74,8 @@ public class NightShelterTask extends Task {
         top = null;
         committed = false;
         holding = false;
+        approach = null;
+        nextSiteScanTick = 0;
     }
 
     @Override
@@ -80,14 +88,45 @@ public class NightShelterTask extends Task {
         if (committed && top != null && floods(world, top)) {
             committed = false;   // water or lava reached the shaft: pick somewhere else
             top = null;
+            approach = null;
         }
-        if (top == null || !committed && !siteHolds(world, top)) {
-            top = pickSite(world, feet);
-            if (top == null) {
-                setDebugState("No place to dig in for the night here");
-                return null;
+        if (top != null && !committed && !siteHolds(world, top)) {
+            top = null;
+            approach = null;
+        }
+        if (top == null) {
+            // Revalidate the real destination before the first dig: an approach can
+            // remove one of its walls. A snapshot is for routing, never a dig permit.
+            if (mod.getPlayer().isOnGround() && siteHolds(world, feet)) {
+                top = feet.toImmutable();
+                approach = null;
+                Debug.logMessage("Night shelter at " + top.toShortString());
+            } else {
+                if (approach != null && approach.contains(feet) && mod.getPlayer().isOnGround()) {
+                    approach = null; // reached a site that no longer passes the live predicate
+                }
+                if ((approach == null || !approach.ownsRoute()) && world.getTime() >= nextSiteScanTick) {
+                    List<BlockPos> sites = pickSites(world, feet);
+                    // baritone/src/main/java/baritone/process/GetToBlockProcess.java:103-108 refreshes destinations
+                    // during a goal. Refresh when our search finishes, preserving an ongoing
+                    // route. The enclosed-site control otherwise retried one stale cell even
+                    // after a reachable site appeared; Unstuck merely hid it by restarting us.
+                    nextSiteScanTick = world.getTime() + 20;
+                    if (sites.isEmpty()) {
+                        approach = null;
+                    } else {
+                        GetToAnyBlockTask refreshed = new GetToAnyBlockTask(sites);
+                        // Keep the active Task/owner if discovery found the same set.
+                        if (!refreshed.equals(approach)) approach = refreshed;
+                    }
+                }
+                if (approach == null) {
+                    setDebugState("No place to dig in for the night in nearby loaded terrain");
+                    return null;
+                }
+                setDebugState("Looking for a reachable place to dig in for the night");
+                return approach;
             }
-            Debug.logMessage("Night shelter at " + top.toShortString());
         }
         BlockPos cap = top.down(), bottom = top.down(DEPTH);
         if (feet.getX() != top.getX() || feet.getZ() != top.getZ()
@@ -126,19 +165,29 @@ public class NightShelterTask extends Task {
         return false;
     }
 
-    /** The nearest acceptable site, the feet cell first. */
+    /** Diagnostic nearest valid site; execution searches all candidates for reachability. */
     private static BlockPos pickSite(World world, BlockPos from) {
+        return pickSites(world, from).stream()
+                .min(Comparator.comparingDouble(p -> p.getSquaredDistance(from))).orElse(null);
+    }
+
+    /** Client-thread policy checks produce immutable destinations for the planner worker. */
+    private static List<BlockPos> pickSites(World world, BlockPos from) {
+        long began = System.nanoTime();
         List<BlockPos> candidates = new ArrayList<>();
         for (int dx = -SITE_SEARCH_RADIUS; dx <= SITE_SEARCH_RADIUS; dx++) {
             for (int dz = -SITE_SEARCH_RADIUS; dz <= SITE_SEARCH_RADIUS; dz++) {
-                for (int dy = -1; dy <= 1; dy++) candidates.add(from.add(dx, dy, dz));
+                if (!world.isChunkLoaded((from.getX() + dx) >> 4, (from.getZ() + dz) >> 4)) continue;
+                for (int dy = -SITE_SEARCH_RADIUS; dy <= SITE_SEARCH_RADIUS; dy++) {
+                    BlockPos cell = from.add(dx, dy, dz);
+                    if (cell.getY() - DEPTH - 1 < world.getBottomY()) continue;
+                    if (siteHolds(world, cell)) candidates.add(cell);
+                }
             }
         }
-        candidates.sort(Comparator.comparingDouble(p -> p.getSquaredDistance(from)));
-        for (BlockPos p : candidates) {
-            if (siteHolds(world, p)) return p;
-        }
-        return null;
+        siteScanNanos = System.nanoTime() - began;
+        siteScanCandidates = candidates.size();
+        return candidates;
     }
 
     /**

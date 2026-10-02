@@ -220,7 +220,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     @Override
     protected void onStart() {
         Nav.cancel();
-        if (goal(AltoClef.getInstance()) instanceof AltoGoal.FleeLive) Nav.cancelAll();
+        if (goal(AltoClef.getInstance()) instanceof AltoGoal.FleeLive
+                || cachedAlto instanceof AltoGoal.AnyBlock) Nav.cancelAll();
         TungstenHelper.reset();
         checker.reset();
         stuckCheck.reset();
@@ -494,7 +495,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (Task.diagnosticEvents != null) Task.noteDiagnostic("drive-stop "
                 + getClass().getSimpleName() + " -> "
                 + (interruptTask == null ? "null" : interruptTask.getClass().getSimpleName()));
-        if (cachedAlto instanceof AltoGoal.FleeLive) Nav.cancelAll();
+        if (cachedAlto instanceof AltoGoal.FleeLive || cachedAlto instanceof AltoGoal.AnyBlock) Nav.cancelAll();
         Nav.cancel();
         TungstenHelper.stop();
         // ⛔ THE ROUTE DIES WITH ITS DRIVE (G52, 2026-09-11). TungstenHelper.stop() ends the
@@ -735,13 +736,26 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // toward the interrupted task's cell (141,24,12) seventy blocks below -- "1 wp,
             // partial" every time, the body never moved. Take the navigator over unless it is
             // already running a nearest-safety search.
-            if (!kaptainwutax.tungsten.task.FastNavigator.isNearestSearch()) {
+            if (!kaptainwutax.tungsten.task.FastNavigator.isNearestSearch(flee)) {
                 if (kaptainwutax.tungsten.task.FastNavigator.isActive()) fleeTookNavigator++;
                 kaptainwutax.tungsten.task.FastNavigator.startNearest(flee.snapshotSafety(2.0),
-                        flee.snapshotRunAway(2.0));
+                        flee.snapshotRunAway(2.0), flee);
             }
             checker.reset();
             setDebugState("Routing to reachable safety");
+            return true;
+        }
+        if (goal instanceof AltoGoal.AnyBlock any) {
+            lastGoalVec = null;
+            lastGoalReachBlock = null;
+            // GoalComposite searches all valid destinations. Its immutable cell set
+            // never calls client-owned shelter/break policy from the planner worker.
+            if (!kaptainwutax.tungsten.task.FastNavigator.isNearestSearch(any)) {
+                kaptainwutax.tungsten.task.FastNavigator.startNearest(any::reached,
+                        any::remaining, any);
+            }
+            checker.reset();
+            setDebugState("Routing to a reachable destination among " + any.cells().size() + " cells");
             return true;
         }
         net.minecraft.util.math.Vec3d gp = goal.target();

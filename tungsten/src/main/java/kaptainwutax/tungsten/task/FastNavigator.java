@@ -435,17 +435,31 @@ public final class FastNavigator {
      */
     public static void startNearest(java.util.function.Predicate<BlockPos> reached,
                                     FastPlanner.CellHeuristic heuristic) {
+        startNearest(reached, heuristic, reached);
+    }
+
+    /** A condition route belongs to its caller, not merely to the condition-search mode. */
+    public static void startNearest(java.util.function.Predicate<BlockPos> reached,
+                                    FastPlanner.CellHeuristic heuristic, Object owner) {
         if (TungstenMod.mc.player == null) return;
         java.util.Objects.requireNonNull(reached, "reached");
+        java.util.Objects.requireNonNull(owner, "owner");
         nearestHeuristic = heuristic;
         startWithGoal(TungstenMod.mc.player.getEntityPos(), null, null, reached, false, true);
+        nearestOwner = owner;
     }
 
     private static volatile FastPlanner.CellHeuristic nearestHeuristic;
+    private static Object nearestOwner;
 
     /** True while the navigator serves a condition ("nearest cell that...") search, not a point. */
     public static boolean isNearestSearch() {
         return active && searchForArrival;
+    }
+
+    /** True only for this caller's condition route; other region goals must take control. */
+    public static boolean isNearestSearch(Object owner) {
+        return isNearestSearch() && nearestOwner == owner;
     }
     /** Condition searches that ran out of budget and walked a partial route toward the region. */
     public static volatile int nearestPartialWalked, nearestPartialNoProgress;
@@ -515,6 +529,7 @@ public final class FastNavigator {
         exactFromDrive = false;
         arrivalTest = null;
         searchForArrival = false;
+        nearestOwner = null;
         pendingGiveUp = false;
         budgetBoostNext = false;
         budgetBoostedThisRoute = false;
@@ -1451,7 +1466,7 @@ public final class FastNavigator {
         // Read the pocket HERE, on the client thread — the search runs on its own thread and
         // must not touch the inventory, but it does need to know how long a bridge it may
         // promise (see FastPlanner.placeBudget).
-        FastPlanner.placeBudget = FastPlanner.countPlaceable(TungstenMod.mc.player);
+        final FastPlanner.StartState startState = FastPlanner.captureStartState();
         final BlockPos start = from;
         final Vec3d target = goal;
         final BlockPos reach = reachBlock;
@@ -1471,10 +1486,8 @@ public final class FastNavigator {
         Thread t = new Thread(() -> {
             try {
                 FastPlanner.Result result = condition != null
-                        ? (heuristic != null
-                            ? FastPlanner.planToCondition(world, start, condition, heuristic, budgetMs)
-                            : FastPlanner.planToCondition(world, start, condition, budgetMs))
-                        : FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact);
+                        ? FastPlanner.planToCondition(world, start, condition, heuristic, budgetMs, startState)
+                        : FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact, startState);
                 // Applying a result can stop the walker and change its input ownership.
                 // Serialize that transition with game ticks; the worker must only calculate.
                 TungstenMod.mc.execute(() -> {

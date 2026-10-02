@@ -424,6 +424,41 @@ public final class FastPlanner {
 
     // ── public entry ─────────────────────────────────────────────────────────
 
+    /** Immutable player inputs for one calculation; capture before starting a worker.
+     * Like baritone/pathing/movement/CalculationContext.java:97-108, player-derived
+     * inputs belong to the request, not to live entity getters in the search loop.
+     * World and mining-tool snapshots remain separate thread-safety work (C4.1).
+     */
+    public record StartState(boolean onGround, boolean touchingWater, boolean climbing,
+                             net.minecraft.util.math.Vec3d position,
+                             net.minecraft.util.math.Box boundingBox, int placeable) {}
+
+    /** Capture on the client thread, including callers entering from a gateway or PathFinder.
+     * FastNavigator captures explicitly before dispatch, so its worker never waits for a tick.
+     */
+    public static StartState captureStartState() {
+        var client = TungstenMod.mc;
+        if (client == null) return new StartState(false, false, false,
+                net.minecraft.util.math.Vec3d.ZERO, null, 0);
+        if (!client.isOnThread()) {
+            try {
+                return client.submit(FastPlanner::captureStartState).get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new java.util.concurrent.CancellationException("Player snapshot interrupted");
+            } catch (java.util.concurrent.ExecutionException e) {
+                throw new IllegalStateException("Player snapshot failed", e.getCause());
+            }
+        }
+        var player = client.player;
+        if (player == null) return new StartState(false, false, false,
+                net.minecraft.util.math.Vec3d.ZERO, null, 0);
+        // isClimbing reads the entity's cached BlockState. Off-thread it can become null
+        // between the cache update and use (retained Flee audit, 2026-10-02).
+        return new StartState(player.isOnGround(), player.isTouchingWater(), player.isClimbing(),
+                player.getEntityPos(), player.getBoundingBox(), countPlaceable(player));
+    }
+
     /**
      * Plan from {@code start} to {@code goal} within a wall-clock budget.
      * Always returns a Result; when the goal is not reached the path is the
@@ -515,7 +550,14 @@ public final class FastPlanner {
      */
     public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
                               BlockPos reachBlock, boolean exactGoal) {
-        return planInternal(world, start, goal, budgetMs, reachBlock, exactGoal, null);
+        return plan(world, start, goal, budgetMs, reachBlock, exactGoal, captureStartState());
+    }
+
+    /** Plan using player inputs already captured on the client thread. */
+    public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
+                              BlockPos reachBlock, boolean exactGoal, StartState startState) {
+        return planInternal(world, start, goal, budgetMs, reachBlock, exactGoal, null,
+                java.util.Objects.requireNonNull(startState, "startState"));
     }
 
     /** Find the cheapest reachable cell satisfying a condition, using the ordinary move graph.
@@ -524,8 +566,7 @@ public final class FastPlanner {
      */
     public static Result planToCondition(WorldView world, BlockPos start,
                                          java.util.function.Predicate<BlockPos> condition, long budgetMs) {
-        java.util.Objects.requireNonNull(condition, "condition");
-        return planInternal(world, start, null, budgetMs, null, false, condition);
+        return planToCondition(world, start, condition, null, budgetMs, captureStartState());
     }
 
     /** Remaining-cost estimate for a condition search, in blocks (what octile returns for a point). */
@@ -545,10 +586,18 @@ public final class FastPlanner {
     public static Result planToCondition(WorldView world, BlockPos start,
                                          java.util.function.Predicate<BlockPos> condition,
                                          CellHeuristic heuristic, long budgetMs) {
+        return planToCondition(world, start, condition, heuristic, budgetMs, captureStartState());
+    }
+
+    /** Condition search using player inputs already captured on the client thread. */
+    public static Result planToCondition(WorldView world, BlockPos start,
+                                         java.util.function.Predicate<BlockPos> condition,
+                                         CellHeuristic heuristic, long budgetMs, StartState startState) {
         java.util.Objects.requireNonNull(condition, "condition");
+        java.util.Objects.requireNonNull(startState, "startState");
         CELL_HEURISTIC.set(heuristic);
         try {
-            return planInternal(world, start, null, budgetMs, null, false, condition);
+            return planInternal(world, start, null, budgetMs, null, false, condition, startState);
         } finally {
             CELL_HEURISTIC.remove();
         }
@@ -556,7 +605,8 @@ public final class FastPlanner {
 
     private static Result planInternal(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
                                        BlockPos reachBlock, boolean exactGoal,
-                                       java.util.function.Predicate<BlockPos> condition) {
+                                       java.util.function.Predicate<BlockPos> condition,
+                                       StartState startState) {
         long t0 = System.currentTimeMillis();
         // ASK HOW MANY BLOCKS WE HAVE, EVERY PLAN. DO NOT TRUST A STATIC SOMEONE ELSE SET.
         // placeBudget starts at MAX_VALUE and had exactly ONE writer, FastNavigator:443. Any plan
@@ -567,7 +617,7 @@ public final class FastPlanner {
         // answered "Bridge place aborted (no block in hand)" every tick — placeCalled=1219 with
         // placeDeferred=0 and placeInRange=0, i.e. it never even got as far as the distance check.
         // A move you cannot perform is not a move, so the count is taken here, where the plan is.
-        placeBudget = countPlaceable(TungstenMod.mc == null ? null : TungstenMod.mc.player);
+        placeBudget = startState.placeable();
         // PLAN FROM A CELL THAT ACTUALLY HAS A FLOOR.
         // 57 of 95 plans died with the START node expanded and childless, because
         // supportTop said NaN there. Faking support was tried and REJECTED (nav_water
@@ -584,11 +634,10 @@ public final class FastPlanner {
         // navRes=434 short). On the ground the feet cell is the start; the expansion already
         // trusts the player's own level there (startCellTrustsThePlayer) and steps off the edge
         // as a planned fall.
-        var startPlayer = TungstenMod.mc == null ? null : TungstenMod.mc.player;
-        boolean airborne = startPlayer == null || !startPlayer.isOnGround();
+        boolean airborne = !startState.onGround();
         if (TungstenConfig.get().planSnapsStartToSupport
                 && (airborne || !TungstenConfig.get().startSnapOnlyAirborne)) {
-            BlockPos snapped = snapStartToSupport(world, start);
+            BlockPos snapped = snapStartToSupport(world, start, startState);
             if (snapped != null && !snapped.equals(start)) {
                 planStartSnapped++;
                 start = snapped;
@@ -602,8 +651,7 @@ public final class FastPlanner {
         // cell under its centre (tree_drop, round 14: the start moved to the supporting cell
         // and the search still died childless, noSup=653 of 657 plans).
         boolean onGroundStart = TungstenConfig.get().startOnGroundTrustsThePlayer
-                && startPlayer != null && startPlayer.isOnGround()
-                && !startPlayer.isTouchingWater() && !startPlayer.isClimbing();
+                && startState.onGround() && !startState.touchingWater() && !startState.climbing();
         NodeMap map = new NodeMap();
         Heap open = new Heap();
 
@@ -751,7 +799,7 @@ public final class FastPlanner {
                     planStartRescued++;
                     support = current.y;
                 } else {
-                    if (current == startNode) noteChildlessStart(world, start, startPlayer, scratch);
+                    if (current == startNode) noteChildlessStart(world, start, startState, scratch);
                     continue;   // genuinely unstandable
                 }
             }
@@ -814,7 +862,7 @@ public final class FastPlanner {
      *  one-node plan 653 times in ninety seconds on tree_drop, and every counter around it said
      *  "no support" without naming the cell or the block under it. */
     private static void noteChildlessStart(WorldView world, BlockPos start,
-                                           net.minecraft.entity.player.PlayerEntity player,
+                                           StartState startState,
                                            BlockPos.Mutable scratch) {
         long now = System.currentTimeMillis();
         if (now - lastChildlessNoteMs < 2000L) return;
@@ -826,9 +874,8 @@ public final class FastPlanner {
         Debug.logMessage(String.format(
                 "FastPlanner: childless start %s support=%s under=%s onGround=%b water=%b at=(%.2f,%.2f,%.2f)",
                 start.toShortString(), Double.isNaN(sup) ? "none" : String.format("%.2f", sup), under,
-                player != null && player.isOnGround(), player != null && player.isTouchingWater(),
-                player == null ? 0.0 : player.getX(), player == null ? 0.0 : player.getY(),
-                player == null ? 0.0 : player.getZ()));
+                startState.onGround(), startState.touchingWater(),
+                startState.position().x, startState.position().y, startState.position().z));
     }
 
     // ── move generation ──────────────────────────────────────────────────────
@@ -2079,6 +2126,11 @@ public final class FastPlanner {
      * the feet anyway. Climbing keeps the plain term; the planner's climbs are priced by their
      * own moves.
      */
+    // Point estimate in walked blocks, shared with composite condition goals.
+    public static double pointEstimate(int x, int y, int z, BlockPos goal) {
+        return octile(x, y, z, goal);
+    }
+
     private static double octile(int x, int y, int z, BlockPos goal) {
         if (goal == null) return 0.0;
         int dx = Math.abs(x - goal.getX());
@@ -2166,15 +2218,14 @@ public final class FastPlanner {
      * is water or a ladder (both unstandable on purpose, with their own move generator), or
      * when nothing better is found.
      */
-    private static BlockPos snapStartToSupport(WorldView world, BlockPos start) {
+    private static BlockPos snapStartToSupport(WorldView world, BlockPos start, StartState startState) {
         BlockPos.Mutable m = new BlockPos.Mutable();
         m.set(start);
         if (!Double.isNaN(PlayerFit.supportTop(world, m))) return start;
         if (isWater(world, start.getX(), start.getY(), start.getZ(), m)
                 || isLadder(world, start.getX(), start.getY(), start.getZ(), m)) return start;
-        var player = TungstenMod.mc == null ? null : TungstenMod.mc.player;
-        if (player != null) {
-            net.minecraft.util.math.Box box = player.getBoundingBox();
+        net.minecraft.util.math.Box box = startState.boundingBox();
+        if (box != null) {
             double[][] corners = {
                 {box.minX, box.minZ}, {box.minX, box.maxZ},
                 {box.maxX, box.minZ}, {box.maxX, box.maxZ},
@@ -2186,7 +2237,7 @@ public final class FastPlanner {
                 if (cand.equals(start)) continue;
                 m.set(cand);
                 if (Double.isNaN(PlayerFit.supportTop(world, m))) continue;
-                double d = cand.toCenterPos().squaredDistanceTo(player.getEntityPos());
+                double d = cand.toCenterPos().squaredDistanceTo(startState.position());
                 if (d < bestDist) { bestDist = d; best = cand; }
             }
             if (best != null) return best;

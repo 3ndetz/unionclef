@@ -479,6 +479,9 @@ taken on your behalf.
   Checkpointcp1002-1301-t644 and shelter-refresh-gamer-end preserve the ground;
   recording and source details in docs/ai/progress.md. Reproduce on the baseline
   before assigning a regression; require sustained approach and actual food.
+  Published0.95.54 replay from the same food checkpoint also stalls: raw5min,
+  median27FPS, sampledHP20/zero deaths, no new food/rung (2026-10-02). Retain
+  the existing input independently of the shelter fix; no rate from one control.
 
 <!-- PILLAR-INTERACTION-CLEARANCE-2026-09-16 -->
 ## Pillar placement must account for non-colliding interaction obstructions (2026-09-16)

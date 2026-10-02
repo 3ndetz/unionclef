@@ -33,7 +33,7 @@
   Generic world/mining/global-budget snapshot debt C4.1/C4.3 remains separate.
 
 ### Implement
-- Six Java sources remain uncommitted: immutable AnyBlock goals, region ownership,
+- Six Java sources implement immutable AnyBlock goals, region ownership,
   loaded3D shelter discovery, live safety revalidation, bounded destination refresh,
   and client-thread immutable player StartState before worker dispatch. Flood/
   hazard checks, three-block shaft and morning policy are unchanged.
@@ -247,3 +247,33 @@
   horizontal line slide and camera pull-back; spring-pop result overshoots.
   None matches the planned quiet vertical cascade/no-overshoot rules exactly;
   use their already-read recipe bodies, not a new effect. No report HTML yet.
+- Matched published00e866 native55695 endedexit1 in child135040: no shelter
+  top selected in90s/260no-site samples, despitefive nearby cells passing the
+  unchanged safety predicate. Same originalCP/defaults/inventory; weighted
+  mean27.84FPS, HP20/deaths0/lava0/planning0/cleanup[]. Full92.1s clip reviewed
+  at2s on both pages; baseline-analysis.json retains this one old control.
+- Published00e866 food replay65325 endedexit1 fromcp1002-1301-t644/raw5min:
+  13responsive/13busy polls,13positions, items308 unchanged/cookedmutton3,
+  no rung, sampledHP20/deaths0, median27FPS. Same swim-out/pillar pursuit loop
+  therefore exists before this shelter candidate; no population/regression-rate
+  claim from one run. Preserved308s capture SHA6a66216e9dbb64e8f9ae45299c7dda6605ab9d111257af204a37b65bee116dd3
+  in reports/footage/shelter-food-published-baseline-20261002.mp4; full capture
+  actually viewed12s on both pages. Densecp1002-1401-t313 and distinct end saved.
+- Eighth actual wiki push36997941027 SUCCESS on3e0ba0ed. Six-scene60s report
+  authored in the isolated pinned111 root; five verified captures adopted and
+  local GSAP/font dependencies frozen with hashes/licenses. Firstcheckexit0
+  (runtime/layout clean, contrast29/29) with12 initial-state lint warnings;
+  corrected title/context initialopacity in CSS and secondcheck haszero lint
+  warnings. All six midpoint scenes and the old10-66s refresh cut actually
+  viewed. Animation-map first attempt lacks helper packages; temporary pinned
+  dependency bootstrap running. No render/TG yet. Corrected CalculationContext
+  citation to97-108; final055 build91543 LIVE, no debug/hotswap detected and
+  no versions/*/bin present. Exactcandidate/class proof and publication pending.
+- Final055 build91543 terminalexit0/BUILD SUCCESSFUL in4m31s. Recursive payload
+  proof:2212 candidate/release classes, no added/removed/changed classes,
+  byte-identical to audited e03; finalJAR6374438bytes/SHAfa9a57f4fb8f35090cd68a4343f957a53bac79eace6cac50ef8140b94278a393,
+  metadata055. Pinned animation-map bootstrap58072 exit0;20/36 mapped tweens,
+  fast entries match the read waterfall recipe; held text while actual footage
+  runs explains the map's dead zones. One empty closing badge diagnosed and
+  replaced with a visible Next pass label. Preview3002 HTTP200 confirmed.
+  Publication/scoped final rebuild, post-deploy audit and reportdelivery pending.
