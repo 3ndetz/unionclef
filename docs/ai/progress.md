@@ -49,6 +49,12 @@
   verify branch/tag/assets/payload, edited English HyperFrames report and
   Telegram delivery, then canonical deployment/audit and the next focused pass.
   Do not close broad natural food or complete-game coverage from arena ascent.
+- Keep milestone scope independent: if the dry branch-clearance and adjacent
+  gates validate, release that stable planning fix while the water-input flag
+  remainsfalse/experimental. Native repeated water acquisition is the separate
+  gate before changing the water default. Final candidate hashes/pins must be
+  documented again after any default/version rebuild; pending2b native plans
+  are not results on a later released binary.
 
 ### Implement
 - Candidate build17162 exit0/7m43s; canonical tester1-only deploy90782 exit0.
@@ -206,3 +212,32 @@
   Earlier furnace/vine/ceiling positive/refusal gates pass and tip1 retains
   its actual red. This checks the correction on the bench, not the full72
   campaign or its recordings, which remain in progress/unreviewed.
+- Campaign5287 remainsLIVE after the first3 complete pairs:36 executed,
+  ON18/18, OFF15/18 with tip1 red3/3 and tip2 green3/3. All other gates
+  pass, minimum sampledFPS28-30, runtime matches[]. These are partial as-run
+  counts; all new films are still unreviewed. Remaining36 are prospective.
+  Wiki37027617770 actualSUCCESS on3d627b8b (verified20); helper/docs committed
+  and atomically pushedmain/1.21.11. Experimental Java/scenario stay OWN WIP.
+- Campaign5287 TERMINAL0/cleanup[]:all72 executed. ON36/36, OFF30/36;
+  tip1 OFF0/6 versus ON6/6 actual3 requested rungs. Tip2 is6/6 in both arms,
+  but ON initial plans complete with3 unique removals (tip1 has4). Other
+  positive/refusal gates all6/6 per arm. Minimum sampledFPS25-30, HP20/noGUI,
+  runtime matches[]; terminal analysis verifies all clip hashes/fixtures/
+  exact-cell outcomes/no duplicate ON removals. New films not yet reviewed.
+- Extended actual policy probe now passes8 loaded predicate checks including
+  configured place-deny zones; exact prior hook/config/list/refusal restored.
+  First extended invocation190534 failed on diagnostic int[][] versus actual
+  List<int[]> type mismatch; preservedstderr, finally restored state. Corrected
+  diagnostic terminal0; not a production movement failure or a rate.
+- All72 actual dry campaign recordings now reviewed at2s/every contact-sheet
+  page, including all protected detours and terminal holds; individual journals
+  and sheets.json mark actual review complete. OFFtip1 leaves the requested
+  column unbuilt and builds beside the intact plant; ON clears and constructs
+  the requested column. OFFtip2 runtime clearing still succeeds. Protected
+  plants remain intact; neighbour construction is not arrival. No death/fire
+  or opened interface seen at the sampled cadence; not every-frame coverage.
+- Adjacent campaign32534 is LIVE in water-pillar-adjacent-20261002-191942:
+  prospective42 gates on exact2b112366, both flagsON/readback, full15s water
+  construction first, then six neighbouring navigation cases, six repeats.
+  Stop first unexpected red/invalid/runtime. No build/render/extraction runs
+  concurrently. Native2b cohort remains prospective/unexecuted; no release yet.
