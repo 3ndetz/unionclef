@@ -4,6 +4,14 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **A mob occupying the breathing shaft can prevent underwater escape (2026-10-02).**
+  The shelter refresh audit accidentally retained its stationary NoAI zombie from
+  the preceding Flee fixture in the air course's only shaft at(4.5,-60,.5).
+  GetToAir owns the chain but MovementSwim3->4 repeatedly fails; the bot drowns
+  once at29.78FPS. Evidence: shelter-refresh-audit-20261002-084838/1/drown_tunnel.
+  This combined fixture does not establish an isolated air regression. Keep its
+  fatal input for deliberate entity-obstructed air-route testing; reproduce on
+  the baseline before assigning a new source regression or choosing a repair.
 - [ ] **Night shelter can hold the playthrough in water without a usable site (2026-10-02).**
   UNIONCLEF-HARD retained a native replay from full59-before-portal. At538s the
   shelter says "No place to dig in for the night here" near(-89.3,61.3,1062.3);
@@ -16039,6 +16047,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 ### C4 — THREAD SAFETY / CORRECTNESS
 - [ ] **C4.1 All searches read the live `ClientWorld` off-thread**, from two worker pools, with no
   `BlockStateInterface` equivalent and no chunk-loaded guard. `VoxelWorld` (the would-be cache) is dead.
+  2026-10-02: clean Flee-to-air isolation round3 completed its retreat but logged
+  a current-generation FastNavigator worker NPE in PlayerEntity.isClimbing,
+  FastPlanner.planInternal:606. Artifact shelter-air-isolation-20261002-094852/3/
+  shelter_flee_condition_owner/client.log. The start flags/position/box and initial
+  block budget now have a client-thread immutable request snapshot; clean build
+  passed, live validation pending. This does not close live world, mining-tool or global-budget
+  thread-safety debt. Preserve the runtime error alongside the behavioral PASS.
   RECONFIRMED 2026-09-01 — the same `VoxelWorld` already checked for C1.3 in this
   same re-read of the register: the fill loop in `MixinWorldChunk.loadFromPacket` is entirely
   commented out and references `ExampleMod.WORLD` (a template name, never renamed). There is no cache,

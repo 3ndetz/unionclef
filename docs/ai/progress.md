@@ -376,6 +376,28 @@
   console output redirected to a persistent file, avoiding the interrupted-pipe
   failure. Log: artifacts/shelter-air-isolation-console.log. No new Java edits.
 
+- Isolation12730 exited1:9 validPASS and round5 drown validFAIL,10/12 completed;
+  last pair NOTRUN, cleanup[]. All10 full recordings actually viewed2s, both pages
+  of each air clip. The red hasHP20/no deaths/29.4FPS; only final Air199<200 fails.
+  Full video shows initial swimming/replenishing around6s, then resumed oak-log
+  search repeatedly submerges again. Original red verdict unchanged; no fatal
+  contamination in this input (fixture absence proven before every course).
+- Round3 behavioral Flee PASS contains a current-generation planning NPE in live
+  PlayerEntity.isClimbing at FastPlanner:606. Generation checked in its catch;
+  keep the runtime defect separately from the green retreat outcome. The startup
+  flags, bounding box, position and initial place count were read from a live
+  player on the worker, contrary to the navigator's client-snapshot comment.
+- Added immutable FastPlanner.StartState, captured on the client thread before
+  FastNavigator dispatch. Ordinary entry points marshal only this capture to the
+  client; the search remains on its caller. Start snapping, dry-ground trust and
+  childless diagnostics consume the same frozen state. Reference: baritone
+  CalculationContext:112-126. World/mining tools/global placeBudget are explicitly
+  separate C4.1/C4.3 debt; not claimed fixed. Initial build used the incomplete
+  project cache and failed offline before compilation. Owner-cache clean Tungsten
+  build plus1.21.11 build19980 completedexit0 in6m29s; nested freshness PASS.
+  Artifact shelter-start-snapshot-build-owner-cache.log. Live validation pending.
+  No publication, no changed air gates, no reuse of incomplete12-case evidence.
+
 ### Assess
 - The retained fatal landing is now rejected by actual-class simulation, and one
   live enabled gap run refused a plan before takeoff, replanned and arrived.
@@ -387,10 +409,11 @@
   is retained separately from the green rebuilt arenas and fixed portal entry.
 - Old06652c reaches/seals one healthy native water entry and passes36 arena
   checks; its stale destination was reproduced without Unstuck. Newf8caef is
-  built/deployed and passes the matched isolated discovery control. The repeated
-  refresh audit is incomplete following the owned mob-fixture leak; validate
-  clean transitions and repeat48, then native saved-entry repeats/full @gamer
-  integration on that exact payload before publication. Mob-occluded air exits
+  built/deployed and passes the matched isolated discovery control. Its clean
+  repeated control stops at Air199 and reveals a separate live-player worker NPE.
+  New snapshot candidate e03ed747 is built; deployment/live tests pending.
+  Repeat shelter/adjacent cases and native saved-entry/full @gamer integration
+  on the final exact payload before publication. Mob-occluded air exits
   have a retained fatal counterexample and no repair established by this pass.
 
 STOP CONDITION CHECK:
@@ -400,3 +423,33 @@ STOP CONDITION CHECK:
 - Did the customer say to stop?         -> no
 VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
          immediately and the next iteration starts at once.
+
+## 2026-10-02 — recurring wiki sync failure (fixed and verified)
+
+### Investigate
+- Owner asked why wiki sync repeatedly fails. Latest36975493590 and historical
+  35376440063 both fail on duplicate Progress.md; first also reports git rm
+  treating ----.md as an option. Upstream cmbrose/github-docs-to-wiki v0.20
+  (63b291ccf8b66be4233493eae236329a8c43343e) reads the input as a string and
+  tests its truthiness. Default "false" is nonempty, so header naming stays on
+  despite commit76232701 removing the input. Progress archives share that header.
+
+### Plan
+- Use deterministic relative-path page names, preserving headings, Home mapping,
+  local doc links/anchors and source links. Validate the export before changing
+  the cloned wiki; separate Git options from paths and serialize publishing.
+
+### Implement
+- Commite4d5c0bd adds the repository-owned PowerShell exporter and regression
+  checks; workflow no longer invokes the broken upstream action. Passed local
+  duplicate-header, Home/archive/source links, code, leading-dash Git cleanup,
+  idempotence and collision-rejection checks. All174 docs export successfully.
+- Pushed atomic main+1.21.11; local version branch fast-forwarded after sole
+  worktree/divergence checks. Actual push run36978862343 SUCCESS,174 pages,
+  wiki master6f4c4d89b8d052c64b23e81d907cb5bf8d762c5d. Explicit second run
+  36979076017 SUCCESS and "Wiki already matches docs." No token was printed.
+- Owner's subsequent highlight question was read-only: source defaults for all
+  visuals/mining/break/place are true. MixinDebugRenderer:135-152 gates only the
+  master switch; mining events are globally subscribed by PlayerExtraController
+  and include manual breaking. WorldEdit selection stays until clearSelection/
+  //desel. No rendering/default changes made; disclosed exact disable commands.
