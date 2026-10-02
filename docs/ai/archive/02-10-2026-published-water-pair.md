@@ -133,3 +133,42 @@
 - Two healthy pairs of three attempted; original pair1 FPS-invalid outcome still
   excluded. Pairs4-6 remain prospective, water default=false. Budget9867MB of15GB,
  169GB free. Wiki37062623387 succeeded on prior exact head8d566680.
+
+## Follow-up: third healthy pair includes a food-positive control
+
+- Prespecified pair4 ON->OFF finishes naturally/parent0 at21:33:54UTC,
+  `logged-job-20261003-001242`. Same helper a3fe7cee/published365e/cp582e,
+  branchtrue, tick-only observation, full capture and unchanged gates. Both
+  gamerPASS for furnace progress, observer0/cleanup[], deaths0/lava0/runtime[].
+  Neither standard PASS means food140/full59/fullgame completion.
+- ON `food-bank-trace-20261003-001242`: median23FPS/13polls; new raw mutton11,
+  cooked porkchop3/cooked chicken4/raw chicken3, original cooked mutton3->1.
+  Wet pillar25ticks/24 JUMP-only/zero grounded/JUMP+SNEAK. Initial traceHP9.766668
+  recovers20. Capture342.747s/video349.866667s, SHA
+  `e12e2feacf8a229ce48101fd4873fa237cd4e453acc3682af6ef5feb5da6c796`.
+- OFF `food-bank-trace-20261003-002326`: median25FPS/13polls; new cooked pork3
+  and cooked chicken4, original cooked mutton3->2. Wet pillar455ticks/430grounded/
+  400 JUMP+SNEAK/zero JUMP-only; initial/min traceHP17.366667. Unequal activationHP
+  again prevents survival attribution. Capture337.234s/video343.933333s, SHA
+  `1be0c1603312b937bb833ef2b362d7622875c7e75e41d28f41a7cee3a621b12b`.
+- Review7724 exits0 at21:35:20UTC (`logged-job-20261003-003432`). All16 actual
+  2s pages inspected/hash-journalled. ON leaves water14-20s, kills pig32-34s,
+  crafts/cooks38-82s; subsequent hunting continues. OFF has repeated wet
+  attempts, descent and surfacing, then approaches the bank92-110s, kills a
+  pig112-114s, gathers wood/crafts118-160s/cooks164-178s, and later hunts/cooks
+  again. Both final chain disappearances recorded; no sampled death/fire.
+- The food-positive OFF observation is retained. The native defect is intermittent,
+  not an unconditional failure with ordinary input. Mechanism exposure is still
+  present in both arms (400 opposed wet inputs versus24 JUMP-only); a successful
+  alternative exit must not be deleted or replaced to exaggerate the change.
+- **Fixed-body is not a task duration:** ON's longest47.507s exact hold starts
+  in MineAndCollect/DestroyBlockTask, but actual film134-182s spans wood, crafting
+  and furnace cooking. The first signature describes only the first phase; it
+  does not prove48s of failed mining. OFF longest31.976s lies in furnace cooking.
+  Earlier wood/craft delays and later route retries remain visible, not disguised
+  as water-only delays or claims of uniformly smooth gameplay.
+- Host156836 naturally exits0 at21:34:15UTC:39samples/no errors/aggregate
+  CPU46.39-76.58%; no per-thread causal claim or unrelated service changes.
+  Budget10129MB of15GB/free168GB. Three healthy pairs of four attempted;
+  pair1 FPS-invalid result retained/excluded, pairs5-6 prospective. Waterdefault
+  remainsfalse. Wiki37065363489 succeeds on fa9bf261 before this append.

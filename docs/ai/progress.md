@@ -435,3 +435,15 @@
   Preserve235718-end/cp1003-0001-t309. Cause/baseline verification pending,
   food140/full59/fullgame open. Host observer naturally0/37samples/noerrors.
   Budget9867MB/free169GB; waterdefaultfalse; remaining pairs4-6 prospective.
+- Prespecified pair4 ON->OFF naturally0 at21:33:54UTC:ON23FPS/new rawmutton11,
+  cookedpork3/chicken4/rawchicken3; OFF25FPS/new cookedpork3/chicken4. Both
+  gamerPASS for furnace, observer0/cleanup[]/deaths0/lava0/runtime[]. InitialHP
+  9.766668 ON vs17.366667 OFF prevents survival attribution. Wetpillar24JUMP-only
+  ON versus400JUMP+SNEAK OFF. Food-positive control retained: native failure is
+  intermittent. Three healthy pairs/four attempted, not final planned cohort.
+- All16 actual2s pair4 pages inspected/hash-journalled. ON exits14-20s, OFF
+  approaches bank92-110s; both hunt/cook. ON47.507s fixedbody spans wood/craft/
+  furnace, NOT48s failed mining from its first signature. OFF31.976s cooking.
+  No sampled death/fire; every final chain disappearance retained. Food140/
+  full59/fullgame remainopen. Host39samples/noerrors/natural0. Budget10129MB/
+  free168GB; waterdefaultfalse; pairs5-6 prospective; priorfa9WikiSUCCESS.
