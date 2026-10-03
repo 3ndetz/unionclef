@@ -16,6 +16,9 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[1] / "deploy" / "runner"))
+from uctest import process as subprocess
+
 VOICE = HERE / "voice"
 REF = os.environ.get("PITCH_REF", "C:/Users/jayra/Downloads/Cave_Johnson_fifties_repulsion_intro02.wav")
 REF_TEXT = os.environ.get("PITCH_REF_TEXT",
@@ -47,7 +50,7 @@ def tts(text: str, out: Path):
 
 def stt(path: Path) -> str:
     # The recogniser drops the first word of a clip that starts on speech; pad 0.8 s of silence.
-    import subprocess, tempfile
+    import tempfile
     pad = Path(tempfile.gettempdir()) / f"pad_{path.stem}.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-t", "0.8", "-i", "anullsrc=r=24000:cl=mono",
                     "-i", str(path), "-filter_complex", "[0][1]concat=n=2:v=0:a=1", str(pad)], check=True)

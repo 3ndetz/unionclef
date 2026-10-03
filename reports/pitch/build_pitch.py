@@ -16,11 +16,13 @@ from __future__ import annotations
 import html
 import json
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[1] / "deploy" / "runner"))
+from uctest import process as subprocess
+
 HF = HERE / "hf"
 VID = HF / "videos"
 OUT = HERE / "out"

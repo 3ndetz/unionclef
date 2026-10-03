@@ -95,3 +95,25 @@
   quiet-hidden-console-original-observation.json. The currently running native
   pair retains its loaded adapter; this correction takes effect on later starts.
   No gamer/Docker/container was terminated to hide windows.
+
+## Follow-up: report helpers use the same unattended process contract
+
+- Five remaining direct imports in reports/build_report.py and pitch's
+  build_pitch.py, add_subtitles.py, sheet.py and tts.py launched noninteractive
+  ffmpeg/ffprobe/npm children outside the bench directory. Replaced their
+  imports with the same adapter and added their directories to the regression
+  audit. Commands, arguments, streams, timeouts and checked-error behavior are
+  unchanged; executable ASTs match for all five after excluding imports and
+  runner-path setup. No existing media, composition or provider request changed.
+- Fresh Windows suite:14 passed/one POSIX skip. Actual Windows child through
+  the imported report module retains stderr and exit7 with console HWND0;
+  ffmpeg/ffprobe version queries succeed. Actual Linux suite:12 passed/three
+  Windows skips; the same report module preserves separate streams and exit7.
+  No render, TTS/STT request or Telegram send was needed for these checks.
+- First Linux checker attempt failed because runpy did not add deploy/runner
+  to sys.path. Its log and exit1 remain retained; the subsequent checker uses
+  the normal script entry point. Logged job221810-155524/source9e92f5dc exits0
+  naturally at19:18:24.363173UTC. Evidence: quiet-report-imports-proof.json,
+  quiet-report-platform-proof.json and quiet-report-linux-contract-v2.log.
+- This extends the completed Windows repair. No useful test, Docker service
+  or existing container was stopped; already loaded processes are unaffected.

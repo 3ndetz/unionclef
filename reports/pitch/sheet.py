@@ -2,9 +2,11 @@
 
 Tiles are the first frame of every 1/fps interval, stamped with its real time in the source.
 """
-import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "deploy" / "runner"))
+from uctest import process as subprocess
 
 v, o = sys.argv[1], sys.argv[2]
 f, s, d = (sys.argv[3:] + ["1", "0", "60"][len(sys.argv[3:]):])[:3]

@@ -220,6 +220,8 @@ class ProcessTests(unittest.TestCase):
         directory = Path(__file__).resolve().parent
         allowed = {Path(__file__).resolve(), directory / "uctest/process.py"}
         paths = list(directory.glob("*.py")) + list((directory / "uctest").glob("*.py"))
+        reports = directory.parents[1] / "reports"
+        paths += list(reports.glob("*.py")) + list((reports / "pitch").glob("*.py"))
         for path in paths:
             with self.subTest(file=path.name):
                 tree = ast.parse(path.read_text(encoding="utf-8-sig"))

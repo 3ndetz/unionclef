@@ -13,11 +13,14 @@ import argparse
 import difflib
 import json
 import re
-import subprocess
+import sys
 from functools import lru_cache
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[1] / "deploy" / "runner"))
+from uctest import process as subprocess
+
 OUT = HERE / "out"
 
 

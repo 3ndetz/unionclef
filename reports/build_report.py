@@ -37,11 +37,13 @@ from __future__ import annotations
 import html
 import json
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parent / "deploy" / "runner"))
+from uctest import process as subprocess
+
 HF = ROOT / "hf"
 VIDEOS = HF / "videos"
 OUT = ROOT / "out"
