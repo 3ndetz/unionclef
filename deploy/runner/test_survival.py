@@ -1,7 +1,8 @@
 """Safety boundaries: a living client never loses defence before world exit."""
 import unittest
+from types import SimpleNamespace
 
-from uctest.survival import disconnect_before_stop, GATEWAY_SOURCE
+from uctest.survival import disconnect_before_stop, disconnect_gateway, GATEWAY_SOURCE
 
 
 class SurvivalBoundaryTests(unittest.TestCase):
@@ -45,7 +46,24 @@ class SurvivalBoundaryTests(unittest.TestCase):
         self.assertEqual(self.run_boundary(), ('inactive', ['disconnect', 'stop']))
 
     def test_already_offline_is_idempotent(self):
-        self.assertEqual(self.run_boundary(initially_online=False), ('inactive', ['stop']))
+        self.assertEqual(self.run_boundary(initially_online=False), ('inactive', ['disconnect', 'stop']))
+
+    def test_offline_cancel_failure_does_not_stop(self):
+        with self.assertRaisesRegex(ValueError, 'transport failed') as caught:
+            self.run_boundary(initially_online=False, disconnect_error=True)
+        self.assertEqual(caught.exception.events, ['disconnect'])
+
+    def test_gateway_declined_offline_logout_keeps_defence_active(self):
+        events = []
+        gateway = SimpleNamespace(
+            entry_point=SimpleNamespace(inGame=lambda: False,
+                disconnectFromServer=lambda: False,
+                stopPathing=lambda: events.append('stop')),
+            jvm=SimpleNamespace(net=SimpleNamespace(minecraft=SimpleNamespace(
+                class_310=SimpleNamespace(method_1551=lambda: None)))))
+        with self.assertRaisesRegex(RuntimeError, 'keeping survival active'):
+            disconnect_gateway(gateway)
+        self.assertEqual(events, [])
 
     def test_timeout_keeps_defence_active(self):
         with self.assertRaisesRegex(RuntimeError, 'keeping survival active') as caught:
@@ -70,8 +88,8 @@ class SurvivalBoundaryTests(unittest.TestCase):
         exec(GATEWAY_SOURCE, namespace)
         events = []
         namespace['disconnect_before_stop'](lambda: False,
-            lambda: self.fail('Already offline'), lambda: events.append('stop'))
-        self.assertEqual(events, ['stop'])
+            lambda: events.append('cancel'), lambda: events.append('stop'))
+        self.assertEqual(events, ['cancel', 'stop'])
 
 
 if __name__ == '__main__':

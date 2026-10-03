@@ -131,6 +131,17 @@ Completed Windows subprocess repair:
   the active document. Private recovery handoff remains the only modified
   workflow-center file.
 
+- Narrow menu/API and shared survival boundary review completed without changing
+  the running5f payload. Deliberate logout cancels queued reconnect intents;
+  a ConnectScreen network future is explicitly refused, not claimed cancelled.
+  Prior six public queued-connect exits and six original native exits retain
+  their independent25s offline holds and actual film journals. The newer
+  failed oxygen trial also confirms28.1089s stable offline fields after exit;
+  its HP20 failure remains a gameplay failure. Fresh Windows unit run passes
+  all9 survival boundaries, including transport failure while already offline.
+  These four source/bench files are ready for a separate atomic owner commit.
+  Scanner ownership and water/core WIP remain separately staged work.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

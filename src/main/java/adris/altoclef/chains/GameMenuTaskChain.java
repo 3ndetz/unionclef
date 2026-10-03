@@ -429,6 +429,30 @@ public class GameMenuTaskChain extends SingleTaskChain {
         }
     }
 
+    /**
+     * Leave deliberately and cancel queued menu reconnects. Call on the client
+     * thread. Internal server switches still use _innerDisconnect so their
+     * scheduled reconnect is preserved.
+     */
+    public void disconnectFromServer(MinecraftClient client) {
+        // A ConnectScreen owns its own network future. Replacing its screen
+        // does not cancel that future; refuse to acknowledge an offline exit
+        // while it can still join. The caller must keep defence active.
+        if (client.currentScreen instanceof net.minecraft.client.gui.screen.multiplayer.ConnectScreen) {
+            throw new IllegalStateException("Connection still in progress; logout not confirmed");
+        }
+        _reconnecting = false;
+        _waitingOnKickScreen = false;
+        _needDisconnect = false;
+        _reJoinAfterDisconnect = false;
+        _needUnStuckFix = false;
+        _needToStopTasksOnReconnect = false;
+        _connectOverrideServerEntry = null;
+        _innerDisconnect(client).run();
+        // A kick screen would schedule a fresh automatic retry on the next tick.
+        client.setScreen(new TitleScreen());
+    }
+
     public Runnable _innerDisconnect(MinecraftClient client) {
         return () -> {
             // WHICH PART OF THE RECONNECT NEVER HAPPENS? The bot leaves the server on death by

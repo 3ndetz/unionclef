@@ -671,6 +671,22 @@ public class Py4jEntryPoint {
         });
     }
 
+    /**
+     * Deliberately leave the current server and cancel pending menu reconnects.
+     * Use before stopping survival tasks or copying an offline checkpoint.
+     * Does not stop tasks or change autoReconnect settings; a later explicit
+     * ConnectToServer can connect normally. Returns true only after the client
+     * thread has completed the disconnect and the world is absent. False means
+     * failure, timeout or an in-flight ConnectScreen connection: keep survival
+     * defence active and inspect client state.
+     */
+    public boolean disconnectFromServer() {
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            _mod.getTaskRunner().gameMenuTaskChain.disconnectFromServer(MinecraftClient.getInstance());
+            return !AltoClef.inGame();
+        }, false));
+    }
+
     public Map<String, String> CentralGameInfoDict = new HashMap<>();
 
     public Map<String, String> getServerInfoDict() {

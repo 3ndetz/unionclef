@@ -16,13 +16,14 @@ def disconnect_before_stop(in_game, disconnect, stop, *, timeout=5.0,
     import time
     clock = clock or time.monotonic
     sleep = sleep or time.sleep
-    if in_game():
-        disconnect()
-        deadline = clock() + timeout
-        while in_game():
-            if clock() >= deadline:
-                raise RuntimeError('Disconnect not confirmed; keeping survival active')
-            sleep(0.1)
+    # An offline menu can still own a pending reconnect. Cancel that intent
+    # even when the world is already absent before confirming the boundary.
+    disconnect()
+    deadline = clock() + timeout
+    while in_game():
+        if clock() >= deadline:
+            raise RuntimeError('Disconnect not confirmed; keeping survival active')
+        sleep(0.1)
     result = stop()
     if in_game():
         raise RuntimeError('Client rejoined during survival teardown')
@@ -30,16 +31,14 @@ def disconnect_before_stop(in_game, disconnect, stop, *, timeout=5.0,
 
 
 def disconnect_gateway(gateway):
-    """Use the existing GameMenu disconnect Runnable and confirm queued stop."""
+    """Cancel menu reconnects through the public logout primitive, then stop."""
     import time
-    from py4j.java_gateway import get_field
     mc, j = gateway.entry_point, gateway.jvm
     client = j.net.minecraft.class_310.method_1551()
-    mod = j.adris.altoclef.AltoClef.getInstance()
 
     def disconnect():
-        menu = get_field(mod.getTaskRunner(), 'gameMenuTaskChain')
-        client.execute(menu._innerDisconnect(client))
+        if not mc.disconnectFromServer():
+            raise RuntimeError('Deliberate logout failed; keeping survival active')
 
     def stop():
         # stopPathing queues @stop even after logout. Its return is only an
