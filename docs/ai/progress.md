@@ -273,6 +273,70 @@ Completed Windows subprocess fix:
   Prepared verifier expects only MovementSwim changed versus b81/other2212
   identical and two changed versus11a. Packaging/deploy/post-fix tests unrun.
   Checkpoint list remains12805MB/15GB,162GB free; no deletion needed.
+- Build128972/log132058-127572 naturally0 at10:32:08.098841UTC:
+  clean0/build0, scoped1.21.11 BUILD SUCCESSFUL,18 executed tasks, no bin.
+  Original packaging154404/log133234-114240 sourceb91d367a naturally1:
+  development getX/getZ names are absent from remapped intermediary bytecode.
+  Preserve that verifier failure. Corrected159996/log133358-68636 source0053abdc
+  naturally0 at10:34:07.299043UTC: a157ef8a has2213 classes, MovementSwim only
+  changed versusb81/other2212 identical, Combat+Swim only versus11a/defaultsTRUE.
+  Actual javap179..214 compares destinationx/z;226..257 accepts exactfeet OR
+  column AND radius<0.36;259..271 SUCCESS. Land137..177 retains its prior gate.
+  Packaging is not a physical or release result. Canonical tester1-only deploy4504/
+  log133428-140600 sourceb9042eda naturally0 at10:35:23.918966UTC and actual
+  loaded SHA equals frozen proof. Exact original boundary helper/sourceec5d3505
+  now runs163312/wrapper164480/unified2276/log133545-164480, started
+  10:35:45.061847UTC. Six planned, post-fix result/coverage pending.
+- Candidate boundary163312/log133545-164480 naturally1 at10:37:50.718539UTC:
+  first of6 FAIL at30FPS, five unrun/cleanup[]. Horizontal keys now move the
+  body fromx1.95646 throughx2 atseq15 and advance the next stroke at16.
+  Complete304-end-tick trace/no gaps: steps4/burn0/queueTicks33/qPrep0/32,
+  no20-tick quiet active-queue span. Original484-step livelock removed in one
+  executor diagnostic, not a six-trial success rate. Unchanged vertical radius
+  still completes atseq46/y-59.4356; maximumy-59.28455 never reaches the target
+  feet cell under +0.1251 convention. With no task/survival chain, all keys stay
+  off after completion and the body sinks. Final Air-8/y-60, trace minimumHP12;
+  sparse sampleHP20/deaths0 does not hide case-log drowned at10:37:39 after
+  the trace/film. This remains a red, not a fixed-survival or vertical-arrival
+  claim. Seven setup voids/fresh-reset kill precede queue; initial Air unmeasured.
+- Candidate18s film/one fixed2s page actually viewed: initial flooded tunnel,
+  route movement toward shaft6.5, held water8.5..17.9/oxygen depleted/later
+  heart loss. Death instant not filmed; original strict log retains it.
+  Analysis163520/log133840-161000 source5a897176 naturally0 at10:38:40.462062;
+  frame prep162324/log133852-20068 sourceb0cb561e naturally0 at10:38:53.856487.
+  Journal142652/log134248-17600 source3fbd35dd naturally0 retains media
+  b0967736/trace0583d778. Original45s actual survival-chain hazard campaign
+  now161620/wrapper158080/unified79158/log134116-158080 source6522e13c,
+  starts10:41:16.906355UTC:24 planned, original commands/kits/FPS20/first-red.
+  No extra Java edit, build or heavy extraction during this campaign. Results
+  pending; horizontal and vertical arrival/sustained-air coverage stay distinct.
+- Original hazard161620/log134116-158080 naturally1 at10:45:34.519797UTC:
+  roofPASS28.67FPS, first airFAIL28.29FPS/death1/sampleminHP10,22 unrun,
+  cleanup[]. Case logs repeat completed4,-60->4,-59 routes10:45:04..19,
+  timeline at34.1s body4.28787/-59.5 then40.1sHP10/GetToAir priority100.
+  FinalAir300 is respawn, not sustained breathing. Initial recovery6.5..8.5
+  followed by USER wander and reentry is distinct from the later fatal hold.
+  No causal regression rate or completed24-case claim.
+- All2 hazard films/3 fixed2s pages actually viewed. Preparation155264/
+  log134719-163508 source2a8ade07 naturally0 at10:47:25.707468UTC.
+  Journal162804/log135308-136396 source2d77c1d6 naturally0 at10:53:08.987010:
+  roof32.2s enters lower water10.5/surface12.5/dry far walkway14.5..32.1;
+  air53s returns under cap10.5, holds14.5..26.5, GetToAir32.5..48.5 with
+  depleted oxygen/lost hearts, respawn50.5..52.5. Instant death not sampled;
+  strict10:45:19 client line and independent death criterion establish it.
+  Film hashes17fe95e4/9eeadd0e retained under134719/actual-review.json.
+- Further MovementSwim WIP ports destination-height entry from
+  BaritoneMovementAscend:170-171; MovementDescend:232-236 likewise requires
+  destination feet. Radius tolerance applies only to level strokes within the
+  destinationx/z column. Vertical strokes require exact destination feet;
+  land full-body rule unchanged. Original task float handles the no-route
+  breathing phase; no new float policy, queue mechanism or reactive timeout.
+  Build164408/wrapper157716/unified49596/log134917-157716 sourceec0e6a7d
+  starts10:49:18.000193UTC, clean0/build pending. Fresh host Java9792/65356
+  noJDWP/no unionclef; no benchlock/test live before build, no overlapping
+  extraction. Prepared verify_swim_height_payload.py is not a packaging result.
+  Exact0fa6f172 wiki37116682479 actualSUCCESS, both branches pushed; new
+  runtime code and this height diagnosis remain uncommitted at this read.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no

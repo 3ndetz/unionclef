@@ -66,6 +66,12 @@
   arrival fix is uncommitted WIP, clean build in progress; target/adjacent/native
   post-fix tests remain pending. Evidence: swim-queue-boundary-20261003-131717/
   actual-review.json. Vertical water bobbing and stricter land arrival retained.
+  Horizontal-onlya157 candidate removes that exact rewind, but the original
+  survival tunnel still drowns at28.29FPS: repeated completed4,-60->4,-59
+  strokes leave bodyy-59.5. Original two executed/22 unrun retained, all three
+  film pages inspected. Vertical arrival now also requires destination feet;
+  level-stroke bobbing/land clearance retained. New clean build/tests pending.
+  Evidence: swim-hazard-film-review-20261003-134719/actual-review.json.
 - [x] **FIXED 0.95.55: night shelter held the playthrough in water without a usable site (2026-10-02).**
   UNIONCLEF-HARD retained a native replay from full59-before-portal. At538s the
   shelter says "No place to dig in for the night here" near(-89.3,61.3,1062.3);
