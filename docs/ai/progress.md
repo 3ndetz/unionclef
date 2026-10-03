@@ -364,6 +364,44 @@ Completed gamer survival verdict:
   sustained offline boundary. No retry or heavy concurrent bench/render/build.
   Latest budget12643MB/15GB, free163GB; owned bench lock absent before launch.
   Actual natural terminal, independent audit and film review remain pending.
+- Documentationb4b7e6e1 committed as owner and atomically pushed to main and
+  1.21.11; local version branch fast-forwarded. The earlier archive EOF
+  whitespace is now corrected without rewriting published history. Wiki
+  37100738701 on1a667eda is independently confirmed completedSUCCESS.
+- LIVE15min21600: exact original entry/pack verified, initial30FPS/defaults
+  true. At147s death watch increments; server06:07:06UTC says tester1 was shot
+  by Skeleton. Prior122s sampledHP17.266666; after death original pack is gone
+  and later early rungs are explicitly skipped. At512s a second death occurs.
+  Do not count post-respawn progress or promote this to a native safety pass.
+  Leave the original physical attempt running to its natural safe boundary;
+  no repeat, new binary, release, render or other bench process meanwhile.
+- Read-only pre-death logs show FleeLive repeatedly reporting reached with
+  zero/one current dangers before the skeleton death. That is a retained
+  diagnostic lead, not an established cause or attribution to scanner/defaults.
+  Prospective saved-swim producer helper restores cp1003-0401-t649 exactly
+  offline, starts @gamer defence promptly, records120s and marshals pose/HP/
+  queue/target collision/block-state reads to the client owner. AST parse only;
+  live method lookup/replay remain untested. No water Java repair yet.
+
+- Current native15 integration21600 naturally returned1 at06:21:03.071317UTC.
+  Measured capture926.365s, median29FPS, two actual in-game deaths (Skeleton,
+  then Zombie), stock smoke false. Lost-pack respawn progress is not success.
+  Strict runtime and cleanup windows are clean; the25s offline boundary retains
+  the post-respawn player, not the original pack lost during gameplay.
+- Independent strict audit47796/log092126-129988 naturally returned1 at
+  06:21:26.492638UTC and correctly retains the original failure. Separate
+  retention audit159496/log092138-157916 naturally0 at06:22:53.693736UTC
+  verifies failed proof/film/checkpoint integrity without changing the verdict.
+  Original proof10daf232, film a1ad6657, candidate11a416e9 remain unchanged.
+- ALL21 original film pages actually inspected at2s; journal74764/
+  log093119-93456 source d81ab702 naturally0 at06:31:20.137434UTC.
+  Forest/water damage precedes the first empty-pack respawn; snow/freezing
+  precedes the second forest respawn. Server records the second death as Zombie;
+  the sampled freezing overlay does not establish its causal contribution.
+  Dirt shelter512.5..926.5s, then TitleScreen928.5..964.5s through the final
+  sample. Fixed cadence, not every frame or moving review. Native survival
+  remains failed;0.95.57 remains an unreleased draft. Finish the truthful
+  candidate report, then measure the saved-swim producer from its exact entry.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
