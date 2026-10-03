@@ -255,6 +255,24 @@ Completed Windows repair:
   before mutation; seven actual parsed-finally branch contracts pass. This does
   not replace actual native integration. Previous3-case contract proof retained.
 
+- Original hazard133432/112580/unified96604/log014719 naturally1 at
+  23:11:00.516157UTC:12/24 executed,11 PASS/one healthy third-repeat mob FAIL,
+  12 unrun. FPS29.6364, zombie remaining1, minHP2, ctl0/cq0/forcefield22;
+  runtime/cleanup[], confirmed offline/inactive. Three tunnelsHP20/endAir300,
+  atomic minAir100/100/99, no dig child; this is not six hazard repeats.
+- Freezer126116/127876/unified72608/log021206/source48273e7c naturally0 at
+  23:12:39.992787UTC. ALL12 actual films/all16 fixed2s pages viewed, including
+  complete68s failed fight. air-route-film-review-20261004-021206/actual-review.json
+  SHAe582c32d73914e1f24761dc8b9a63545df93bbe6670cab74f47144b54b53086d.
+  Failed film keeps the sword but runs low-heart flight6.5..67.9s around the rim.
+  Original0.5/4.5/5.5/6.5 full-resolution frames inspected: health loss while
+  no chain runs precedes active RunAwayFromHostilesTask. Original MobMelee
+  spawn/count/sleep2 is before@test kill; Scenario.run starts its timeline
+  AFTER drive_start. Early sampledt1 health is not an atomic activation witness.
+  Next focused experiment adds read-only ticks and local command-submission
+  timestamps around the unchanged original suite prefix; no core fight-policy
+  change or air-route causality claim. Remaining hazards/42/native6 stay open.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

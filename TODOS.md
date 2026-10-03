@@ -4,6 +4,16 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **A spawned zombie attacks before the melee fixture activates defence (2026-10-04).**
+  Original90faa8a4 hazard audit ends after11 PASS/one third-repeat mob FAIL,
+  12 cases unrun. At29.64FPS the zombie survives, sampledHP2, ctl0/cq0;
+  film shows sword equipped but low-heart RunAwayFromHostilesTask throughout.
+  Full-resolution5.5s frame still says no chain running while health is already
+  reduced. MobMelee spawns/counts/waits2s before its original@test kill command;
+  TaskRunner is inactive during that setup. Preserve the original healthy FAIL
+  and measure actual health/tasks around command submission before changing
+  fight policy or assigning an air-route regression. All12 films/16 pages reviewed:
+  air-route-film-review-20261004-021206/actual-review.json.
 - [ ] **Air escape alternates digging and swimming as the body bobs (2026-10-04).**
   Two dry-entry eff tunnel traces start GetToAir at Air149/HP20, repeatedly
   cancel swimming for a grounded cap quote, then surface after Air-19/HP18.
@@ -20,7 +30,10 @@
   is separate. New through-logout series6/6 passes28.3..29.5FPS, recorded/endHP20,
   minAir101/endAir300, no dig child; all six films/all12 pages reviewed:
   air-route-film-review-20261004-014458/actual-review.json. Earlier red retained.
-  Original hazard/adjacent/native validation remains open; no release claim.
+  Original hazard audit executes12/24:11 PASS/one healthy third-repeat mob FAIL,
+  12 unrun, all12 films reviewed. Three in-prefix tunnels keepHP20/endAir300,
+  minAir99..100/no dig child. Adjacent/native and complete hazards remain open;
+  no release claim or combat regression assigned from the incomplete prefix.
 - [ ] **A lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside
