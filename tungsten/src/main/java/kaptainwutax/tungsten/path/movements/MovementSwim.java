@@ -28,8 +28,8 @@ import net.minecraft.world.WorldView;
  * you. Hold the movement key toward the destination and hold JUMP to rise. The base
  * {@link Movement#update} already presses JUMP while the feet are in liquid and the body is below
  * {@code dest.y + 0.6}, which covers crossing and surfacing; this class adds the aim, the descent
- * (where that rule correctly does NOT press jump), and an arrival test that tolerates a body which
- * bobs between two cells instead of sitting in one.
+ * (where that rule correctly does NOT press jump), and an arrival test that tolerates vertical
+ * bobbing during a level stroke after the body has entered the destination column.
  */
 public class MovementSwim extends Movement {
 
@@ -125,8 +125,7 @@ public class MovementSwim extends Movement {
         }
         PlayerEntity player = ctx.player();
 
-        // ARRIVAL IS A DISTANCE, NOT A CELL. A swimmer is rarely centred in a block: the body
-        // bobs, and a strict feet-equals-dest test can be missed for a whole stroke at a time.
+        // A level stroke tolerates vertical bobbing within the destination column.
         double dx = player.getEntityPos().x - (dest.getX() + 0.5);
         double dy = player.getEntityPos().y - dest.getY();
         double dz = player.getEntityPos().z - (dest.getZ() + 0.5);
@@ -144,10 +143,22 @@ public class MovementSwim extends Movement {
         // beside it (the current has the body again the tick the keys drop): the body must be
         // clear of the water, or at least at the cell's centre where the box no longer reaches
         // the water cell (G99c).
-        boolean landArrived = ctx.playerFeet().equals(dest)
+        BetterBlockPos feet = ctx.playerFeet();
+        boolean landArrived = feet.equals(dest)
                 && (!player.isTouchingWater() || dx * dx + dz * dz < 0.09);
+        // Port baritone/.../movements/MovementTraverse.java:248-260: a horizontal step must enter
+        // its destination before SUCCESS. In the empty tunnel, x=1.95646 is still in src1 but
+        // within 0.6 of dest2's centre. The old radius consumed that stroke, then the next stroke
+        // rewound to src1: 484 successes, 121 ticks with all keys off, zero displacement, drowning.
+        // Port the destination-height entry from MovementAscend.java:170-171 as well. Keeping
+        // the radius on vertical strokes completed -60->-59 while still at -59.5; the original
+        // survival tunnel repeated that completed stroke until drowning. Only level strokes may
+        // tolerate vertical bobbing. Rising and diving must enter the actual destination cell.
+        // Land's existing full-body arrival check above remains stricter.
+        boolean inDestColumn = feet.getX() == dest.getX() && feet.getZ() == dest.getZ();
+        boolean levelStroke = dest.getY() == src.getY();
         boolean arrived = destIsLand ? landArrived
-                : (ctx.playerFeet().equals(dest) || distSq < 0.36);
+                : (feet.equals(dest) || (levelStroke && inDestColumn && distSq < 0.36));
         if (arrived) {
             return state.setStatus(MovementStatus.SUCCESS);
         }

@@ -1,6 +1,7 @@
 package kaptainwutax.tungsten.combat;
 
 import kaptainwutax.tungsten.TungstenModRenderContainer;
+import kaptainwutax.tungsten.helpers.PlayerFit;
 import kaptainwutax.tungsten.render.Color;
 import kaptainwutax.tungsten.render.Cuboid;
 import kaptainwutax.tungsten.render.Line;
@@ -402,7 +403,14 @@ public class CombatPathfinder {
             // start preferring a pond.
             for (int[] off : SWIM_DIRS) {
                 BlockPos c = pos.add(off[0], off[1], off[2]);
-                if (isLiquid(c, world) || (isWalkable(c, world) && !isHazard(c.down(), world))) {
+                // Baritone MovementTraverse.java:103-107 checks both feet and head before
+                // offering a traverse. MovementSwim cannot mine the cap or plan a crawl;
+                // match FastPlanner.java:1043-1046's full-body water clearance. The retained
+                // full59 entry offered water(-190,60,1018) beneath stone at y61 and failed
+                // the same stroke twice; fluid at the feet alone is not a usable move.
+                boolean swim = isLiquid(c, world)
+                        && PlayerFit.bodyFits(world, c.getX() + 0.5, c.getY(), c.getZ() + 0.5);
+                if (swim || (isWalkable(c, world) && !isHazard(c.down(), world))) {
                     result.add(c);
                 }
             }

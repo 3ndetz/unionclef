@@ -164,7 +164,39 @@ Completed Windows subprocess repair:
   now also fails. Reads only the existing atomic ring and a separate FPS counter,
   reducing reflection/world-query traffic without a production change. Earlier
   failed full-column diagnostic immutable; no successful run rate inferred.
-  Await natural protective boundary before any further bench/render/deploy.
+  Naturally1 at14:46:38.888546UTC, unchanged20FPS floor fails at median8FPS.
+  All2436 trace rows/2425 end ticks complete; air-mining189 ticks include
+  0 grounded/188JUMP/minimumAir-16. MinimumHP16 fails healthyHP20 despite
+  endingHP20 recovery; deaths3327 unchanged. Protective logout32.609s retains
+  exact offline fields/statistics and original checkpoint, runtime/cleanup[].
+  Analyzer152276/wrapper122644/log175015-122644 naturally0 at14:50:16.362198UTC.
+  Entire196s film/all5 fixed2s pages actually inspected. Extraction167620/
+  wrapper167272/log175039-167272 naturally0; journal122208/wrapper165188/
+  log175413-165188 naturally0, actual-review SHA
+  14f46c5982ba3cce60acd29d838b781b73b8b6ddce3d24c6b3e0dda37a64e990.
+  Bank hold, later cap mining/damage/recovery and food visible; no portal.
+  Removing world-query polling did not establish a healthy native stand.
+- Separate capped-water mechanism fixture reconstructs all21 saved inventory
+  stacks, slots/counts/damage; iron pick97/stone pick109, no new tool or potion.
+  First168288/wrapper151020/log180023-151020/source9c0d8277 naturally1 at
+  15:03:30.804896UTC before its35s objective: preparing underwater consumed
+  oxygen while the task runner was inactive. EntryAir-6/HP14 rejects it.
+  Its later inactive drowning is a preparation/teardown defect, not production
+  oxygen-cost evidence. Protective logout independently verified afterward.
+  Retained13.1s preparation film/allone2s page actually inspected; journal
+  157064/wrapper147004/log180840-147004/source1042439a naturally0.
+  Prospectively stage the complete pack, chat and recorder on a dry cap;
+  activate @idle before entering water, preserveHP20/FPS20/endAir200 gates,
+  record actual production helper costs on the client thread, and disconnect
+  before stopping defence even on failed setup. No heal/refill after entry.
+  Earlier bad fixture remains immutable. New161516/wrapper168880/unified41381/
+  log180843-168880/source8f19fbdf starts15:08:43.635450UTC; one causal control,
+  not a native survival rate. Await its natural boundary before build/deploy.
+- The independently tested water sources are ready for a narrow core commit:
+  CombatPathfinder full-body liquid clearance and MovementSwim destination
+  column/height entry. Frozen5f final classes match the measured sources,
+  original24 hazard and42 adjacency gates remain unchanged; earlier reds and
+  native oxygen failures stay open. No stable057 release or full-game claim.
 - Read-only checkpoint list:12805MB/15GB, diskfree161GB. Archived all467
   prior progress lines verbatim; exact line equality checked before replacing
   the active document. Private recovery handoff remains the only modified
