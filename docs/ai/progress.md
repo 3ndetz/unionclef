@@ -271,3 +271,32 @@ VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
   second-resolution directory name before starting any audit child. Retained
   tool error; wrapper now appends itsPID for unique ownership. Audit153736 is
   the sole actual combined audit. No benchmark retry or overwritten job directory.
+- Static callout preparation134308/log033354-152512 and install117020/
+  log033449-153372 ended0. Word-tier catalog selected plain yt-circle-pointer;
+  adapted only ellipse/draw-on, omitting its countdown, bounce and rotation.
+  Route-limit scene mounted; five-scene lint148824/log033640-50012 ended0 at
+  00:36:53.981187UTC, with only the retained incomplete-host warning.
+- Closing authoring157208/log034412-148264 ended0 at00:44:39.694494UTC:
+  timeline/history confirmed our own changes, then all six scenes mounted with
+  explicit candidate57/native-pending status and only the measured42 gates.
+  Source cuts/storyboard/brief updated to actual adopted and inspected evidence.
+  Static lint53924/log034732-88212 ended0 at00:47:41.405697UTC: zero errors
+  and warnings, seven files. Browser/layout/contrast/motion/render remain pending;
+  dry106964 continues naturally and no new release/video delivery is claimed.
+- Dry106964 ended naturally0 at00:48:58.534637UTC/log033006-150588.
+  Independent audit157316/log034939-157612 ended0 at00:50:18.307466UTC:
+  exactly36 trials/min29FPS/sampledHP20/unchangedGUI/material/refusal gates,
+  complete sample-window recordings/runtime[]/cleanup[]. All36 two-second
+  pages actually viewed in five batches7/7/7/7/8 and hash-journalled.
+  Allowed fixtures visibly build three rungs; ceiling/protected-vine refuse
+  construction, protected vines remain. This is not native-food coverage.
+- First browser gate153136/log035024-141540 ended0 at00:51:23.807809UTC:
+  browser actually ran, runtime/layout/contrast errors0,24 contrast checks,
+  seven informational entrance/crop findings. All seven midpoint/end snapshots
+  actually viewed and retained separately with hashes before refinements.
+  All six scenes mount/readable; circle encloses the actual placed block.
+- Narrow refinement raises heading stacking during entrance and declares only
+  inspected inner picture cropping intentional; closing adds verified36dry.
+  Browser106728/log035518-15284 ended0 at00:56:11.862232UTC; refined snapshots
+  and counts not yet reviewed. Choreography map38892/log035600-76904 isLIVE;
+  native integration/release/render/delivery remain pending.
