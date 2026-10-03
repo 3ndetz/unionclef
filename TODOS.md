@@ -58,6 +58,14 @@
   queue/state/input ownership before assigning a new producer regression.
   Evidence: swim-hazard-film-review-20261003-122649/actual-review.json and
   retained-air-stuck-20261003-123820.
+  Same six-case11a control and traced prefix each pass6/6; no new producer
+  regression established. Exact-boundary queue isolation on11a reproduces:
+  Swim1->2 declares success whilex1.95646 still occupies source1, next stroke
+  rewinds/resets;484 burned steps,121 all-key-off ticks, zero displacement.
+  One drowning at29FPS, original first-red retained. Destination-column water
+  arrival fix is uncommitted WIP, clean build in progress; target/adjacent/native
+  post-fix tests remain pending. Evidence: swim-queue-boundary-20261003-131717/
+  actual-review.json. Vertical water bobbing and stricter land arrival retained.
 - [x] **FIXED 0.95.55: night shelter held the playthrough in water without a usable site (2026-10-02).**
   UNIONCLEF-HARD retained a native replay from full59-before-portal. At538s the
   shelter says "No place to dig in for the night here" near(-89.3,61.3,1062.3);

@@ -205,6 +205,75 @@ Completed Windows subprocess fix:
   atomicallymain/1.21.11. Telegram9712 confirmed, HAPI video displayed; CLI feedback
   explicitly NOT sent because telemetry disabled. No new release/native success.
 
+- Identical six-course prefix on11a control157864/wrapper143832/
+  log124353-143832, source158a1c5a naturally0 at09:55:13.784429UTC:
+  six original gates PASS27.89..30FPS, runtime[]/cleanup[], deaths0.
+  Canonical tester1-only control deployment161968/log124209-112144
+  source8d043f20 naturally0 at09:43:03.133251UTC deliberately loads11a
+  with UCTEST_ALLOW_STALE=1; original candidate proofs retained, local
+  build/libs b81 restored afterward. No other container/base/host changed.
+- All six control films/eight fixed2s pages actually viewed. Preparation83564/
+  log125626-160392 source4fad985b naturally0 at09:56:41.782659UTC;
+  journal163388/log130400-163640 sourcea6dbe042 naturally0 at
+  10:04:00.397000UTC. Summary6fbf00d8 unchanged. Both roof films show submerged
+  passage/dry exit; air1 reenters water and finishes air239/HP20, air2 returns
+  atx1.4193 rather than fatalx1.95646 and swims back to air before later
+  digging/dry field. Lava escapes with HP12/residual burning; meleeHP14.
+  Separate JVM control does not establish a causal regression or improvement
+  rate. Original b81 drowning remains1; no native or24-case clearance.
+- Current trace151328/wrapper162972/unified7184/log130414-162972,
+  sourcec3ce2433 starts10:04:14.428799UTC on actual11a. Same six-case prefix,
+  original commands/kits/FPS20/first-red; only existing read-only client-tick
+  body/keys/queue/task trace added to air. Separately timed queue counters
+  are not atomic with tick rows. Natural0 at10:15:25.583397UTC,6/6 original
+  gates PASS28.75..30FPS, runtime[]/cleanup[], both airHP20/deaths0. Air traces
+  have1009/1054 rows and967/1012 end-client-ticks, no errors/gaps and no
+  contiguous20-end-tick queue span with all keys off. Read-only analyses82376/
+  log130827-161496 and161072/log131602-164092 source5a897176 naturally0.
+- All trace films/eight fixed2s pages actually viewed; preparation156308/
+  log131551-141824 source4fad985b naturally0 at10:16:07.339443UTC.
+  Journal48372/log131715-159568 source853e4ce1 naturally0 verifies hashes and
+  original summarydaa70129. Air films later dig and leave onto dry field;
+  lavaHP12/residual burning and land meleeHP14 remain separate from survival.
+  No24-case/native success or causal improvement rate. Exact413ab48f wiki
+  37114323040 succeeds; no executor source change yet.
+- Queue-boundary diagnostic33612/wrapper145472/unified73609/log131717-145472,
+  sourceec5d3505 starts10:17:17.388593UTC on11a. Deliberate original tunnel
+  startx1.9564609/y-60 and injected cells1->2->3->4/y-60 then4/y-59,
+  real client-thread queue.start,10s and first-red/FPS20. No USER task or
+  survival chain: this isolates the queue executor and is not the original45s
+  course or native survival. Planned6, terminal/coverage pending. Premature
+  water arrival followed by same-tick rewind remains a hypothesis.
+- Boundary33612/log131717-145472 naturally1 at10:19:00.901262UTC: one of
+  six executed,29FPS, actual admitted4, death1/sampleHP8/cleanup[], five unrun.
+  Complete336-end-tick trace proves Swim1,-60,0->2,-60,0 held idx0of4,
+  all keys off/tasks[]/alternative drivers inactive, zero displacement for
+  121ticks/6.003s. Counters484 steps/484 burned/122queue ticks/qPrep0/0/
+  no status failure. Source arrival distance0.543539<0.6 consumes the first
+  stroke; next stroke2->3 excludes feet1 and rewinds/resets, four pairs per
+  eight-advance tick account for484=4x121. This reproduces on11a independently
+  of the uncommitted CombatPathfinder change; not a causal regression rate.
+- Boundary18s film/one fixed2s page actually viewed: held underwater through
+  16.5, oxygen/hearts loss10.5..16.5, respawn field17.9. Actual drowned line
+  10:18:41/death delta1, instantaneous death frame not sampled. Seven setup
+  voids and deliberate fresh-reset kill precede measured queue start; initial
+  air unmeasured, so do not claim a drowning rate from full air. Analysis159436/
+  log131916-139884 source5a897176 naturally0; frame preparation159760/
+  log131937-159268 naturally0 at10:19:39.050693UTC. Journal163624/
+  log132222-24856 source50c5c3d7 naturally0 at10:22:22.440585UTC, preserves
+  original1/trace6283c3a2/media/summary. Executor isolation, not original45s/native.
+- MovementSwim WIP now ports destination entry from BaritoneTraverse:248-260:
+  distance tolerance may finish water strokes only within destinationx/z
+  column. Existing vertical bobbing and stricter land full-body arrival remain.
+  No queue/FastNavigator/physics/input/timer/config mechanism changed.
+  Clean scoped build128972/wrapper127572/unified19812/log132058-127572,
+  sourceec0e6a7d starts10:20:59.005824UTC; clean0/build pending. Fresh read
+  of Windows Java9792/65356 shows noJDWP and no unionclef ownership; human
+  TLauncher/Minecraft untouched. No simultaneous heavy bench or frame extraction.
+  Prepared verifier expects only MovementSwim changed versus b81/other2212
+  identical and two changed versus11a. Packaging/deploy/post-fix tests unrun.
+  Checkpoint list remains12805MB/15GB,162GB free; no deletion needed.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
