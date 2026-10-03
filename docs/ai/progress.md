@@ -427,6 +427,39 @@ Completed Windows subprocess fix:
   expects only TaskMovementTrace changed versus d53, other2212 identical.
   AST passes; no packaging/runtime/native/release result claimed.
 
+- Oxygen trace build84156/log144440-164068 exits naturally 0 at
+  11:56:55.337246 UTC: clean0/build0, scoped1.21.11 success18 tasks/no bin.
+  Packaging35032/log145724-152352, source6ea18df9, exits0 at
+  11:57:29.607622 UTC. Candidate5f324dd2 retains2213 recursive classes;
+  only TaskMovementTrace differs versusd53, all other2212 byte-identical.
+  Combat+Swim+Trace only versus11a; constructor defaults class identicalTRUE.
+  Actually inspected optional enabled guard0..6 and absent-player/world7..25,
+  then getter-to-map sequences217..233(submerged),234..250(air),251..267(maxAir).
+  Bytecode-review.json retains inspection and its coverage; no physical claim.
+- Canonical tester1 deployment4504/wrapper137640/unified24627/log145830-137640,
+  sourceb9042eda, exits0 at11:59:25.276788 UTC; loaded SHA5f324dd2 matches
+  frozen proof. Earlier4504 deploy had a different job/wrapper/time: identify
+  by full job path, not reused PID. No other container or host application changed.
+  New check_air_oxygen_hazard_neighbors.py, source14f3a9af, is prepared for
+  original24 cases with optional oxygen trace/integrity gate only. Original45s
+  command/kit/outcome gates/FPS20/first-red unchanged. Physical outcome pending;
+  no threshold change, native completion or release claim.
+
+- Oxygen campaign146864/wrapper103248/unified51352/log150110-103248,
+  source14f3a9af, starts12:01:10.561953UTC on5f324dd2. First six cases
+  pass at28..30FPS; both air cases HP20/deaths0/finalAir300.
+  Actual optional trace schema validates1116/974 end ticks with no gaps/errors;
+  minimumAir20/28, GetToAir owns118/206 ticks. Both last pre-stop tick
+  and unchanged post-stop Air gate read300. This validates the three added
+  read-only fields; full24 campaign and actual film review remain in progress.
+  No original d53 Air156 red rewritten and no comparative/native claim.
+- Source inspection finds Scenario.run calls drive_stop before DrownTunnel
+  reads live Rcon Air. A teardown contribution to the earlier endpoint156
+  remains a hypothesis, not a measured explanation. No gate, duration,
+  safety policy, route or input changed. Prepared new source-specific film
+  freezer retains all executed cases, original verdicts and oxygen traces;
+  AST passes, extraction waits for the campaign's natural terminal.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

@@ -82,6 +82,11 @@ public final class TaskMovementTrace {
             row.put("vel", List.of(player.getVelocity().x, player.getVelocity().y, player.getVelocity().z));
             row.put("ground", player.isOnGround());
             row.put("water", player.isTouchingWater());
+            // Feet touching water does not establish oxygen loss. Keep eye submersion
+            // and oxygen in this same client-tick snapshot as keys and task ownership.
+            row.put("submerged", player.isSubmergedInWater());
+            row.put("air", player.getAir());
+            row.put("maxAir", player.getMaxAir());
             row.put("lava", player.isInLava());
             row.put("hp", player.getHealth());
             row.put("yaw", player.getYaw());
