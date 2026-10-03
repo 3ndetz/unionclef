@@ -140,11 +140,32 @@ Completed Windows subprocess fix:
   journal160880/log115816-155128 sourceab3cb26a natural0 at
   08:58:17.482857UTC verifies hashes and corrected get_field access while
   offline, actualdisabled=false/inGame=false. No world/settings change.
-- LIVE distinct corrected six-join campaign156988/wrapper160560/
+- Completed distinct corrected six-join campaign156988/wrapper160560/
   log115834-160560, unified10287, sourceb8b2945a starts08:58:34.785195UTC.
   Original failed first campaign remains1; no failed physical result relabeled.
-  Complete rate, terminal, cleanup and films pending. Deployment0/one clean
-  Java window do not yet establish a validated headless stand.
+  Natural0 at09:03:27.527054UTC:6/6,29..30FPS/runtime[]/cleanup[], actual
+  WEB_AUDIO1/PULSE_SERVER unix socket, two null speakers, open SoundManager,
+  disabled=false, original voicechat configuration bytes unchanged. Every
+  confirmed logout remains inactive/offline for25s;17..18 samples each.
+  Scope tester1 flat whole-join boundaries only: no full-container startup
+  window, tester2 or native survival claim.
+- All six43.2..44.7s recordings prepared158900/wrapper129696/
+  log120522-129696 source3981619d naturally0 at09:05:40.952145UTC.
+  Every six fixed2s page actually viewed. Journal162720/wrapper99404/
+  log121440-99404 source1724fac1 naturally0 at09:14:40.798839UTC verifies
+  film hashes, summarye3ad6264, original failed probe1/source28a2bfb2 and
+  its earlier inspected film. Title0.5..10.5, join/loading or dry arena
+  12.5..16.5, full sampled hearts, Title18.5 through42.5..44.5; no sampled
+  rejoin. Fixed2s samples, not every frame or moving playback. Null devices
+  are runtime evidence, not an inference from silent recordings.
+- Compose config validation exits0 with no stderr; only existing tester
+  environment changes, no host sound device or base-image change. Future
+  tester2 receives the same virtual-audio configuration but is unmeasured.
+- LIVE maintained roof/empty-shaft air/lava escape/land melee campaign119728/
+  wrapper113888/log121528-113888, unified93350, source6522e13c starts
+  09:15:28.338855UTC.24 planned,6 rounds; original kits/triggers/gates/FPS20
+  and first-red stop. Natural result, cleanup and all film reviews pending.
+  No simultaneous heavy extraction/render/build or second bench client.
 - Prepared native parent now requests cooperative failure via an owned marker
   at600s and waits for the child's natural logout/offline finally boundary;
   it no longer kills the loaded survival owner via subprocess.run timeout.

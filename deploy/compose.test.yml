@@ -75,6 +75,12 @@ services:
     environment:
       MC_USERNAME: "tester1"
       MC_MAX_MEM: "3G"
+      # Enable the base image's virtual PulseAudio device. With WEB_AUDIO=0,
+      # Simple Voice Chat2.6.18 opens the default speaker on every world join
+      # and fails because no device exists, even when its disabled flag is true.
+      # The existing image supplies null sinks; no host sound device is mounted.
+      # https://github.com/jlesage/docker-baseimage-gui#web-audio
+      WEB_AUDIO: "1"
       # THE FRAME RATE IS THE WHOLE PVP SUITE'S BLOCKER, AND THIS IS THE UNTOUCHED LEVER.
       # The stand runs at 4-8 fps against its own 14.0 validity floor, and run_suite.py:326 already
       # established the cause is a single-threaded SOFTWARE render ceiling rather than foreign load
@@ -150,6 +156,8 @@ services:
     environment:
       MC_USERNAME: "tester2"
       MC_MAX_MEM: "3G"
+      # Same virtual audio device as tester1; keep joins clean on both clients.
+      WEB_AUDIO: "1"
       # Same as tester1 — see the note there. The opponent is a client too, and on a duel course the
       # two of them share the same cores, so leaving this one at 1920x1080 would cap the pair.
       DISPLAY_WIDTH: "854"
