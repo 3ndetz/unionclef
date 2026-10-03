@@ -283,6 +283,37 @@ Completed Windows subprocess repair:
   fixtures/results immutable, source/embedded AST and exact future diff reviewed.
   Await natural boundary and actual film before choosing a shared-cost repair.
 
+- Long-swim control naturally1 at16:50:36.617557UTC, healthy20.333FPS:
+  HP20->18->16->14/minAir-19, objective deaths0/endAir300. Original dryHP20/
+  Air300/21-stack kit retained. FirstGetToAir148,11 mining ticks; third damage
+  comes207 actual game ticks after rescue starts, exceeding the8x16=128 quote.
+  Complete1091 rows/1085 end ticks/no gaps/errors. Separate preparation drowned
+  at16:46:11 remains in the failed runtime gate, before fresh dry reset/objective.
+  It does not establish objective death or disappear after reset. Entire43.1s/
+  one fixed2s page actually inspected; actual-review SHA
+  702d5a3afe741cd8ee0ec1348d83a7ff4cff64c8ffd324047ce2db06476b32f4.
+  Single mechanism counterexample, no success/comparison rate or native claim.
+- Follow-up WIP shares MovementSwim's existing20tick executor cost with both
+  oxygen reserve and dig-versus-swim selection; stroke input/arrival behavior
+  unchanged. Upstream ActionCosts prices water walking, not this executor.
+  Clean build/final recursive-class scope/bytecode/deploy and repeated strict
+  controls/adjacency/native tests remain required. Intermediate-body clearance
+  and multi-block cap pricing remain unproved; no simultaneous repair claimed.
+  Future isolated-fixture preparation must safely stage the owned returning
+  player before long setup while preserving every objective gate and old red.
+- New clean build169936/wrapper162752/unified19077/log200844-162752,
+  unchanged build-helper source8782df35, starts17:08:45.178537UTC. Own client
+  offline/no bench lock/generated bins. Host debugger probe passes before launch;
+  container shell probe fails quoting, then private read-only Python probe confirms
+  no owned-client debugger. This ordering mistake is retained, not represented
+  as a successful pre-launch container check. Wait for natural build boundary.
+  New staged fixture source da2eab0eccb00bf63c3d71f0e17148a30c3c27b239ce7244a9bbbd744a9d9da9
+  preserves the original objective-class AST and embedded production probe bytes.
+  Its join log starts before connection; dry owned-arena teleport precedes long
+  preparation. First run it on unchanged2bc, then compare the new shared-cost
+  candidate with strict repeated gates. Neither staged baseline nor new candidate
+  tests have executed yet. No057 release or new video report.
+
 - Narrow menu/API and shared survival boundary review completed without changing
   the running5f payload. Deliberate logout cancels queued reconnect intents;
   a ConnectScreen network future is explicitly refused, not claimed cancelled.
