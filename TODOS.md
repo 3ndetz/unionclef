@@ -72,6 +72,13 @@
   film pages inspected. Vertical arrival now also requires destination feet;
   level-stroke bobbing/land clearance retained. New clean build/tests pending.
   Evidence: swim-hazard-film-review-20261003-134719/actual-review.json.
+  Height-entryd53 candidate enters the actual vertical destination before
+  completion. Original hazard prefix executes6/24 with5 PASS; repeat2 air
+  still FAIL28.75FPS, finalAir156<200 withHP20/deaths0. All6 films/8 pages
+  inspected; no original gate relaxed. Half-air150 safety threshold and USER
+  return mean endpointAir alone cannot establish broken ownership. Same-prefix
+  client-tick diagnosis pending; native survival and24-case coverage remain open.
+  Evidence: swim-hazard-film-review-20261003-142721/actual-review.json.
 - [x] **FIXED 0.95.55: night shelter held the playthrough in water without a usable site (2026-10-02).**
   UNIONCLEF-HARD retained a native replay from full59-before-portal. At538s the
   shelter says "No place to dig in for the night here" near(-89.3,61.3,1062.3);

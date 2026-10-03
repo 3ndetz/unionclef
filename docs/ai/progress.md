@@ -337,6 +337,68 @@ Completed Windows subprocess fix:
   extraction. Prepared verify_swim_height_payload.py is not a packaging result.
   Exact0fa6f172 wiki37116682479 actualSUCCESS, both branches pushed; new
   runtime code and this height diagnosis remain uncommitted at this read.
+- Height build164408/log134917-157716 naturally0 at11:01:41.250095UTC:
+  clean0/build0, scoped1.21.11 success18 tasks/no bin. Pack146608/
+  log140230-153280 sourcea8ebf696 naturally0 at11:02:38.689463UTC;
+  d53a7a15 has2213 classes, only MovementSwim differs versusa157/other2212
+  identical; Combat+Swim only versus11a/defaultsTRUE. Actually inspected
+  javap137..177 unchanged land gate;179..214 x/z column;216..238
+  source/destinationY equality;250..286 feet-equal OR levelStroke AND
+  column AND radius. Vertical radius branch refused at264, SUCCESS288..300.
+  Retained arrival-bytecode-review.json, no physical/native/release claim.
+  Canonical deploy162676/wrapper161480/unified1790/log140317-161480,
+  sourceb9042eda starts11:03:17.478294UTC; terminal/post-fix tests pending.
+- Canonical height deploy162676/log140317-161480 naturally0 at
+  11:04:14.140047UTC, loaded SHA d53a7a15 equals frozen proof. Unchanged
+  ec5d3505 boundary helper now157880/wrapper91992/unified37298/
+  log140523-91992 starts11:05:23.362372UTC, six planned/first-red/FPS20,
+  all original gates preserved. Current source, JAR and live experiment are
+  distinct from preceding a157 failures; physical terminal/review pending.
+- Height boundary157880/log140523-91992 naturally1 at11:07:52.533573UTC:
+  first of6 FAIL29FPS/five unrun/cleanup[]. Trace360 end ticks/no gaps/steps4/
+  burn0/queueTicks37/qPrep0/36, no quiet20-tick active queue span. Actual
+  vertical movement stays active throughseq51/y-58.98256, then finishes52/
+  y-58.87105, maximumy-58.61451. Destination feet are now entered before
+  completion; initial horizontal and vertical early-success mechanisms no
+  longer occur in this single trace. No task/defence active by isolation;
+  after completion all keys off and body sinks. Original finalAir-6/y-60 gates
+  remain FAIL, sampleminHP18/trace18 do not hide later11:07:39 case-log drown.
+  InitialAir unmeasured, damage already during movement; not wholly attributable
+  to the post-route period. This is not sustained-air or six-trial success.
+- Complete18s fixed2s page actually viewed: initial tunnel, movement6.5/upward
+  wall8.5, returned submerged10.5..17.9. Death instant after recording.
+  Analysis56196/log140807-141964 source5a897176 naturally0; frame30608/
+  log140820-161204 sourceb0cb561e naturally0 at11:08:22.624527UTC.
+  Journal161128/log141015-158196 source814fc9c0 naturally0 at11:10:15.743966,
+  mediaaf4527cf/tracea39bbe40, original red retained. Original unchanged
+  hazard24 now150736/wrapper158264/unified67672/log140903-158264 source6522e13c
+  starts11:09:03.285824UTC on d53, first-red/FPS20/original task/kits/gates.
+  Terminal, full film review and original45s survival outcome still pending.
+
+- Original d53 hazard150736/log140903-158264 naturally1 at11:20:15.463872UTC:
+  six executed/five PASS/one FAIL/eighteen unrun/cleanup[]. Roof1+roof2,
+  air1, lava1 and land melee1 pass28..29.6667FPS. Repeat2 air FAIL28.75FPS
+  solely finalAir156<200; no deaths/sampleminHP20/runtime_errors[]. Do not
+  call this a drowning death or a completed24-case success. Seven setup voids
+  and reset kill precede original task start11:19:13. Case-local original logs
+  show USER wandering, failed physics routes and shaft-side mining/swim-out.
+  Sparse samples/fixed2s views are not atomic oxygen/ownership telemetry.
+- Preparation28660/wrapper161992/unified38295/log142721-161992 source2a8ade07
+  naturally0 at11:27:40.575783UTC. All six clips/eight complete fixed2s pages
+  actually viewed and journaled in swim-hazard-film-review-20261003-142721/
+  actual-review.json: roof dry walkways; air1 initial recovery, return, mining,
+  then outside sky44.5..52.5; lava entry/fire then clear; zombie approach/fight/
+  death; air2 initial recovery6.5..8.5, USER return, second GetToAir18.5..20.5,
+  USER mining30.5..42.5 and failed bank exit44.5..46.5, tunnel at52.5.
+  Original WorldSurvivalChain threshold is half maxAir150; GetToAir retains
+  control until full. FinalAir156 alone cannot prove broken safety ownership.
+  Keep original red, do not tune policy solely to the endpoint. No Java edit.
+- Same six-course prefix with existing client-tick telemetry now159248/
+  wrapper127520/unified18954/log142925-127520 sourcec3ce2433,
+  started11:29:25.907719UTC on d53. Original45s command/kits/gates/FPS20/
+  first-red unchanged, only existing read-only body/key/task trace enabled.
+  Current diagnosis is pending; target repeats,42 adjacency and native/full59
+  remain open. No overlapping build/frame extraction or unrelated host changes.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
