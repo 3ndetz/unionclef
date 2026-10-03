@@ -1,0 +1,1159 @@
+{
+  "query": "annotation circle ring callout label",
+  "tier": "words",
+  "tier_detail": "local word match",
+  "dropped": 0,
+  "unindexed": 0,
+  "shown": 71,
+  "total": 386,
+  "report_gap": "npx hyperframes feedback --search-miss \"annotation circle ring callout label\" --wanted \"<the move you needed>\" --tier words",
+  "results": [
+    {
+      "name": "hw-callout-circle",
+      "type": "component",
+      "title": "Scribble Callout Circle",
+      "description": "Wobbled ellipse draws around a target with optional scribble fill and curved connector; the handwritten label pops in WITH momentum and the drawn shapes absorb the arrival with a volume-preserving contact squash; outline and connector take the family stroke matrix (plain/soft/sharp/spray); boils",
+      "tags": [
+        "handwritten",
+        "annotation",
+        "callout",
+        "overlay"
+      ]
+    },
+    {
+      "name": "yt-circle-pointer",
+      "type": "component",
+      "title": "Pointer Circle + Countdown",
+      "description": "Draw-on annotation ellipse around a target plus a countdown chip that pulses each tick",
+      "tags": [
+        "annotation",
+        "countdown",
+        "overlay"
+      ]
+    },
+    {
+      "name": "mk-callout-highlight",
+      "type": "block",
+      "title": "Word-Sweep Highlight",
+      "description": "A sentence whose word-by-word emphasis is driven by a single scalar — tween it to sync the highlight with a voiceover",
+      "tags": [
+        "typography",
+        "karaoke",
+        "captions",
+        "minimal"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 8
+    },
+    {
+      "name": "conic-progress-ring",
+      "type": "component",
+      "title": "Conic Progress Ring",
+      "description": "A token-driven conic progress ring whose angular fill and center count settle together from one registered percentage.",
+      "tags": [
+        "data",
+        "progress",
+        "ring",
+        "conic-gradient",
+        "prove",
+        "demonstrate"
+      ]
+    },
+    {
+      "name": "hw-box-label",
+      "type": "component",
+      "title": "Hand-Drawn Box Label",
+      "description": "Wobbled rounded rectangle draws on — across the authored stroke matrix (plain/soft/sharp/spray) — or drops in and lands with a volume-true contact squash and bouncy spring recovery, with a handwritten label above or centered; boils",
+      "tags": [
+        "handwritten",
+        "annotation",
+        "overlay"
+      ]
+    },
+    {
+      "name": "north-korea-locked-down",
+      "type": "block",
+      "title": "North Korea Locked Down",
+      "description": "Realistic map zoom into North Korea with a red scribble circle, locked-down pop-up label, and reddish editorial wash.",
+      "tags": [
+        "showcase",
+        "map",
+        "annotation",
+        "youtube",
+        "kinetic"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/north-korea-locked-down.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/north-korea-locked-down.png"
+      }
+    },
+    {
+      "name": "carousel-circle-5",
+      "type": "block",
+      "title": "Circle Carousel 5",
+      "description": "Image cards ride a circle with a size gradient by depth angle, sweeping in fast-slow-fast swings (Circle style 5); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-circle-4",
+      "type": "block",
+      "title": "Circle Carousel 4",
+      "description": "Image cards ride a circle with a size gradient by depth angle, sweeping in fast-slow-fast swings (Circle style 4); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-circle-3",
+      "type": "block",
+      "title": "Circle Carousel 3",
+      "description": "Image cards ride a circle with a size gradient by depth angle, sweeping in fast-slow-fast swings (Circle style 3); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-circle-2",
+      "type": "block",
+      "title": "Circle Carousel 2",
+      "description": "Image cards ride a circle with a size gradient by depth angle, sweeping in fast-slow-fast swings (Circle style 2); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-circle-1",
+      "type": "block",
+      "title": "Circle Carousel 1",
+      "description": "Image cards ride a circle with a size gradient by depth angle, sweeping in fast-slow-fast swings (Circle style 1); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "vox-annotate",
+      "type": "component",
+      "title": "Vox Annotate",
+      "description": "The Vox-style annotate gesture: a keyword in a held sentence gets a hand-drawn marker while a thin connector draws up to a mono callout label, all as one choreographed beat on the cue.",
+      "tags": [
+        "motion-primitive",
+        "typography",
+        "annotation",
+        "marker",
+        "deterministic"
+      ]
+    },
+    {
+      "name": "carousel-text-circle-5",
+      "type": "block",
+      "title": "Text + Circle Carousel 5",
+      "description": "A headline mask-reveals word by word while a circle carousel converges from off-frame and threads the line, collapses to centre, hard-cuts to a second line that arrives at 1.4× (Circle style 5).",
+      "tags": [
+        "carousel",
+        "title-card",
+        "kinetic-text",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5
+    },
+    {
+      "name": "carousel-text-circle-4",
+      "type": "block",
+      "title": "Text + Circle Carousel 4",
+      "description": "A headline mask-reveals word by word while a circle carousel converges from off-frame and threads the line, collapses to centre, hard-cuts to a second line that arrives at 1.4× (Circle style 4).",
+      "tags": [
+        "carousel",
+        "title-card",
+        "kinetic-text",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5
+    },
+    {
+      "name": "carousel-text-circle-3",
+      "type": "block",
+      "title": "Text + Circle Carousel 3",
+      "description": "A headline mask-reveals word by word while a circle carousel converges from off-frame and threads the line, collapses to centre, hard-cuts to a second line that arrives at 1.4× (Circle style 3).",
+      "tags": [
+        "carousel",
+        "title-card",
+        "kinetic-text",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5
+    },
+    {
+      "name": "carousel-text-circle-2",
+      "type": "block",
+      "title": "Text + Circle Carousel 2",
+      "description": "A headline mask-reveals word by word while a circle carousel converges from off-frame and threads the line, collapses to centre, hard-cuts to a second line that arrives at 1.4× (Circle style 2).",
+      "tags": [
+        "carousel",
+        "title-card",
+        "kinetic-text",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5
+    },
+    {
+      "name": "carousel-text-circle-1",
+      "type": "block",
+      "title": "Text + Circle Carousel 1",
+      "description": "A headline mask-reveals word by word while a circle carousel converges from off-frame and threads the line, collapses to centre, hard-cuts to a second line that arrives at 1.4× (Circle style 1).",
+      "tags": [
+        "carousel",
+        "title-card",
+        "kinetic-text",
+        "images",
+        "showcase",
+        "circle"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5
+    },
+    {
+      "name": "press-ripple",
+      "type": "component",
+      "title": "Press Ripple",
+      "description": "A cursor decel-arrives from off-stage, lands slightly off-center on a caller-positioned target, compresses with it in lockstep, releases with two small click rings while the label swaps to a check, then exits off-stage while the confirmed state holds.",
+      "tags": [
+        "cursor",
+        "motion-primitive",
+        "product-demo",
+        "press",
+        "ripple",
+        "payoff"
+      ]
+    },
+    {
+      "name": "animated-bar-chart",
+      "type": "component",
+      "title": "Animated Bar Chart",
+      "description": "A compact data card with deterministic bar growth and value callouts.",
+      "tags": [
+        "data"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/animated-bar-chart.png"
+      }
+    },
+    {
+      "name": "blur-out-up",
+      "type": "component",
+      "title": "Blur Out Up",
+      "description": "Words arrive clean and depart upward with increasing blur for airy exits.",
+      "tags": [
+        "motion-primitive",
+        "typography"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/blur-out-up.png"
+      }
+    },
+    {
+      "name": "soft-blur-in",
+      "type": "component",
+      "title": "Soft Blur In",
+      "description": "A soft opacity, blur, and lift reveal for headlines, captions, and product UI callouts",
+      "tags": [
+        "motion-primitive",
+        "text",
+        "reveal",
+        "blur"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/soft-blur-in.png"
+      }
+    },
+    {
+      "name": "hw-underline",
+      "type": "component",
+      "title": "Squiggle Marks",
+      "description": "Hand-drawn squiggle underline, double-pass strikethrough, and bracket marks that draw on",
+      "tags": [
+        "handwritten",
+        "annotation",
+        "text-treatment"
+      ]
+    },
+    {
+      "name": "us-map-bubble",
+      "type": "block",
+      "title": "US Bubble Map",
+      "description": "Animated US bubble map with proportional city markers, value callouts, and connection lines — composable with us-map",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "usa",
+        "bubble",
+        "cities"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-bubble.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-bubble.png"
+      }
+    },
+    {
+      "name": "success-check",
+      "type": "component",
+      "title": "Success Check",
+      "description": "A success check primitive with ring pop, path draw, and subtle rotate blur",
+      "tags": [
+        "video-primitive",
+        "transition-primitive",
+        "transitions-dev-port",
+        "success",
+        "check"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/success-check.png"
+      }
+    },
+    {
+      "name": "arc-motion-path",
+      "type": "component",
+      "title": "Arc Motion Path",
+      "description": "A GSAP MotionPath primitive that flies a callout along a curved arc with autorotation.",
+      "tags": [
+        "video-primitive",
+        "motionpath",
+        "gsap-plugin",
+        "hyperframes-native"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/arc-motion-path.png"
+      }
+    },
+    {
+      "name": "carousel-vision-5",
+      "type": "block",
+      "title": "Vision Carousel 5",
+      "description": "A ring of large image cards tilted into a row under a 3D camera, each card turning toward the centre (Vision style 5); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "vision",
+        "3d"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-vision-4",
+      "type": "block",
+      "title": "Vision Carousel 4",
+      "description": "A ring of large image cards tilted into a row under a 3D camera, each card turning toward the centre (Vision style 4); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "vision",
+        "3d"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-vision-3",
+      "type": "block",
+      "title": "Vision Carousel 3",
+      "description": "A ring of large image cards tilted into a row under a 3D camera, each card turning toward the centre (Vision style 3); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "vision",
+        "3d"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-vision-2",
+      "type": "block",
+      "title": "Vision Carousel 2",
+      "description": "A ring of large image cards tilted into a row under a 3D camera, each card turning toward the centre (Vision style 2); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "vision",
+        "3d"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "carousel-vision-1",
+      "type": "block",
+      "title": "Vision Carousel 1",
+      "description": "A ring of large image cards tilted into a row under a 3D camera, each card turning toward the centre (Vision style 1); 12 image slots.",
+      "tags": [
+        "carousel",
+        "gallery",
+        "images",
+        "showcase",
+        "vision",
+        "3d"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6
+    },
+    {
+      "name": "heygen-avatar-promo-card",
+      "type": "block",
+      "title": "HeyGen Avatar Promo Card",
+      "description": "A portrait HeyGen offer card pairs a moving avatar mosaic with bold promotional typography and a branded callout",
+      "tags": [
+        "showcase",
+        "avatar",
+        "promotion",
+        "vertical"
+      ],
+      "dimensions": {
+        "width": 1080,
+        "height": 1920
+      },
+      "duration": 10,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/heygen-avatar-promo-card.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/heygen-avatar-promo-card.png"
+      }
+    },
+    {
+      "name": "outline-draw",
+      "type": "component",
+      "title": "Outline Draw",
+      "description": "A rounded outline that proves a callout by drawing clockwise as a hollow conic-gradient border with a clean closure.",
+      "tags": [
+        "motion-primitive",
+        "effects",
+        "outline",
+        "border",
+        "mask",
+        "proof"
+      ]
+    },
+    {
+      "name": "tracking-in",
+      "type": "component",
+      "title": "Tracking In",
+      "description": "A precise letter-spacing reveal for premium headings and interface labels",
+      "tags": [
+        "motion-primitive",
+        "text",
+        "reveal",
+        "typography"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/tracking-in.png"
+      }
+    },
+    {
+      "name": "data-chart",
+      "type": "block",
+      "title": "Data Chart",
+      "description": "Animated bar + line chart with staggered reveal, NYT-style typography, and value labels",
+      "tags": [
+        "data",
+        "chart",
+        "statistics"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 15,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/data-chart.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/data-chart.png"
+      }
+    },
+    {
+      "name": "logo-sting",
+      "type": "component",
+      "title": "Logo Sting",
+      "description": "A wordmark slams into its final scale, fires one accent ring and one white impact frame, then holds completely still.",
+      "tags": [
+        "motion-primitive",
+        "brand",
+        "logo",
+        "sting",
+        "impact",
+        "reveal"
+      ]
+    },
+    {
+      "name": "news-ticker",
+      "type": "block",
+      "title": "News Ticker",
+      "description": "Premium broadcast-style lower-third ticker with live label, headline ribbon, and scrolling news crawl.",
+      "tags": [
+        "lower-third",
+        "overlay",
+        "news",
+        "ticker"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7
+    },
+    {
+      "name": "world-map",
+      "type": "block",
+      "title": "World Map",
+      "description": "Animated world choropleth with country-by-country reveal, tooltip labels, and rotating globe inset — D3 Natural Earth projection",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "world",
+        "choropleth"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 14,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/world-map.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/world-map.png"
+      }
+    },
+    {
+      "name": "us-map-hex",
+      "type": "block",
+      "title": "US Hex Grid Map",
+      "description": "Animated hexagonal tile grid map — each state as an equal-weight hex with data fill and abbreviation label",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "usa",
+        "hexgrid",
+        "tilegrid"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 10,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-hex.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-hex.png"
+      }
+    },
+    {
+      "name": "us-map",
+      "type": "block",
+      "title": "US Map",
+      "description": "Animated US choropleth map with staggered state reveals, value labels, and gradient legend — pure inline SVG with GSAP",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "usa",
+        "choropleth"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map.png"
+      }
+    },
+    {
+      "name": "gesture-tap",
+      "type": "component",
+      "title": "Gesture Tap",
+      "description": "A contact circle taps a mobile pill button, releases it into a new labeled accent state, and lifts away.",
+      "tags": [
+        "motion-primitive",
+        "gesture",
+        "tap",
+        "interaction",
+        "ui-props"
+      ]
+    },
+    {
+      "name": "swipe-rail",
+      "type": "component",
+      "title": "Swipe Rail",
+      "description": "A contact circle leads a horizontal card rail through a fast drag, momentum carry, and settled snap to the next card.",
+      "tags": [
+        "motion-primitive",
+        "interaction",
+        "gesture",
+        "swipe",
+        "cards",
+        "rail"
+      ]
+    },
+    {
+      "name": "match-cut",
+      "type": "component",
+      "title": "Match Cut",
+      "description": "A circle accelerates into a hard single-frame scene swap, matches the incoming circle exactly, and continues into a smaller resting pose.",
+      "tags": [
+        "motion-primitive",
+        "transition",
+        "match-cut",
+        "hard-cut",
+        "continuity"
+      ]
+    },
+    {
+      "name": "radial-surround",
+      "type": "component",
+      "title": "Radial Surround",
+      "description": "Labeled hairline chips assemble around a centered subject on an elliptical ring, then optionally converge inward with a subtle edge dim. The center never moves: surrounded, not zoomed.",
+      "tags": [
+        "motion-primitive",
+        "problem-setup",
+        "radial",
+        "ring",
+        "surround",
+        "converge"
+      ]
+    },
+    {
+      "name": "hw-pipeline",
+      "type": "block",
+      "title": "Hand-Drawn Flowchart",
+      "description": "Wobbled boxes with handwritten labels joined by curved connectors, drawing on in sequence from a node list",
+      "tags": [
+        "handwritten",
+        "diagram",
+        "data-viz",
+        "overlay"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7
+    },
+    {
+      "name": "avatar-cloud",
+      "type": "component",
+      "title": "Avatar Cloud",
+      "description": "Lettermark avatars populate a loose elliptical cloud while fine SVG links draw between the community and its central proof label.",
+      "tags": [
+        "effects",
+        "avatars",
+        "community",
+        "network",
+        "social-proof",
+        "prove"
+      ]
+    },
+    {
+      "name": "marker-highlight",
+      "type": "component",
+      "title": "Marker Highlight",
+      "description": "Display text settles in, then one hand-drawn marker stroke (highlight, circle, underline, or scribble) draws over the emphasized word on cue.",
+      "tags": [
+        "motion-primitive",
+        "typography",
+        "emphasis",
+        "marker",
+        "deterministic"
+      ]
+    },
+    {
+      "name": "mk-progress-stat",
+      "type": "block",
+      "title": "Count-Up Stat Card",
+      "description": "Big-numeral statistic with count-up, label, thin progress track filling to value/max, and caption; light and dark schemes",
+      "tags": [
+        "data-viz",
+        "stat",
+        "minimal"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7
+    },
+    {
+      "name": "mk-line-graph",
+      "type": "block",
+      "title": "Minimal Line Graph",
+      "description": "One or two SVG series draw on with dots popping and value labels riding the draw front; dim baseline axis, x-labels, color-dot legend",
+      "tags": [
+        "data-viz",
+        "chart",
+        "graph",
+        "minimal"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7
+    },
+    {
+      "name": "beat-timeline",
+      "type": "component",
+      "title": "Beat Timeline",
+      "description": "A paused master-timeline orchestration spine that pins titled beat rows to evenly spaced named labels. Each row enters on its label, holds with the sequence, then exits with the group.",
+      "tags": [
+        "orchestration",
+        "transitions",
+        "sequencing",
+        "bridge",
+        "timeline"
+      ]
+    },
+    {
+      "name": "hw-arrow",
+      "type": "component",
+      "title": "Hand-Drawn Arrow",
+      "description": "Wobbled draw-on arrow with straight, gentle, and swoop curve poses, a four-way stroke texture matrix (plain/soft/sharp/spray), and a travel-aligned head-arrival stretch pulse with spring recovery; boils while on screen",
+      "tags": [
+        "handwritten",
+        "annotation",
+        "arrow",
+        "overlay"
+      ]
+    },
+    {
+      "name": "nyc-paris-flight",
+      "type": "block",
+      "title": "NYC Paris Flight",
+      "description": "Apple-style realistic map animation with a plane flying from New York to Paris, marker circle, landing pop, and sound effects.",
+      "tags": [
+        "showcase",
+        "travel",
+        "map",
+        "youtube",
+        "sfx"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 6,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/nyc-paris-flight.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/nyc-paris-flight.png"
+      }
+    },
+    {
+      "name": "chart-story",
+      "type": "component",
+      "title": "Chart Story",
+      "description": "One chart builds from data in reading order and lands the exact supplied values: staggered bars, a left-to-right line with area fill, a sweeping donut, or filling progress bars, with an accented value callout on the emphasized datum.",
+      "tags": [
+        "motion-primitive",
+        "proof",
+        "stats",
+        "chart",
+        "bars",
+        "line",
+        "donut",
+        "progress",
+        "deterministic"
+      ]
+    },
+    {
+      "name": "touch-indicator",
+      "type": "component",
+      "title": "Touch Indicator",
+      "description": "A translucent contact-circle gesture actor for mobile UI scenes: it touches the glass on the frame the host target responds, then lifts. Tap or swipe, picked by variable.",
+      "tags": [
+        "cursor",
+        "motion-primitive",
+        "mobile",
+        "gesture",
+        "touch",
+        "pointer"
+      ]
+    },
+    {
+      "name": "telemetry-hud",
+      "type": "component",
+      "title": "Telemetry HUD",
+      "description": "Quiet mono debug-HUD readouts frame a slotted subject: corner brackets draw on, label:value lines tick their values on cues, one readout emphasized in accent. The subject never moves; the HUD breathes zero.",
+      "tags": [
+        "motion-primitive",
+        "product-demo",
+        "hud",
+        "telemetry",
+        "deterministic"
+      ]
+    },
+    {
+      "name": "marker-checklist-card",
+      "type": "component",
+      "title": "Marker Checklist Card",
+      "description": "A hand-lettered paper card: marker headline with an underline and a drawn ellipse around one word, then three checklist rows whose checks draw themselves on - typewriter labels, marker values. The paper-and-marker sibling of mk-specs-list's clean professional rows",
+      "tags": [
+        "motion-primitive",
+        "handwritten",
+        "checklist",
+        "paper",
+        "marker"
+      ]
+    },
+    {
+      "name": "grid-card-assemble",
+      "type": "component",
+      "title": "Grid Card Assemble",
+      "description": "N capability cards (thin-line icon that draws on, mono label, optional muted body) stagger-assemble into a grid or vertical list with a fade plus short slide into slot, then hold perfectly still.",
+      "tags": [
+        "motion-primitive",
+        "layout",
+        "grid",
+        "list",
+        "stagger",
+        "assemble",
+        "feature-tour"
+      ]
+    },
+    {
+      "name": "titlecard-lockup",
+      "type": "component",
+      "title": "Titlecard Lockup",
+      "description": "The calm breather titlecard: an optional mono kicker fades up, the wordmark settles dead-center with one restrained move, a hairline rule draws left to right, a mono label fades beneath, and the lockup holds truly still.",
+      "tags": [
+        "motion-primitive",
+        "typography",
+        "title-card",
+        "lockup",
+        "breather",
+        "orient"
+      ]
+    },
+    {
+      "name": "hw-boil",
+      "type": "component",
+      "title": "Hand-Drawn Boil",
+      "description": "Hand-drawn jitter that re-poses every N frames, as seek-safe helpers: pose derives from quantized timeline time through a seeded hash; includes the shared onUpdate dispatcher, a wobbled-ellipse path generator, the boil pose control (off/calm/lively over the family-locked frameDrop), a curvature-adaptive pen-velocity ease, and the completed stroke matrix (plain/soft/sharp/spray — spray is index-seeded deterministic dots, no turbulence) with texture-safe draw-on",
+      "tags": [
+        "handwritten",
+        "effect",
+        "annotation"
+      ]
+    },
+    {
+      "name": "segmentation-flood",
+      "type": "component",
+      "title": "Segmentation Flood",
+      "description": "Machine-vision read of a slotted subject: translucent accent segmentation masks flood on in quantized scanline steps, each region gets a thin bracket and mono label chip, a deterministic 2-frame HUD flicker rides the pass, then the labeled read settles clean.",
+      "tags": [
+        "motion-primitive",
+        "product-demo",
+        "ai",
+        "hud",
+        "canvas",
+        "deterministic",
+        "experiment"
+      ]
+    },
+    {
+      "name": "iris-reveal",
+      "type": "component",
+      "title": "Iris Reveal",
+      "description": "A circle clip-path opens from an authored origin revealing state B over state A in one confident pass, then holds on B. Classic register dims and desaturates the before state so the after state lands in full color; a thin accent rim rides the iris edge. Callers fill the named before/after slot panels; token-styled defaults render when a slot is left empty.",
+      "tags": [
+        "transition",
+        "iris",
+        "circle-reveal",
+        "clip-path",
+        "bridge",
+        "slots"
+      ]
+    },
+    {
+      "name": "mk-usage-arc",
+      "type": "component",
+      "title": "Hairline Arc Gauge",
+      "description": "Thin circular gauge that draws on while its percentage counts up; one helper call drives both",
+      "tags": [
+        "data-viz",
+        "gauge",
+        "minimal"
+      ]
+    },
+    {
+      "name": "focus-blur-resolve",
+      "type": "component",
+      "title": "Focus Blur Resolve",
+      "description": "A premium focus pull from heavy blur to crisp text, then a soft blur-out exit.",
+      "tags": [
+        "motion-primitive",
+        "typography"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/focus-blur-resolve.png"
+      }
+    },
+    {
+      "name": "fade-through",
+      "type": "component",
+      "title": "Fade Through",
+      "description": "A calm transition primitive that fades one layer out, passes through a wash, and reveals the next layer",
+      "tags": [
+        "motion-primitive",
+        "transition",
+        "fade",
+        "crossfade",
+        "scene"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/fade-through.png"
+      }
+    },
+    {
+      "name": "grid-pixelate-wipe",
+      "type": "component",
+      "title": "Grid Pixelate Wipe",
+      "description": "Transition effect where the screen dissolves into a grid of squares that fade out with staggered timing — use between scenes",
+      "tags": [
+        "transition",
+        "wipe",
+        "grid",
+        "pixelate"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/grid-pixelate-wipe.png"
+      }
+    },
+    {
+      "name": "store-badge-lockup",
+      "type": "component",
+      "title": "Store Badge Lockup",
+      "description": "Settles a short headline above equal-size App Store and Google Play badges as a token-driven mobile end-card call to action.",
+      "tags": [
+        "prop",
+        "ui-props",
+        "mobile",
+        "store-badges",
+        "cta",
+        "ask"
+      ]
+    },
+    {
+      "name": "push-in",
+      "type": "component",
+      "title": "Push In",
+      "description": "A centered headline gains focus through one slow, continuous camera push and a gentle fade out.",
+      "tags": [
+        "motion-primitive",
+        "camera",
+        "push-in",
+        "focus",
+        "emphasize",
+        "holdable"
+      ]
+    },
+    {
+      "name": "code-shader-dissolve",
+      "type": "block",
+      "title": "Code Shader Dissolve",
+      "description": "The code compiles into existence: a GPU fragment shader resolves it out of seeded noise with a chromatic dissolve front and edge glow, then holds crisp.",
+      "tags": [
+        "code",
+        "code-animation",
+        "shader",
+        "webgl",
+        "developer"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/code-shader-dissolve.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/code-shader-dissolve.png"
+      }
+    },
+    {
+      "name": "cut-the-curve",
+      "type": "component",
+      "title": "Cut the Curve",
+      "description": "A velocity-matched directional hard cut: the outgoing subject accelerates with power4.in, swaps at peak velocity, and the incoming subject continues in the same direction with power4.out.",
+      "tags": [
+        "transition",
+        "directional-cut",
+        "velocity-match",
+        "whip",
+        "bridge",
+        "demonstrate"
+      ]
+    },
+    {
+      "name": "code-morph",
+      "type": "block",
+      "title": "Code Morph",
+      "description": "One snippet transforms into another — tokens glide between positions, leavers fade out, enterers fade in. Shiki Magic Move re-driven as a paused GSAP timeline.",
+      "tags": [
+        "code",
+        "code-animation",
+        "morph",
+        "refactor",
+        "developer"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/code-morph.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/code-morph.png"
+      }
+    },
+    {
+      "name": "extended-keyframe",
+      "type": "component",
+      "title": "Extended Keyframe",
+      "description": "The never-fully-lands arrival: an element covers most of its move in the first fifth of the duration and creeps the rest to the last frame, exits along its arrival vector, and carries shutter motion blur — from any side or by scale, one call per element, plus the ease on its own for any tween",
+      "tags": [
+        "motion",
+        "ease",
+        "arrival",
+        "kinetic-type",
+        "text",
+        "motion-blur",
+        "after-effects",
+        "slide-in",
+        "scale-in"
+      ]
+    },
+    {
+      "name": "message-thread-reveal",
+      "type": "block",
+      "title": "Message Thread Reveal",
+      "description": "A full text conversation plays out on a phone - bubbles popping in, typing indicators, a shared link card, emoji, delivered receipts - with the whole thread scrolling up beat by beat until a closing card lands. The complete chat ad-template, measured message by message",
+      "tags": [
+        "showcase",
+        "mock-ui",
+        "chat",
+        "vertical",
+        "ad-template"
+      ],
+      "dimensions": {
+        "width": 1080,
+        "height": 1920
+      },
+      "duration": 25.7667
+    }
+  ]
+}

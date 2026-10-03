@@ -1,0 +1,40 @@
+<template>
+  <style>
+    #constructed-rung-root { position:absolute; inset:0; width:100%; height:100%; background:#111816; color:#edf3e8; }
+    #constructed-rung-heading { position:absolute; left:96px; top:46px; font:900 96px/1.06 Montserrat; letter-spacing:-.045em; opacity:0; }
+    #constructed-rung-context { position:absolute; left:96px; top:158px; font:400 34px/1.35 'IBM Plex Mono'; color:#b8d979; }
+    #constructed-rung-frame { position:absolute; left:288px; top:224px; width:1344px; height:756px; overflow:hidden; }
+    #constructed-rung-picture { width:100%; height:100%; }
+    #constructed-rung-video { width:100%; height:100%; object-fit:contain; }
+    #constructed-rung-circle { position:absolute; left:850px; top:492px; width:220px; height:220px; pointer-events:none; }
+    #constructed-rung-circle svg { width:100%; height:100%; overflow:visible; }
+    #constructed-rung-circle ellipse { fill:none; stroke:#b8d979; stroke-width:6; stroke-linecap:round; }
+    #constructed-rung-label { position:absolute; left:1120px; top:560px; width:360px; padding:18px 24px; background:#111816; color:#b8d979; font:400 32px/1.3 'IBM Plex Mono'; }
+    #constructed-rung-source { position:absolute; left:96px; top:1016px; font:400 28px/1.3 'IBM Plex Mono'; color:#b5c2b4; }
+  </style>
+  <div id="constructed-rung-root" data-composition-id="constructed-rung" data-width="1920" data-height="1080" data-duration="8">
+    <h1 id="constructed-rung-heading">One cell, one scaffold</h1>
+    <p id="constructed-rung-context">Source water → grounded on a placed block</p>
+    <div id="constructed-rung-frame"><div id="constructed-rung-picture" data-layout-allow-overflow>
+      <video id="constructed-rung-video" class="clip" src="assets/footage/constructed-rung.mp4" muted playsinline data-start="0" data-duration="8" data-track-index="0"></video>
+    </div></div>
+    <!-- Pointer ring adapted from installed yt-circle-pointer; no countdown. -->
+    <div id="constructed-rung-circle"><svg viewBox="0 0 220 220"><ellipse cx="110" cy="110" rx="103" ry="103"></ellipse></svg></div>
+    <p id="constructed-rung-label">Placed block</p>
+    <p id="constructed-rung-source">Prior input build · actual reset default · 1×</p>
+  </div>
+  <script>
+    const rungTimeline = gsap.timeline({paused:true});
+    const rungEllipse = document.querySelector('#constructed-rung-circle ellipse');
+    const rungStrokeLength = rungEllipse.getTotalLength();
+    gsap.set(rungEllipse, {strokeDasharray:rungStrokeLength});
+    rungTimeline.fromTo(rungEllipse, {strokeDashoffset:rungStrokeLength}, {strokeDashoffset:0,duration:.7,ease:'power2.inOut'}, 3.5);
+    rungTimeline.fromTo('#constructed-rung-label', {scale:0,opacity:0}, {scale:1,opacity:1,duration:.45,ease:'power3.out'}, 3.5);
+    rungTimeline.set('#constructed-rung-heading', {opacity:1,y:72}, .08);
+    rungTimeline.to('#constructed-rung-heading', {y:0,duration:.19,ease:'power4.out'}, .08);
+    rungTimeline.fromTo('#constructed-rung-context', {scale:0,opacity:0}, {scale:1,opacity:1,duration:.45,ease:'power3.out'}, .15);
+    rungTimeline.fromTo('#constructed-rung-source', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .3);
+    rungTimeline.fromTo('#constructed-rung-picture', {scale:1}, {scale:1.012,duration:8,ease:'none'}, 0);
+    window.__timelines['constructed-rung'] = rungTimeline;
+  </script>
+</template>

@@ -1,0 +1,57 @@
+<template>
+  <style>
+    #food-observations-root { position:absolute; inset:0; width:100%; height:100%; padding:80px 96px; display:flex; flex-direction:column; gap:36px; background:#111816; color:#edf3e8; }
+    #food-observations-heading { font-family:Montserrat; font-weight:900; font-size:96px; line-height:1.06; letter-spacing:-.045em; opacity:0; }
+    #food-observations-context { font:400 32px/1.35 'IBM Plex Mono'; color:#b5c2b4; }
+    #food-observations-body { display:grid; grid-template-columns:1.2fr 1fr; gap:80px; flex:1; align-items:center; }
+    #food-observations-chart { --hf-grow:1; display:grid; grid-template-columns:1fr 1fr; gap:72px; }
+    #food-observations-chart .food-column { display:flex; flex-direction:column; gap:20px; }
+    #food-observations-chart .food-count { font:900 110px/1 Montserrat; letter-spacing:-.04em; }
+    #food-observations-chart .food-label { font:400 32px/1.35 'IBM Plex Mono'; min-height:90px; }
+    #food-observations-chart .bars { height:270px; display:flex; align-items:end; border-bottom:3px solid #b5c2b4; }
+    #food-observations-chart .bar { display:block; width:100%; height:var(--h); transform:scaleY(var(--hf-grow)); transform-origin:50% 100%; background:#b5c2b4; }
+    #food-observations-chart .food-swim .bar { background:#b8d979; }
+    #food-observations-chart .food-swim .food-count { color:#b8d979; }
+    #food-observations-limits { display:flex; flex-direction:column; gap:28px; font:400 34px/1.4 'IBM Plex Mono'; }
+    #food-observations-limits strong { font:900 42px/1.2 Montserrat; color:#e5bf80; }
+    #food-observations-footer { border-top:2px solid #b5c2b4; padding-top:22px; font:400 28px/1.4 'IBM Plex Mono'; color:#b5c2b4; }
+  </style>
+  <div id="food-observations-root" data-composition-id="food-observations" data-width="1920" data-height="1080" data-duration="10">
+    <h1 id="food-observations-heading">Food at the end</h1>
+    <p id="food-observations-context">New food observed in the pack · five FPS-valid checkpoint pairs</p>
+    <!-- Adapted from installed animated-bar-chart: observations, not safety passes. -->
+    <div id="food-observations-body">
+      <div id="food-observations-chart" class="hf-catalog-animated-bar-chart">
+        <div class="food-column">
+          <div class="food-count">1/5</div>
+          <div class="food-label">Ordinary input</div>
+          <div class="bars"><span class="bar" style="--h:20%"></span></div>
+        </div>
+        <div class="food-column food-swim">
+          <div class="food-count">5/5</div>
+          <div class="food-label">Swimming ascent</div>
+          <div class="bars"><span class="bar" style="--h:100%"></span></div>
+        </div>
+      </div>
+      <div id="food-observations-limits">
+        <strong>Safety still red</strong>
+        <p>One ordinary-input arm died to a Drowned trident.</p>
+        <p>Initial health differed; no survival attribution.</p>
+        <p>Food gathering and the full playthrough remain open.</p>
+      </div>
+    </div>
+    <p id="food-observations-footer">Same 0.95.56 binary, water input OFF / ON · six pairs attempted; one FPS-invalid</p>
+  </div>
+  <script>
+    const foodTimeline = gsap.timeline({paused:true});
+    // waterfall-entry: binary reveal, heavier heading travels farther.
+    foodTimeline.set('#food-observations-heading', {opacity:1,y:72}, .08);
+    foodTimeline.to('#food-observations-heading', {y:0,duration:.19,ease:'power4.out'}, .08);
+    foodTimeline.fromTo('#food-observations-context', {opacity:0,y:32}, {opacity:1,y:0,duration:.4,ease:'expo.out'}, .24);
+    // Installed deterministic chart growth, adapted to transform-only bars.
+    foodTimeline.fromTo('#food-observations-chart', {'--hf-grow':0}, {'--hf-grow':1,duration:1.2,ease:'power3.out'}, .4);
+    foodTimeline.fromTo('#food-observations-limits', {scale:0,opacity:0}, {scale:1,opacity:1,duration:.55,ease:'power3.out'}, .7);
+    foodTimeline.fromTo('#food-observations-footer', {opacity:0,y:24}, {opacity:1,y:0,duration:.45,ease:'power2.out'}, 1.05);
+    window.__timelines['food-observations'] = foodTimeline;
+  </script>
+</template>

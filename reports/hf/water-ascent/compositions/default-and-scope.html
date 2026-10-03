@@ -1,0 +1,30 @@
+<template>
+  <style>
+    #default-and-scope-root { position:absolute; inset:0; width:100%; height:100%; background:#111816; color:#edf3e8; padding:72px 80px; display:flex; flex-direction:column; }
+    #default-and-scope-heading { font:900 96px/1.06 Montserrat; letter-spacing:-.045em; opacity:0; }
+    #default-and-scope-fact { margin-top:96px; max-width:1600px; font:900 80px/1.15 Montserrat; color:#b8d979; }
+    #default-and-scope-detail { margin-top:36px; max-width:1500px; font:400 34px/1.4 'IBM Plex Mono'; }
+    #default-and-scope-tested { margin-top:72px; max-width:1580px; font:400 34px/1.4 'IBM Plex Mono'; }
+    #default-and-scope-open { margin-top:36px; max-width:1580px; font:400 34px/1.4 'IBM Plex Mono'; color:#e5bf80; }
+    #default-and-scope-source { margin-top:auto; font:400 28px/1.4 'IBM Plex Mono'; color:#b5c2b4; }
+  </style>
+  <div id="default-and-scope-root" data-composition-id="default-and-scope" data-width="1920" data-height="1080" data-duration="10">
+    <h1 id="default-and-scope-heading">The next default</h1>
+    <p id="default-and-scope-fact">Ascent input in water</p>
+    <p id="default-and-scope-detail">The water pillar rises without holding the sinking input.</p>
+    <p id="default-and-scope-tested">Prior input build: 42 wet + 36 dry trials passed.</p>
+    <p id="default-and-scope-open">Current: 24 navigation + 12 exit checks. Native survival failed.</p>
+    <p id="default-and-scope-source">Unreleased 0.95.57 · food / combat / full playthrough open</p>
+  </div>
+  <script>
+    const scopeTimeline = gsap.timeline({paused:true});
+    scopeTimeline.set('#default-and-scope-heading', {opacity:1,y:72}, .08);
+    scopeTimeline.to('#default-and-scope-heading', {y:0,duration:.19,ease:'power4.out'}, .08);
+    scopeTimeline.fromTo('#default-and-scope-fact', {scale:0,opacity:0}, {scale:1,opacity:1,duration:.45,ease:'power3.out'}, .15);
+    scopeTimeline.fromTo('#default-and-scope-detail', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .36);
+    scopeTimeline.fromTo('#default-and-scope-tested', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .5);
+    scopeTimeline.fromTo('#default-and-scope-open', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .62);
+    scopeTimeline.fromTo('#default-and-scope-source', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .74);
+    window.__timelines['default-and-scope'] = scopeTimeline;
+  </script>
+</template>

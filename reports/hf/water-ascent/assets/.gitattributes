@@ -1,0 +1,5 @@
+# Retain frozen upstream runtime/licence bytes and their provenance hashes.
+GSAP-README.md -text -whitespace
+gsap.min.js -text -whitespace
+ibm-plex-mono-400-OFL.txt -text -whitespace
+montserrat-900-OFL.txt -text -whitespace

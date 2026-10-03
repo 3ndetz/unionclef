@@ -1,0 +1,9 @@
+.hyperframes/
+.media/
+renders/
+videos/
+*.log
+snapshots/
+contact-sheet.jpg
+assets/footage/
+.thumbnails/

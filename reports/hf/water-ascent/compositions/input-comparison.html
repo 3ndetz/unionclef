@@ -1,0 +1,46 @@
+<template>
+  <style>
+    #input-comparison-root { position:absolute; inset:0; width:100%; height:100%; background:#111816; color:#edf3e8; padding:72px 80px; }
+    #input-comparison-heading { font:900 96px/1.06 Montserrat; letter-spacing:-.045em; opacity:0; }
+    #input-comparison-panels { position:absolute; top:242px; left:80px; right:80px; display:grid; grid-template-columns:1fr 1fr; gap:32px; }
+    #input-comparison-panels .comparison-label { font:400 32px/1.35 'IBM Plex Mono'; margin-bottom:24px; }
+    #input-comparison-panels .comparison-view { width:864px; height:486px; overflow:hidden; }
+    #input-comparison-panels .comparison-picture { width:100%; height:100%; }
+    #input-comparison-panels video { width:100%; height:100%; object-fit:contain; }
+    #input-comparison-right-label { color:#b8d979; }
+    #input-comparison-mechanism { position:absolute; top:842px; left:80px; right:80px; font:400 34px/1.35 'IBM Plex Mono'; }
+    #input-comparison-scope { position:absolute; top:909px; left:80px; right:80px; font:400 30px/1.35 'IBM Plex Mono'; color:#e5bf80; }
+    #input-comparison-source { position:absolute; top:1000px; left:80px; right:80px; font:400 28px/1.3 'IBM Plex Mono'; color:#b5c2b4; }
+  </style>
+  <div id="input-comparison-root" data-composition-id="input-comparison" data-width="1920" data-height="1080" data-duration="12">
+    <h1 id="input-comparison-heading">Same water bank</h1>
+    <div id="input-comparison-panels">
+      <div><p class="comparison-label" id="input-comparison-left-label">Ordinary input · 4×</p>
+        <div class="comparison-view"><div class="comparison-picture" id="input-comparison-left-picture">
+          <video id="input-comparison-off" class="clip" src="assets/footage/off-bank-source-window.mp4" muted playsinline data-start="0" data-duration="12" data-track-index="0"></video>
+        </div></div>
+      </div>
+      <div><p class="comparison-label" id="input-comparison-right-label">Swimming ascent · 1×</p>
+        <div class="comparison-view"><div class="comparison-picture" id="input-comparison-right-picture">
+          <video id="input-comparison-on" class="clip" src="assets/footage/on-bank.mp4" muted playsinline data-start="0" data-duration="12" data-track-index="1"></video>
+        </div></div>
+      </div>
+    </div>
+    <p id="input-comparison-mechanism">Water ascent drops the opposed sneak input.</p>
+    <p id="input-comparison-scope">Initial health differed. No survival or speed claim.</p>
+    <p id="input-comparison-source">Same checkpoint / 0.95.56 binary · OFF 36–84s / ON 30–42s</p>
+  </div>
+  <script>
+    const comparisonTimeline = gsap.timeline({paused:true});
+    comparisonTimeline.set('#input-comparison-heading', {opacity:1,y:72}, .08);
+    comparisonTimeline.to('#input-comparison-heading', {y:0,duration:.19,ease:'power4.out'}, .08);
+    comparisonTimeline.fromTo('#input-comparison-left-label', {scale:0,opacity:0}, {scale:1,opacity:1,duration:.45,ease:'power3.out'}, .15);
+    comparisonTimeline.fromTo('#input-comparison-right-label', {scale:0,opacity:0}, {scale:1,opacity:1,duration:.45,ease:'power3.out'}, .21);
+    comparisonTimeline.fromTo('#input-comparison-mechanism', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .36);
+    comparisonTimeline.fromTo('#input-comparison-scope', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .5);
+    comparisonTimeline.fromTo('#input-comparison-source', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .62);
+    comparisonTimeline.fromTo('#input-comparison-left-picture', {scale:1}, {scale:1.012,duration:12,ease:'none'}, 0);
+    comparisonTimeline.fromTo('#input-comparison-right-picture', {scale:1}, {scale:1.012,duration:12,ease:'none'}, 0);
+    window.__timelines['input-comparison'] = comparisonTimeline;
+  </script>
+</template>

@@ -1,0 +1,29 @@
+<template>
+  <style>
+    #water-hook-root { position:absolute; inset:0; width:100%; height:100%; color:#edf3e8; background:#111816; }
+    #water-hook-heading { position:absolute; z-index:1; left:96px; top:38px; font:900 96px/1.06 Montserrat; letter-spacing:-.045em; opacity:0; }
+    #water-hook-frame { position:absolute; left:192px; top:152px; width:1536px; height:864px; overflow:hidden; }
+    #water-hook-picture { width:100%; height:100%; }
+    #water-hook-video { width:100%; height:100%; object-fit:contain; }
+    #water-hook-source { position:absolute; left:192px; top:1032px; font:400 28px/1.3 'IBM Plex Mono'; color:#b5c2b4; }
+    #water-hook-rate { position:absolute; right:96px; top:76px; font:400 32px/1.2 'IBM Plex Mono'; color:#b8d979; }
+  </style>
+  <div id="water-hook-root" data-composition-id="water-hook" data-width="1920" data-height="1080" data-duration="6">
+    <h1 id="water-hook-heading">Swimming up</h1>
+    <div id="water-hook-frame"><div id="water-hook-picture" data-layout-allow-overflow>
+      <video id="water-hook-video" class="clip" src="assets/footage/on-bank.mp4" muted playsinline data-start="0" data-duration="6" data-track-index="0"></video>
+    </div></div>
+    <p id="water-hook-source">Bank exit · checkpoint pair 3 · swimming input ON</p>
+    <p id="water-hook-rate">1×</p>
+  </div>
+  <script>
+    const hookTimeline = gsap.timeline({paused:true});
+    hookTimeline.set('#water-hook-heading', {opacity:1,y:72}, .08);
+    hookTimeline.to('#water-hook-heading', {y:0,duration:.19,ease:'power4.out'}, .08);
+    hookTimeline.fromTo('#water-hook-rate', {scale:0,opacity:0}, {scale:1,opacity:1,duration:.45,ease:'power3.out'}, .15);
+    hookTimeline.fromTo('#water-hook-source', {opacity:0,y:24}, {opacity:1,y:0,duration:.4,ease:'power3.out'}, .28);
+    // Small push on the untimed picture wrapper; playback belongs to HyperFrames.
+    hookTimeline.fromTo('#water-hook-picture', {scale:1}, {scale:1.012,duration:6,ease:'none'}, 0);
+    window.__timelines['water-hook'] = hookTimeline;
+  </script>
+</template>

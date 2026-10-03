@@ -403,6 +403,33 @@ Completed gamer survival verdict:
   remains failed;0.95.57 remains an unreleased draft. Finish the truthful
   candidate report, then measure the saved-swim producer from its exact entry.
 
+- The truthful candidate progress film is now rendered and delivered, not a
+  release announcement. CLI0.8.113->0.8.114 upgraded and browser checks passed;
+  prior42 wet/36 dry input trials remain distinct from current24 navigation/
+  12 exit boundaries and failed native survival. No footage/motion was changed.
+- Final browser/snapshot commands both returned0; wrapper148416/
+  log094249-44144 returned1 only on history end after my history begin used
+  the wrong working directory. That original failure is retained. Separate
+  journal159540/log094619-142420 returned0 after actual review of all8 current
+  snapshots and history repair from the project. No browser retry masked it.
+- Render38876/log094647-104688 naturally0 at06:49:01.164364UTC:58.000s,
+  1920x1080 H264/30FPS/1740 frames, deliberate silence. Drawelement capture,
+  hardware GPU,2m4.2s pipeline. Master SHA98d3663b; exact probe/proof retained.
+  Telegram delivery157980/log095031-113888 naturally0 at06:51:29.798773UTC:
+  1280x720/58s/1740 frames,14393872 bytes, SHA c7053bd1. Both master's two
+  and delivery's two fixed2s pages actually viewed; journal155604/
+  log095259-120580 naturally0 at06:53:00.268133UTC verifies hashes and review.
+  This is fixed sampling, not every-frame or moving playback inspection.
+- Send161320/log095311-156864 naturally0 at06:53:24.333545UTC; Telegram
+  message9712 confirmed, English caption retains nativeFAIL and no new release.
+  HAPI video display acknowledged. Local media ledger registration25516/
+  log095532-151224 naturally0 at06:55:45.968391UTC; ignored video_006 adopted
+  locally, no remote media upload. Original failures and draft57 are unchanged.
+- ONE exact saved-swim diagnostic139448/wrapper35608/log100255-35608
+  started07:02:55.858397UTC, sourcec7b43213, cp1003-0401-t649/rawAir225/HP20/
+  original21-stack pack. Actual method lookup, terminal and film review pending;
+  do not claim causal body-clearance proof or a water fix before those reads.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

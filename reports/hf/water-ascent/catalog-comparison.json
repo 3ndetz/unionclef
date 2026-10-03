@@ -1,0 +1,705 @@
+{
+  "query": "animated bar chart comparison",
+  "tier": "words",
+  "tier_detail": "local word match",
+  "dropped": 0,
+  "unindexed": 0,
+  "shown": 38,
+  "total": 386,
+  "report_gap": "npx hyperframes feedback --search-miss \"animated bar chart comparison\" --wanted \"<the move you needed>\" --tier words",
+  "results": [
+    {
+      "name": "animated-bar-chart",
+      "type": "component",
+      "title": "Animated Bar Chart",
+      "description": "A compact data card with deterministic bar growth and value callouts.",
+      "tags": [
+        "data"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/animated-bar-chart.png"
+      }
+    },
+    {
+      "name": "data-chart",
+      "type": "block",
+      "title": "Data Chart",
+      "description": "Animated bar + line chart with staggered reveal, NYT-style typography, and value labels",
+      "tags": [
+        "data",
+        "chart",
+        "statistics"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 15,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/data-chart.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/data-chart.png"
+      }
+    },
+    {
+      "name": "bar-chart-race",
+      "type": "block",
+      "title": "Bar Chart Race",
+      "description": "Ranked bars grow and overtake each other as a time series advances, with the axis rescaling as values climb and the accent handing over to whoever leads",
+      "tags": [
+        "data",
+        "chart",
+        "statistics",
+        "ranking"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12
+    },
+    {
+      "name": "comparison-split",
+      "type": "component",
+      "title": "Comparison Split",
+      "description": "Two full-bleed panels compare before and after states as a persistent divider wipes the vivid after layer over the muted before layer and rests at a configurable split.",
+      "tags": [
+        "prop",
+        "ui-props",
+        "compare",
+        "holdable",
+        "before-after",
+        "wipe"
+      ]
+    },
+    {
+      "name": "decline-chart",
+      "type": "component",
+      "title": "Decline Chart",
+      "description": "A metric line draws downward as its value counts down and the ambient background darkens in lockstep.",
+      "tags": [
+        "motion-primitive",
+        "data",
+        "chart",
+        "decline",
+        "metric",
+        "problem"
+      ]
+    },
+    {
+      "name": "chart-story",
+      "type": "component",
+      "title": "Chart Story",
+      "description": "One chart builds from data in reading order and lands the exact supplied values: staggered bars, a left-to-right line with area fill, a sweeping donut, or filling progress bars, with an accented value callout on the emphasized datum.",
+      "tags": [
+        "motion-primitive",
+        "proof",
+        "stats",
+        "chart",
+        "bars",
+        "line",
+        "donut",
+        "progress",
+        "deterministic"
+      ]
+    },
+    {
+      "name": "lt-stack-bars",
+      "type": "block",
+      "title": "Lower Third — Stack Bars",
+      "description": "Two stacked bars: a dark name bar wipes from the left, an accent role bar wipes from the right",
+      "tags": [
+        "lower-third",
+        "overlay",
+        "podcast",
+        "interview",
+        "bold"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 4.8
+    },
+    {
+      "name": "lt-clean-bar",
+      "type": "block",
+      "title": "Lower Third — Clean Bar",
+      "description": "Minimal white-card lower third for podcasts/interviews: accent tab, name + role, clip-wipe entrance",
+      "tags": [
+        "lower-third",
+        "overlay",
+        "podcast",
+        "interview"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 4.8
+    },
+    {
+      "name": "spotify-card",
+      "type": "block",
+      "title": "Spotify Now Playing",
+      "description": "Animated Spotify now-playing card with album art and progress bar",
+      "tags": [
+        "social",
+        "overlay",
+        "spotify"
+      ],
+      "dimensions": {
+        "width": 1080,
+        "height": 1920
+      },
+      "duration": 5,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/spotify-card.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/spotify-card.png"
+      }
+    },
+    {
+      "name": "x-post",
+      "type": "block",
+      "title": "X Post Card",
+      "description": "Animated X/Twitter post card overlay with engagement metrics",
+      "tags": [
+        "social",
+        "overlay",
+        "twitter"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/x-post.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/x-post.png"
+      }
+    },
+    {
+      "name": "tiktok-follow",
+      "type": "block",
+      "title": "TikTok Follow",
+      "description": "Animated TikTok follow overlay with profile card and follow button",
+      "tags": [
+        "social",
+        "overlay",
+        "tiktok"
+      ],
+      "dimensions": {
+        "width": 1080,
+        "height": 1920
+      },
+      "duration": 4.5,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/tiktok-follow.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/tiktok-follow.png"
+      }
+    },
+    {
+      "name": "reddit-post",
+      "type": "block",
+      "title": "Reddit Post Card",
+      "description": "Animated Reddit post card overlay with upvotes and comments",
+      "tags": [
+        "social",
+        "overlay",
+        "reddit"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/reddit-post.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/reddit-post.png"
+      }
+    },
+    {
+      "name": "instagram-follow",
+      "type": "block",
+      "title": "Instagram Follow",
+      "description": "Animated Instagram follow overlay with profile card and follow button",
+      "tags": [
+        "social",
+        "overlay",
+        "instagram"
+      ],
+      "dimensions": {
+        "width": 1080,
+        "height": 1920
+      },
+      "duration": 4.5,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/instagram-follow.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/instagram-follow.png"
+      }
+    },
+    {
+      "name": "chatgpt-exchange",
+      "type": "block",
+      "title": "ChatGPT Exchange",
+      "description": "A portrait ChatGPT-style exchange types and sends a prompt, streams an answer, assembles a comparison table, and scrolls back through the result",
+      "tags": [
+        "showcase",
+        "mock-ui",
+        "ai",
+        "chat",
+        "vertical",
+        "ad-template"
+      ],
+      "dimensions": {
+        "width": 1080,
+        "height": 1920
+      },
+      "duration": 14.9
+    },
+    {
+      "name": "yt-lower-third",
+      "type": "block",
+      "title": "YouTube Lower Third",
+      "description": "Animated YouTube subscribe lower third with avatar and channel info",
+      "tags": [
+        "social",
+        "overlay",
+        "youtube"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 4.5,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/yt-lower-third.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/yt-lower-third.png"
+      }
+    },
+    {
+      "name": "mesh-gradient-bg",
+      "type": "component",
+      "title": "Mesh Gradient Background",
+      "description": "A render-safe mesh gradient using animated radial layers.",
+      "tags": [
+        "effect"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/mesh-gradient-bg.png"
+      }
+    },
+    {
+      "name": "macos-notification",
+      "type": "block",
+      "title": "macOS Notification",
+      "description": "Animated macOS-style notification banner with app icon and message",
+      "tags": [
+        "social",
+        "overlay",
+        "notification"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 5,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/macos-notification.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/macos-notification.png"
+      }
+    },
+    {
+      "name": "mk-line-graph",
+      "type": "block",
+      "title": "Minimal Line Graph",
+      "description": "One or two SVG series draw on with dots popping and value labels riding the draw front; dim baseline axis, x-labels, color-dot legend",
+      "tags": [
+        "data-viz",
+        "chart",
+        "graph",
+        "minimal"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 7
+    },
+    {
+      "name": "grain-overlay",
+      "type": "component",
+      "title": "Grain Overlay",
+      "description": "Animated film grain texture overlay using CSS keyframes — adds warmth and analog character to any composition",
+      "tags": [
+        "texture",
+        "grain",
+        "overlay",
+        "film"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/grain-overlay.png"
+      }
+    },
+    {
+      "name": "before-after-wipe",
+      "type": "component",
+      "title": "Before After Wipe",
+      "description": "Two full-bleed content slots compare before and after states as a persistent divider wipes the after layer over the before layer and rests at a configurable split. Callers fill the named before/after slot panels; token-styled defaults render when a slot is left empty.",
+      "tags": [
+        "prop",
+        "ui-props",
+        "compare",
+        "comparison",
+        "split-screen",
+        "holdable",
+        "before-after",
+        "wipe",
+        "slots"
+      ]
+    },
+    {
+      "name": "us-map-bubble",
+      "type": "block",
+      "title": "US Bubble Map",
+      "description": "Animated US bubble map with proportional city markers, value callouts, and connection lines — composable with us-map",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "usa",
+        "bubble",
+        "cities"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-bubble.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-bubble.png"
+      }
+    },
+    {
+      "name": "us-map-flow",
+      "type": "block",
+      "title": "US Flow Map",
+      "description": "Animated connection arcs between US cities over a base map — composable origin-destination flow visualization",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "usa",
+        "flow",
+        "connections",
+        "arcs"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-flow.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-flow.png"
+      }
+    },
+    {
+      "name": "flowchart",
+      "type": "block",
+      "title": "Flowchart",
+      "description": "Animated decision tree with SVG connectors, sticky-note nodes, cursor interaction, and typing correction",
+      "tags": [
+        "diagram",
+        "flowchart",
+        "interactive"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/flowchart.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/flowchart.png"
+      }
+    },
+    {
+      "name": "dynamic-grid",
+      "type": "component",
+      "title": "Dynamic Grid",
+      "description": "A responsive animated grid background driven by CSS variables for SaaS, code, and data scenes",
+      "tags": [
+        "video-primitive",
+        "motion-primitive",
+        "background",
+        "grid",
+        "ui"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/dynamic-grid.png"
+      }
+    },
+    {
+      "name": "macos-tahoe-liquid-glass",
+      "type": "block",
+      "title": "macOS Tahoe Liquid Glass Desktop",
+      "description": "3D MacBook with a macOS Tahoe-style desktop, glass menu bar, Finder window, dock, and cinematic device camera move.",
+      "tags": [
+        "html-in-canvas",
+        "3d",
+        "macos",
+        "tahoe",
+        "gltf"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 15,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/macos-tahoe-liquid-glass.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/macos-tahoe-liquid-glass.png"
+      }
+    },
+    {
+      "name": "lower-third-bild",
+      "type": "block",
+      "title": "Lower Third — BILD Style",
+      "description": "News-style lower third with tight-fit text boxes: white headline bar with red drop-shadow, red sub-line with white drop-shadow.",
+      "tags": [
+        "broadcast",
+        "lower-third",
+        "news",
+        "overlay"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 8
+    },
+    {
+      "name": "world-map",
+      "type": "block",
+      "title": "World Map",
+      "description": "Animated world choropleth with country-by-country reveal, tooltip labels, and rotating globe inset — D3 Natural Earth projection",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "world",
+        "choropleth"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 14,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/world-map.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/world-map.png"
+      }
+    },
+    {
+      "name": "spain-map",
+      "type": "block",
+      "title": "Spain Map",
+      "description": "Animated Spain choropleth by autonomous community with staggered reveals and gradient legend — D3 conic conformal projection",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "spain",
+        "europe",
+        "choropleth"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/spain-map.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/spain-map.png"
+      }
+    },
+    {
+      "name": "shimmer-sweep",
+      "type": "component",
+      "title": "Shimmer Sweep",
+      "description": "Animated light sweep across text or elements using a CSS gradient mask — ideal for AI accents and premium reveals",
+      "tags": [
+        "text",
+        "shimmer",
+        "highlight",
+        "effect"
+      ],
+      "preview": {
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/components/shimmer-sweep.png"
+      }
+    },
+    {
+      "name": "lt-side-rule",
+      "type": "block",
+      "title": "Lower Third — Side Rule",
+      "description": "Cardless lower third with a vertical accent bar; condensed display name + mono role, text-shadowed for footage",
+      "tags": [
+        "lower-third",
+        "overlay",
+        "podcast",
+        "interview",
+        "minimal"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 4.8
+    },
+    {
+      "name": "code-snippet-dark-2026",
+      "type": "block",
+      "title": "Code Snippet - Dark 2026",
+      "description": "VS Code workbench with per-character typing animation in the Dark 2026 theme. Full editor chrome with activity bar, sidebar, tabs, terminal, and status bar.",
+      "tags": [
+        "code",
+        "developer",
+        "showcase",
+        "vscode"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 11
+    },
+    {
+      "name": "us-map-hex",
+      "type": "block",
+      "title": "US Hex Grid Map",
+      "description": "Animated hexagonal tile grid map — each state as an equal-weight hex with data fill and abbreviation label",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "usa",
+        "hexgrid",
+        "tilegrid"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 10,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-hex.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map-hex.png"
+      }
+    },
+    {
+      "name": "us-map",
+      "type": "block",
+      "title": "US Map",
+      "description": "Animated US choropleth map with staggered state reveals, value labels, and gradient legend — pure inline SVG with GSAP",
+      "tags": [
+        "data",
+        "map",
+        "geography",
+        "usa",
+        "choropleth"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/us-map.png"
+      }
+    },
+    {
+      "name": "flowchart-vertical",
+      "type": "block",
+      "title": "Flowchart Vertical",
+      "description": "Portrait animated decision tree with SVG connectors, sticky-note nodes, cursor interaction, and typing correction",
+      "tags": [
+        "diagram",
+        "flowchart",
+        "interactive",
+        "portrait"
+      ],
+      "dimensions": {
+        "width": 1440,
+        "height": 2560
+      },
+      "duration": 12,
+      "preview": {
+        "video": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/flowchart-vertical.mp4",
+        "poster": "https://static.heygen.ai/hyperframes-oss/docs/images/catalog/blocks/flowchart-vertical.png"
+      }
+    },
+    {
+      "name": "code-snippet-dark-modern",
+      "type": "block",
+      "title": "Code Snippet - Dark Modern",
+      "description": "VS Code workbench with per-character typing animation in the Dark Modern theme. Full editor chrome with activity bar, sidebar, tabs, terminal, and status bar.",
+      "tags": [
+        "code",
+        "developer",
+        "showcase",
+        "vscode"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 11
+    },
+    {
+      "name": "mk-background",
+      "type": "block",
+      "title": "Minimal Gradient Background",
+      "description": "Procedural soft-blob gradient backdrop in a minimalist presentation style: two radial blobs drifting over a base color, with an animatable rounded-card bar mask and optional frosted-glass mode",
+      "tags": [
+        "background",
+        "gradient",
+        "minimal",
+        "professional",
+        "presentation"
+      ],
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "duration": 10
+    },
+    {
+      "name": "social-proof-card",
+      "type": "component",
+      "title": "Social Proof Card",
+      "description": "The app-store close as one mountable scene: wordmark, five stars, a proof line, three feature icons and a CTA capsule build in a quiet stagger and hold - measured from reference ad footage. For an animated star sweep use star-rating-fill; for a quote card use testimonial-proof-card; for a bare lockup use cta-lockup",
+      "tags": [
+        "motion-primitive",
+        "social-proof",
+        "end-card",
+        "cta",
+        "vertical"
+      ]
+    },
+    {
+      "name": "chat-thread",
+      "type": "component",
+      "title": "Chat Thread",
+      "description": "The measured conversation as one mountable scene at full fidelity: status bar, back badge, avatar and name pill, bubbles with real iMessage tails, a Delivered receipt, large emoji rows, a media placeholder, a link card, and typing dots holding the beat. Every message picks its type by prefix - recv:/sent: text, emoji: a large row, img media, card:Title~domain a link card - and heights are measured at mount so any thread fits",
+      "tags": [
+        "motion-primitive",
+        "chat",
+        "mock-ui",
+        "conversation",
+        "vertical"
+      ]
+    }
+  ]
+}
