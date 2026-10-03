@@ -400,6 +400,33 @@ Completed Windows subprocess fix:
   Current diagnosis is pending; target repeats,42 adjacency and native/full59
   remain open. No overlapping build/frame extraction or unrelated host changes.
 
+- The same d53 prefix with existing traces, 159248/log142925-127520,
+  finished naturally with exit 0 at 11:39:50.146985 UTC: all six original
+  cases PASS at 28.25..30 FPS, cleanup empty. Both air cases retain HP20,
+  zero deaths and final Air300. Original d53 Air156 failure remains retained;
+  this is two additional air trials, not six air repetitions or 24-case clearance.
+- Read-only analyses 148156/log143533-22024 and 162524/log144040-157632,
+  source 5a897176, finish naturally with exit 0. Air traces contain 1039/1192
+  rows and 1037/1127 end ticks, no errors/gaps or 20-tick quiet active queue
+  spans. GetToAir owns 111/121 ticks, handing back to USER at 7.477/8.819 s.
+  Steps7/burn0 and queueTicks88/79; oxygen is not in this older tick schema.
+- Preparation 130872/log144042-103900, source 4fad985b, exits 0 at
+  11:40:57.557286 UTC. All six clips/eight complete fixed2s pages actually
+  viewed: both roof passages surface and reach dry goals; air1 recovers then
+  wanders/mines, air2 recovers then mines and exits outside by40.5s; lava escapes
+  with residual fire/HP12, land zombie fight finishes with HP14. Journal158684/
+  log144342-159972, source c6ca80a0, exits 0 at11:43:43.264714 UTC.
+  Evidence: air-sequence-film-review-20261003-144042/actual-review.json.
+- Next observation-only change adds submerged, air and maxAir to existing
+  opt-in TaskMovementTrace, on the same client tick as body/keys/task ownership.
+  No safety threshold, arrival, route, input or original gate changed. Build84156/
+  wrapper164068/unified55861/log144440-164068, source ec0e6a7d, starts
+  11:44:40.986502 UTC. Fresh host check finds no Java debug session; bench lock
+  absent and all prior heavy extraction/tests ended naturally. Clean build and
+  packaging pending; tester1 still has d53. Prepared oxygen payload verifier
+  expects only TaskMovementTrace changed versus d53, other2212 identical.
+  AST passes; no packaging/runtime/native/release result claimed.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
