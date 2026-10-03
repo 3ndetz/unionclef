@@ -1559,6 +1559,15 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** Building policy for shared servers: mine only natural terrain, and optionally never
+     *  place blocks (no pillars or bridges left behind). */
+    public Map<String, Object> setBuildPolicy(boolean breakOnlyNatural, boolean allowPlace) {
+        kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        cfg.breakOnlyNatural = breakOnlyNatural;
+        cfg.allowPlace = allowPlace;
+        return Map.of("ok", true, "breakOnlyNatural", cfg.breakOnlyNatural, "allowPlace", cfg.allowPlace);
+    }
+
     /** Clear all runtime protected areas (place + break deny zones). */
     public Map<String, Object> clearProtectedAreas() {
         kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
@@ -5832,6 +5841,110 @@ public class Py4jEntryPoint {
      *  (hp/pos/held/onGround/blocks), and nearby players (name/pos/distance/
      *  health-visible/hostile-facing). The agent uses this to pick tactics
      *  (attack/retreat/bridge/buy) and drives the mod primitives. Read-only. */
+    /** Fly to (x,y,z) on an elytra: equips it, takes off, climbs on fireworks above the terrain,
+     *  glides down near the target. Fire-and-poll with flyStatus. Needs an elytra and
+     *  fireworks in the inventory (creativeGive them in creative). */
+    public Map<String, Object> flyTo(int x, int y, int z) {
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.start(x + 0.5, y, z + 0.5),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    public Map<String, Object> flyStatus() {
+        return adris.altoclef.util.agent.ElytraFlight.status();
+    }
+
+    public Map<String, Object> flyStop() {
+        adris.altoclef.util.agent.ElytraFlight.stop();
+        return adris.altoclef.util.agent.ElytraFlight.status();
+    }
+
+    /** Creative mode only: take an item from the creative inventory into a free slot, the same
+     *  packet the creative screen sends. No /give and no operator rights needed. Survival gets
+     *  ok=false with a reason; there the agent mines and crafts instead. */
+    public Map<String, Object> creativeGive(String itemId, int count) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            var me = client.player;
+            if (me == null || client.interactionManager == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            if (!me.getAbilities().creativeMode) { out.put("ok", false); out.put("reason", "not creative"); return out; }
+            net.minecraft.util.Identifier id = net.minecraft.util.Identifier.tryParse(
+                    itemId.contains(":") ? itemId : "minecraft:" + itemId);
+            // getOrEmpty: Registries.get(Identifier) changed shape in 1.21.2 and the preprocessor
+            // maps it onto getEntry, which returns a reference, not the item.
+            net.minecraft.item.Item item = id == null ? null
+                    : net.minecraft.registry.Registries.ITEM.getOrEmpty(id).orElse(null);
+            if (item == null || item == net.minecraft.item.Items.AIR) {
+                out.put("ok", false); out.put("reason", "unknown item " + itemId); return out;
+            }
+            int left = Math.max(1, Math.min(count, 64 * 9));
+            int given = 0;
+            var inv = me.getInventory();
+            for (int i = 0; i < 36 && left > 0; i++) {
+                if (!inv.getStack(i).isEmpty()) continue;
+                int n = Math.min(left, item.getMaxCount());
+                net.minecraft.item.ItemStack stack = new net.minecraft.item.ItemStack(item, n);
+                inv.setStack(i, stack.copy());
+                // Player screen handler: hotbar 0..8 is slot 36..44, main 9..35 keeps its index.
+                client.interactionManager.clickCreativeStack(stack, i < 9 ? 36 + i : i);
+                left -= n;
+                given += n;
+            }
+            out.put("ok", given > 0);
+            out.put("given", given);
+            if (given == 0) out.put("reason", "inventory full");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Text of every sign within radius blocks (front and back), nearest first. Lets an agent
+     *  learn place names ("Pink house", "Farm") instead of guessing from block colours. Reads
+     *  block entities of the loaded chunks, so it costs nothing in world block lookups. */
+    public List<Map<String, Object>> readSigns(int radius) {
+        int r = Math.max(1, Math.min(radius, 64));
+        return onClientThread(() -> {
+            List<Map<String, Object>> out = new ArrayList<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            var me = client.player;
+            if (me == null || client.world == null) return out;
+            int cx = me.getBlockX() >> 4, cz = me.getBlockZ() >> 4, cr = (r >> 4) + 1;
+            for (int x = cx - cr; x <= cx + cr; x++) {
+                for (int z = cz - cr; z <= cz + cr; z++) {
+                    if (!client.world.getChunkManager().isChunkLoaded(x, z)) continue;
+                    var chunk = client.world.getChunk(x, z);
+                    for (var be : chunk.getBlockEntities().values()) {
+                        if (!(be instanceof net.minecraft.block.entity.SignBlockEntity sign)) continue;
+                        var pos = be.getPos();
+                        double d = Math.sqrt(me.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
+                        if (d > r) continue;
+                        String front = signLines(sign.getFrontText());
+                        String back = signLines(sign.getBackText());
+                        if (front.isEmpty() && back.isEmpty()) continue;
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("pos", pos.getX() + "," + pos.getY() + "," + pos.getZ());
+                        m.put("distance", Math.round(d * 10) / 10.0);
+                        m.put("front", front);
+                        m.put("back", back);
+                        out.add(m);
+                    }
+                }
+            }
+            out.sort((a, b) -> Double.compare((Double) a.get("distance"), (Double) b.get("distance")));
+            return out;
+        }, List.of());
+    }
+
+    private static String signLines(net.minecraft.block.entity.SignText text) {
+        StringBuilder sb = new StringBuilder();
+        for (net.minecraft.text.Text line : text.getMessages(false)) {
+            String l = line.getString().strip();
+            if (l.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(l);
+        }
+        return sb.toString();
+    }
+
     public Map<String, Object> getGameState() {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
@@ -5859,7 +5972,7 @@ public class Py4jEntryPoint {
             if (lb > 0) self.put("msSinceBreakProgress", System.currentTimeMillis() - lb);
             self.put("food", me.getHungerManager().getFoodLevel());
             self.put("saturation", me.getHungerManager().getSaturationLevel());
-            self.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
+            self.put("pos", String.format(java.util.Locale.ROOT, "%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
             self.put("onGround", me.isOnGround());
             // WHICH WORLD AM I IN? There was no way to ask over py4j at all, which a playthrough
             // needs constantly -- overworld, nether, end are three different sets of rules, and an
@@ -5881,7 +5994,7 @@ public class Py4jEntryPoint {
             self.put("yaw", Math.round(me.getYaw() * 10.0f) / 10.0);
             self.put("pitch", Math.round(me.getPitch() * 10.0f) / 10.0);
             net.minecraft.util.math.Vec3d vel = me.getVelocity();
-            self.put("vel", String.format("%.2f,%.2f,%.2f", vel.x, vel.y, vel.z));
+            self.put("vel", String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f", vel.x, vel.y, vel.z));
             var ct = client.crosshairTarget;
             if (ct instanceof net.minecraft.util.hit.BlockHitResult bhr
                     && ct.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
@@ -5892,6 +6005,12 @@ public class Py4jEntryPoint {
             } else {
                 self.put("lookingAt", ct == null ? "none" : ct.getType().toString());
             }
+            // Creative or survival changes what the agent can do (no drops from mined blocks in
+            // creative, items come from the creative inventory instead).
+            if (client.interactionManager != null && client.interactionManager.getCurrentGameMode() != null) {
+                self.put("gameMode", client.interactionManager.getCurrentGameMode().name().toLowerCase(java.util.Locale.ROOT));
+            }
+            self.put("flying", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(me));
             out.put("self", self);
 
             List<Map<String, Object>> players = new ArrayList<>();
@@ -5901,8 +6020,8 @@ public class Py4jEntryPoint {
                 double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 Map<String, Object> pm = new HashMap<>();
                 pm.put("name", p.getName().getString());
-                pm.put("pos", String.format("%.1f,%.1f,%.1f", p.getX(), p.getY(), p.getZ()));
-                pm.put("distance", String.format("%.1f", dist));
+                pm.put("pos", String.format(java.util.Locale.ROOT, "%.1f,%.1f,%.1f", p.getX(), p.getY(), p.getZ()));
+                pm.put("distance", String.format(java.util.Locale.ROOT, "%.1f", dist));
                 pm.put("hp", p.getHealth());          // visible for tracked players
                 pm.put("sprinting", p.isSprinting());
                 players.add(pm);
@@ -5935,7 +6054,7 @@ public class Py4jEntryPoint {
                             } catch (Exception ignored) {}
                             Map<String, Object> bm = new HashMap<>();
                             bm.put("pos", bp.getX() + "," + bp.getY() + "," + bp.getZ());
-                            bm.put("distance", String.format("%.1f", Math.sqrt(dx * dx + dy * dy + dz * dz)));
+                            bm.put("distance", String.format(java.util.Locale.ROOT, "%.1f", Math.sqrt(dx * dx + dy * dy + dz * dz)));
                             beds.add(bm);
                             break;
                         }

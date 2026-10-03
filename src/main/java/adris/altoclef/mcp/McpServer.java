@@ -240,6 +240,29 @@ public class McpServer {
                 "Battle perception (the agent's eyes): self(hp/maxHp/armor/pos/onGround/held/blocks), "
                 + "players[](name/pos/distance/hp/sprinting), beds[](nearby beds). Read before deciding tactics.",
                 schema(), a -> api.getGameState());
+        tool("flyTo",
+                "Elytra flight to a point: equip, take off, climb on fireworks above terrain, glide down "
+                + "near it. Needs elytra + fireworks in inventory. Poll flyStatus (phase: equip/takeoff/"
+                + "flying/done/failed).",
+                schema("x:int", "y:int", "z:int"),
+                a -> api.flyTo(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
+        tool("flyStatus", "Current elytra flight: phase, reason, distance, rockets used.", schema(),
+                a -> api.flyStatus());
+        tool("flyStop", "Abort the elytra flight (the bot glides down on its own).", schema(),
+                a -> api.flyStop());
+        tool("creativeGive",
+                "Creative mode only: put count of an item (e.g. 'firework_rocket', 'elytra') into free "
+                + "inventory slots, like taking it from the creative tab. ok=false with reason otherwise.",
+                schema("item:string", "count:int"), a -> api.creativeGive(argStr(a, "item"), argInt(a, "count")));
+        tool("setBuildPolicy",
+                "Shared-server manners: breakOnlyNatural=true mines only dirt/grass/sand/gravel/leaves/"
+                + "snow/plants (never builds); allowPlace=false never places blocks.",
+                schema("breakOnlyNatural:bool", "allowPlace:bool"),
+                a -> api.setBuildPolicy(argBool(a, "breakOnlyNatural"), argBool(a, "allowPlace")));
+        tool("readSigns",
+                "Text of signs within radius blocks (front/back), nearest first: place names and notes "
+                + "players left. Radius capped at 64.",
+                schema("radius:int"), a -> api.readSigns(argInt(a, "radius")));
         tool("inventorySpace",
                 "Free inventory slots + block counts by type (resource planning before bridging/building).",
                 schema(), a -> api.inventorySpace());
