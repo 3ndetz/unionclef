@@ -42,8 +42,10 @@ public class BlockScanner {
     private Dimension scanDimension = Dimension.OVERWORLD;
     private World scanWorld = null;
 
-    private boolean scanning = false;
-    private boolean forceStop = false;
+    // Client-thread ownership. A worker only writes its private request and
+    // publishes completion through the volatile flag; it never changes caches
+    // or game timers belonging to a later world.
+    private ScanRequest activeScan;
 
 
     public BlockScanner(AltoClef mod) {
@@ -409,52 +411,90 @@ public class BlockScanner {
     }
 
     public void reset() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (!client.isOnThread()) {
+            client.execute(this::reset);
+            return;
+        }
+        if (activeScan != null) activeScan.cancelled = true;
+        activeScan = null;
         trackedBlocks.clear();
         scannedBlocks.clear();
         scannedChunks.clear();
+        cachedScannedBlocks.clear();
         rescanTimer.forceElapse();
         blacklist.clear();
-        forceStop = true;
     }
 
     public void tick() {
-        if (mod.getWorld() == null || mod.getPlayer() == null) return;
-        //be maximally aware of the closest blocks around you
-        scanCloseBlocks();
-        if (!rescanTimer.elapsed() || scanning) return;
-
-        if (scanDimension != WorldHelper.getCurrentDimension() || mod.getWorld() != scanWorld) {
-            if (LOG) {
-                mod.log("BlockScanner: new dimension or world detected, resetting data!");
-            }
+        World world = mod.getWorld();
+        // Invalidate before processing a completion, including ticks spent in
+        // menus. Port the ownership order in baritone/src/main/java/baritone/cache/WorldProvider.java:
+        // 102-110 (closeWorld clears the current world before closing its cache).
+        if (world != scanWorld) {
             reset();
-            scanWorld = mod.getWorld();
-            scanDimension = WorldHelper.getCurrentDimension();
+            scanWorld = world;
+        }
+        if (world == null || !AltoClef.inGame()) {
+            // A connection can disappear before the world reference is cleared.
+            // Detach its request here as well; TimerGame requires the connection.
+            if (activeScan != null) reset();
             return;
         }
-
-        cachedScannedBlocks = new HashMap<>(scannedBlocks.size());
-        for (Map.Entry<Block, HashSet<BlockPos>> entry : scannedBlocks.entrySet()) {
-            cachedScannedBlocks.put(entry.getKey(), (HashSet<BlockPos>) entry.getValue().clone());
+        Dimension dimension = WorldHelper.getCurrentDimension();
+        if (scanDimension != dimension) {
+            reset();
+            scanDimension = dimension;
         }
+
+        if (activeScan != null && activeScan.completed) {
+            ScanRequest completed = activeScan;
+            activeScan = null;
+            if (!completed.cancelled && completed.world == world && completed.succeeded) {
+                scannedBlocks.clear();
+                scannedBlocks.putAll(completed.blocks);
+                scannedChunks.clear();
+                scannedChunks.putAll(completed.chunks);
+                cachedScannedBlocks = copyBlocks(scannedBlocks);
+                scanDone++;
+                scanChunks = completed.visited;
+                scanScanned = completed.scanned;
+                scanMs = completed.ms;
+            }
+            // Only the current world's client tick owns this timer. A completed
+            // worker after logout is discarded by reset(), never timed in a menu.
+            rescanTimer.reset();
+        }
+        //be maximally aware of the closest blocks around you
+        scanCloseBlocks();
+        if (!rescanTimer.elapsed() || activeScan != null) return;
 
         if (LOG) {
             mod.log("Updating BlockScanner.. size: " + trackedBlocks.size() + " : " + cachedScannedBlocks.size());
         }
 
-        scanning = true;
+        ScanRequest request = new ScanRequest(world, mod.getPlayer().getChunkPos(),
+                mod.getPlayer().getPos(), world.getTime(), copyBlocks(scannedBlocks),
+                new HashMap<>(scannedChunks), blacklist.snapshotUnreachable());
+        activeScan = request;
         scanStarted++;
-        forceStop = false;
         new Thread(() -> {
             try {
-                rescan(Integer.MAX_VALUE, Integer.MAX_VALUE);
+                rescan(request, Integer.MAX_VALUE, Integer.MAX_VALUE);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                rescanTimer.reset();
-                scanning = false;
+                // Release-publish every result field. The client tick either
+                // accepts this request or has already detached it on world exit.
+                request.completed = true;
             }
-        }).start();
+        }, "unionclef-block-scan").start();
+    }
+
+    private static HashMap<Block, HashSet<BlockPos>> copyBlocks(Map<Block, HashSet<BlockPos>> source) {
+        HashMap<Block, HashSet<BlockPos>> copy = new HashMap<>(source.size());
+        source.forEach((block, positions) -> copy.put(block, new HashSet<>(positions)));
+        return copy;
     }
 
     private void scanCloseBlocks() {
@@ -506,24 +546,22 @@ public class BlockScanner {
     /** Instrumentation for the distant-block investigation: does a full rescan pass ever COMPLETE? */
     public static volatile int scanStarted, scanDone, scanChunks, scanScanned, scanMs;
 
-    private void rescan(int maxCount, int cutOffRadius) {
-        if (mod.getWorld() == null || mod.getPlayer() == null) return;
-
+    private void rescan(ScanRequest request, int maxCount, int cutOffRadius) {
         long ms = System.currentTimeMillis();
 
-        ChunkPos playerChunkPos = mod.getPlayer().getChunkPos();
-        Vec3d playerPos = mod.getPlayer().getPos();
+        World world = request.world;
+        ChunkPos playerChunkPos = request.playerChunk;
+        Vec3d playerPos = request.playerPos;
 
         int scanned = 0;
         HashSet<ChunkPos> visited = new HashSet<>();
         Queue<Node> queue = new ArrayDeque<>();
         queue.add(new Node(playerChunkPos, 0));
 
-        while (!queue.isEmpty() && visited.size() < maxCount && !forceStop) {
+        while (!queue.isEmpty() && visited.size() < maxCount && !request.cancelled) {
             Node node = queue.poll();
 
-            if (mod.getWorld() == null) return;
-            if (node.distance > cutOffRadius || visited.contains(node.pos) || !mod.getWorld().getChunkManager().isChunkLoaded(node.pos.x, node.pos.z))
+            if (node.distance > cutOffRadius || visited.contains(node.pos) || !world.getChunkManager().isChunkLoaded(node.pos.x, node.pos.z))
                 continue;
 
             visited.add(node.pos);
@@ -536,11 +574,11 @@ public class BlockScanner {
             // Recency is a reason to skip the WORK, not the TRAVERSAL. Walking on costs a set lookup;
             // the expensive part, scanChunk(), is still gated exactly as before.
             boolean isPriorityChunk = getChunkDist(node.pos, playerChunkPos) <= 2;
-            boolean tooFresh = !isPriorityChunk && scannedChunks.containsKey(node.pos)
-                    && mod.getWorld().getTime() - scannedChunks.get(node.pos) < RESCAN_TICK_DELAY;
+            boolean tooFresh = !isPriorityChunk && request.chunks.containsKey(node.pos)
+                    && request.worldTime - request.chunks.get(node.pos) < RESCAN_TICK_DELAY;
             if (!tooFresh) {
                 scanned++;
-                scanChunk(node.pos, playerChunkPos);
+                scanChunk(request, node.pos, playerChunkPos);
             }
 
             // THIS BFS USED TO STEP ONLY DIAGONALLY -- (x+1,z+1), (x-1,z+1), (x-1,z-1), (x+1,z-1).
@@ -559,14 +597,9 @@ public class BlockScanner {
             queue.add(new Node(new ChunkPos(node.pos.x, node.pos.z + 1), node.distance + 1));
             queue.add(new Node(new ChunkPos(node.pos.x, node.pos.z - 1), node.distance + 1));
         }
-        if (forceStop) {
-            // reset again, might have changed some values from the time forceStop was called
-            reset();
-            forceStop = false;
-            return;
-        }
+        if (request.cancelled) return;
 
-        for (Iterator<ChunkPos> iterator = scannedChunks.keySet().iterator(); iterator.hasNext(); ) {
+        for (Iterator<ChunkPos> iterator = request.chunks.keySet().iterator(); iterator.hasNext(); ) {
             ChunkPos pos = iterator.next();
             int distance = getChunkDist(pos, playerChunkPos);
 
@@ -575,7 +608,7 @@ public class BlockScanner {
             }
         }
 
-        for (HashSet<BlockPos> set : scannedBlocks.values()) {
+        for (HashSet<BlockPos> set : request.blocks.values()) {
             if (set.size() < CACHED_POSITIONS_PER_BLOCK) {
                 continue;
             }
@@ -583,15 +616,12 @@ public class BlockScanner {
             getFirstFewPositions(set, playerPos);
         }
 
-        scanDone++;
         // visited = chunks WALKED, scanned = chunks actually re-read. They differ once recency stops
         // gating the traversal, and the gap is the point: a pass now reaches far more than it re-reads.
-        scanChunks = visited.size();
-        scanScanned = scanned;
-        scanMs = (int) (System.currentTimeMillis() - ms);
-        if (LOG) {
-            mod.log("Rescanned in: " + scanMs + " ms; visited: " + scanChunks + " chunks");
-        }
+        request.visited = visited.size();
+        request.scanned = scanned;
+        request.ms = (int) (System.currentTimeMillis() - ms);
+        request.succeeded = true;
     }
 
     private int getChunkDist(ChunkPos pos1, ChunkPos pos2) {
@@ -623,25 +653,26 @@ public class BlockScanner {
      *
      * @param chunkPos position of the scanned chunk
      */
-    private void scanChunk(ChunkPos chunkPos, ChunkPos playerChunkPos) {
-        World world = mod.getWorld();
-        WorldChunk chunk = mod.getWorld().getChunk(chunkPos.x, chunkPos.z);
-        scannedChunks.put(chunkPos, world.getTime());
+    private void scanChunk(ScanRequest request, ChunkPos chunkPos, ChunkPos playerChunkPos) {
+        World world = request.world;
+        WorldChunk chunk = world.getChunk(chunkPos.x, chunkPos.z);
+        request.chunks.put(chunkPos, request.worldTime);
 
         boolean isPriorityChunk = getChunkDist(chunkPos, playerChunkPos) <= 2;
 
         for (int x = chunkPos.getStartX(); x <= chunkPos.getEndX(); x++) {
             for (int y = world.getBottomY(); y < world.getTopY(); y++) {
+                if (request.cancelled) return;
                 for (int z = chunkPos.getStartZ(); z <= chunkPos.getEndZ(); z++) {
                     BlockPos p = new BlockPos(x, y, z);
-                    if (this.isUnreachable(p) || world.isOutOfHeightLimit(p)) continue;
+                    if (request.excluded.contains(p) || world.isOutOfHeightLimit(p)) continue;
 
                     BlockState state = chunk.getBlockState(p);
                     if (state.isAir()) continue;
 
                     Block block = state.getBlock();
-                    if (scannedBlocks.containsKey(block)) {
-                        HashSet<BlockPos> set = scannedBlocks.get(block);
+                    if (request.blocks.containsKey(block)) {
+                        HashSet<BlockPos> set = request.blocks.get(block);
 
                         if ((set.size() > CACHED_POSITIONS_PER_BLOCK * 750 && !isPriorityChunk)) continue;
 
@@ -649,7 +680,7 @@ public class BlockScanner {
                     } else {
                         HashSet<BlockPos> set = new HashSet<>();
                         set.add(p);
-                        scannedBlocks.put(block, set);
+                        request.blocks.put(block, set);
                     }
                 }
             }
@@ -657,6 +688,35 @@ public class BlockScanner {
     }
 
     private record Node(ChunkPos pos, int distance) {
+    }
+
+    private static final class ScanRequest {
+        // World identity and player/search inputs are fixed for this request.
+        // Chunk contents still come from the live captured world off-thread;
+        // C4.1's immutable chunk-state cache remains separate, open work.
+        final World world;
+        final ChunkPos playerChunk;
+        final Vec3d playerPos;
+        final long worldTime;
+        final HashMap<Block, HashSet<BlockPos>> blocks;
+        final HashMap<ChunkPos, Long> chunks;
+        final Set<BlockPos> excluded;
+        volatile boolean cancelled;
+        volatile boolean completed;
+        boolean succeeded;
+        int visited, scanned, ms;
+
+        ScanRequest(World world, ChunkPos playerChunk, Vec3d playerPos, long worldTime,
+                    HashMap<Block, HashSet<BlockPos>> blocks, HashMap<ChunkPos, Long> chunks,
+                    Set<BlockPos> excluded) {
+            this.world = world;
+            this.playerChunk = playerChunk;
+            this.playerPos = playerPos;
+            this.worldTime = worldTime;
+            this.blocks = blocks;
+            this.chunks = chunks;
+            this.excluded = excluded;
+        }
     }
 
 

@@ -7,6 +7,8 @@ import adris.altoclef.util.helpers.StorageHelper;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Sometimes we will try to access something and fail TOO many times.
@@ -161,6 +163,19 @@ public abstract class AbstractObjectBlacklist<T> {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Copy the current exclusions on the owning thread for a background scan.
+     * Uses the same expiry rules as a normal lookup; the worker cannot mutate
+     * entries or restore attempts while the client is recording a new failure.
+     */
+    public Set<T> snapshotUnreachable() {
+        Set<T> result = new HashSet<>();
+        for (T item : entries.keySet()) {
+            if (unreachable(item)) result.add(item);
+        }
+        return result;
     }
 
     /**

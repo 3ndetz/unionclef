@@ -141,6 +141,19 @@ Completed Windows subprocess repair:
   all9 survival boundaries, including transport failure while already offline.
   These four source/bench files are ready for a separate atomic owner commit.
   Scanner ownership and water/core WIP remain separately staged work.
+- Menu commit e23f4ac5 is atomically pushed to main and1.21.11; local branch
+  fast-forwarded. Fresh read-only final-JAR comparison confirms five lifecycle
+  classes in current5f are byte-identical to tested11a, including ScanRequest.
+  Scanner source review confirms old-world requests detach before completion
+  consumption, worker maps remain private, blacklist exclusions are copied
+  on the owner, and only current-world client ticks reset TimerGame. This ports
+  WorldProvider.closeWorld:102-110's ownership order. Six original scanner
+  exit cases pass the independent strict audit, all seven retained films are
+  actually journalled,24 original discovery/navigation cases pass, and six
+  native exit boundaries retain exact offline fields. Native15min gameplay
+  remains failed; live off-thread WorldChunk contents still leave C4.1 open.
+  These two scanner source files are committed separately; no rebuild/deploy
+  or change to the current42 campaign payload is needed or performed.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
