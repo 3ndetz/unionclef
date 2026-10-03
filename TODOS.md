@@ -48,6 +48,16 @@
   This combined fixture does not establish an isolated air regression. Keep its
   fatal input for deliberate entity-obstructed air-route testing; reproduce on
   the baseline before assigning a new source regression or choosing a repair.
+- [ ] **An empty breathing tunnel can still drown after the task returns to water (2026-10-03).**
+  Original hazard campaign stops at repeat2 air:29.444FPS, one drowning death,
+  five earlier passes and eighteen unrun cases. After initial air recovery,
+  USER wander returns underwater; GetToAir owns the chain but queue repeats
+  no-progress drops atx1.95646/y-60. Retained scenes are Swim/PREPPING with
+  all keys off. No zombie remains in this fixture; pdEnter0. Preserve the
+  original red, compare the identical suite prefix on11a and measure actual
+  queue/state/input ownership before assigning a new producer regression.
+  Evidence: swim-hazard-film-review-20261003-122649/actual-review.json and
+  retained-air-stuck-20261003-123820.
 - [x] **FIXED 0.95.55: night shelter held the playthrough in water without a usable site (2026-10-02).**
   UNIONCLEF-HARD retained a native replay from full59-before-portal. At538s the
   shelter says "No place to dig in for the night here" near(-89.3,61.3,1062.3);

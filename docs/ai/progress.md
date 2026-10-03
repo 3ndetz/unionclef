@@ -161,16 +161,46 @@ Completed Windows subprocess fix:
 - Compose config validation exits0 with no stderr; only existing tester
   environment changes, no host sound device or base-image change. Future
   tester2 receives the same virtual-audio configuration but is unmeasured.
-- LIVE maintained roof/empty-shaft air/lava escape/land melee campaign119728/
+- Completed maintained roof/empty-shaft air/lava escape/land melee campaign119728/
   wrapper113888/log121528-113888, unified93350, source6522e13c starts
   09:15:28.338855UTC.24 planned,6 rounds; original kits/triggers/gates/FPS20
-  and first-red stop. Natural result, cleanup and all film reviews pending.
+  and first-red stop. Natural1 at09:26:13.419800UTC: six of24 executed,
+  five PASS/one FAIL/eighteen unrun, cleanup[]. Roof1/2, air1, lava1 and
+  melee1 pass at23..30FPS. Empty air2 drowns at29.444FPS; after initial air
+  recovery USER wander returns underwater, then GetToAir/queue cannot leave
+  x1.95646/y-60. SampledHP8, death delta1; respawnHP20/air300 is not success.
+  Fixture reset found no zombie, unlike the retained entity-obstructed case.
   No simultaneous heavy extraction/render/build or second bench client.
+- All six hazard films/eight full fixed2s pages actually inspected. Preparation
+  154980/wrapper130700/log122649-130700 source95a830db naturally0 at
+  09:27:04.360106UTC. Journal17952/wrapper162020/log123640-162020,
+  source8157c294 naturally0 at09:36:41.079407UTC verifies original natural1,
+  source6522e13c, six film hashes and summary09feccd7 unchanged. Roof films
+  show descent under cap/dry exit; air1 later reenters water but retainsHP20;
+  lava1 loses4HP under the unchanged resistance kit; land melee1 loses6HP.
+  Air2 loses oxygen/hearts26.5..32.5s and is on the respawn field36.5 onward.
+  Fixed2s sampling, not every frame/playback; no baseline/native success claim.
+  Six setup void deaths09:24:20..43 precede fresh reset09:24:55/task09:25:07.
+  Keep setup and measured drowning separate; do not claim death-free lifecycle.
+- Read-only retained queue capture160660/wrapper132040/log123820-132040,
+  source1f8a28ee naturally0 at09:38:21.502604UTC, before any counter reset or
+  redeploy: two retained scenes Swim/PREPPING/idx0of4, stone below/water at
+  feet/head, all latched keys off, velocity0. This is post-cleanup retained
+  diagnostic evidence, not an atomic contemporaneous tick. Actual GetToAir
+  starts FastNavigator.startNearest; original failed course pdEnter0. Measure
+  queue/state ownership and replay the same six-course prefix on11a before
+  attributing failure to the one-class CombatPathfinder guard.
 - Prepared native parent now requests cooperative failure via an owned marker
   at600s and waits for the child's natural logout/offline finally boundary;
   it no longer kills the loaded survival owner via subprocess.run timeout.
   Existing190s observer timeout covers only the read-only observer subprocess.
   All new code parses; native normal/deadline paths remain physically unrun.
+- Native preparation now announces its artifact directory before work; the
+  parent retains that mapping and available proof/cleanup on failed children
+  as well as passes. AST only; native six physical replays remain unrun.
+- Virtual-audio compose change committed381a0d22 as owner, atomically pushed
+  main/1.21.11. Exact-head Sync to wiki37112528077 succeeds. Last public release
+  remains0.95.56;0.95.57 must not publish while the air route is red.
 - Truthful58s water progress film sources committed4cf49cb9 as owner and pushed
   atomicallymain/1.21.11. Telegram9712 confirmed, HAPI video displayed; CLI feedback
   explicitly NOT sent because telemetry disabled. No new release/native success.
