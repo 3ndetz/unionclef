@@ -46,11 +46,13 @@ Completed Windows repair:
 - [x] Windows console repair including five report wrappers committed/pushed.
 - [x] Unit verification of prospective water entry/lifetime: Windows21/21 and
   actual Linux21/21; no real game outcome inferred.
-- [ ] Execute new24-case outside-clearing waiting-pad campaign after VIDEO render
-  releases the FPS window; preserve first red and review every actual film.
-- [ ] Move a verified returning-player preparation fix into the shared default
-  harness. The outside waiting pad is currently PRIVATE experimental wrapper;
-  ordinary run_suite preparation must not be described as fully repaired yet.
+- [x] Execute outside-pad campaign after actual VIDEO render completion; retain
+  six passes/one lava event-latch FAIL,17 unrun; all7 films/all11 pages reviewed.
+- [ ] Validate the prospective shared default staging and lava event observation.
+  Shared source Windows/Linux35 boundary tests pass; retained audit ends after
+  two valid passes and one17FPS INVALID,21 unrun; all three films reviewed.
+- [ ] Build and test retaining GetToAir's own live condition route. Both earlier
+  air trials startAir149 and lose2HP while alternating grounded dig/swim quotes.
 - [ ] Original42 adjacent gates and native six exact cp1003-0401-t649 replays on
   eff with unchanged HP20/FPS20/original21-stack pack/death baseline3327/logouts.
 - [ ] Narrow tested core commits, stable scoped release and public class proof.
@@ -95,6 +97,88 @@ Completed Windows repair:
   until its promised native-steering completion signal. No other containers,
   host GUI/browser, controller or Docker service changed.
 - Preserve unrelated Java/config/version/nav WIP. No057 release/newHF/TG yet.
+
+## 2026-10-04 — shared arena preparation and transient escape observation
+
+### Investigate
+
+- VIDEO actually confirms render and final encoding finished; FPS window released.
+- Outside-pad job56164/133220/log235951 naturally1 at21:17:20.140430UTC:
+  six PASS/one repeat2 lava FAIL at26.78FPS/HP12/no deaths;17 cases unrun.
+  Confirmed logout/inactive endpoint, cleanup/runtime[]. All7 actual films/all11
+  fixed2s pages viewed, actual-review3a1bff538373c3fb748a2b29c013eb282baf3942297eb2580dc9503080627750.
+- Lava98s film leaves lava onto stone26.5s. Original sampled nearby event window
+  is missed: timeline(-1.264,-60,.5) at1s to(-7.866,-60,-4.568) at12.1s,
+  already beyond radius9. That original FAIL remains unchanged.
+- Both air traces start rescueAir149/HP20 and lose2HP with rescue active; repeated
+  cap dig/swim switches track ground bobbing. Reference Baritone's current-route
+  continuation at behavior/PathingBehavior.java:196-224 and current FastNavigator
+  owner-scoped nearest-condition API, not a new timeout or movement fallback.
+
+### Plan
+
+- [x] Retain old seven-case terminal and actual film/atomic-trace diagnosis.
+- [x] Move outside-clearing dry staging to shared arena lifecycle; protect failed
+  returning joins before generic actor stop, retain support on failure.
+- [x] Prospectively latch actual-tick lava entry/nearby living exit, keeping old
+  distance/death/kit/command/geometry gates; default observation cleanup hook.
+- [x] Windows34/34 and actual Linux34/34 staging/escape/water/survival boundaries.
+- [ ] Finish shared default24 audit on unchanged eff payload; review every film.
+- [ ] Build/inspect/deploy owner-scoped air route continuation, target repeats,
+  original42 adjacent gates and raw six native replays, then stable release.
+
+### Implement
+
+- Shared arena padx=arena_half+8/y-55 remains outside prepare clearing. Target
+  connection teleports immediately onto dry support; native nonstaged callers
+  retain their connection behaviour. Support removed after fixture reset before
+  recording/activation. Failed stage first confirms logout; failed logout keeps
+  drivers and support. Missing/wrong position fails confirmation.
+- EscapeLava/Pool uses existing bounded client-tick trace before the hazard;
+  missing rows/errors fail. A living non-lava tick after observed lava entry
+  latches the original nearby window; distant later samples cannot erase it.
+  cleanup releases observation on failed run/setup as well. Old FAIL retained.
+- Linux30940/146140/log003210/source31c6f142 naturally0 at21:32:14.359596UTC.
+  shared-boundary-linux-proof.json binds nine current sources, actual34 tests.
+- Shared audit63908/wrapper125368/unified56015/log003304 naturally1 at
+  21:41:17.005074UTC, only3/24 executed: roof29FPS/HP20 PASS,
+  air28FPS/HP18/Air300 PASS, lava original objective PASS but17FPS INVALID;
+  21 unrun, runtime/cleanup[], confirmed logout. No invalid green count.
+  check_shared_boundary_hazard_neighbors.py SHA
+  461178131b6d5e9edb23633e355a40a94890361893090007a176fb2b6989de83,
+  start21:33:04.980455UTC, exact eff/no private join helper, original24 order,
+  FPS20/first-red. Seven bound fixture hashes frozen throughout the run.
+- Freezer131136/138312/log004217/source8c99b21d naturally0 at
+  21:42:27.800724UTC. All three actual films/all four fixed2s pages viewed;
+  shared-boundary-hazard-film-review-20261004-004217/actual-review.json SHA
+  0e111d123b0849081454fd66fdf28e188ac582878786bb701700b99aecaf6854.
+  Dry support is removed before activation, roof intact; air rescue still
+  alternates cap/swim and loses2HP, lava seq240 observes a living nearby exit.
+  No native coverage or effect attributed to the unbuilt Java guard.
+- Prospective lava cleanup now owns a submitted enable before its acknowledgement:
+  actual onClientThread timeout does not cancel a queued client action. False/
+  exceptional enable acknowledgements still queue disable. Windows35/35 and
+  Linux35/35 pass; Linux17608/49388/log005035/source385786e1 naturally0.
+  New escape-ack-linux-proof.json preserves earlier34 proof and source hashes.
+- GetToAir source now keeps only isNearestSearch(this), and starts its nearest
+  route with this owner. Current build107236/83288/log005222/source
+  d4317f52505d193aefd8ec49f6e2ad692792b9b84d4f189c997b9889346081bf
+  starts21:52:22.203030UTC after successful host/owned-client JDWP checks,
+  offline/inactive and absent bench lock/IDE bins. Clean phase passes;
+  build/actual final-JAR scope proof/deployment/game tests remain pending.
+  Three failed preflight attempts are retained: absent container ps, isolated
+  /proc sees no Java, Docker top needs PID column. No build ran on those paths.
+- Prepared future six HP20 atomic tunnel targets, original24 hazards and original
+  42 navigation gates on the future candidate. They are UNRUN. Target HP20 is
+  an explicit additional diagnostic gate; original24 HP12 gates unchanged.
+- VIDEO owner authorizes a new229s Mineswarm remake. FPS-sensitive bench is
+  offline; authorized TOOLKIT steer delivered once with localId
+  65511689-3acc-4e96-8990-d393b6daf47a/messageId
+  f6715aaf-b2c4-47f8-9f5c-44cbb78433f9/statusSTEERED. Await its promised
+  render/mastering completion signal before measured gameplay resumes.
+- Future native cleanup rechecks offline/inactive/reconnect intents immediately
+  before mutation; seven actual parsed-finally branch contracts pass. This does
+  not replace actual native integration. Previous3-case contract proof retained.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no

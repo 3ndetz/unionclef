@@ -4,6 +4,24 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Air escape alternates digging and swimming as the body bobs (2026-10-04).**
+  Two dry-entry eff tunnel traces start GetToAir at Air149/HP20, repeatedly
+  cancel swimming for a grounded cap quote, then surface after Air-19/HP18.
+  Original HP12 gates pass, but neither run is damage-free. Preserve the
+  actual films and validate retaining the task's own live route until it ends;
+  Baritone PathingBehavior.java:196-224 preserves a current goal route.
+  Evidence: water-boundary-hazard-film-review-20261004-001859/actual-review.json
+  and completed-boundary-air-first-two.json. Source repair is pending build
+  and repeated target/adjacent/native tests; no release claim.
+- [ ] **A lava escape can cross the nearby verdict window between samples (2026-10-04).**
+  Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
+  shows dry stone at26.5s. Sequential timeline sampling jumps from inside
+  lava at1s to beyond the original radius9 at12.1s, missing the exit event.
+  Retain that FAIL. Prospective harness latches observed lava entry and a
+  living non-lava client tick inside the unchanged nearby radius, with the
+  original death gate. Windows/Linux unit boundaries pass; the shared
+  prefix observed a living nearby exit, but its17FPS is INVALID;
+  repeated healthy validation remains open. No retroactive verdict or core regression.
 - [ ] **End a survival observation without exposing the stopped player (2026-10-03).**
   Actual-default57 full59 resume stops tasks under water at01:17:01UTC; the
   player drowns at01:17:23 after diagnostics/checkpoint copying. Recorded
