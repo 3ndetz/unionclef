@@ -11,8 +11,13 @@
   actual films and validate retaining the task's own live route until it ends;
   Baritone PathingBehavior.java:196-224 preserves a current goal route.
   Evidence: water-boundary-hazard-film-review-20261004-001859/actual-review.json
-  and completed-boundary-air-first-two.json. Source repair is pending build
-  and repeated target/adjacent/native tests; no release claim.
+  and completed-boundary-air-first-two.json. Clean build and actual class proof
+  now bind90faa8a4: only GetToAirTask differs from eff. First two targets retain
+  HP20/no dig child, but repeat2 final Air178 FAILS the unchanged200 gate at
+  26.43FPS after two full-air recoveries and a late third rescue; four unrun.
+  Both films reviewed: air-route-film-review-20261004-012500/actual-review.json.
+  Observation ended2.5s before final readouts completed; through-logout trace
+  is separate. Repeated target/adjacent/native validation remains open; no release.
 - [ ] **A lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside

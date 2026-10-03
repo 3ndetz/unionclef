@@ -53,8 +53,10 @@ Completed Windows repair:
   two valid passes and one17FPS INVALID,21 unrun; all three films reviewed.
 - [ ] Build and test retaining GetToAir's own live condition route. Both earlier
   air trials startAir149 and lose2HP while alternating grounded dig/swim quotes.
-- [ ] Original42 adjacent gates and native six exact cp1003-0401-t649 replays on
-  eff with unchanged HP20/FPS20/original21-stack pack/death baseline3327/logouts.
+  Clean90faa8a4 build/class proof/deployment complete; target series has one
+  PASS/one healthy final-Air FAIL/four unrun. Both actual films reviewed.
+- [ ] Original24 hazard/42 adjacent gates and native six exact cp1003-0401-t649
+  replays on90faa8a4 with unchanged HP20/FPS20/original pack/death3327/logouts.
 - [ ] Narrow tested core commits, stable scoped release and public class proof.
 - [ ] Edited HyperFrames/Telegram milestone report, then next full59 audit.
 
@@ -164,18 +166,56 @@ Completed Windows repair:
   route with this owner. Current build107236/83288/log005222/source
   d4317f52505d193aefd8ec49f6e2ad692792b9b84d4f189c997b9889346081bf
   starts21:52:22.203030UTC after successful host/owned-client JDWP checks,
-  offline/inactive and absent bench lock/IDE bins. Clean phase passes;
-  build/actual final-JAR scope proof/deployment/game tests remain pending.
+  offline/inactive and absent bench lock/IDE bins. Natural0 at
+  22:10:26.931491UTC; clean0/build0,18 tasks executed, no IDE bins.
   Three failed preflight attempts are retained: absent container ps, isolated
   /proc sees no Java, Docker top needs PID column. No build ran on those paths.
-- Prepared future six HP20 atomic tunnel targets, original24 hazards and original
-  42 navigation gates on the future candidate. They are UNRUN. Target HP20 is
-  an explicit additional diagnostic gate; original24 HP12 gates unchanged.
+- Corrected verifier149164/159140/log011122/source88f30e6c naturally0 at
+  22:11:28.523185UTC; final candidate90faa8a492d824b6728b61003618ed808fad1d94d5dfbc77fd8a6514b680820a.
+  Exactly2213 recursive classes/only GetToAirTask differs from eff, all2212
+  others identical. Actual onTick36..51 owner guard precedes pricing;
+  startNearest267..277 passes this owner. Actual-bytecode-review.json binds
+  both inspected outputs. First verifier25200/135336 FAILED because its
+  expected descriptor omitted path/fast; partial folder retained, no JAR change.
+- Canonical tester1-only deployment2936/164332/log011221/source6a4eb896
+  naturally0 at22:13:32.002979UTC. Preflight and ending offline/inactive,
+  owned bench lock, booted mod file SHA equals frozen90faa8a4; no other client.
+- Six HP20 atomic tunnel targets127588/158368/unified72037/log011441,
+  sourcef0f122eccff52111560b1faaa846089892a48f81c7c9690ecd265fd481abf559,
+  start22:14:41.390101UTC. Target HP20 is an explicit additional diagnostic
+  gate on every atomic tick AND final pre-logout health; actual parsed judge
+  five boundary contracts pass, including late/missing final health. Original
+  24 hazard HP12 gates unchanged. Seven loaded fixture sources frozen while live.
+  Natural1 at22:19:48.439610UTC: only2/6 executed. First PASS28.2857FPS,
+  HP20/1059endticks/minAir101/finalAir300; second FAIL26.4286FPS,
+  HP20/1155endticks/minAir100/finalAir178 below unchanged200; four unrun.
+  No dig child ticks in either trace, runtime/cleanup[], confirmed offline.
+  Freezer68220/116216/log012500/source48273e7c naturally0 at22:25:08.091154UTC.
+  Both53s films/allfour2s pages actually viewed; actual-review.json SHA
+  79ec45238ee04b3a07d3ec223ff380a82f4380f152c7beb64c56d8f498b604f7,
+  air-route-film-review-20261004-012500. Repeat2 has two Air300 recoveries,
+  USER returns to water, then third rescue atseq1185/Air149/HP20 before exit.
+  Original red is retained; no six-repeat, native or improvement-rate claim.
+- Target diagnostic disabled trace before the sequential final readouts,
+  leaving2705/2484ms from last tick to completion of final readouts.
+  New private check_air_route_lifetime.py keeps observation through the
+  original final readouts/logout, drains retained rows offline, then disables.
+  Original45s/Air200/no-death/HP12 and added recordedHP20 gates unchanged.
+  Removing the earlier diagnostic drain/disable delay changes endpoint phase;
+  that difference is explicit, not an identical-time comparison.
+  Eight actual parsed-method boundary contracts pass, including unconfirmed
+  logout, final-read error, drain failure, lateHP loss and disable lost ack.
+- LIVE prospective lifetime series99592/wrapper21208/unified98816/log013004,
+  source449fe54fcd12e483092a2887a41b31ed2ccb55af3702b8584904ec97dd143e2f,
+  start22:30:04.655809UTC. Same deployed90faa8a4, offline/inactive preflight,
+  no other tester active; seven loaded fixture sources frozen. First red stops.
+  Original24 hazards/42 navigation/native6 remain UNRUN on this candidate.
 - VIDEO owner authorizes a new229s Mineswarm remake. FPS-sensitive bench is
   offline; authorized TOOLKIT steer delivered once with localId
   65511689-3acc-4e96-8990-d393b6daf47a/messageId
-  f6715aaf-b2c4-47f8-9f5c-44cbb78433f9/statusSTEERED. Await its promised
-  render/mastering completion signal before measured gameplay resumes.
+  f6715aaf-b2c4-47f8-9f5c-44cbb78433f9/statusSTEERED. VIDEO later confirms
+  cff5f2b8-f453-4a25-af63-c45f46a967cc complete after12m13s, final mastering/
+  preview encoding done. FPS window actually released before this target launch.
 - Future native cleanup rechecks offline/inactive/reconnect intents immediately
   before mutation; seven actual parsed-finally branch contracts pass. This does
   not replace actual native integration. Previous3-case contract proof retained.
