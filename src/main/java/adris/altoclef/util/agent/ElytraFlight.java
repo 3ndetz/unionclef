@@ -32,6 +32,8 @@ public final class ElytraFlight {
     private static volatile String reason = "";
     private static double tx, ty, tz;
     private static int ticks, takeoffTicks, boostCooldown, rocketsUsed;
+    private static int glideWait, climbTicks;
+    private static boolean glideSent;
     private static boolean registered;
 
     private static final int TIMEOUT_TICKS = 20 * 180;
@@ -49,7 +51,8 @@ public final class ElytraFlight {
         tx = x;
         ty = y;
         tz = z;
-        ticks = takeoffTicks = boostCooldown = rocketsUsed = 0;
+        ticks = takeoffTicks = boostCooldown = rocketsUsed = glideWait = climbTicks = 0;
+        glideSent = false;
         reason = "";
         phase = Phase.EQUIP;
         return status();
@@ -146,21 +149,35 @@ public final class ElytraFlight {
                 }
             }
             case TAKEOFF -> {
+                // Creative flight (double jump) blocks gliding: make sure it is off.
+                if (p.getAbilities().flying) {
+                    p.getAbilities().flying = false;
+                    p.sendAbilitiesUpdate();
+                }
                 if (adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) {
                     phase = Phase.FLYING;
+                    climbTicks = 30; // steep climb first, or the first glide scrapes the ground
                     boost(client, p);
                     return;
                 }
-                if (++takeoffTicks > 60) {
+                if (++takeoffTicks > 20 * 12) {
                     fail("could not take off");
                     return;
                 }
                 aim(p, tx - p.getX(), tz - p.getZ(), -10);
                 if (p.isOnGround()) {
                     p.jump();
-                } else if (p.getVelocity().y < 0) {
-                    // Falling after the jump: open the wings, as pressing jump mid-air does.
+                    glideSent = false;
+                    glideWait = 0;
+                } else if (!glideSent && p.getVelocity().y < 0) {
+                    // Past the top of the jump: open the wings ONCE. The server answers a repeat
+                    // while already gliding with stopGliding(), and the client sees the gliding
+                    // flag a tick or two late -- sending every tick closed the wings again.
                     p.networkHandler.sendPacket(new ClientCommandC2SPacket(p, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+                    glideSent = true;
+                } else if (glideSent && ++glideWait > 10) {
+                    glideSent = false; // no confirmation this jump: try again on the next one
+                    glideWait = 0;
                 }
             }
             case FLYING -> fly(client, p);
@@ -194,6 +211,10 @@ public final class ElytraFlight {
             if (dist < ARRIVE_DIST && above < 3) {
                 finish("arrived");
             }
+        } else if (climbTicks > 0) {
+            climbTicks--;
+            pitch = -50; // right after take-off: get away from the ground
+            if (speed < 1.5) boost(client, p);
         } else if (p.getY() < cruise) {
             pitch = -30; // climb
             if (speed < 1.1) boost(client, p);
@@ -211,11 +232,14 @@ public final class ElytraFlight {
     }
 
     private static void boost(MinecraftClient client, ClientPlayerEntity p) {
-        if (boostCooldown > 0) return;
+        // A rocket used on the ground just flies off on its own: only while gliding.
+        if (boostCooldown > 0 || !adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) return;
         if (!holdInHotbar(client, p, Items.FIREWORK_ROCKET)) {
             reason = "out of fireworks";
             return;
         }
+        // The swap into the hotbar lands next tick: use the rocket only once it is in hand.
+        if (!p.getMainHandStack().isOf(Items.FIREWORK_ROCKET)) return;
         client.interactionManager.interactItem(p, Hand.MAIN_HAND);
         rocketsUsed++;
         boostCooldown = 30;
