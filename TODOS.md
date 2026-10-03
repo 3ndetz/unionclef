@@ -17,7 +17,10 @@
   26.43FPS after two full-air recoveries and a late third rescue; four unrun.
   Both films reviewed: air-route-film-review-20261004-012500/actual-review.json.
   Observation ended2.5s before final readouts completed; through-logout trace
-  is separate. Repeated target/adjacent/native validation remains open; no release.
+  is separate. New through-logout series6/6 passes28.3..29.5FPS, recorded/endHP20,
+  minAir101/endAir300, no dig child; all six films/all12 pages reviewed:
+  air-route-film-review-20261004-014458/actual-review.json. Earlier red retained.
+  Original hazard/adjacent/native validation remains open; no release claim.
 - [ ] **A lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside

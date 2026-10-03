@@ -55,6 +55,8 @@ Completed Windows repair:
   air trials startAir149 and lose2HP while alternating grounded dig/swim quotes.
   Clean90faa8a4 build/class proof/deployment complete; target series has one
   PASS/one healthy final-Air FAIL/four unrun. Both actual films reviewed.
+  Separate through-logout target series now6/6 healthy/HP20/Air300, all films
+  reviewed. Earlier red retained; original24 hazards/42 adjacent/native6 pending.
 - [ ] Original24 hazard/42 adjacent gates and native six exact cp1003-0401-t649
   replays on90faa8a4 with unchanged HP20/FPS20/original pack/death3327/logouts.
 - [ ] Narrow tested core commits, stable scoped release and public class proof.
@@ -205,11 +207,44 @@ Completed Windows repair:
   that difference is explicit, not an identical-time comparison.
   Eight actual parsed-method boundary contracts pass, including unconfirmed
   logout, final-read error, drain failure, lateHP loss and disable lost ack.
-- LIVE prospective lifetime series99592/wrapper21208/unified98816/log013004,
+- Prospective lifetime series99592/wrapper21208/unified98816/log013004,
   source449fe54fcd12e483092a2887a41b31ed2ccb55af3702b8584904ec97dd143e2f,
   start22:30:04.655809UTC. Same deployed90faa8a4, offline/inactive preflight,
-  no other tester active; seven loaded fixture sources frozen. First red stops.
-  Original24 hazards/42 navigation/native6 remain UNRUN on this candidate.
+  no other tester active; seven loaded fixture sources frozen. Natural0 at
+  22:44:09.698507UTC,6/6 PASS. FPS29.4286/29.375/29.5/28.8571/29.25/28.2857;
+  recorded/endHP20, no deaths, finalAir300, minAir101 in all six. Endtick counts
+  1090/1137/1094/1110/1138/1107; each rescue startsAir149, no dig child ticks.
+  Runtime/cleanup[], confirmed offline. Earlier healthy finalAir178 FAIL retained.
+  Freezer28796/23736/log014458/source48273e7c naturally0 at22:45:19.553934UTC;
+  all six53s films/all12 fixed2s pages actually viewed. Actual-review SHA
+  4682847fb84062f3965ff9eea4d27271ad3bc30d0b1e07a6384da6a21c91afdd,
+  air-route-film-review-20261004-014458. USER enclosure escape/mining follows
+  air replenishment, eventually exits; it is not an air-task mining child.
+  Last actual ticks include220..489ms AFTER final readout completion, ending
+  145..179ms before confirmed logout. No native/comparative-rate/release claim.
+- Older shelter-air-isolation-20261002-094852/5/drown_tunnel original verdict
+  re-opened: Air199 FAIL/HP20/no deaths/29.4FPS, cleanup[]. Both existing53s
+  pages re-viewed: initial rescue/refill, USER later mining/water return.
+  historical-air-endpoint-199-reinspection.json SHA
+  4aef8631a12d729281f3bab8926347d13f3652556a341e66b96964f1ddc9e9c9.
+  Older setup/observer/payload differs; not an identical arm or comparative rate.
+- Native future helper diagnose_saved_swim_post_logout_trace.py SHA
+  a24f221cb4152bc96de5239b70096d49d3e1bbe0e22cfc1b7782693eb8d6f34e
+  retrieves unsampled ring rows after confirmed logout, before25s offline hold.
+  Original120s/HP20/FPS20/pack/deaths3327/strict runtime/hold unchanged.
+  Seven earlier outer-finally branch contracts inherited by identical actual AST;
+  nine new actual parsed offline-drain/health-gate boundaries pass, including
+  lateHP18, rejoin, empty tail, read error, malformed rows and preserved old file.
+  New parent check_oxygen_post_logout_native.py SHA
+  73abac2229b7a69fba87887951f50b283b1f85b17848ebd68990c0a88c5a1880 is UNRUN.
+- LIVE original24 hazards133432/wrapper112580/unified96604/log014719,
+  check_air_route_hazard_lifetime.py SHA
+  dbefb0493235cf36e77a2b21f029c515b939162f966b5969dfd7693b9b407e45,
+  start22:47:19.976171UTC. Tested through-logout observer; original hazard judge
+  AST identical/HP12/Air200/death thresholds unchanged, no addedHP20 hazard gate.
+  Same verified90faa8a4, offline/inactive before entry, no other tester active.
+  First red/INVALID stops and is retained. Seven fixture sources frozen while live.
+  Original42 navigation/native6 remain UNRUN on this candidate.
 - VIDEO owner authorizes a new229s Mineswarm remake. FPS-sensitive bench is
   offline; authorized TOOLKIT steer delivered once with localId
   65511689-3acc-4e96-8990-d393b6daf47a/messageId
