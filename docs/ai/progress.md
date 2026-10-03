@@ -243,6 +243,46 @@ Completed Windows subprocess repair:
   terminal and every actual film review; new oxygen runtime/native regression
   proof, narrow source commit, stable057 release and next HF/TG remain pending.
 
+- First2bc cap trial naturally1 at16:13:03.919031UTC: objective PASS but
+  INVALID19FPS below unchanged20 floor, five trials unrun. FirstGetToAir257,
+  minimumAir43/HP20/no deaths/endAir300,188 mining ticks/0 ground/187JUMP,
+  complete1255 rows/1253 end ticks, runtime/cleanup[]. Fresh client-thread
+  quote237.499990/no swim exit. No healthy improvement/rate claim; prior25FPS
+  control and19FPS candidate are different machine conditions. Freezer153904/
+ 167972/log191541/sourceb5d16171 naturally0 at16:15:58.085017UTC. Entire43s/
+  one2s page actually inspected; review SHA
+  d10b065ffe5d200848a052d669bf569d5e8b983b67ea9f61b6b3340cd1816253.
+- Prospective2bc native parent158284/11660/unified67917/log192212-11660,
+  source75bc9712, starts16:22:12.770538UTC. First child97792, unchanged
+  ring helper0804de5f; original raw entry/death baseline restored exactly.
+  Parent naturally1 at16:29:54.008020UTC, deadline not exceeded/five unrun:
+  median4FPS below20, minimumHP18/endHP20/deaths3327. Current producer155,
+  no offered retained capped edge. Complete2265 rows/2256 end ticks, no gaps/
+  errors. Zero air-mining;306 other-air ticks/minAir-19. One HP20->18 event
+  seq1947 at(-188.3696,63.0206,1020.6102), GetToAir/F....J/no queue. First
+  escape begins atAir142/groundedbody(-190.5448,55,1011.7943). This describes
+  a swimming escape under failedFPS, not a healthy causal result or cap test.
+  Protective logout29.489s retains exact player/statistics, checkpoint unchanged,
+  runtime/cleanup[]. Analyzer100152/131864/log193258/sourceeacab35e naturally0
+  at16:32:59.644193UTC. Extraction101080/150644/log193327/sourceb0cb561e
+  naturally0 at16:34:10.241563UTC. Entire198.2s/all5 fixed2s pages actually
+  inspected; review SHA
+  c9f2c66ba08352c78f8cd31ab22973afc5cb09a58102513121023500ea92316d.
+- Source follow-up finds separate estimates: GetToAir uses8 ticks per swim
+  cell; MovementSwim.calculateCost returns20; FastPlanner uses ActionCosts'
+  own swim heuristic/vertical factor. No unmeasured constant replacement yet.
+  Current reserve prices only the first ceiling block; thick roofs and real
+  swim travel remain unproved. All original24/42/new six-cap validation stays
+  open; earlier5f24/42 coverage is not new2bc coverage.
+- Prospective long-swim mechanism fixture104824/106656/unified80479/log194526,
+  sourceccf2e946, starts16:45:26.742454UTC on unchanged2bc. Original21-stack
+  pack and dry/active entry retained,35s objective and strictHP20/FPS20/no-death/
+  endAir200/complete-trace gates. One cap above competes with a16-step water
+  outlet. Unlike the original cap-only fixture, actual GetToAir can exercise
+  either swimming or mining; retained outcome gates decide escape. Original
+  fixtures/results immutable, source/embedded AST and exact future diff reviewed.
+  Await natural boundary and actual film before choosing a shared-cost repair.
+
 - Narrow menu/API and shared survival boundary review completed without changing
   the running5f payload. Deliberate logout cancels queued reconnect intents;
   a ConnectScreen network future is explicitly refused, not claimed cancelled.
