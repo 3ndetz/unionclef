@@ -52,7 +52,7 @@ Completed Windows subprocess repair:
   Prior native startup failures remain failed; no source checkpoint alteration,
   health/inventory kit, day lock or hidden retry. Parent deadline uses owned
   cooperative cancellation and awaits the child's protective natural boundary.
-- [ ] Re-run original42 water/land/build adjacency after the MovementSwim change.
+- [x] Re-run original42 water/land/build adjacency after the MovementSwim change.
   Earlier b81 passed42/42 with every film reviewed; it is an older payload.
 - [ ] Diagnose the retained native portal/food/combat failures, audit focused
   fixes, narrowly commit/sync tested sources, publish a stable scoped release,
@@ -123,9 +123,26 @@ Completed Windows subprocess repair:
   No original HP gate weakened or physical trial retried. Payload remains5f.
 - Current42 adjacency50460/wrapper162620/unified48188/log160559-162620,
   sourcecd1f3897, starts13:05:59.939268UTC after failed native film review.
-  LIVE: unchanged original42 water/land/build gates and first-red behavior.
-  Investigating native air selection/mining/oxygen budget while it runs; no
-  source edit/build/deploy under the current test.
+  Naturally0 at14:14:58.744542UTC:42/42PASS, unchanged original gates,
+  FPS26.5..30, all sampledHP20/deaths0, runtime/cleanup[]. No source Java edit,
+  build or deploy under the test. Current payload remains frozen5f.
+  Film freezer166416/wrapper99404/log171523-99404, source73aa04cc,
+  naturally0 at14:18:56.202674UTC. All42 films/all42 fixed2s pages actually
+  inspected. Journal144184/wrapper148668/log172113-148668, sourced5413411,
+  naturally0 at14:21:15.242289UTC; actual-review SHAd14dea26d2e9c931f1e8354019105391f06dd03d442bcc3469b942c70e181825.
+  Crossing, underwater support/ascent and land/build objectives visible;
+  completed-goal holds remain distinct from unfinished movement. Repeat6
+  descend setup void recovery and incidental bridge failed-find-path chat/
+  residual physics drawings are retained, not hidden behind the green gates.
+  No native-survival or every-frame claim.
+- One prospective native oxygen diagnosis134424/wrapper165964/unified77076/
+  log172158-165964, sourcea5bfa066, starts14:21:58.897028UTC after every42
+  film is reviewed. Original120s/HP20/FPS20/raw pack/death baseline and protective
+  logout gates unchanged. Adds same-client-tick oxygen/ground/key/task trace
+  and sequential live block reads covering the actual body footprint. Saved
+  geometry has a lower adjacent roof at(-191,56,1009); it alone cannot prove
+  live collision, input ownership or the cause of damage. No speculative
+  oxygen threshold or production input change. Natural terminal pending.
 - Read-only checkpoint list:12805MB/15GB, diskfree161GB. Archived all467
   prior progress lines verbatim; exact line equality checked before replacing
   the active document. Private recovery handoff remains the only modified
