@@ -231,3 +231,43 @@ VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
   measurement advances the playthrough process. This fixes evidence collection,
   never gameplay or FPS. Native food140/full59/combat remain open; continue the
   pending actual-default audit and originally unexecuted cases immediately.
+
+### Candidate validation continuation
+- Collector/test/progress commit05e44c5a pushed atomically to both canonical
+  branches; local1.21.11 fast-forwarded. Wiki37081099635 actuallySUCCESS.
+- Remaining-seven gate140776 ended0 at00:20:38.339818UTC/log031157,
+  water-release-defaults-tail-20261003-031158. Independent combined audit153736/
+  log032149-139480 ended0 at00:22:00.220596UTC: exact42 unique scheduled trials,
+  min29FPS, sampledHP20/deaths0/runtime[]/cleanup[], actual defaults/JARf792.
+  All42 fixed2s pages now actually inspected/hash-journalled. Original midnight
+  exit1 remains retained; recovered case35 plus seven previously unexecuted
+  trials complete the original schedule without retrying a gameplay failure.
+- Dry actual-default fixture106964/wrapper150588/log033006-150588 isLIVE,
+  helper97740fa0,36 planned trials. New exact-prefix log collector and peer
+  preservation guard, original material/GUI/policy/FPS gates. No dry overall
+  score or native/release result yet; await its natural terminal/audit.
+- Report resume153372/log031851 ended0 at00:19:13.646418UTC: read-only CLI
+  freshness confirms0.8.113 current; history shows only our prior source-cut/
+  storyboard edits. Three action scenes authored and mounted alongside stat
+  scene (four of six). Two final scenes and browser/render checks remain.
+- First footage staging148824/log032109 ended1: original normal-speed ON bank
+  slice is valid/adopted, then compressed OFF cut fails exact-duration audit.
+  Output-side duration was applied after speed-up; rejected output is retained
+  as unmounted off-bank.mp4/failed-output.json, never adopted or used in film.
+- Correct input-bound source ranges107796/log032625-98232 ended0 at
+  00:26:55.371170UTC. Five source-SHA-verified silent854x480/30FPS cuts retained:
+  ON12s/1x, OFF12s/4x, rung8s/1x, slower entry12s/8x, smoker return12s/8x.
+  Off-bank-source-window.mp4 is the corrected mounted asset. Local media ledger
+  contains exactly these five approved assets; source/hash/time/speed in cuts.json.
+- Static lint147360/log032752-139124 ended0 at00:28:00.290965UTC: zero errors,
+  one retained missing-host-coverage warning on incomplete58s root. Do not
+  extend the opening scene over later slots to silence it; finish the timeline.
+  Cut-sheet preparation149204/log032752-155096 ended0 at00:28:20.254141UTC.
+  All9 half-second pages actually viewed/journalled: bank exit then wood, OFF
+  submerged hold, one real constructed rung, slower entry retries then exit,
+  smoker detours then GUI. This is exact retimed-cut sampling, not moving,
+  every-frame, composed/browser/render proof. New report not delivered yet.
+- Parallel audit-launch attempt collided with the ignored durable wrapper's
+  second-resolution directory name before starting any audit child. Retained
+  tool error; wrapper now appends itsPID for unique ownership. Audit153736 is
+  the sole actual combined audit. No benchmark retry or overwritten job directory.
