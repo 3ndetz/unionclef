@@ -45,7 +45,10 @@ Completed Windows subprocess repair:
   and land-melee cases each, unchanged gates/FPS20/first-red behavior.
 - [x] Independent raw oxygen schema/sequence/ownership analysis.
 - [x] Actually inspect every current campaign film and write hash-bound journal.
-- [ ] Run six raw120s saved-entry producer/logout observations on current5f.
+- [x] Execute first-red raw120s saved-entry producer/logout campaign on current5f.
+  First native trial fails healthyHP20; five remaining trials stay unrun.
+- [ ] Diagnose the retained native oxygen loss, then repeat the six-trial gates
+  after a measured core repair. No successful native rate established.
   Prior native startup failures remain failed; no source checkpoint alteration,
   health/inventory kit, day lock or hidden retry. Parent deadline uses owned
   cooperative cancellation and awaits the child's protective natural boundary.
@@ -104,9 +107,25 @@ Completed Windows subprocess repair:
   No new bench, build or deploy during extraction/review.
 - Current native campaign89252/wrapper97224/unified64772/log155657-97224,
   sourced3e535ad, starts12:56:57.783715UTC after all films are reviewed.
-  Target remains six exact raw120s saved-entry producer/logout trials, stop
-  on first red and await natural protective cleanup. This campaign is LIVE;
-  no native pass or cleanup result yet. Payload remains frozen5f324dd2.
+  First trial87284 naturally1; parent naturally1 at13:02:42.102470UTC,
+  deadline not exceeded, five trials unrun. Actual57 sequential observations,
+  medianFPS24, minimumHP16, endingHP18.3667, persisted deaths3327 unchanged.
+  Actual native grid producer186 positive lines, no capped target in sampled
+  queues; this is not a six-run clearance/survival proof. Runtime errors[].
+  Protective logout completes,28.1089s offline hold has no rejoin and original
+  six NBT fields/statistics stay identical. Checkpoint fingerprint unchanged.
+  Cleanup retains the healthy-ending assertion failure, not a logout failure.
+  Film182.7s/all4 fixed2s pages actually inspected: initial air recovery,
+  portal search by bank, later downward portal route, GetToAir capped-shaft
+  mining and oxygen damage, recovery/eating, second descent and air mining.
+  Journal162016/50624/log160523-50624 naturally0 at13:05:23.562902UTC,
+  reviewSHA31f52ddddbf6c8c822e5d1c5f4b45716bd5437b764c972242317687d2419ed11.
+  No original HP gate weakened or physical trial retried. Payload remains5f.
+- Current42 adjacency50460/wrapper162620/unified48188/log160559-162620,
+  sourcecd1f3897, starts13:05:59.939268UTC after failed native film review.
+  LIVE: unchanged original42 water/land/build gates and first-red behavior.
+  Investigating native air selection/mining/oxygen budget while it runs; no
+  source edit/build/deploy under the current test.
 - Read-only checkpoint list:12805MB/15GB, diskfree161GB. Archived all467
   prior progress lines verbatim; exact line equality checked before replacing
   the active document. Private recovery handoff remains the only modified
