@@ -28,7 +28,8 @@ Completed Windows subprocess fix:
 ### Plan
 - [x] Clean scoped build, final recursive payload proof and canonical tester1 deploy.
 - [x] Six physical sealed-roof passes, actual planner decision and film inspection.
-- [ ] Original42 water/land/build adjacency gates, unchanged FPS20/first-red rule.
+- [x] Original42 water/land/build adjacency gates, unchanged FPS20/first-red rule.
+  All42 fixed2s film pages actually inspected and journaled below.
 - [ ] Air/lava escape and combat adjacency affected by permitted liquid routing.
 - [ ] Correctly observed native repeats and original-checkpoint portal integration.
 - [ ] Audit, narrowly commit/sync tested sources, scoped stable release, actual
@@ -66,11 +67,89 @@ Completed Windows subprocess fix:
   film hashes, original FAIL1 terminals, completed six-trial0 and decision0.
   Prepared258a483c/actual-review under swim-grid-film-review-20261003-105128.
   Invisible barriers are proved by retained server checks, not visual inference.
-- LIVE42 adjacent trials157316/wrapper162364/log105356-162364 started
+- Completed42 adjacent trials157316/wrapper162364/log105356-162364 started
   07:53:56.137798UTC, sourcecd1f3897, unified7819. Actual b81 payload/defaults,
   original7 courses x6 repetitions, established join then strict course windows.
   No native startup error waiver. No concurrent render/build/second bench client.
-  Final rate, natural terminal, cleanup and all film reviews remain pending.
+  Natural0 at08:46:07.051880UTC:42/42 at29..30FPS, runtime[]/cleanup[].
+  No native/startup/underwater-combat claim. All42 films now reviewed below.
+- Headless sound investigation146576/log105936-158576 source9ba9fde4
+  naturally0 at07:59:45.598645UTC; exact installed voicechat2.6.18 bytecode
+  initializes SoundManager on every join, regardless of disabled flag. No
+  audio settings, host device, client or image changed by this inspection.
+  Actual tester1 JVM reads WEB_AUDIO=0/PULSE_SERVER absent; its built-in
+  PulseAudio service has a disabled marker. Upstream base-image docs identify
+  WEB_AUDIO=1 as the supported virtual-audio setup. Compose now enables this
+  for future tester launches only; the completed42 campaign used its old state.
+  Canonical tester1 redeploy completed below; six clean join boundaries are
+  still required before claiming a repaired stand. Do not mute voicechat or
+  filter its errors.
+- Maintained NavGridWaterRoof now has the exact class AST of the six tested
+  ignored-fixture trials; registered for future suite imports. The already
+  loaded42-trial process still runs its original seven courses unchanged.
+- Initially prepared: check_headless_audio_joins.py uses shared recorder,
+  six strict pre-join byte windows, real open SoundManager/speaker enumeration,
+  voicechat disabled=false and25s offline holds. No native survival claim.
+  check_swim_hazard_neighbors.py plans6x maintained roof/empty breathing shaft/
+  lava pool escape/land melee, preserving original kits, triggers and gates.
+  diagnose_saved_swim_observed.py and check_saved_swim_observed.py plan six
+  exact raw120s native replays with DEBUG ownership/restoration and sampled
+  original capped-edge checks. Source filenames are preparations, not results.
+- Documentation archive/proofs committedcb6b7560 as owner, atomically pushed
+  main/1.21.11 and local version branch fast-forwarded. Runtime sources remain
+  WIP; release0.95.57 has not been published. The earlier22-case read was only
+  interim; the natural terminal and complete42-case result are retained above.
+- Fixed2s review preparation161936/wrapper63084/log114626-63084 started
+  08:46:26.213855UTC, source7ddd7e6e. It independently rereads all original
+  gates, case byte windows and timeline health/deaths, then freezes all42 films.
+  Natural0 at08:47:24.869691UTC. Every42 page actually viewed; journal46208/
+  wrapper114096/log115040-114096 source0c12c59d naturally0 at
+  08:50:40.899864UTC. Summary98708509 remains byte-identical; original gates,
+  runtime[]/cleanup[] and every timeline sampleHP20/deaths0 independently read.
+  Water films show submersion and dry exit; pillars place a rung and hold it;
+  dry courses show ascent/descent/wall traversal/bridge construction and arrival.
+  Fixed2s sampling, not every frame/playback; no native success or performance
+  comparison. No concurrent heavy bench during frame extraction/inspection.
+- One void recovery appears during arena rebuild before measured nav_descend6,
+  after nav_staircase6 ended. Opened run_suite:348-389/ArenaBuilder:23-26 and
+  actors:155-174: arena removal precedes hard reset and counter zeroing.
+  Both measured timelines are HP20/deaths0. Preserve the setup event rather
+  than claiming an entire suite lifecycle had no void events.
+- Prepared native observer now copies original persisted statistics exactly
+  (original3327 deaths), checks end death delta and HP20 independently of
+  sampled client health, and retains two offline NBT/statistics snapshots
+  across a25s menu-ownership hold. Diagnostic failure cannot skip protective
+  logout. These new guards parse but have not yet run physically.
+- Prepared audio join helper now retains first failed probe films/log windows
+  in its per-trial finally as well as successful joins. Canonical deployment
+  preparation preserves the oldb81 payload/deployment proof instead of
+  overwriting it. Canonical tester1-only deployment153948/wrapper139036/
+  log115113-139036 source3cd97c57 naturally0 at08:52:11.586503UTC; loaded
+  exactb81/final nested jars verified. Own headless-audio-deployment-115114
+  copied proof retains old candidate/deployment evidence unchanged. No base
+  image/controlling container/host audio/human client modification.
+- First audio join audit160960/wrapper30940/log115336-30940,
+  source28a2bfb2 starts08:53:36.503115UTC. Sameb81 payload, six strict
+  pre-join windows, actual SoundManager and device enumeration, original
+  voicechat settings and FPS20. Natural1 at08:54:05.261058UTC: first probe
+  wrongly resolves ClientConfig.disabled as a Py4J JavaMember; no25s hold or
+  six-join success. Original helper28a2bfb2 frozen, row/runtime[]/cleanup[]
+  and film6f5a64bb retained. All20.1s film page actually viewed: Title until
+  10.5, loading12.5..16.5, dry/full-heart18.5, final20.0Title.
+  Retention156360/log115649-125252 natural0 at08:56:51.209166UTC;
+  journal160880/log115816-155128 sourceab3cb26a natural0 at
+  08:58:17.482857UTC verifies hashes and corrected get_field access while
+  offline, actualdisabled=false/inGame=false. No world/settings change.
+- LIVE distinct corrected six-join campaign156988/wrapper160560/
+  log115834-160560, unified10287, sourceb8b2945a starts08:58:34.785195UTC.
+  Original failed first campaign remains1; no failed physical result relabeled.
+  Complete rate, terminal, cleanup and films pending. Deployment0/one clean
+  Java window do not yet establish a validated headless stand.
+- Prepared native parent now requests cooperative failure via an owned marker
+  at600s and waits for the child's natural logout/offline finally boundary;
+  it no longer kills the loaded survival owner via subprocess.run timeout.
+  Existing190s observer timeout covers only the read-only observer subprocess.
+  All new code parses; native normal/deadline paths remain physically unrun.
 - Truthful58s water progress film sources committed4cf49cb9 as owner and pushed
   atomicallymain/1.21.11. Telegram9712 confirmed, HAPI video displayed; CLI feedback
   explicitly NOT sent because telemetry disabled. No new release/native success.
