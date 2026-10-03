@@ -142,7 +142,29 @@ Completed Windows subprocess repair:
   and sequential live block reads covering the actual body footprint. Saved
   geometry has a lower adjacent roof at(-191,56,1009); it alone cannot prove
   live collision, input ownership or the cause of damage. No speculative
-  oxygen threshold or production input change. Natural terminal pending.
+  oxygen threshold or production input change. Naturally1 at14:29:44.682296UTC:
+  24 outer rows/median11FPS/minimumHP14/endHP17.9000/deaths3327 unchanged.
+  Original healthy20FPS floor fails; no healthy survival/comparative claim.
+  Protective logout completes30.3145s offline hold, exact player/stat fields
+  and source checkpoint unchanged, runtime errors[]. Healthy-ending cleanup
+  assertion fails, not logout. Complete2782 trace rows/2704 end ticks have
+  zero gaps/errors.381 air-mining ticks:0 grounded/379 JUMP, minimumAir-19.
+  Live sampled floor at(-191,53,1006) is water: releasing jump alone is NOT
+  an established repair. Observation remains descriptive under failedFPS.
+  Analyzer122776/wrapper80384/log173019-80384 naturally0 at14:30:20.747919UTC.
+  Film extraction167644/wrapper164276/log173220-164276 naturally0 at14:32:57.285633UTC;
+  all199.9s represented by five fixed2s pages, all actually inspected.
+  Journal163672/wrapper168212/log173625-168212 naturally0 at14:36:26.908041UTC;
+  reviewSHAa8639f098cea2bec630d0961c5e040673922c9fdd8f1f9a260e633a805c2b2d6.
+  Both capped-shaft digs show damage and subsequent recovery; entity identity
+  in a sampled opening is uncertain. Native portal completion remains absent.
+- Separate ring-only diagnostic138564/wrapper146476/unified9581/log173939-146476,
+  source0804de5f, starts14:39:39.202302UTC. Original120s/raw pack/HP20/FPS20/
+  baseline deaths/offline gates unchanged; every actual-tick health decrease
+  now also fails. Reads only the existing atomic ring and a separate FPS counter,
+  reducing reflection/world-query traffic without a production change. Earlier
+  failed full-column diagnostic immutable; no successful run rate inferred.
+  Await natural protective boundary before any further bench/render/deploy.
 - Read-only checkpoint list:12805MB/15GB, diskfree161GB. Archived all467
   prior progress lines verbatim; exact line equality checked before replacing
   the active document. Private recovery handoff remains the only modified
