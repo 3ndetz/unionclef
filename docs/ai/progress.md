@@ -347,6 +347,27 @@ Completed Windows subprocess repair:
   log210224/source da2eab0e start18:02:24.680224UTC. First trial PASS at
   22.75FPS/minimumHP20/deaths0/endAir300/runtime[],188 actual mining ticks.
   Remaining trials and every actual film review pending; no six-run rate yet.
+- Six staged eff trials naturally0 at18:25:09.419386UTC:6/6PASS at
+  FPS22.75,22,27,23.6667,28,26.5; minimumHP20 throughout, objective deaths0,
+  endAir300/runtimecleanup[]. FirstGetToAir256..257,188 mining ticks each,
+  minimumAir55,67,67,69,68,68. Complete trace counts1024/1022,1182/1180,
+  921/919,877/875,870/868,850/848 rows/end ticks; no errors/gaps.
+  Extraction150628/95468/unified58247/log212528/sourcea4991bd0 naturally0
+  at18:26:00.858021UTC. All six actual43.0s films/one fixed2s page each
+  actually inspected. Cap mining, surface refill and later shaft bobbing retain
+  full hearts. Actual-review SHA
+  5a2398e6cf62bf0cf687706d3858fd301858028afde186fa998e9ebeedc56510.
+  Initial journal incorrectly required the last atomic rowAir300: repeat1 has
+  Air298 there, separate original endpoint readoutAir300. Failed assertion
+  retained; journal now distinguishes both readings, original gates unchanged.
+  Six current reliability observations, not a comparative improvement rate
+  against one baseline, not pure-cap/native/multi-cap/full59 coverage.
+- Original pure-cap six-trial staged campaign87604/wrapper6688/unified56530/
+  log213624-6688/sourcef8361b06 starts18:36:24.330653UTC on exact loaded eff.
+  Original objective AST/production probe/21-stack tools/geometry/35s/strict
+  HP20/FPS20/no-death/endAir200/log/trace gates retained. Only same dry join
+  wrapper prepares the returning player. Await natural completion and every
+  film review; original24 hazards/42 adjacency/native6 remain unrun on eff.
 
 - Narrow menu/API and shared survival boundary review completed without changing
   the running5f payload. Deliberate logout cancels queued reconnect intents;
