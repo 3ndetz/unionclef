@@ -59,6 +59,7 @@ public final class ElytraFlight {
         if (phase != Phase.DONE && phase != Phase.FAILED) {
             phase = Phase.IDLE;
             reason = "stopped";
+            MinecraftClient.getInstance().execute(ElytraFlight::putRocketsAway);
         }
     }
 
@@ -80,6 +81,33 @@ public final class ElytraFlight {
     private static void fail(String why) {
         phase = Phase.FAILED;
         reason = why;
+        putRocketsAway();
+    }
+
+    private static void finish(String why) {
+        phase = Phase.DONE;
+        reason = why;
+        putRocketsAway();
+    }
+
+    /** Leave a harmless stack in hand. With rockets selected, the next right click the pathfinder
+     *  makes (placing a block, a fall clutch) launches a firework instead -- and with a full
+     *  inventory the mod cannot de-equip it on its own. */
+    private static void putRocketsAway() {
+        var p = MinecraftClient.getInstance().player;
+        if (p == null) return;
+        var inv = p.getInventory();
+        if (!inv.getStack(PlayerVer.getSelectedSlot(inv)).isOf(Items.FIREWORK_ROCKET)) return;
+        int fallback = -1;
+        for (int i = 0; i < 9; i++) {
+            var st = inv.getStack(i);
+            if (st.isEmpty()) {
+                PlayerVer.setSelectedSlot(inv, i);
+                return;
+            }
+            if (fallback < 0 && st.getItem() instanceof net.minecraft.item.BlockItem) fallback = i;
+        }
+        if (fallback >= 0) PlayerVer.setSelectedSlot(inv, fallback);
     }
 
     private static void tick(MinecraftClient client) {
@@ -145,8 +173,7 @@ public final class ElytraFlight {
         double dist = Math.hypot(dx, dz);
         if (!adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) {
             if (p.isOnGround() && dist < ARRIVE_DIST * 3) {
-                phase = Phase.DONE;
-                reason = "landed";
+                finish("landed");
             } else if (p.isOnGround()) {
                 takeoffTicks = 0;
                 phase = Phase.TAKEOFF; // touched down early: take off again
@@ -165,8 +192,7 @@ public final class ElytraFlight {
             // Final approach: aim straight at the landing spot, nose down at most 45 degrees.
             pitch = (float) Math.min(45, Math.max(5, Math.toDegrees(Math.atan2(above, Math.max(dist, 1)))));
             if (dist < ARRIVE_DIST && above < 3) {
-                phase = Phase.DONE;
-                reason = "arrived";
+                finish("arrived");
             }
         } else if (p.getY() < cruise) {
             pitch = -30; // climb
