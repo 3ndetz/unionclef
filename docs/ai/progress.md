@@ -313,6 +313,40 @@ Completed Windows subprocess repair:
   preparation. First run it on unchanged2bc, then compare the new shared-cost
   candidate with strict repeated gates. Neither staged baseline nor new candidate
   tests have executed yet. No057 release or new video report.
+- New build naturally0 at17:52:59.474323UTC: clean0/scoped build0, all18
+  tasks executed/no build cache, build phase37m21. Verifier131920/165176/
+  unified58693/log205328/sourcecd86c252 naturally0 at17:53:42.552005UTC.
+  Frozen eff3fcfd01c40ae9eacfad00370ff477a388cbfec2f9939598b744cbf0e94d30
+  has2213 recursive classes: ONLYGetToAirTask/MovementSwim differ versus2bc,
+  other2211 includingChain/Combat/Trace/lifecycle/defaults byte-identical.
+  Actual shouldStart181..184 and onTick69..72 now multiply by20; MovementSwim
+  calculateCost0..3 still returns20. Full javap instruction/offset comparison
+  matches after the two8->20 replacements and constant-field changes, ignoring
+  pool numbering and its comment-column padding only. Original padding-only
+  comparison failure retained before correction; no execution change hidden.
+  Actual bytecode journal SHA
+  4979fb84556cf2458e04e0f4146eb7c2604a9551b3db8703cbb7814b0a73366f.
+- Staged unchanged2bc control64540/57652/unified9433/log205444/source da2eab0e,
+  start17:54:44.353093UTC, naturally1 at17:58:00.451800UTC. Healthy27.8FPS,
+  minimumHP14/minAir-19, firstGetToAir148/11mining ticks, objective deaths0/
+  endAir297. Returning-player dry join14.431s retains priorHP14/Air300;
+  original ordinary hard-reset/21-stack kit begins objectiveHP20/Air300.
+  Whole join/setup runtime window has no errors or drowning. Complete994 rows/
+  988 end ticks/no gaps/errors/cleanup[]. No rate claim from this single control.
+  Preparation148316/158328/log205835/sourcea4991bd0 naturally0 at
+  17:58:41.762746UTC. Entire43.0s/one fixed2s page actually inspected;
+  actual-review SHA8031138c2ffa18e44c3094e961c8929acbcd59cfb256095331ffb3d12511a4a7.
+  Earlier preparation red remains unchanged. Safe join does not remove the
+  gameplay counterexample; prospective candidate six repeats remain pending.
+- Canonical tester1-only deployment69608/143196/unified43920/log205955,
+  unchanged sourceb9042eda, starts17:59:56.027564UTC. Await natural terminal/
+  exact loaded eff3fcfd SHA before candidate controls. No other client, host,
+  controller or original native checkpoint changed; no057 release/new HF/TG.
+- Deployment naturally0 at18:01:18.389389UTC; exact loaded eff3fcfd SHA
+  verified. Six prospective staged candidate trials153584/151308/unified41766/
+  log210224/source da2eab0e start18:02:24.680224UTC. First trial PASS at
+  22.75FPS/minimumHP20/deaths0/endAir300/runtime[],188 actual mining ticks.
+  Remaining trials and every actual film review pending; no six-run rate yet.
 
 - Narrow menu/API and shared survival boundary review completed without changing
   the running5f payload. Deliberate logout cancels queued reconnect intents;
