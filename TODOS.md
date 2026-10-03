@@ -13,6 +13,12 @@
   assertion after a premature gamer import. Preserve that terminal and repair
   configuration binding for subsequent launches. Evidence: artifacts/
   water-default-native-20261003-035828/actual-review.json.
+  Shared logout-before-stop passed six short saved-entry boundaries, but the
+  corrected15min integration rejoins at02:31:05UTC after confirmed logout at
+  02:31:04. Named checkpoint metadata is online; the byte-prefix gate retains
+  a voicechat error during that rejoin. Keep this task open and diagnose pending
+  menu/connection ownership. Evidence: artifacts/
+  water-default-native-logout-20261003-051257/actual-review.json.
 - [ ] **Portal approach repeatedly returns under water after seeking air (2026-10-03).**
   Same original full59 entry, actual-default57,29FPS:460..916s alternates portal
   approach/GetToAir near(-189.5,58..62,1018) without sustained route progress.

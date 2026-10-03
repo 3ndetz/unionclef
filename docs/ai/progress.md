@@ -402,3 +402,74 @@ VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
   diagnostic-wrapper failures remain retained. Next focused pass is the full
   original15min integration with corrected name binding, then stable57 video/
   release and the actual CombatPathfinder clearance mismatch reproduction.
+- Bench b5938639 committed with owner identity and atomically pushed to main
+  and1.21.11; local version branch fast-forwarded. Wiki37088918824 SUCCESS
+  on this exact commit. Candidate config/version/normal water registry/report
+  remain separate WIP; no Java code or rebuilt payload was changed here.
+- Corrected native156596/wrapper150228/log051257-150228 started
+  02:12:57.269485UTC, outereae3003c/gamer793bea3e/guardeda91495ec.
+  Original full59-before-portal restored and exact original entry verified;
+  both actual packaged defaults readtrue before @gamer.15min/noDAYLOCK/
+  dense5min/namedend/runtime byte-prefix capture; unchanged rung/response/
+  death verdict and independent20FPS. First98s aliveHP20 with original
+  cookedmutton5, collecting wood for a shield. Terminal/film/NBT audit pending.
+  No concurrent heavy render/browser/build or other bench client.
+
+- Corrected native156596 naturally1 at02:31:29.638731UTC. Original smoke
+  passed29FPS/36responsive polls/HP20/zero logged deaths; actual defaults true,
+  entry/source unchanged and named checkpoint saved. Outer byte-prefix gate
+  correctly retained a voicechat sound-device ERROR during post-window rejoin.
+  More importantly, logout02:31:04 is followed by tester1 joining02:31:05;
+  named checkpoint metadata is online, despite the confirmed inactive/offline
+  snapshot. Do not call this an offline integration pass or suppress the error.
+- Retention141492/log053301-152464 naturally0 at02:34:19.260825UTC.
+  Original terminal/proof/helper remain unchanged; frozen gamer.mp4 SHA8210ca8e,
+  exact named checkpoint file manifest/player NBT and full client/server logs
+  retained. ALL20 fixed2s pages actually viewed and hash-journalled. Sampled
+  shelter158..380s exits, then reaches a new deep lava site by772s; placement/
+  wander refusals persist. Original mutton5 remains, no food140 or portal claim.
+  Final page shows world->loading->world during the rejoin. The six preceding
+  short lifetime trials remain their measured result, not long-run coverage.
+- Next focused bench diagnosis2640/log054011-11880 started02:40:11.671558UTC
+  from the exact newly retained portal checkpoint, with read-only GameMenu
+  fields/counters before and after logout. One attempt, no gameplay retries,
+  no inventory/health/position edits. Terminal pending; candidate57 stays draft.
+
+- Ownership2640 naturally1 at02:42:27.401653UTC: my screen diagnostic used a
+  JavaMember instead of get_field, before the before/logout measurement. Film/
+  cleanup retained; no physical failure claimed. Corrected future136224/source
+  18e3e772 naturally0 at02:46:05.032533UTC: same end checkpoint, one connect,
+  active2s then logout; eight immediate snapshots plus25s remain offline and
+  gmConnectCalled3 unchanged. Reconnect flags false before/after; unchanged
+  source still passes this short context. This does not reproduce the long
+  native preparation's rejoin or justify a speculative Java repair.
+- Diagnostic50184/log054818-46156 started02:48:18.754296UTC, source131adb04.
+  Reuses exact native preparation/original saved entry and logs menu ownership
+  at verified entry and before/after logout. Only its observation is shortened
+  to12s after entry verification. Stock short-smoke verdict may fail; this is
+  explicitly neither15min coverage nor a native gameplay rate. No retry of a
+  gameplay/FPS red or source/terminal rewrite; await actual reconnect owner.
+
+- Native-setup diagnostic50184 naturally0 at02:52:19.190561UTC; stock short
+  smoke is FALSE, not a gameplay pass. At verified entry/before logout the
+  menu's _reconnecting flag is true despite an online world. After logout,
+  gmConnectCalled changes0->1 and the player is online again within1s, remaining
+  online25s later. This directly identifies menu reconnect ownership; the
+  earlier simple restored-endpoint probe did not cover native preparation.
+  Original proof/terminal/helper/clip74b2a646 remain unchanged.
+- Focused repair in progress: a deliberate GameMenu logout cancels pending
+  reconnect/kick/server-switch intents on the client thread, then reuses the
+  internal disconnect and parks on TitleScreen. Internal switches keep their
+  reconnect behavior. Public Py4j disconnectFromServer confirms completion;
+  the shared survival boundary invokes it even from an offline menu before
+  stopping defence. Windows8 safety boundaries pass. Clean scoped candidate
+  build109412/log060006-143512 started03:00:06.674957UTC; actual class proof,
+  canonical deployment, repeated real native preparation and long integration
+  remain pending. Do not reuse earlier config-only class equivalence.
+
+STOP CONDITION CHECK:
+- Is the work actually finished?        -> no
+- Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
+- Did the customer say to stop?         -> no
+VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
+         immediately and the next iteration starts at once.
