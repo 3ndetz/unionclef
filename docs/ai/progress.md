@@ -202,6 +202,47 @@ Completed Windows subprocess repair:
   the active document. Private recovery handoff remains the only modified
   workflow-center file.
 
+- Healthy isolated dry-cap control161516/wrapper168880/log180843-168880,
+  source8f19fbdf, naturally1 at15:13:30.771462UTC. Original21-stack pack,
+  slots/counts/tool damage retained; dryHP20/Air300 and active@idle precede
+  actual water entry. At25FPS, GetToAir first starts withAir148/HP20;188
+  actual mining ticks consume that supply, minimumAir-19/HP16, no deaths,
+  endingAir300. Complete1069 rows/1067 end ticks, no gaps/errors or runtime
+  matches. Client-thread production quote331.249993/no reachable swim exit;
+  the quote-versus-observed duration difference remains separately uncertain.
+  No cache-cause or comparative-rate claim. Protective logout precedes stop.
+  Entire43s film/one fixed2s page actually inspected. Journal72176/140928/
+  log182525/sourcea465caeb naturally0; actual-review SHA
+  49c6a071cd920887e122231f5ee2e35838819e735f2148658df4634149960b82.
+- Owner commitf3e0d9716e5b9d36eca62cbdd30ff14d17d38c88 narrowly contains
+  CombatPathfinder, MovementSwim and progress. Atomic main/1.21.11 push succeeds,
+  local branch synchronized, exact Wiki37132428169 SUCCESS. Earlier references
+  to these two movement sources as WIP describe their investigation state;
+  their tested final sources are now committed. Oxygen/native failures remain.
+- Separate uncommitted oxygen candidate uses existing cap/swim cost to retain
+  at least half the air supply or a longer exit estimate, plus its20tick quote
+  refresh margin. Weak world ownership, feet/support/clock invalidation and
+  fresh current-pack tool pricing bound reuse. WorldSurvivalChain keeps one
+  escape task until fully refilled; existing dig/swim inputs are unchanged.
+  Sources reviewed against Task/SingleTaskChain and upstream float/tool caches;
+  no upstream oxygen-budget implementation found or claimed.
+- Clean build163972/159628/log182823-159628/source8782df35 naturally0 at
+  15:59:42.762091UTC: clean tungsten and scoped offline1.21.11 build, all18
+  tasks rerun/no build cache, no generatedbin output. No live bench/debugger.
+  Verifier164304/167672/log190037-167672/sourceeae2a505 naturally0 at
+  16:01:02.371837UTC. Frozen2bc337460c13b68a09c9aa518a48478af4220477470290049f7c83f78db7fa7f
+  has2213 recursive classes: ONLYGetToAirTask/WorldSurvivalChain differ versus5f,
+  other2211 including movement/lifecycle/defaults byte-identical. Actual new
+  threshold/cache/tool-cost/chain continuation/final refill bytecode inspected;
+  reviewSHA3fb118c51e24c01553d97cf93a615d1bb61f25205781bb32c18f5e7a005fd036.
+  Canonical tester1-only deploy158820/162136/log190228/sourceb9042eda naturally0
+  at16:05:09.752907UTC; exact loaded SHA matches frozen proof.
+- Prospective six dry-cap trials151696/98892/unified40496/log190723-98892,
+  unchanged source8f19fbdf, start16:07:23.882042UTC. StrictHP20/FPS20/no-death/
+  endAir200/trace gates and original pack remain, first red stops. Await natural
+  terminal and every actual film review; new oxygen runtime/native regression
+  proof, narrow source commit, stable057 release and next HF/TG remain pending.
+
 - Narrow menu/API and shared survival boundary review completed without changing
   the running5f payload. Deliberate logout cancels queued reconnect intents;
   a ConnectScreen network future is explicitly refused, not claimed cancelled.
