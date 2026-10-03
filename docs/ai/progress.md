@@ -368,6 +368,22 @@ Completed Windows subprocess repair:
   HP20/FPS20/no-death/endAir200/log/trace gates retained. Only same dry join
   wrapper prepares the returning player. Await natural completion and every
   film review; original24 hazards/42 adjacency/native6 remain unrun on eff.
+- Pure-cap campaign naturally0 at18:55:21.099578UTC:6/6PASS, FPS28.75,
+  28.75,28.2,24.25,29,27.4. All minimumHP20/deaths0/endAir300/runtimecleanup[];
+  firstGetToAir257/mining188/minAir68,68,68,69,68,68. Actual production quote
+  237.499990 ticks, no swim outlet. Complete trace rows/end ticks828/826,
+  908/906,866/864,931/929,963/961,864/862; no errors/gaps. Extraction168036/
+  92196/unified92158/log215540/source245ee0c2 naturally0 at18:56:15.726792UTC.
+  All six actual43.0s films/one fixed2s page each actually inspected: cap
+  mining, surface refill and later opened-shaft bobbing with full hearts.
+  Actual-review SHA3306ae338f2ba70102a9336820a0dd71c2165e16d0a8cdf9847aaae237aa5f11.
+  Single-cap coverage, not multi-cap/native/whole-game or improvement rate.
+- Public056 default uncertainty resolved without rebuild or deployment: saved
+  downloaded asset SHA365e1fdb verified; nested config bytes match inspected
+  class SHAfd349a89aa4ec1631786475006a22f11a7ea547ffe02e3575b3189ec2516976c.
+  Actual constructor1128 iconst_0/1129 putfield confirms swim-input defaultFALSE;
+  current eff isTRUE. The pending config-default change is real, not already
+  published. No public057 release or new HyperFrames/Telegram deliverable.
 
 - Narrow menu/API and shared survival boundary review completed without changing
   the running5f payload. Deliberate logout cancels queued reconnect intents;
