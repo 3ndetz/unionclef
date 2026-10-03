@@ -16130,8 +16130,10 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   2026-10-03: native logout boundary6 logs "Running game timer while not in game"
   from BlockScanner worker completion (old BlockScanner.java:454). The strict
   audit fails even though the original wrapper missed this STDERR error.
-  Client-owned scan requests/results and world-exit invalidation are being
-  repaired and tested; this does not close live chunk-state reads in C4.1.
+  Client-owned scan requests/results and world-exit invalidation pass six
+  arena logout boundaries on payload11a416e9: no worker/cache publication or
+  timer error25s after exit, FPS29-30. Distant discovery/navigation and native
+  integration remain pending; this does not close live chunk-state reads in C4.1.
   2026-10-02: clean Flee-to-air isolation round3 completed its retreat but logged
   a current-generation FastNavigator worker NPE in PlayerEntity.isClimbing,
   FastPlanner.planInternal:606. Artifact shelter-air-isolation-20261002-094852/3/

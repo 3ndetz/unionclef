@@ -108,37 +108,8 @@ Completed gamer survival verdict:
   No complete42 or prospective dry/native/release result. Source/JAR unchanged;
   log collector preserves the original measured error-window gate.
 
-## 2026-10-03 — retain client errors across midnight log rotation
-
-### Investigate
-- Actual candidate gate crosses midnight. Client latest.log changes from4889
-  lines to the new daily file; old line-index collection raises even though
-  nav_bridge passes. Matching the same number of lines would also silently
-  omit errors if a new file grew past the old count. Client/container remains
-  healthy; restarting either would not repair the log boundary.
-
-### Plan
-- Identify the starting file by exact byte prefix, keep newly rolled gzip
-  archives plus frozen end snapshot, and fail on missing/ambiguous history.
-  Retain any incomplete starting line in full, preserving boundary errors.
-- Use the quiet subprocess adapter for read-only Docker calls; preserve clients,
-  original failed evidence, gates, sampling and Linux compatibility.
-
-### Implement
-- New uctest/client_logs.py provides a conservative retained ClientLogWindow;
-  the actual-default continuation and prepared dry fixtures now use it.
-  Original frozen failed helper stays unchanged for provenance.
-- Nine meaningful boundary tests pass on actual Windows Python3.14 and Linux
-  Python3.11: append, real midnight shape/errors on both sides, numeric size
-  rotations, partial error lines, equal-count replacement, missing/ambiguous
-  history, missing intermediate archive and rollover during collection.
-  Linux/read-only live client check16452/log030827 ended0 at00:08:34.698UTC.
-  Live snapshot prefix/window retained without altering the client; retained
-  real midnight archive independently validates the production byte collector.
-- ASSESS: gameplay score is unchanged; trustworthy cross-midnight error
-  measurement advances the playthrough process. This fixes evidence collection,
-  never gameplay or FPS. Native food140/full59/combat remain open; continue the
-  pending actual-default audit and originally unexecuted cases immediately.
+Completed client-log rotation:
+[archive/03-10-2026-client-log-rotation.md](archive/03-10-2026-client-log-rotation.md).
 
 ### Candidate validation continuation
 - Collector/test/progress commit05e44c5a pushed atomically to both canonical
@@ -462,6 +433,46 @@ Completed gamer survival verdict:
   empty caches/no workers25s, six distant-table+navigation sets, six native
   boundaries and a15min integration. Their runtime gate includes the STDERR
   TimerGame error; original weak helpers and failed strict audit remain frozen.
+- Documentation7f3201fc committed as3ndetz and atomically pushed to main and
+  1.21.11; local version branch fast-forwarded. Wiki37096491046 isSUCCESS.
+  Second scan build148620 naturally0 at04:26:40.288029UTC. Packaging24588/
+  log072710-157836 naturally0 at04:27:26.346659UTC: frozen final SHA
+  11a416e9cef8f05f4027e1241d20942814787ab24e5ccf8b8e2ceaf5c1ef8a45.
+  All2212 previous class names retained plus one ScanRequest. Four class byte
+  payloads differ from409f; nested Node/BlacklistEntry executable javap are
+  exactly identical to409f, all other2208 class byte payloads match. Actual
+  final scanner bytecode guards inGame and resets TimerGame only in tick,
+  not its worker lambda. Both packaged default flags remain true. Canonical
+  tester1-only deployment157324/log072841-130756 started04:28:41.632828UTC.
+  New-binary gameplay/lifetime coverage has not started; await actual load.
+- Deployment157324 naturally0 at04:29:35.234260UTC, loaded tester1 SHA11a416e9.
+  First observer63640/log073015-151000 naturally1 at04:30:48.527925UTC:
+  my atomic client-thread fixture called the Python entrypoint, whose helper
+  enqueues a client action and waits. Logout was not immediately confirmed in
+  that caller context; retain source344bb7c/terminal/filmc1f07de5, runtime[]
+  and cleanup[]. This is not a completed scanner cohort or survival pass.
+  Corrected future-only observer uses the public Java menu delegate on its
+  documented client owner; ordinary shared Py4j teardown remains on its network
+  caller. No Java/payload edit or physical/FPS failure retry. Six-case24856/
+  log073522-94204 started04:35:22.531398UTC, sourced31c839a; actual terminal
+  and all film reviews remain pending. No heavy concurrent bench work.
+
+- Six scanner boundaries24856 naturally0 at04:39:56.891639UTC. Independent
+  strict audit139184/log074507-147844 naturally0 at04:45:19.790605UTC verifies
+  all original acknowledgements, byte-window hashes, source/payload and films:
+  FPS30/30/29/30/29/29, cancelled/completed requests, no workers, empty caches,
+  counters unchanged25s after exit; no measured runtime errors or cleanup errors.
+  An unfinished request is observed before atomic capture/logout; capture itself
+  does not assert it remains unfinished. This is arena lifetime coverage only.
+- ALL seven scanner films actually reviewed at2s: failed observer shows arena
+  then black transition, six corrected films show arena0.5s then TitleScreen
+  2.5..26.5s. Journal98080/log074608-47308 naturally0 at04:46:08.633511UTC
+  verifies original clip/page hashes. Fixed cadence, not every-frame review;
+  original failed fixture and native strict audit remain failed.
+- New payload discovery/navigation140084/wrapper141096/log074609-141096
+  started04:46:09.659585UTC, sourcec2b635be: six distant-table/flat/staircase/
+  descend sets,24 planned original gates, actual reset defaults, strong logs.
+  No heavy concurrent extraction/render/build. Native six and15min still pending.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
