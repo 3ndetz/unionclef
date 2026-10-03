@@ -129,17 +129,14 @@ def _parse_pos(s):
 def _pos_from_playerdata():
     """(dimension, (x, z)) of the bot read straight from its player .dat, for a bot that is offline.
 
-    A tiny NBT scan: the Pos list (3 doubles) and the Dimension string. The bot is the only player
-    file on this stand; the newest .dat is taken."""
-    import gzip, struct
-    r = sh(["docker", "exec", SERVER, "sh", "-c",
-            f"ls -t {WORLD_IN_CONTAINER}/playerdata/*.dat 2>/dev/null | head -1"], 30)
-    f = r.stdout.strip()
-    if not f:
-        return "", None
+    This bench uses offline-mode identities (compose.test.yml). Selecting the
+    newest file could copy another tester's regions after the bot logs out."""
+    import gzip, hashlib, struct, uuid
+    player_id = str(uuid.UUID(bytes=hashlib.md5(('OfflinePlayer:' + BOT).encode()).digest(), version=3))
+    f = f"{WORLD_IN_CONTAINER}/playerdata/{player_id}.dat"
     tmp = ROOT / "_pd.dat"
     ROOT.mkdir(parents=True, exist_ok=True)
-    sh(["docker", "cp", f"{SERVER}:{f}", str(tmp)], 60)
+    sh(["docker", "cp", f"{SERVER}:{f}", str(tmp)], 60, check=True)
     try:
         b = gzip.open(tmp).read()
         dim, xz = "", None

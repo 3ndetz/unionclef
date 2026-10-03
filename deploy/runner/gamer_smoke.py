@@ -13,6 +13,7 @@ responsive and survived the observation window.
 import atexit, functools, json, os, pathlib, re, sys, time
 from uctest import process as subprocess
 from uctest.recording import finish_recording
+from uctest.survival import GATEWAY_SOURCE
 import checkpoint as _cp
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
@@ -56,12 +57,25 @@ if FROM_CP:
     # swap); pin the spawn so the spiral's forest search does not spend minutes on ground the
     # resumed run will never see
     os.environ.setdefault("GAMER_SPAWN", "0 150 0")
-SNIP=r"""
+SNIP=GATEWAY_SOURCE+r"""
 import json,sys
 from py4j.java_gateway import JavaGateway,GatewayParameters
 req=json.loads(sys.argv[1])
 gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=req.get("port",25333),auto_convert=True))
 mc=gw.entry_point; op=req["op"]; out={}
+def inventory_summary():
+    f=mc.getInventoryFull(); n=0; items=0; ids=[]; food={}
+    try:
+        for s in f.get("slots") or []:
+            sd=dict(s)
+            if not sd.get("empty"):
+                n+=1; items+=int(sd.get("count",0) or 0)
+                nm=str(sd.get("item") or sd.get("name") or "")
+                if nm: ids.append(nm)
+                if any(k in nm for k in ("beef","pork","mutton","chicken","bread","apple","potato","carrot","cod","salmon","rabbit","berries","melon","stew","cookie","pie","rotten")):
+                    food[nm.replace("minecraft:","")]=food.get(nm.replace("minecraft:",""),0)+int(sd.get("count",0) or 0)
+    except Exception: pass
+    return {"nonEmpty":n,"items":items,"ids":ids,"food":food}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
@@ -78,23 +92,28 @@ elif op=="stop-confirmed":
     work=j.java.lang.invoke.MethodHandleProxies.asInterfaceInstance(j.java.lang.Class.forName('java.util.concurrent.Callable'),handle)
     future=j.java.util.concurrent.FutureTask(work); client.execute(future)
     out={"runner":str(future.get(20,j.java.util.concurrent.TimeUnit.SECONDS))}
+elif op=="disconnect-confirmed": out=disconnect_gateway(gw)
+elif op=="end-observation":
+    # Capture readouts while defence remains active. After logout inventory and
+    # portal trackers can be empty; never diagnose that as loss during gameplay.
+    readouts={}
+    for label,read in (("end inv",inventory_summary),
+            ("queue stats",lambda: str(mc.placeStats() or "")),
+            ("guide hops",lambda: str(mc.guideHopShapes() or "")),
+            ("guide halts",lambda: str(mc.guideDump() or "")),
+            ("recent chat",lambda: [str(c) for c in mc.getRecentChat(10)])):
+        try: readouts[label]={"value":read()}
+        except Exception as error: readouts[label]={"error":str(error)[-200:]}
+    try: portals=dict(mc.getLastNetherPortals())
+    except Exception: portals={}
+    out=disconnect_gateway(gw)
+    out.update(readouts=readouts,portals=portals)
 elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
 elif op=="gs":
     gs=mc.getGameState()
     out={"inGame":gs.get("inGame"),"self":dict(gs.get("self") or {})}
 elif op=="inv":
-    f=mc.getInventoryFull(); n=0; items=0; ids=[]; food={}
-    try:
-        for s in f.get("slots") or []:
-            sd=dict(s)
-            if not sd.get("empty"):
-                n+=1; items+=int(sd.get("count",0) or 0)
-                nm=str(sd.get("item") or sd.get("name") or "")
-                if nm: ids.append(nm)
-                if any(k in nm for k in ("beef","pork","mutton","chicken","bread","apple","potato","carrot","cod","salmon","rabbit","berries","melon","stew","cookie","pie","rotten")):
-                    food[nm.replace("minecraft:","")]=food.get(nm.replace("minecraft:",""),0)+int(sd.get("count",0) or 0)
-    except Exception: pass
-    out={"nonEmpty":n,"items":items,"ids":ids,"food":food}
+    out=inventory_summary()
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="portals": out=dict(mc.getLastNetherPortals())
 elif op=="setportal": out={"ok": bool(mc.setLastNetherPortal(req["dim"], int(req["x"]), int(req["y"]), int(req["z"])))}
@@ -137,14 +156,15 @@ def py4j(op,t=30,**kw):
     r=sh(["docker","exec",CLIENT,"python3","-c",SNIP,json.dumps({"op":op,"port":PORT,**kw})],t)
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
-def cp_save(name, note=""):
+def cp_save(name, note="", *, portals=None):
     """checkpoint.save plus what the client remembers and the world does not: the last nether
     portal used in each dimension. MiscBlockTracker holds it in memory only, so a resumed run used
     to forget the portal it came through and build another (n59/n61, TODOS)."""
-    try:
-        portals = py4j("portals", t=15)
-    except Exception:
-        portals = {}
+    if portals is None:
+        try:
+            portals = py4j("portals", t=15)
+        except Exception:
+            portals = {}
     return _cp.save(name, note=note, extra={"portals": portals})
 
 
@@ -1484,13 +1504,13 @@ def _run():
             print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} food={_me.get('food')}/{_me.get('saturation')} eat={_fd} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
-    # The window ends before diagnostics and checkpoint copying. Otherwise the
-    # bot keeps playing while its verdict and recording describe an earlier state.
-    _stopped = py4j("stop-confirmed")
-    if not _stopped.get("runner", "").startswith("active=false"):
-        raise RuntimeError(f"gamer did not stop at the observation boundary: {_stopped}")
-    print("GAMER_WINDOW_END", json.dumps({"epochMs": int(time.time()*1000),
-                                         "runner": _stopped["runner"]}))
+    # Leave the world before stopping defence: the server continues ticking
+    # through diagnostics and checkpoint copying, including drowning damage.
+    _ending = py4j("end-observation", t=45)
+    if _ending.get("inGame") is not False or not _ending.get("runner", "").startswith("active=false"):
+        raise RuntimeError(f"gamer logout/stop not confirmed: {_ending}")
+    print("GAMER_WINDOW_END", json.dumps({key: _ending[key]
+                                         for key in ("epochMs", "runner", "inGame")}))
     # WHAT DID IT ACTUALLY END UP HOLDING? "Ten items gathered" and "no materials to craft"
     # are only contradictory if those ten are logs. Print the list rather than assume.
     # DID IT DIE, AND TO WHAT? A run that ends with an empty pack has usually lost it on death,
@@ -1526,20 +1546,11 @@ def _run():
     # bare, and py4j() raises on a non-zero docker exec, so a client that was momentarily busy at
     # the end discarded a COMPLETED ten-minute run with "RuntimeError: inv:" and no ladder line at
     # all. Report what answers and say plainly what did not.
-    for _label, _op, _kw in (("end inv", "inv", {}), ("queue stats", "stats", {}),
-                             ("guide hops", "guidehop", {}), ("guide halts", "guide", {}),
-                             ("recent chat", "chat", {"n": 10})):
-        try:
-            _r = py4j(_op, **_kw)
-            if _op == "stats":
-                _r = _r.get("s")
-            elif _op in ("guidehop", "guide"):
-                _r = _r.get("r")
-            elif _op == "chat":
-                _r = _r.get("chat")
-            print(f"  {_label}:", _r)
-        except Exception as _de:                  # noqa: BLE001 -- never lose a run over a readout
-            print(f"  {_label}: unavailable ({str(_de)[:70]})")
+    for _label, _readout in _ending["readouts"].items():
+        if "error" in _readout:
+            print(f"  {_label}: unavailable ({_readout['error'][:70]})")
+        else:
+            print(f"  {_label}:", _readout["value"])
 
     gained = best_items - inv0.get("items",0)
     distinct_pos = len(moved)
@@ -1553,7 +1564,8 @@ def _run():
         # clip ends with the run, not with a minute of the copy.
         try:
             cp_save(SAVE_END, note=f"end of run {RUN_SEQ[0]} ({MINUTES:g} min), ladder: "
-                     + (", ".join(f"{k}@{v}s" for k, v in reached.items()) if reached else "nothing"))
+                     + (", ".join(f"{k}@{v}s" for k, v in reached.items()) if reached else "nothing"),
+                    portals=_ending["portals"])
         except Exception as _ce:                      # noqa: BLE001
             print(f"  end checkpoint failed: {str(_ce)[:120]}")
     print("\n=== RESULTS ===")
@@ -1638,8 +1650,8 @@ def main():
         _pending_error = sys.exc_info()[0]
         _cleanup_errors = []
         try:
-            _stopped = py4j("stop-confirmed")
-            if not _stopped.get("runner", "").startswith("active=false"):
+            _stopped = py4j("disconnect-confirmed", t=35)
+            if _stopped.get("inGame") is not False or not _stopped.get("runner", "").startswith("active=false"):
                 raise RuntimeError(f"gamer stop not confirmed: {_stopped}")
         except Exception as _error:
             _cleanup_errors.append(f"gamer stop: {_error}")

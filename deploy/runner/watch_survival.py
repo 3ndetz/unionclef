@@ -11,35 +11,16 @@ player is never left exposed in the live world.
 import argparse
 import json
 import signal
-from uctest import process as subprocess
 import time
 from pathlib import Path
 
 from gamer_smoke import rec_start, rec_stop
 from uctest.harness import Py4jClient
+from uctest.survival import disconnect_and_stop as _disconnect_and_stop
 
 
 def disconnect_and_stop():
-    # Keep survival active until the client has left the world.
-    code = """
-from py4j.java_gateway import JavaGateway, GatewayParameters, get_field
-import time
-g = JavaGateway(gateway_parameters=GatewayParameters(port=25333, auto_convert=True))
-j = g.jvm
-mod = j.adris.altoclef.AltoClef.getInstance()
-client = j.net.minecraft.class_310.method_1551()
-menu = get_field(mod.getTaskRunner(), 'gameMenuTaskChain')
-client.execute(menu._innerDisconnect(client))
-for _ in range(50):
-    if not g.entry_point.inGame():
-        break
-    time.sleep(0.1)
-else:
-    raise RuntimeError('Disconnect not confirmed; keeping survival active')
-g.entry_point.stopPathing()
-"""
-    subprocess.run(['docker', 'exec', 'uctest-mc-tester1', 'python3', '-c', code],
-                   check=True, timeout=20)
+    return _disconnect_and_stop('uctest-mc-tester1')
 
 
 def main():

@@ -4,6 +4,21 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **End a survival observation without exposing the stopped player (2026-10-03).**
+  Actual-default57 full59 resume stops tasks under water at01:17:01UTC; the
+  player drowns at01:17:23 after diagnostics/checkpoint copying. Recorded
+  gameplay remains separate from this teardown failure. Reuse the established
+  watch_survival disconnect-before-stop lifecycle; retain final readouts and
+  an exact offline checkpoint. Original wrapper also failed its checkpoint-name
+  assertion after a premature gamer import. Preserve that terminal and repair
+  configuration binding for subsequent launches. Evidence: artifacts/
+  water-default-native-20261003-035828/actual-review.json.
+- [ ] **Portal approach repeatedly returns under water after seeking air (2026-10-03).**
+  Same original full59 entry, actual-default57,29FPS:460..916s alternates portal
+  approach/GetToAir near(-189.5,58..62,1018) without sustained route progress.
+  Starting food5->4; no new food or portal completion. Retain the exact end
+  checkpoint water-default-native-end-20261003-035828 and inspect actual guide/
+  physics/goal handoffs before assigning a flag regression or designing a fix.
 - [x] **Gamer smoke must reject post-death progress (2026-10-03).**
   Published056 native pair6 OFF reports one trident death (was impaled by Drowned),
   loses the original pack, then counts crafting/wood tools after respawn as PASS.

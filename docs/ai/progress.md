@@ -300,3 +300,105 @@ VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
   Browser106728/log035518-15284 ended0 at00:56:11.862232UTC; refined snapshots
   and counts not yet reviewed. Choreography map38892/log035600-76904 isLIVE;
   native integration/release/render/delivery remain pending.
+- Refined report check is now reviewed: zero errors, warnings or informational
+  findings; browser actually ran and all24 contrast checks passed. All eight
+  entrance/midpoint/end snapshots actually viewed and hash-journalled in
+  water-check-refined/actual-review.json. Choreography38892/log035600-76904
+  naturally ended0 at00:56:53.098359UTC:43 tweens/37 mapped/6 micro-skipped.
+  Map overview and tween list inspected; chart/closing static windows are
+  deliberate reading holds. No moving/render/publication/delivery claim.
+- Documentationcf094dad pushed atomically to main and1.21.11; local version
+  branch fast-forwarded. Candidate source/version/new report remain WIP.
+- Original-checkpoint native integration4764/wrapper145688/log035828-145688
+  started00:58:28.178893UTC, helper3e535ee6. Original helper1f0af692 and gamer
+  315a5af6 frozen; original full59-before-portal restored raw and exact entry
+  verified. Actual reset settings bothtrue/JARf792 read back before @gamer.
+  At last observation276s: iron reached72.5s, HP20, five starting cooked
+  mutton, waiting underground through the night.15min gate remains LIVE,
+  with no terminal/FPS/death/recording audit result yet. No concurrent heavy
+  browser/render/build or second bench client during measurement.
+- Native4764 naturally ended1 at01:17:26.696373UTC. The original helper's
+  checkpoint assertion failed: outer import parsed SAVE_END=last before the
+  inner helper supplied its named checkpoint. Original sources/results/exit
+  retained unchanged. Its stock smoke resultTrue is not an outer integration pass.
+- Measured window01:01:45.092..01:17:01.443UTC/916.351s:36 responsive polls,
+  median29FPS, sampledHP20, deaths0, iron72.5s/crafting388.5s. One pool repeats
+  portal/GetToAir approaches460..916s; existing mutton5->4. Fullplaythrough,
+  nativefood140 and route completion remain open. No flag attribution measured.
+- Terminal retention157456/log041906-8392 ended0; frozen clip922.4s SHA
+  5adb4e3a3a588f4794bb7bc99480a8de06d64b526e6c218d5b7b195a19bb497c.
+  Actual last checkpoint copied byte-identically to
+  water-default-native-end-20261003-035828; original metadata/name retained.
+  Its actual tester1 NBT isHP18.300001/Air-18 despite earlier metadataHP20.
+  Client/server logs agree on post-window drowning01:17:23. Never count this
+  teardown loss as a successful end-state or rewrite the original failure.
+- Read-only log retention134768/log041939-67776 ended0. Independent audit
+  157456/log041954-132616 ended0 at01:21:11.576206UTC; ALL20 fixed2s pages
+  actually viewed7/7/6 and hash-journalled. Clock-window runtime errors[];
+  earlier voice-device/reconnect errors retained in full logs. Retention audit0
+  does not change original wrapper1; no full moving/everyframe review claim.
+- Investigate/Plan next: use existing watch_survival logout-before-stop primitive
+  at the observation boundary, confirm disconnect fail-closed, preserve final
+  diagnostics and saved player/nearby regions offline. Verify teardown faults
+  and real submerged saved entry before a corrected named-checkpoint launch.
+  The prospective helper77cd753a binds SAVE_END explicitly; it has not run.
+  Last budget10889MB/15GB/free166GB; fetch confirms HEADcf094dad equals both
+  remote branches. Existing candidate/report source WIP remains untouched.
+- Bench repair now uses one shared uctest.survival sequence in gamer and
+  watch_survival. A disconnect timeout/transport error leaves defence active;
+  queued stop is confirmed only offline. Final inventory/guide/chat/portals are
+  captured before logout; checkpoint selects tester1's actual offline identity,
+  never the newest arbitrary player's file. Windows7 safety tests and unchanged
+  production-verdict13/client-log9 boundaries pass. Real bench proof pending.
+- First lifetime fixture140168/log044159-23532 naturally1 at01:44:22.641856UTC:
+  my helper used nonexistent getGameState.self.health instead of self.hp.
+  This is a diagnostic helper error, not a completed physical trial. Original
+  helper/result/terminal retained; cleanup[] and aborted-readout.mp4 copied
+  before any recorder reuse. Corrected future helper2eacd1ea started2180/
+  wrapper119644/log044457-119644 at01:44:57.456252UTC; six planned real
+  boundaries (three submerged/three dry), no automatic retry of gameplay reds.
+- Corrected lifetime2180 naturally1 at01:48:05.089162UTC. The first submerged
+  boundary completed logout/queued-stop,20FPS floor,25s wait, offline copy,
+  Health/Air/food/Pos/Inventory/Dimension exactness and no-death assertions.
+  My next assertion compared returned tuple coordinates to a list, so the
+  wrapper is still failed. Raw pre-copy NBT and saved checkpoint retained;
+  aborted-coordinate-check.mp4 copied before reuse. No physical/FPS failure
+  was suppressed. A future six-case helper casts only coordinate container
+  types; retain both earlier helper failures separately from its results.
+- Source review for the next gameplay pass: the retained native window repeats
+  MovementSwim(-190,60,1019)->(-190,60,1018) FAILED at step2/30 every~17s,
+  then queues another route toward(-191,55,997). This is a concrete failed
+  horizontal water edge, not merely an inferred air-preemption issue. Read
+  MovementSwim fully, GetToAir fully, WorldSurvival air ownership/input gates,
+  TaskRunner/AltoClef.stopTasks and upstream MovementTraverse water sections.
+  No Java fix or causal flag attribution yet; reproduce/measure the edge from
+  the retained endpoint once the current lifetime campaign ends.
+- Verified lifetime87496/log044920-89528 naturally0 at02:07:59.028457UTC.
+  Six new boundaries completed (three original damaged submerged entries,
+  three original dry entries), observedFPS26..29, no added deaths, exact offline
+  Health/Air/food/Pos/Inventory/Dimension after25s plus copy. Stored inventories
+  and final readouts retained; no health/air reset or claim of unchanged health
+  during the short live entry. Cleanup[]; original checkpoints unchanged.
+  Independent audit/Linux tests/all-film review pending.
+- Read-only retained region inspection finds source water at(-190,60,1018)
+  with stone at(-190,61,1018); source(-190,60,1019) is water with an open
+  column. FastPlanner already rejects insufficient water body clearance.
+  The actual primDrive gridBFS producer is CombatPathfinder: its allowSwim
+  branch accepts isLiquid(c) without checking head/body clearance. This names
+  a candidate producer/executor mismatch, not a proven live repair. Retained
+  blocks JSON is saved-world palette evidence only, no live collision/tick claim.
+- Independent audit157496/log050909-45988 naturally0 at02:09:34.108322UTC:
+  six exact offline NBTs/correct player regions/unchanged source checkpoints,
+  min observed26FPS, Linux7 safety boundaries pass on cachedPython3.11.
+  ALL12 fixed2s pages actually viewed4/4/4 and hash-journalled. Every film
+  joins its original entry, briefly runs its task and exits to menu; all later
+  sampled frames stay offline. Complete films61.67..64.33s; not moving/everyframe
+  or gameplay-rate proof. Windows7 also pass; actual source AST proves the
+  production inventory calculation and rung/death/response/FPS judge unchanged.
+- ASSESS: this fixes checkpoint lifetime and prevents the measured post-stop
+  drowning mechanism; it does not improve a gameplay rung/food score. Shared
+  lifecycle reuses the existing disconnect primitive and keeps defence alive
+  on failed logout, with no game-rule/inventory/health changes. Two earlier
+  diagnostic-wrapper failures remain retained. Next focused pass is the full
+  original15min integration with corrected name binding, then stable57 video/
+  release and the actual CombatPathfinder clearance mismatch reproduction.
