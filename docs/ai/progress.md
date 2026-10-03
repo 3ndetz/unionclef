@@ -1,99 +1,7 @@
 # Progress
 
-## 2026-10-03 — reject gamer progress after survival failure
-
-### Investigate
-- End goal remains the full @gamer playthrough on tungsten. Original full59
-  lava-column collection, native food140, generated terrain, combat and C4
-  world/mining/global-budget thread safety remain open. No controlling
-  container/COMPLEX/SWARM or human desktop changes.
-- Completed published056 construction/default/video and all six prespecified
-  native water pairs are archived in
-  [archive/03-10-2026-published056-validation.md](archive/03-10-2026-published056-validation.md).
-  Exact native sources and coverage are in
-  [archive/02-10-2026-published-water-pair.md](archive/02-10-2026-published-water-pair.md).
-  Public0.95.56 binary365e and original food checkpoint582e remain unchanged.
-  Water default=false; branch clearance=true.
-- Independent cohort014130 verifies all94 actually inspected fixed2s pages.
-  Six attempted pairs/twelve arms: five FPS-valid pairs, FOUR successful
-  pair terminals. FPS-invalid1 and safety-failed6 retained; campaign safetyRED.
-  FPS-valid new endfood observations ON5/5 versusOFF1/5 are NOT safety passes.
-  Unequal activation injury prevents survival attribution; food140 remainsopen.
-- Pair6 OFF011621 dies to a Drowned trident, loses its pack, then climbs crafting/
-  wood tools after respawn and stock gamer reportsPASS. Outer helpera3fe7cee
-  correctly rejects it. The common verdict uses reached[] without deaths;
-  rung checkpoint machinery already skips postdeath saves.
-- Windows console addition is complete/pushed5ec7248d/7a3d64a1/b93fb76d.
-  Actual Windows14PASS/1SKIP from detached and hiddenattached parents, Linux
-  12PASS/3SKIP; inherited console/pipe/file streams and interaction retained.
-  Archive/02-10-2026-quiet-windows-processes.md keeps exact evidence/limits.
-- Read-only Drowned follow-up: projectile tracker includes persistent projectiles,
-  actual1.21.11 hasTrident reads both hands, MobDefense applies extra danger cost.
-  Ordinary ranged/poisonous nuisance classification omits Drowned, but this
-  alone is NOT a causal diagnosis of the fatal underwater approach. Baritone
-  Avoidance.java provides ordinary mob avoidance, not a matching combat policy.
-  No Java repair or survival benefit is inferred from this one retained death.
-
-### Plan
-- Reject a run when either the server-log death list or existing independent
-  death watch says it died. Do not invalidate a measured death as lowFPS;
-  retain ordinary no-death rung/poll/FPS thresholds and cleanup semantics.
-- Validate actual production verdict boundaries against the retained falsePASS.
-- Run recorded real same-checkpoint fixtures: lethal generic damage (not /kill)
-  followed by a new crafting table mustFAIL; no-death new table mustPASS.
-  Injected fixtures verify the harness, never natural food or gameplay rates.
-  No retries or lowered20FPS fixture floor; every red stays retained.
-- Actually inspect all sampled film pages, audit cleanup and original checkpoint
-  fingerprints, then commit/push the tested fix and continue original blockers.
-
-### Implement
-- gamer_smoke.py now requires no death from either existing source. Death
-  prints an explicit survival-failure reason and remainsFAIL even at lowFPS.
-  Rung/poll thresholds and ordinary no-death FPS gate are unchanged.
-- Actual production verdict AST audit passes13 boundaries, including retained
-  trident respawn, each death source independently, lowFPS deathFAIL, original
-  lowFPS progressPASS/no-progressINVALID, deeper required rung and poll gates.
-  Evidence: artifacts/gamer-verdict-boundaries-proof.json. This block-level
-  audit does not replace real whole-run tests.
-- Real fixture101436/wrapper123404 isLIVE, logged-job-20261003-014649,
-  gamer-death-verdict-20261003-014649. Helper6527a1c7, loaded gamer source315a5af6,
-  public365e/cp582e,1.5min recorded arms. Original308item inventory confirmed.
-  No terminal result/film inspection claim yet; await actual natural boundary.
-- Documentation/cohort sources committed15134f91 and pushed to both canonical
-  branches, local1.21.11 fast-forwarded. Latest wiki check still pending.
-  Last checkpoint budget10570MB of15GB/free167GB.
-- Fixture101436 naturallyTERMINAL0 at22:58:36UTC/log014649. Real generic damage
-  confirms ucDeaths9->10, then crafting@48.6s; deaths1/FPS27/4 responsive+busy
-  polls, gamerFAIL/exit1. Adjacent same-entry no-death crafting@47.2s/FPS28/
-  4 responsive+busy polls, gamerPASS/exit0. Original308item entry in both;
-  cleanup[] and originalcp582e fingerprint unchanged. Injected table/damage
-  verify only harness semantics, never natural food/crafting rates.
-- Captures106.066667/103.266667s cover confirmed100.116/97.282s windows,
-  SHA317dfb0b2bf388aab0ccc01313d814315ee1b2d479ebe85b3b233469fd050a2c
-  and a3a0390101f27abdb972b2780d6276a2905565f38787ca75eed436e7eee21fc3.
-  Review157100 naturally0 at22:59:14UTC/log015901; all6 fixed2s pages actually
-  inspected/hash-journalled. Death arm transitions to bare-handed tree respawn
-  between28.5-30.5s, then table/wood/craft/dig; no sampled death-screen claim.
-  Zero-death arm retains pack and submerged bank hold; no natural food closure.
-  Final chain disappearance inspected in both. Not moving/everyframe coverage.
-- ASSESS:retained natural falsePASS becomesFAIL under the actual production
-  verdict; real injected death/new-rung FAIL and zero-death new-rung PASS prove
-  whole-run dispatch without relaxing gates. This advances trustworthy full-game
-  measurement, not combat or food completion. The common verdict consumes the
-  existing observations; no reactive gameplay script or Java change.
-- No mod release/video for this invisible Python harness correction; public056
-  and its delivered report9676 remain unchanged. Water default remainsfalse.
-  Native cohort safetyRED and original falsePASS source remain retained.
-  Next focus returns to medium-specific water input/default validation and
-  original playthrough blockers. Latest a1ae58f1 Wiki37074785036 actuallySUCCESS.
-
-STOP CONDITION CHECK:
-- Is the work actually finished?        -> no
-- Is the END GOAL reached?              -> no  (@gamer plays the whole game on
-                                           tungsten, baritone deleted)
-- Did the customer say to stop?         -> no
-VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
-         immediately and the next iteration starts at once.
+Completed gamer survival verdict:
+[archive/03-10-2026-gamer-survival-verdict.md](archive/03-10-2026-gamer-survival-verdict.md).
 
 ## 2026-10-03 — validate medium-specific water input as the packaged default
 
@@ -446,7 +354,7 @@ VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
 - Diagnostic50184/log054818-46156 started02:48:18.754296UTC, source131adb04.
   Reuses exact native preparation/original saved entry and logs menu ownership
   at verified entry and before/after logout. Only its observation is shortened
-  to12s after entry verification. Stock short-smoke verdict may fail; this is
+  to a nominal12s after entry verification. Stock short-smoke verdict may fail; this is
   explicitly neither15min coverage nor a native gameplay rate. No retry of a
   gameplay/FPS red or source/terminal rewrite; await actual reconnect owner.
 
@@ -466,6 +374,94 @@ VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
   build109412/log060006-143512 started03:00:06.674957UTC; actual class proof,
   canonical deployment, repeated real native preparation and long integration
   remain pending. Do not reuse earlier config-only class equivalence.
+- Documentationbb85e60c committed as the owner and atomically pushed to both
+  canonical branches; local version branch fast-forwarded. First clean build
+  109412 naturally0 at03:09:53.211038UTC; packaging149752/log061048-104284
+  naturally0 at03:10:55.913419UTC freezes66dc63dd, exactly config+GameMenu+Py4j
+  changed versus public056, exactly two menu/API classes versus priorf79257.
+  No deployment or gameplay measured on66dc. Vanilla cached ConnectScreen
+  bytecode proves screen replacement alone does not cancel its network future.
+  Added a fail-closed guard for that in-flight screen; second clean scoped
+  build141332/log061114-143892 started03:11:14.080483UTC. Windows and cached
+  Linux9 safety boundaries now pass, including an offline API-decline case.
+  Prospective six native-preparation boundaries preserve stock short-smoke
+  failure as a separate verdict, exact offline NBT/25s wait/unchanged settings,
+  byte-prefix runtime errors and fresh recordings. No automatic retries.
+- Second clean build141332 naturally0 at03:21:02.970329UTC. Independent
+  guarded packaging151696/log062120-144020 naturally0 at03:21:28.392505UTC
+  freezes409f26180395ffd47be3297e7bf28061d876b7515141889f57427420698dd8da.
+  All2212 recursive class names match: only config+GameMenu+Py4j differ from
+  public056, only two menu/API classes differ from priorf79257. Actual final
+  bytecode includes the vanilla ConnectScreen guard and both default flags true.
+  Canonical tester1-only deployment112544/log062147-155044 started
+  03:21:47.437366UTC. Native/adjacent measurements have not started yet.
+  Wiki37092111256 onbb85e60c isSUCCESS; original three failed diagnostics
+  and four actually inspected pages remain unchanged. Completed death-verdict
+  documentation moved verbatim to archive/03-10-2026-gamer-survival-verdict.md.
+- Canonical deployment112544 naturally0 at03:22:41.416054UTC; actual loaded
+  tester1 SHA409f2618 matches frozen candidate. Six planned native-preparation
+  boundaries148680/log062313-143296 started03:23:13.724472UTC, wrapperhelper
+  e38f2288. Full unchanged preparation restores the original checkpoint after
+  its discarded baseline reset; exact restored inventory is checked before
+  every short task window. No heavy concurrent render/build/other bench client.
+  Await all actual terminals and independently inspect every captured film.
+- First three planned boundaries naturally0. Each retains exact offline NBT
+  through25s/copy with unchanged autoReconnect=true and no connect-counter
+  increase. Actual before-logout FPS29/29/30; first stock one-poll median26.
+  Their pending reconnect flags were FALSE before exit, so they do not prove
+  cancellation of an active intent. A separate prospective public queued-
+  connect fixture retains one legacy helper control and six candidate exits;
+  it writes no private fields and has not run. Native six-case source stays
+  frozen. Its .2min setting is nominal: the unchanged20s poll/readouts overrun
+  it; the independent audit records actual capture-to-ending timestamps.
+  First-case measured byte-prefix window has no ERROR/Exception/timer error;
+  startup/pre-restore voice and background timer messages remain in full logs.
+- Six native boundaries148680 naturally0 at03:49:37.228292UTC, six exact
+  offline copies and no late connection. Independent audit34476/log065020-
+  54324 naturally1 at03:50:21.030460UTC: case6 emits "Running game timer while
+  not in game" at03:48:43 during its measured logout window, from BlockScanner
+  worker completion resetting TimerGame. Original wrapper regex missed this
+  STDERR error. Keep the strict audit failed and retain every source/terminal;
+  do not call the campaign clean. C4 scan completion/lifetime needs a core fix.
+- Pending-intent fixture79100/log065219-158224 naturally1 at03:52:19.544884UTC:
+  my gamer import parsed the proof filename as minutes before any game action.
+  Source79699cb0/terminal retained. Future-only corrected import04fef9e1 launched
+  154100/log065327-53296 at03:53:27.303001UTC: one exact legacy helper control
+  and six deliberate cancellations of real public queued-connect requests on
+  candidate409f. No physical/FPS failure retried; source/helper still unchanged.
+  Native films/strict-failure retention remain to be reviewed before reuse.
+- Pending-intent154100 naturally0 at03:56:56.606020UTC. The same new409f payload
+  reproduces an unsafe delayed join with the exact b593 helper control, then
+  cancels six real public queued-connect requests while offline for25s each.
+  autoReconnect stays true, connect counters do not advance, server/death score
+  unchanged, cleanup empty. All seven films retained; visual review pending.
+- C4 scan-lifetime repair now uses a client-owned request, request-local maps,
+  captured world/player/time and blacklist exclusions. The worker publishes
+  completion through one volatile flag; only the matching world's client tick
+  accepts it and resets TimerGame. World exit detaches/cancels old requests and
+  clears every cache before any completion is consumed. Upstream reference:
+  baritone WorldProvider.closeWorld:102-110. Captured live chunk contents remain
+  off-thread C4.1 debt, explicitly not closed. Clean build and bench coverage
+  of this new binary remain pending; prior native audit stays failed.
+- ALL13 retained native/queued-intent films reviewed at2s:19 pages, exact hashes
+  journalled by158556/log071128-104868 (naturally0 at04:11:28.658747UTC).
+  Six short native films show digging then TitleScreen through the final sample.
+  Legacy control samples show TitleScreen->Loading terrain->TitleScreen; its
+  brief online acknowledgement is in the original ownership trace, missed by
+  the2s samples. Six cancellation films remain on TitleScreen throughout. No
+  full-frame review, gameplay rates, or clean native-audit claim.
+- First scan clean build149944/log070706-74940 naturally0 at04:16:34.205626UTC,
+  build phase8m2s/18 executed tasks. Packaging41788/log071650-158608 naturally1
+  at04:16:51.251125UTC: expected class-change list omitted existing nested
+  Node/BlacklistEntry classes, which also differ. Frozenf6f0d16c retained,
+  not deployed. Future verifier separately compares their executable javap
+  against409f; no unexplained change is waived or inferred from source alone.
+- Added connection-presence guard before any game timer use and recompiled:
+  148620/log071717-157448 started04:17:17.208920UTC. No deployment yet.
+  Future scanner tests require real unfinished requests, sustained cancellation/
+  empty caches/no workers25s, six distant-table+navigation sets, six native
+  boundaries and a15min integration. Their runtime gate includes the STDERR
+  TimerGame error; original weak helpers and failed strict audit remain frozen.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
