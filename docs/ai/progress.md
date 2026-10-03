@@ -342,6 +342,28 @@ Completed gamer survival verdict:
   player fields25s through checkpoint copy. Strong timer/error gate, first red
   stops the campaign; no heavy concurrent render/extraction/build. Original
   strict-red409f sixth logout remains unchanged. Await actual terminals/audit.
+- Native six158492 naturally0 at05:52:57.887683UTC. Independent strict audit
+  151956/log085400-115244 naturally0 at05:54:01.018321UTC confirms unchanged
+  original checkpoint, exact offline player fields through25s/copy, healthy
+  server, no new death, unchanged connect counters and no measured timer/errors.
+  Original medians28/29/28/28/28/30FPS; actual capture windows34.751/51.343/
+  33.928/33.114/32.728/36.196s. All six short stock smoke verdicts remain false;
+  these are exit boundaries, not gameplay passes. Case2 actually owns pending
+  reconnect both at entry and before logout; the other five do not. This is
+  one native pending cancellation, not a six-case pending-trigger rate.
+- Native film preparation140688/log085402-157360 naturally0 at
+  05:54:28.287082UTC. ALL six original films/twelve pages actually inspected
+  at2s: digging/stone holds followed by TitleScreen through every final sample.
+  No later loading/gameplay/death HUD sampled. Journal157416/log090114-95020
+  sourceacd771bc naturally0 at06:01:14.709495UTC verifies exact clips/pages.
+  Fixed sampling, not every-frame/moving review or full C4.1 closure.
+- ONE15min original full59 integration21600/wrapper142352/log090136-142352
+  started06:01:36.981475UTC, source4e1a8bae, frozen guarded helpera91495ec and
+  gamer793bea3e. Original raw checkpoint/pack, no day lock, native five-minute
+  checkpoints, actual defaults/loaded11a, strict timer/runtime gate and25s
+  sustained offline boundary. No retry or heavy concurrent bench/render/build.
+  Latest budget12643MB/15GB, free163GB; owned bench lock absent before launch.
+  Actual natural terminal, independent audit and film review remain pending.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
