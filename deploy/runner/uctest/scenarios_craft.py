@@ -11,6 +11,7 @@ project is hammering this box, so these courses answer in seconds under any load
 WHAT THEY GATE. Holding the item. Not "the task ran", not "the screen opened" -- the rung is the
 item in the pack, the same bar the playthrough ladder uses.
 """
+import json
 import re
 import time
 
@@ -1246,6 +1247,7 @@ class EscapeLava(CraftTable):
         ctx.bot.cmd("@get oak_log 1")
         time.sleep(2)
         # At the pool's edge, not its centre: one step east is dry.
+        self._start_escape_observation(ctx)
         ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
         # RESISTANCE, NOT FIRE RESISTANCE — AND THE DIFFERENCE IS THE WHOLE COURSE.
         # A survivable window is needed, or a red only means "nothing could have escaped in three
@@ -1261,6 +1263,7 @@ class EscapeLava(CraftTable):
                      allow_reject=True)
 
     def drive_tick(self, ctx, elapsed):
+        self._observe_escape(ctx)
         super().drive_tick(ctx, elapsed)
         hp = ctx.bot.health()
         if hp is not None:
@@ -1310,13 +1313,66 @@ class EscapeLava(CraftTable):
         fifteen blocks off at the spawn point.
         """
         x, z = self._pos(ctx)
+        return self._nearby_escape_position(x, z)
+
+    def _nearby_escape_position(self, x, z):
         d = (x * x + z * z) ** 0.5
         return 1.5 < d < 8.0
+
+    def _start_escape_observation(self, ctx):
+        """Observe the original nearby escape window on actual client ticks.
+
+        The 2026-10-03 pool film reaches dry stone while sequential rcon
+        sampling jumps from the lava to beyond radius9 eleven seconds later.
+        Keep the original radius and death gates; latch their transient event
+        from the existing bounded diagnostic ring instead of changing them.
+        """
+        self.escape_sequence = 0
+        self.escape_lava_seen = False
+        # onClientThread can time out before its queued enable runs. Own cleanup
+        # before submission so a declined/exceptional acknowledgement still
+        # queues a disable after that possible late enable.
+        self.escape_trace_enabled = True
+        if ctx.bot.py.call('setMovementTrace', True) is not True:
+            raise RuntimeError('Lava escape observation did not enable')
+
+    def _observe_escape(self, ctx):
+        rows = [json.loads(raw) for raw in ctx.bot.py.call('getMovementTrace', self.escape_sequence)]
+        with open(ctx.art.path('escape-ticks.jsonl'), 'a', encoding='utf-8') as output:
+            for row in rows:
+                output.write(json.dumps(row) + '\n')
+                if 'error' in row or row.get('seq') != self.escape_sequence + 1:
+                    raise RuntimeError('Incomplete lava escape trace: ' + str(row))
+                self.escape_sequence = row['seq']
+                if row.get('event') != 'end-client-tick':
+                    continue
+                if type(row.get('lava')) is not bool or row.get('hp') is None or len(row.get('pos') or []) != 3:
+                    raise RuntimeError('Missing lava escape snapshot: ' + str(row))
+                if row['lava'] and row['hp'] > 0:
+                    self.escape_lava_seen = True
+                x, y, z = row['pos']
+                if (self.escape_lava_seen and not row['lava'] and row['hp'] > 0
+                        and self._nearby_escape_position(x, z) and not ctx.geo.get('escaped_at')):
+                    ctx.geo['entered'] = True
+                    ctx.geo['escaped_at'] = max(0.001, (row['epochMs'] / 1000) - ctx.t0)
+                    ctx.geo['escaped_pos'] = (round(x, 1), round(z, 1))
+                    ctx.art.write_json('escape-event.json', dict(tick=row,
+                        scope='Observed lava entry followed by a living non-lava tick within the original nearby radius. Original death gate still required; no rewritten prior verdict.'))
+
+    def drive_stop(self, ctx):
+        self._observe_escape(ctx)
+        super().drive_stop(ctx)
+
+    def cleanup(self, ctx):
+        if getattr(self, 'escape_trace_enabled', False):
+            if ctx.bot.py.call('setMovementTrace', False) is not True:
+                raise RuntimeError('Lava escape observation did not disable')
+            self.escape_trace_enabled = False
 
     def early_stop(self, ctx):
         if not ctx.geo.get("entered"):
             return False
-        return self._escaped(ctx) and (ctx.bot.health() or 0) > 0
+        return (bool(ctx.geo.get('escaped_at')) or self._escaped(ctx)) and (ctx.bot.health() or 0) > 0
 
     def judge(self, ctx):
         hp = ctx.bot.health()
@@ -1379,6 +1435,7 @@ class EscapeLavaPool(EscapeLava):
         ctx.bot.py.try_call("resetRunCounters")
         ctx.bot.cmd("@get oak_log 1")
         time.sleep(2)
+        self._start_escape_observation(ctx)
         ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
         # Same window as escape_lava (see there): resistance keeps the trigger live and buys time.
         ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:resistance 120 4 true",
@@ -1387,6 +1444,9 @@ class EscapeLavaPool(EscapeLava):
     def _escaped(self, ctx):
         """Past the sheet's edge (3.5 from the centre) and still nearby, which a respawn is not."""
         x, z = self._pos(ctx)
+        return self._nearby_escape_position(x, z)
+
+    def _nearby_escape_position(self, x, z):
         d = ((x - 0.5) ** 2 + (z - 0.5) ** 2) ** 0.5
         return self.HALF + 0.3 < d < 9.0
 

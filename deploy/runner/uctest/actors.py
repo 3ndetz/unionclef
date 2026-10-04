@@ -13,12 +13,20 @@ class Bot:
         self.py = Py4jClient(container)
 
     # -- lifecycle ---------------------------------------------------------
-    def ensure_in_game(self, server="test-server", timeout=600, rcon=None):
+    def ensure_in_game(self, server="test-server", timeout=600, rcon=None, staging=None):
         """Make sure the bot is in game ON `server`. When `rcon` is given it is
         the authority on presence: a bot logged into the OTHER stand server
         still reports inGame()=true, so scenarios that switch worlds (real-
         terrain chase on gamer-server) must verify against that server's
-        player list, not just the client's own flag."""
+        player list, not just the client's own flag.
+
+        An arena may supply an already prepared dry staging spawn. Teleport
+        as soon as the target server accepts this player, before slow config
+        and geometry setup can spend a returning swimmer's remaining air.
+        Native terrain callers retain their original connection behaviour.
+        """
+        if staging is not None and rcon is None:
+            raise ValueError("Dry arena staging requires the target server rcon")
         wait_for(f"{self.name} py4j", lambda: self.py.call("inGame") is not None,
                  timeout, 10, self.log)
 
@@ -30,9 +38,22 @@ class Bot:
             except Exception:  # noqa: BLE001 - server may still be booting
                 return False
 
-        if on_target_server():
+        on_target = on_target_server()
+        if not on_target:
+            self.py.call("ConnectToServer", server)
+        if staging is not None:
+            def stage_player():
+                reply = rcon.cmd(f"tp {self.name} {staging}", allow_reject=True)
+                return f"Teleported {self.name}" in reply
+            wait_for(f"{self.name} on dry staging", stage_player,
+                     min(timeout, 240), 0.25, self.log)
+            position = rcon.entity_pos(self.name)
+            target = [float(value) for value in staging.split()[:3]]
+            if position is None or len(position) != 3 or any(abs(float(got) - want) > 1.0 for got, want in zip(position, target)):
+                raise RuntimeError(f"{self.name} dry staging teleport not confirmed: {position}")
             return
-        self.py.call("ConnectToServer", server)
+        if on_target:
+            return
         wait_for(f"{self.name} in game on {server}", on_target_server,
                  240, 5, self.log)
         time.sleep(3)

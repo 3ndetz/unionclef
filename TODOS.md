@@ -65,8 +65,11 @@
   Separate prepared-melee hazard series now24/24 valid PASS, FPS28..30;
   six tunnel traces HP20/minAir100/finalAir300/no air-task dig child. Every
   actual film reviewed. Original incomplete/red campaigns remain unchanged;
-  original42 navigation cases and native six checkpoint replays are still open.
-- [ ] **A lava escape can cross the nearby verdict window between samples (2026-10-04).**
+  Original42 navigation cases now all pass on the same candidate, minimum
+  averageFPS29, all42 films/pages inspected at fixed2s cadence. Evidence:
+  adjacent-route-film-review-20261004-052055/actual-review.json. Native six
+  exact checkpoint replays remain open; this does not establish native safety.
+- [x] **FIXED: a lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside
   lava at1s to beyond the original radius9 at12.1s, missing the exit event.
@@ -74,7 +77,11 @@
   living non-lava client tick inside the unchanged nearby radius, with the
   original death gate. Windows/Linux unit boundaries pass; the shared
   prefix observed a living nearby exit, but its17FPS is INVALID;
-  repeated healthy validation remains open. No retroactive verdict or core regression.
+  Subsequent declared-preparation campaign completes all six original lava
+  objectives at29..30FPS, sampledHP12..16/no deaths; all actual films reviewed.
+  Original resistance and distance/death gates remain. This closes observation
+  coverage, not damage-free or native lava safety. No retroactive verdict or
+  core regression assigned.
 - [ ] **End a survival observation without exposing the stopped player (2026-10-03).**
   Actual-default57 full59 resume stops tasks under water at01:17:01UTC; the
   player drowns at01:17:23 after diagnostics/checkpoint copying. Recorded

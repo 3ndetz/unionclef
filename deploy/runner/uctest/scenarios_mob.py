@@ -20,6 +20,7 @@ import time
 from .actors import KIT_SWORD
 from .arena import STAND_Y
 from .scenario import Criterion, Scenario
+from .survival import disconnect_and_stop
 
 
 def _zombie_count(ctx):
@@ -137,13 +138,53 @@ class MobMelee(Scenario):
         ctx.bot.py.try_call("resetRunCounters")
         # Four blocks: inside the field, close enough to engage at once, far enough that closing
         # the distance is still part of the test.
-        ctx.rcon.cmd(f"summon zombie 4.5 {STAND_Y} 0.5")
+        self._start_prepared_zombie(ctx)
+
+    def _start_prepared_zombie(self, ctx):
+        """Preserve initialized spawn; finish tracker setup before releasing AI."""
+        if not str(ctx.bot.py.call('getRunnerStatus')).startswith('active=false'):
+            raise RuntimeError(f'{self.id} preparation requires an inactive runner')
+        # Minecraft1.21.11 ExecuteCommand.summon calls SummonCommand.summon
+        # with initialize=true, then withEntity(newEntity). Apply NoAI after
+        # initialization in that same server command: direct summon with NBT
+        # skips normal age/equipment/attribute initialization.
+        # Five actual traces lose3HP before the old command is submitted.
+        ctx.geo['entered_mob_fixture'] = True
+        ctx.rcon.cmd(f'execute positioned 4.5 {STAND_Y} 0.5 summon zombie '
+                     'run data merge entity @s {NoAI:1b}')
         ctx.geo["spawned"] = _zombie_count(ctx)
-        time.sleep(2)
-        # @test kill runs KillEntityTask on the nearest tracked zombie. The tracker lags the summon
-        # by about a second, and issued too early the command finds an empty list and starts
-        # nothing -- with no task running the defence chain is never ticked and nothing fights.
-        ctx.bot.cmd("@test kill")
+        time.sleep(2)  # Original tracker warm-up, with the target paused.
+        paused = ctx.rcon.entity_float('@e[type=zombie,limit=1]', 'NoAI')
+        hp = ctx.bot.health()
+        if ctx.geo['spawned'] != 1 or paused != 1 or hp != 20:
+            raise RuntimeError(f'{self.id} inadequate mob staging: '
+                               f"count={ctx.geo['spawned']} NoAI={paused} HP={hp}")
+        ctx.art.write_json('mob-preparation.json', dict(
+            health_before_exposure=hp, noai_before_exposure=paused,
+            spawned=ctx.geo['spawned'],
+            scope='Initialized original zombie at the original coordinates, paused only during setup. Original tracker wait, kit and fight gates retained. No healing after exposure.'))
+        # Own possible exposure before spawn submission; a late/lost pause or
+        # resume acknowledgement must still exit before stopping defence.
+        reply = ctx.rcon.cmd('data merge entity @e[type=zombie,limit=1] {NoAI:0b}')
+        if 'Modified entity data' not in reply:
+            raise RuntimeError(f'{self.id} zombie AI resume was not confirmed: {reply}')
+        ctx.bot.cmd('@test kill')  # No intervening RPC after releasing AI.
+        deadline = time.monotonic() + 20
+        while True:
+            runner = str(ctx.bot.py.call('getRunnerStatus'))
+            if runner.startswith('active=true'):
+                break
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f'{self.id} task did not activate after mob release')
+            time.sleep(0.1)
+        ctx.art.write_json('mob-activation.json', dict(runner=runner, ai_resume_reply=reply,
+            scope='Original command immediately follows AI release; activation and confirmation spend pre-loop fight time. Original geometry, kit, duration and objective thresholds retained.'))
+
+    def drive_stop(self, ctx):
+        # Subclasses with their own unmarked start retain their old lifecycle.
+        if ctx.geo.get('entered_mob_fixture') and not ctx.geo.get('protective_logout'):
+            ctx.geo['protective_logout'] = disconnect_and_stop(ctx.bot.container)
+        super().drive_stop(ctx)
 
     def early_stop(self, ctx):
         return _zombie_count(ctx) == 0
@@ -1509,6 +1550,7 @@ class DrownTunnel(Scenario):
     tier = "gate"
     needs_victim = False
     duration = 45
+    ends_with_logout = True
     bot_kit = ["item replace entity {name} weapon.mainhand with stone_pickaxe"]
 
     def build(self, arena, ctx):
@@ -1516,7 +1558,12 @@ class DrownTunnel(Scenario):
         arena._fill(-4, STAND_Y, -2, 7, STAND_Y + 5, 2, "stone")
         arena._fill(-3, STAND_Y, 0, 6, STAND_Y + 1, 0, "water")
         arena._fill(4, STAND_Y + 2, 0, 4, STAND_Y + 5, 0, "air")
-        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 90 0"
+        ctx.geo["water_entry"] = f"0.5 {STAND_Y} 0.5 90 0"
+        # Kit/chat/recorder setup must not consume oxygen while the runner is
+        # inactive. The retained 2026-10-03 trace starts at Air31 and loses4HP
+        # before GetToAir owns a tick. Stage on the existing dry ceiling, then
+        # enter the original tunnel immediately before the original command.
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y + 6} 0.5 90 0"
         ctx.geo["fps"] = []
 
     def drive_start(self, ctx):
@@ -1524,13 +1571,33 @@ class DrownTunnel(Scenario):
         ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:instant_health 1 10 true")
         ctx.geo["d0"] = ctx.rcon.score(ctx.bot.name, "d")
         ctx.bot.py.try_call("resetRunCounters")
-        ctx.bot.cmd("@get oak_log 3")
+        self.start_in_water(ctx, lambda: ctx.bot.cmd("@get oak_log 3"))
+
+    def drive_stop(self, ctx):
+        # The retained19:51:39 drowning occurs after this45s objective passed:
+        # USER wander returned underwater, and generic stop left it undefended
+        # while the next course was prepared. Freeze outcomes while defence is
+        # active, then use the same confirmed logout as native observations.
+        try:
+            ctx.geo["end_air"] = ctx.rcon.entity_float(ctx.bot.name, "Air")
+            ctx.geo["end_deaths"] = ctx.rcon.score(ctx.bot.name, "d")
+            ctx.geo["end_health"] = ctx.bot.health()
+            if any(ctx.geo[key] is None for key in ("end_air", "end_deaths", "end_health")):
+                raise RuntimeError("Missing final DrownTunnel survival readout")
+            ctx.art.write_json("survival-end.json", dict(
+                air=ctx.geo["end_air"], deaths=ctx.geo["end_deaths"], health=ctx.geo["end_health"],
+                epoch_ms=int(time.time() * 1000),
+                scope="Sequential final readouts with defence active, before logout/stop; replaces the old post-stop endpoint. Original Air200/no-death/HP12 thresholds retained; final health also included."))
+        finally:
+            ctx.geo["protective_logout"] = disconnect_and_stop(ctx.bot.container)
+            ctx.art.write_json("protective-logout.json", ctx.geo["protective_logout"])
+        super().drive_stop(ctx)
 
     def judge(self, ctx):
-        b = ctx.bot.name
-        died = (ctx.rcon.score(b, "d") or 0) - (ctx.geo.get("d0") or 0)
-        air = ctx.rcon.entity_float(b, "Air")
+        died = ctx.geo["end_deaths"] - (ctx.geo.get("d0") or 0)
+        air = ctx.geo["end_air"]
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        hps.append(ctx.geo["end_health"])
         yield Criterion("did not drown", died == 0, f"deaths={died} min_hp={min(hps) if hps else None}")
         yield Criterion("breathing again", air is not None and air >= 200, f"air={air}")
         # Digging out survives here too, barely (min_hp 6 and 4 on the build that always dug):

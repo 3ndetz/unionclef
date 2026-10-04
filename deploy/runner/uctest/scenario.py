@@ -477,6 +477,7 @@ class Scenario:
     # hand-built strip.
     world = "flat"
     builds_arena = True        # False = play the world as generated (real terrain)
+    ends_with_logout = False   # Explicit survival fixtures confirm exit before stopping defence.
 
     # ⛔ SOME COURSES SCORE FALLS THEMSELVES, AND THE GENERIC ARENA GUARD MUST NOT OVERRIDE THEM.
     # run_suite's guard (checklist 4k) marks a run INVALID when the bot ends up far below the
@@ -499,6 +500,36 @@ class Scenario:
     def drive_start(self, ctx):
         raise NotImplementedError
 
+    def start_in_water(self, ctx, activate):
+        """Finish dry setup, enter the fixture, then immediately queue its original task.
+
+        Only explicit callers use this boundary. Kit/recorder/chat preparation
+        must not spend an inactive specimen's oxygen: the 2026-10-03 roof
+        witness had Air48 and active=false before its original command.
+        Starting navigation on the ceiling can move the player off it before
+        the teleport. Only the activation call and confirmation follow entry;
+        kit, recorder and other setup are already finished. No health or
+        oxygen is injected after entering the hazard.
+        """
+        dry_air = ctx.rcon.entity_float(ctx.bot.name, "Air")
+        dry_hp = ctx.bot.health()
+        if dry_air != 300 or dry_hp != 20:
+            raise RuntimeError(f"{self.id} inadequate dry staging: Air={dry_air} HP={dry_hp}")
+        # A failure after entry still needs logout before generic actor cleanup.
+        ctx.geo["entered_water_fixture"] = True
+        ctx.rcon.cmd(f"tp {ctx.bot.name} {ctx.geo['water_entry']}")
+        activate()
+        deadline = time.monotonic() + 20
+        while not str(ctx.bot.py.call("getRunnerStatus")).startswith("active=true"):
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"{self.id} task did not activate on dry staging")
+            time.sleep(0.1)
+        ctx.art.write_json("hazard-entry.json", dict(
+            dry_air=dry_air, dry_hp=dry_hp, water_entry=ctx.geo["water_entry"],
+            runner=str(ctx.bot.py.call("getRunnerStatus")),
+            entry_air=ctx.rcon.entity_float(ctx.bot.name, "Air"),
+            scope="Dry setup and respawn on the existing ceiling; enter original water coordinates immediately before queuing the original command. Only activation/confirmation spends pre-loop air; no post-entry health or oxygen injection. Geometry, kit, duration and objective thresholds unchanged."))
+
     def drive_tick(self, ctx, t):
         pass
 
@@ -506,6 +537,14 @@ class Scenario:
         ctx.bot.stop_all()
         if ctx.victim:
             ctx.victim.stop_all()
+
+    def cleanup(self, ctx):
+        """Release scenario observations even when setup/run fails.
+
+        run_suite calls this after any required protective logout, before
+        generic actor cleanup. Ordinary scenarios own no extra observation.
+        """
+        pass
 
     # Recording/diagnostic runs need the FULL duration: an objective reached in the
     # first seconds produces a 4-second clip and a sample set too small to judge

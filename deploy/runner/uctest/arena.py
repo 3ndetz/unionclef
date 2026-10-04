@@ -20,6 +20,26 @@ class ArenaBuilder:
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.rcon.cmd(f"fill {x1} {y} {z1} {x2} {y} {z2} {block}")
 
+    def prepare_waiting_pad(self, half):
+        """Keep returning players dry outside the cube cleared by prepare().
+
+        A pad inside that cube disappeared during the 2026-10-03 water
+        setup. The ensuing void recovery filled stone over the finished roof.
+        Keep this temporary support until the ordinary reset places both
+        actors in the fixture; remove it before recording or activation.
+        """
+        x = half + 8
+        assert x - 2 > half
+        self.rcon.cmd(f"forceload add {x-2} -2 {x+2} 2")
+        self.rcon.cmd(f"fill {x-2} {STAND_Y+5} -2 {x+2} {STAND_Y+5} 2 stone")
+        self.rcon.cmd(f"fill {x-2} {STAND_Y+6} -2 {x+2} {STAND_Y+9} 2 air")
+        return f"{x+0.5} {STAND_Y+6} 0.5 90 0"
+
+    def remove_waiting_pad(self, half):
+        """Remove temporary support only after actors reach their fixture spawn."""
+        x = half + 8
+        self.rcon.cmd(f"fill {x-2} {STAND_Y+5} -2 {x+2} {STAND_Y+5} 2 air")
+
     def prepare(self, half=40, regen=False):
         """Forceload + clear the arena cube + standard gamerules."""
         self.rcon.cmd(f"forceload add {-half} {-half} {half} {half}")

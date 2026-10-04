@@ -226,6 +226,59 @@ class NavWater(NavCourse):
         return (26, STAND_Y, 0)
 
 
+class NavGridWaterRoof(NavCourse):
+    """Cross a sealed water corridor beneath a solid cap into a dry chamber.
+
+    The feet-level shortcut is liquid with only one block of headroom. A full
+    body can cross one cell lower; no wall mining or over-roof route exists.
+    Uses @goto, the same grid producer as @gamer, rather than gotoXYZ/FastPlanner.
+    Artificial geometry isolates occupancy; it is not a native survival test.
+    """
+    id = 'nav_grid_water_roof'
+    duration = 60
+    arena_half = 22
+    goal_tolerance = 1.0
+    settings = {'verboseDebugLogging': 'true'}
+
+    def build(self, arena, ctx):
+        arena._fill(-2, -64, -2, 21, -64, 2, 'stone')
+        for z in (-2, 2):
+            arena._fill(-2, -63, z, 21, -57, z, 'barrier')
+        for x in (-2, 21):
+            arena._fill(x, -63, -1, x, -57, 1, 'barrier')
+        arena._fill(-1, -57, -1, 20, -57, 1, 'barrier')
+        arena._fill(-1, -63, -1, 8, -61, 1, 'water')
+        arena._fill(4, -61, -1, 7, -58, 1, 'barrier')
+        # Rise in the open last water column, then leave onto a supported bank
+        # at the same height. Let ordinary flow settle; the goal is beyond its
+        # seven-block reach, so we do not mistake floating for a dry arrival.
+        arena._fill(9, -63, -1, 20, -62, 1, 'stone')
+        # Prepare on the existing barrier ceiling. The retained inactive setup
+        # has only48 of300 air before the original task can defend the body.
+        ctx.geo.update(goal=(18.5, -61, 0.5), bot_spawn='0.5 -56 0.5 -90 0',
+                       water_entry='0.5 -62 0.5 -90 0')
+
+    def sample_kwargs(self):
+        # This corridor's solid floor is at-64, not the shared pad's-61.
+        return {'floor_y': -64}
+
+    def drive_start(self, ctx):
+        ctx.bot.py.call('setTungstenPathing', True)
+        self.start_in_water(ctx, lambda: ctx.bot.py.call('ExecuteCommand', '@goto 18 -61 0'))
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        health = [sample['bot_hp'] for sample in ctx.samples if sample.get('bot_hp') is not None]
+        yield Criterion('no sampled health loss', health and min(health) == 20,
+                        'min_hp=' + str(min(health) if health else None), load_sensitive=False)
+        caps = [ctx.rcon.cmd(f'execute if block {x} -61 {z} barrier')
+                for x in range(4, 8) for z in (-1, 0, 1)]
+        yield Criterion('sealed roof remains intact', all('passed' in value.lower() for value in caps),
+                        'No over-roof, wall-mining or roof-breaking route', load_sensitive=False)
+        dry = ctx.rcon.cmd('execute if block 18 -61 0 air')
+        yield Criterion('far goal is dry', 'passed' in dry.lower(), dry, load_sensitive=False)
+
+
 class NavLadder(NavCourse):
     """Climb a 4-high ladder onto a shelf — the ladder move set."""
     id = "nav_ladder"
@@ -760,5 +813,5 @@ class NavTunnel(NavCourse):
 
 
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend, NavCliff,
-             NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
+             NavWater, NavGridWaterRoof, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
              NavNotch, NavLava, NavPowder, NavPowderPit, NavTunnel]

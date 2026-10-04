@@ -326,7 +326,8 @@ Completed Windows repair:
   Windows63/63 and actual Linux63/63, including12 new mob boundaries.
 - [x] Original24 hazard objectives with declared prospective preparation,
   first-red/FPS20/HP12/Air200 gates; review every actual film and runtime seal.
-- [ ] Original42 adjacent navigation objectives on the same verified candidate.
+- [x] Original42 adjacent navigation objectives on the same verified candidate;
+  all42 valid PASS/all42 fixed2s pages inspected, minimum averageFPS29.
 - [ ] Six native cp1003-0401-t649 trials with original pack/HP20/FPS20 gates.
 - [ ] Tested narrow commits, scoped stable release/public class proof, edited
   HyperFrames/Telegram report, then full59 continuation.
@@ -360,6 +361,71 @@ Completed Windows repair:
 - Collector577d560d is owner-authored/pushed to both branches; Wiki37164500639
   SUCCESS. Fixture/core/config/version WIP preserved and not yet committed.
   No057 public release, new report delivery, foreign process/container change.
+- Assessment: original hazard prefix11/12 valid PASS and activation diagnostic
+  20 gameplay PASS/19 runtime seals are retained; this prospective phase reaches
+  24/24 valid PASS/all24 seals. Preparation minima change17->20 in traced fights,
+  with the same candidate, not a comparative core combat/survival improvement.
+  The advance is a trustworthy preparation/lifetime gate for the full playthrough;
+  native portal/food/survival remain open. This repairs the bench's inactive
+  exposure rather than weakening core safety or adding a gameplay script.
+  Measured preparation and log-window defects are closed;42 adjacent and native6
+  now test the core candidate instead of repeating speculative combat patches.
+- Independent read-only public packaging audit confirms source/build hashes:
+  release-class-scope-20261004.json SHA
+  dc2f5e1fd8197acfa389e63bc4ae9bb0717a150c8b69534921beeca7fb6ae2d3.
+  Public056 has2212 recursive classes;90faa8a4 has2213. Twelve existing classes
+  differ and BlockScanner.ScanRequest is added, none removed. This includes
+  accumulated logout, scanner/blacklist, liquid edge/arrival, trace, water-default
+  and oxygen changes. The one-class delta applies only to retained eff, not
+  public056. Native coverage/release remain pending for the accumulated scope.
+
+## 2026-10-04 — complete adjacent navigation audit
+
+### Investigate
+
+- Same verified90faa8a4 candidate; original seven courses in original order,
+  six repeats, FPS20/first-red and original objectives. All eight fixture
+  hashes match the completed24 hazard audit. No Java rebuild or deployment.
+- Parent135032/wrapper112760/log042215 naturally0 at
+  2026-10-04T02:20:23.963492UTC:42/42 valid PASS, zero FAIL/INVALID,
+  minimum averageFPS29, runtime/cleanup[]. Final offline/inactive confirmed
+  epoch1791080420306, bench lock released. SampledHP20/deaths0 throughout.
+
+### Plan
+
+- [x] Original42 objectives, exact case log seals and complete actual film review.
+- [ ] Commit tested preparation/lifetime/observation bench changes narrowly;
+  retain Java/config/version/release WIP separately.
+- [ ] Native six exact cp1003-0401-t649 raw120s replays with original pack,
+  all-tickHP20/FPS20/death3327/strict byte windows and25s offline hold.
+- [ ] Stable scoped release/public packaging proof, edited HF/Telegram report,
+  then next full59 pass; C4.1 captured-live-world worker reads remain open.
+
+### Implement
+
+- Freezer94824/wrapper167444/log052055 naturally0 at02:21:57.322184UTC.
+  All42 actual films/all42 fixed2s pages inspected, then journal/hash binding:
+  adjacent-route-film-review-20261004-052055/actual-review.json SHA
+  f90d3c49b7e1136b317462f28400f532d31a6ed411e315e126b571d7cd64cc74.
+  This is sampled page inspection, not every frame or uninterrupted playback.
+- Six water pillars each build one source-water rung, spend exactly one block
+  and rest grounded atHP20. Flat/stairs/descend/water/wall/bridge each6/6.
+  Similar bridge-repeat3 camera views were checked against the actual timeline:
+  coordinates change until goal arrival14.3s; no freeze/self-fall recorded.
+  Retained colored route overlays alone do not prove concurrent active writers.
+- Production bench scope is shared dry staging before arena reset, opt-in water
+  activation/protective logout, original nearby lava event latching and initialized
+  paused mob setup immediately followed by original activation. Windows/Linux63
+  contracts already pass; no source changed since those proofs or either campaign.
+  Preparation exposure and final observation timing changes are explicit; original
+  failed verdicts remain retained. Overriding mob start lifecycles stay unmarked.
+- Assessment: navigation remains42/42, so no comparative route improvement is
+  claimed. The candidate now has complete24 hazard/42 adjacent regression gates
+  with healthy FPS and inspectable recordings. This advances trustworthy native
+  testing; it does not close full portal/food/survival or the accumulated public
+  release scope. Next measurement is the exact saved native entry, not another
+  artificial setup patch. VIDEO's heavy phase is complete; no foreign process,
+  controller, Docker service or host GUI changed.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no

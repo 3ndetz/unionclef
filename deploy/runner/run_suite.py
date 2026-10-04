@@ -187,6 +187,7 @@ VIZ_OFF = {k: "false" for k in VIZ_SETTINGS}
 
 
 from uctest.recording import finish_recording
+from uctest.survival import disconnect_and_stop
 
 
 def _rec_start(scn_id, dur, persp=0, bot=None):
@@ -289,9 +290,22 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
             wait_for(f"{world['container']} rcon (after restart)",
                      lambda: "players" in rcon.cmd("list", timeout=8), 240, 10)
             print(f"  [ok] {world['container']} came back after a restart", flush=True)
-        bot.ensure_in_game(world["host"], rcon=rcon)
+        arena = ArenaBuilder(rcon)
+        staging = arena.prepare_waiting_pad(scn.arena_half) if scn.builds_arena else None
+        connection = dict(rcon=rcon)
+        if staging is not None:
+            connection['staging'] = staging
+            # A join/teleport failure may leave a saved swimmer exposed.
+            ctx.geo['arena_staging_pending'] = True
+        bot.ensure_in_game(world["host"], **connection)
         if scn.needs_victim:
-            victim.ensure_in_game(world["host"], rcon=rcon)
+            victim.ensure_in_game(world["host"], **connection)
+        if staging is not None:
+            # Only stop after the exposed returning player reaches dry support.
+            bot.stop_all()
+            if scn.needs_victim:
+                victim.stop_all()
+            ctx.geo['arena_staging_pending'] = False
         # clean config every run (persist poisoning), then force visualisation ON
         # so the recording SHOWS the planned path / trajectories, then the
         # scenario's own pins.
@@ -343,7 +357,6 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
                     raise SystemExit(
                         f"--pin {k}={v} did not apply (got {got!r}). Refusing to run: an "
                         f"A/B against an unapplied flag measures the build against itself.")
-        arena = ArenaBuilder(rcon)
         if scn.builds_arena:
             arena.prepare(half=scn.arena_half, regen=scn.regen)
         scn.build(arena, ctx)
@@ -356,6 +369,10 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         bot.fresh_reset(ctx.geo["bot_spawn"], scn.bot_kit, hard)
         if scn.needs_victim:
             victim.fresh_reset(ctx.geo["victim_spawn"], scn.victim_kit, hard)
+        if staging is not None:
+            arena.remove_waiting_pad(scn.arena_half)
+            ctx.geo['dry_staging'] = dict(spawn=staging, removed_before_activation=True)
+            art.write_json('dry-staging.json', ctx.geo['dry_staging'])
         rcon.reset_kd([BOT, VICTIM])
         if scn.settings:
             bot.pin_settings(scn.settings)
@@ -402,6 +419,19 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
                 "invalid": stand,
                 "invalid_reason": ("stand: " + err[:80]) if stand else None}
     finally:
+        if ctx.geo.get('arena_staging_pending'):
+            # Never let a failed returning-player join reach generic stop while
+            # it may still occupy the saved hazard. Keep the dry pad on failure.
+            for actor in ((bot, victim) if scn.needs_victim else (bot,)):
+                boundary = disconnect_and_stop(actor.container)
+                if actor is bot:
+                    ctx.geo['protective_logout'] = boundary
+        # A failed setup/run must also leave an opt-in survival fixture safely.
+        # If logout fails, propagate it without stopping the live defence.
+        if (scn.ends_with_logout or ctx.geo.get("entered_water_fixture")
+                or ctx.geo.get("entered_mob_fixture")) and not ctx.geo.get("protective_logout"):
+            ctx.geo["protective_logout"] = disconnect_and_stop(bot.container)
+        scn.cleanup(ctx)
         for b in (bot, victim):
             try:
                 b.stop_all()
