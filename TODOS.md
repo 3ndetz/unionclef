@@ -16333,8 +16333,19 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   unchanged, exact checkpoint preserved, runtime/cleanup[]. Capture including
   reflection8.511..13.740ms; not a gameplay/FPS/publication result. Both full
   fixed2s film sheets viewed. Scanner now has a candidate client capture using
-  only private PalettedContainer copies and loaded membership; scoped clean
-  build active, exact final payload and discovery/logout/adjacent tests pending.
+  only private PalettedContainer copies and loaded membership. Scoped clean/
+  build0; exact final114eeeb0 recursively2215 classes, only three scanner
+  classes changed/two snapshot classes added vs D583, actual bytecode reviewed.
+  Canonical owned tester1 deployment0/exact loaded identity. Installed helper
+  contract6/6: initial4096 section cells+16 negative-height cells each agree,
+  empty/height/wrong-chunk boundaries pass, actual server stone-to-glass changes
+  retain old reads, six snapshots still read after real logout, off-thread
+  capture rejected. All sampledHP20/inventory/use unchanged/offline300/
+  checkpoint unchanged/runtime+cleanup[]; full40.9s fixed2s sheet viewed.
+  FPS7..21 retained; no healthy gameplay/speed claim. Three distinct observed
+  scanner captures3.901/15.117/8.841ms are non-atomic final-counter samples,
+  not six independent benchmark rounds. Distant/navigation24-case run active;
+  current active-worker logout/adjacent/native integration remain pending.
   No C4.1 closure or release claim.
   FastPlanner's state memo first misses still read live world. GetToAirTask:157
   captures live world in its condition; FleeLive.snapshotSafety:438-450 copies

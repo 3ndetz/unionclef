@@ -435,7 +435,32 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
 - Scoped clean build54156/124948 starts09:26:49.330587UTC, helper47579bb0,
   successful host/owned-client JDWP and offline checks required before Gradle.
   Compiler owns only its containers, capped2CPU/2workers; nine source inputs
-  bound before/after. Final payload proof/deployment/bench tests pending.
+  bound before/after. Clean/build naturally0 at09:41:07.559311UTC.
+- Strict final verifier133860/168872 naturally0 at09:42:04.243394UTC:
+  candidate114eeeb0, recursive2215 vs D5832213, only scanner/Node/ScanRequest
+  changed, ScanInput/nested ChunkBlockSnapshot added, no removed classes.
+  Actual changed bytecode reviewed; proofbd9b2926. Canonical tester1-only
+  deployment74612/127464 naturally0 at09:50:24.335045UTC, exact loaded SHA,
+  offline/inactive/nine-source identity retained. No foreign process changes.
+- Installed production contract112304/161676 naturally0 at
+  09:56:37.744480UTC: six captures,4096 initial section cells+16 negative-height
+  cells each; actual emptyY96/height bounds/wrong chunk checks pass. Six declared
+  server stone-to-glass writes positively reach the live client, while snapshot
+  reads retain stone. Real logout then all six detached snapshot/empty reads
+  pass; gateway-thread capture rejects before a null chunk read. These are
+  actual installed helper calls, not the earlier API-copy diagnostic.
+  All259 sampled end ticksHP20/unchanged inventory/use0/offlineHP20/Air300/
+  one filled+one empty/exact original checkpoint/runtime+cleanup[]. Own Java
+  diagnostic loader/files removed. Proof0e916e40/film71f765cd40.9s, full
+  original-size fixed2s sheet viewed: menu/join/stone headspace/fullhearts/logout.
+  FPS7/10/15/12/16/21 retained; no healthy gameplay rate or speedup claim.
+  Scanner counters show three accepted natural scans; repeated non-atomic
+  capture observations3.901/15.117/8.841ms are not six independent timing runs.
+- Current distant-table/flat/staircase/descend original gates,24 planned/six
+  rounds, launched19336/149160 at09:57:57.154800UTC, helper8b94acb4.
+  Exact114eeeb0/source/default/FPS20 guards and first-red stop retained;
+  teardown deliberately logs out before stopping. Current logout6 and
+  full native/adjacent integration remain pending; no source/release closure.
 - Assess: this establishes copy isolation and advances the open scanner
   ownership boundary; full-playthrough score/healthy current rate have not
   moved. The source candidate is uncommitted/unreleased until measured.
