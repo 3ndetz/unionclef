@@ -339,7 +339,48 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   native count1/handoff167120/50912 starts08:14:08.545863UTC with unchanged
   original48s/HP20/FPS20/inventory/runtime/logout gates, no synthetic geometry.
   Read-only host sampler119116/68644 runs alongside it, no extra game calls;
-  result/film review pending. Java/source/deployment remain unchanged.
+  result/film review pending at that checkpoint. Java/source/deployment remain unchanged.
+
+- Native count1/handoff167120/50912 naturally1 at08:19:10.532888UTC:
+  all19 rows already finished/live1filled1empty,18 ordinary Idle handoffs,
+  966 retained end ticksHP20/offlineHP20/Air300/runtime+cleanup[]. MedianFPS14
+  INVALID; not extra-emptying/collection coverage. Both complete original-size
+  fixed2s sheets actually viewed, proofb22b4fb1/film6e7ddc02/70.6s and
+  actual-review.json retained. Read-only host observer119116/68644 naturally0
+  at08:19:35.534482UTC, errors[]; actual gameplay overlaps host aggregateCPU
+  97.54/91.43% at08:18:25/08:18:58, not per-thread causal proof or blame.
+- New prospective native producer coverage follows GetToAirTask.java:115-121/
+  167-171 and FastNavigator.java:1476-1489 condition search, rather than assuming
+  every air route emits gridBFS. Same-tick task+active navigation+MovementSwim+
+  movement keys/oxygen deficit followed by full-air recovery is required.
+  Original grid-positive1PASS/1healthy coverageFAIL/4unrun remains unchanged.
+  Initial read-only witness ordering test exits1; separate v2 adds monotonic
+  positive sequence admission and passes one positive/ten negative boundaries.
+  Retrospective old traces have95/23 such swim ticks; coverage analysis only,
+  not new original PASS verdicts or current-payload trials. No mod change.
+- Read-only headroom114280/103704 records seventeen15s CPU intervals; only
+  after three consecutive<=75%/no bench lock at08:30:36.482505UTC does it
+  launch one declared native trial. Native-air protocol naturally1 at
+  08:36:47.089437UTC: medianFPS14 INVALID, all114 samples retained,2516
+  contiguous rows/2480 end ticks allHP20/minAir29. Positive actual air execution:
+  131 task/navigation/swim ticks, firstseq1978/full-air recoveryseq2229 with
+  thirteen full-air ticks. Last tick starts another rescue, Air37, not submerged;
+  final full replenishment is not claimed. Original blocked edge absent/grid111,
+  exact entry/checkpoint unchanged/deaths3327/runtime+cleanup[],30.625s offline
+  player/stats unchanged/inactive. Proof55d6fda9/film4bd5e074/184.1s: all four
+  complete original-size fixed2s sheets actually viewed and actual-review.json
+  retained. Night/resting-point/wander holds and late swim failure remain visible.
+  Aggregate headroom before launch does not guarantee gameplayFPS. No healthy
+  rate, adjacent audit or stable release; diagnose remaining stand headroom
+  before launching another campaign, preserving every original terminal.
+- Assess: the validated current gameplay rate remains absent; this advances
+  coverage/stand diagnosis, not the full-playthrough score. The task-local core
+  change remains unreleased and generic navigation is unchanged. Repeated
+  INVALID measurements cannot establish a behavioral regression or a fix rate.
+  Next scheduling check waits at most20min for90s aggregateCPU<=55%; this
+  stricter threshold is uncalibrated and never replaces actualFPS20. Only then
+  may one unchanged current count2/3/0/1 six-round campaign run, stopping at its
+  first red/INVALID. No process/GPU/settings intervention or automatic refresh.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no

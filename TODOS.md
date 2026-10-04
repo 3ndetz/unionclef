@@ -136,8 +136,14 @@
   explores591ticks/16.378m and empties on stone, six Idle handoffs/2196HP20ticks/
   live+offline1filled1empty; medianFPS8 INVALID. All actual films reviewed;
   originals retained, no healthy rate or timing comparison. Read-only stand-load
-  diagnosis precedes more campaigns. No anchor clicked, generic interaction
-  unchanged. Native/support/no-face/healthy-repeat and adjacent validation
+  diagnosis precedes more campaigns. Current native count1 also retainsHP20/
+  live+offline1filled1empty, but medianFPS14 INVALID; both film pages reviewed.
+  Separately declared air-task/navigation/swim/recovery coverage executes131
+  atomic swim ticks, all2480 end ticksHP20/minAir29/deaths3327, but medianFPS14
+  INVALID despite a CPU headroom precondition. All four film pages reviewed;
+  late rescue endsAir37, no final full replenishment or healthy native rate.
+  Original grid-positive coverage FAIL remains unchanged. No anchor clicked;
+  generic interaction is unchanged. Native/support/no-face/healthy-repeat and adjacent validation
   remain open before release.
   Daily58s edited HyperFrames report delivered to Telegram9917,1080p/30FPS,
   SHA684c1ede; original failures and incomplete denominators remain explicit.
