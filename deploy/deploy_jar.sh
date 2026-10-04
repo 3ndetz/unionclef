@@ -33,7 +33,21 @@ JAR=$(ls -t "$JAR_DIR"/unionclef-1.21.11-*.jar 2>/dev/null | grep -v -- '-all\|-
 # a guard that cries wolf is one that gets switched off. Classes are rewritten only when the code
 # actually changed, which makes "classes newer than jar" exactly the compileJava-then-deploy case
 # this exists to catch, and nothing else.
-NEWEST_CLS=$(find versions/*/build/classes build/classes tungsten/build/classes shredder/build/classes     -name '*.class' -newer "$JAR" -print -quit 2>/dev/null)
+NEWEST_CLS=""
+for cls_dir in versions/*/build/classes build/classes tungsten/build/classes shredder/build/classes; do
+    # A scoped clean build need not create every output directory; shredder is
+    # source reference only. Missing roots are normal, not a failed freshness
+    # check. Errors reading an existing root must still stop deployment.
+    [ -d "$cls_dir" ] || continue
+    if ! cls_candidate=$(find "$cls_dir" -name '*.class' -newer "$JAR" -print -quit); then
+        echo "ERROR: cannot check compiled bytecode in $cls_dir" >&2
+        exit 1
+    fi
+    if [ -n "$cls_candidate" ]; then
+        NEWEST_CLS="$cls_candidate"
+        break
+    fi
+done
 if [ -n "$NEWEST_CLS" ]; then
     echo "STALE JAR: $JAR is older than compiled bytecode ($NEWEST_CLS)" >&2
     echo "  the bench would measure code you did not build -- run:  ./gradlew :1.21.11:build" >&2
