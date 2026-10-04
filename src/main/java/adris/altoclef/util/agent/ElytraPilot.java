@@ -12,7 +12,7 @@ package adris.altoclef.util.agent;
  */
 public final class ElytraPilot {
 
-    public enum Mode { CLIMB, CRUISE, DESCENT, FLARE }
+    public enum Mode { CLIMB, CRUISE, DESCENT, FINAL, FLARE, SINK }
 
     public static final class Out {
         public float yaw, pitch;
@@ -24,7 +24,8 @@ public final class ElytraPilot {
 
     // Tuning, all found against the vanilla physics (ElytraPilotSim).
     static final double CLEARANCE = 20;          // cruise this high above the terrain ahead
-    static final double GLIDE_SLOPE = 14;        // degrees of the final descent
+    static final double GLIDE_SLOPE = 14;        // degrees of a steep approach (obstacles before the spot)
+    static final double PLANE_SLOPE = 7;         // degrees of a plane-like approach over clear ground
     static final double MAX_YAW_RATE = 7;        // degrees per tick
     static final double MAX_PITCH_RATE = 4.5;
     static final double K_GAMMA = 1.3;           // pitch per degree of flight-path error
@@ -46,15 +47,26 @@ public final class ElytraPilot {
         climbOut = 30;
     }
 
+    /** Take over a glide already in the air (a fall, a stopped flight): no climb-out. */
+    public void resetForLanding(float yaw, float pitch) {
+        reset(yaw, pitch);
+        climbOut = 0;
+        mode = Mode.DESCENT;
+    }
+
     public Mode mode() { return mode; }
 
     /**
      * One tick.
      * @param terrainAhead highest ground on the next ~80 blocks of the course (and at the target)
      * @param groundBelow  ground height right under the bot
+     * @param runwayClear  nothing sticks up into a shallow approach over the last ~50 blocks: land
+     *                     like a plane (long glide, round-out, touch down rolling); else steep
+     *                     approach and a pull-up over the spot
      */
     public Out step(double x, double y, double z, double vx, double vy, double vz,
-                    double tx, double ty, double tz, double terrainAhead, double groundBelow) {
+                    double tx, double ty, double tz, double terrainAhead, double groundBelow,
+                    boolean runwayClear) {
         Out o = new Out();
         double dx = tx - x, dz = tz - z;
         double dist = Math.hypot(dx, dz);
@@ -66,23 +78,37 @@ public final class ElytraPilot {
         if (boostCooldown > 0) boostCooldown--;
         if (climbOut > 0) climbOut--;
 
-        // Mode: a plane's profile -- climb out, cruise, start down on the glide slope, flare.
-        double slopeDist = Math.max(0, above - 2) / Math.tan(Math.toRadians(GLIDE_SLOPE));
-        // Flare early enough to bleed the speed: a fast glide floats a long way nose-up.
-        if (mode == Mode.FLARE && above > 12) {
-            mode = Mode.DESCENT; // flared too high (a rocket was still burning): go down again
+        // Mode: a plane's profile -- climb out, cruise, glide slope -- then a player's landing:
+        // over the spot pull up to bleed the speed (FLARE), then sink onto it slowly (SINK).
+        // Elytra barely slow down on a shallow glide; only a pull-up takes the speed off.
+        double slope = runwayClear ? PLANE_SLOPE : GLIDE_SLOPE;
+        double slopeDist = Math.max(0, above - 1) / Math.tan(Math.toRadians(slope));
+        boolean nearEnd = climbOut == 0 && dist < 40; // never "land" right after take-off
+        boolean landing = mode == Mode.FLARE || mode == Mode.SINK;
+        if (landing && dist > 45) {
+            landing = false; // drifted off: fly a new approach
         }
-        if (mode == Mode.FLARE || (above < 5 && dist < 16) || (above < 9 && dist < 8 + speed * 10)) {
-            mode = Mode.FLARE;
-        } else if (dist < slopeDist + 6 && climbOut == 0) {
+        if (landing) {
+            if (mode == Mode.FLARE && speed < 0.5) mode = Mode.SINK;
+            else if (mode == Mode.SINK && speed > 0.95 && above > 4) mode = Mode.FLARE;
+        } else if (runwayClear && (mode == Mode.FINAL || nearEnd && above < 2.2 && dist < 35)) {
+            mode = Mode.FINAL; // round-out: a few blocks over the ground, ease the sink to nothing
+        } else if (nearEnd && dist < 6 + speed * 12 && (!runwayClear && above < 18 || above > 6)) {
+            mode = Mode.FLARE; // steep approach, or a plane approach that came in far too high
+        } else if (dist < slopeDist + 6 + (runwayClear ? speed * 10 : 0) && climbOut == 0) {
             mode = Mode.DESCENT;
-        } else if (climbOut > 0 || y < cruise - 4) {
+        } else if (climbOut > 0 || y < cruise - 8) {
             mode = Mode.CLIMB;
         } else {
             mode = Mode.CRUISE;
         }
+        // Higher ground than the landing spot still ahead and not far below: climb over it first.
+        boolean ridge = dist > 50 && terrainAhead > ty + 2 && y - terrainAhead < 12
+                && mode != Mode.FLARE && mode != Mode.SINK && mode != Mode.FINAL;
+        if (ridge) mode = Mode.CLIMB;
         // Terrain right under the wings beats any plan.
-        boolean low = y - groundBelow < 6 && mode != Mode.FLARE && dist > 16;
+        boolean low = y - groundBelow < 6 && dist > 16 && mode != Mode.FLARE && mode != Mode.SINK
+                && mode != Mode.FINAL && !(mode == Mode.DESCENT && runwayClear && dist < 50);
         if (low) mode = Mode.CLIMB;
 
         double gammaCmd;
@@ -91,24 +117,36 @@ public final class ElytraPilot {
             case CLIMB -> {
                 gammaCmd = Math.max(8, Math.min(30, (cruise - y) * 0.9));
                 if (speed < 0.9 && boostCooldown == 0) gammaCmd = Math.min(gammaCmd, 4); // no stall
-                wantBoost = speed < 1.3 || low;
+                // Close to the descent a rocket only adds speed the landing must bleed off.
+                wantBoost = low || ridge || speed < 0.8 || speed < 1.3 && (climbOut > 0 || dist > slopeDist + 30);
             }
             case CRUISE -> {
-                gammaCmd = Math.max(-6, Math.min(6, (cruise - y) * 0.5));
-                // No rocket close to the descent: it would still burn on the approach.
-                wantBoost = dist > slopeDist + 45 && (speed < 1.1 || (cruise - y > 2 && speed < 1.25));
+                // Soar: glide down gently through an 8-block band, a rocket only at its bottom
+                // or when the speed sags -- long quiet glides between short pushes.
+                gammaCmd = Math.max(-4, Math.min(6, (cruise - y) * 0.5));
+                wantBoost = dist > slopeDist + 45 && (speed < 0.95 || (cruise - y > 6 && speed < 1.25));
             }
             case DESCENT -> {
                 double path = Math.toDegrees(Math.atan2(Math.max(above - 1, 0), Math.max(dist - 3, 1)));
-                gammaCmd = -Math.max(3, Math.min(30, path));
-                // Too fast for the approach: shallower, and let the flare take the height off.
-                if (speed > 1.35) gammaCmd = Math.max(gammaCmd, -8);
-                // A hill between here and the target: stay above it before going down.
-                if (dist > 40 && y - terrainAhead < 12) gammaCmd = Math.max(gammaCmd, 4);
+                gammaCmd = -Math.max(2, Math.min(runwayClear ? 12 : 30, path));
+                // Steep approach: too fast means shallower, and the pull-up takes the rest. A plane
+                // approach just keeps its slope -- touching down fast at 7 degrees is harmless.
+                if (speed > 1.35 && !runwayClear) gammaCmd = Math.max(gammaCmd, -8);
                 // Below the slope (a long, shallow glide ran out of height): add power.
-                wantBoost = path < GLIDE_SLOPE - 7 && above < 12 && dist > 25;
+                wantBoost = path < slope - (runwayClear ? 4 : 7) && above < 12 && dist > 25
+                        || speed < 0.7 && dist > 40; // a long descent from high up ran out of speed
             }
-            default -> { // FLARE: nose up, bleed speed, sink onto the spot
+            case FINAL -> {
+                gammaCmd = above > 1.2 ? -4 : -1.5; // flatten out and let it settle
+                wantBoost = false;
+            }
+            case SINK -> {
+                // Slow, straight at the spot: steep enough to come down, never a dive.
+                double path = Math.toDegrees(Math.atan2(Math.max(above, 0), Math.max(dist, 1)));
+                gammaCmd = -Math.max(8, Math.min(35, path));
+                wantBoost = false;
+            }
+            default -> { // FLARE
                 gammaCmd = 0;
                 wantBoost = false;
             }
@@ -116,15 +154,18 @@ public final class ElytraPilot {
 
         float pitchCmd;
         if (mode == Mode.FLARE) {
-            // Nose up bleeds speed -- unless a rocket still pushes, then it is a zoom climb.
-            pitchCmd = boostCooldown > 0 ? 5 : speed > 0.6 ? -25 : -8;
+            // A hard pull-up -- unless a rocket still pushes, then it would be a zoom climb.
+            pitchCmd = boostCooldown > 0 ? 5 : -35;
+            integral = 0;
+        } else if (mode == Mode.SINK && above < 2) {
+            pitchCmd = -8; // round out over the ground
             integral = 0;
         } else {
             double err = gammaCmd - gamma;
             integral = Math.max(-12, Math.min(12, integral + err * K_INT));
             pitchCmd = (float) -(gammaCmd + K_GAMMA * err + integral);
             // Stall guard: without thrust and slow, the nose goes down to win speed back.
-            if (speed < 0.5 && boostCooldown == 0) pitchCmd = Math.max(pitchCmd, 12);
+            if (speed < 0.5 && boostCooldown == 0 && mode != Mode.SINK) pitchCmd = Math.max(pitchCmd, 12);
             pitchCmd = Math.max(-40, Math.min(40, pitchCmd));
         }
 
@@ -138,7 +179,7 @@ public final class ElytraPilot {
             o.boost = true;
             boostCooldown = (int) ROCKET_TICKS;
         }
-        o.arrived = mode == Mode.FLARE && dist < 4 && above < 3;
+        o.arrived = (mode == Mode.FLARE || mode == Mode.SINK) && dist < 4 && above < 3;
         o.yaw = yaw;
         o.pitch = pitch;
         o.mode = mode;

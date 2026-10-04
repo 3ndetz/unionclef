@@ -37,6 +37,12 @@ public final class ElytraFlight {
     private static final ElytraPilot pilot = new ElytraPilot();
     private static boolean pilotReady;
     private static volatile ElytraPilot.Out lastOut;
+    // Fall watch: the wings open in a long fall, and a glide nobody steers is landed. "armed"
+    // marks a glide that is ours (we opened the wings, or our flight was stopped) -- a player
+    // flying this account by hand is never taken over.
+    private static volatile boolean fallGlide = true;
+    private static boolean armed, rescue;
+    private static int deployCooldown;
     private static boolean glideSent;
     private static boolean registered;
 
@@ -44,12 +50,21 @@ public final class ElytraFlight {
 
     private ElytraFlight() {}
 
-    /** Start a flight; call on the client thread. */
-    public static synchronized Map<String, Object> start(double x, double y, double z) {
+    /** Hook the client tick once: flights, and the fall watch between flights. */
+    public static synchronized void register() {
         if (!registered) {
             ClientTickEvents.END_CLIENT_TICK.register(ElytraFlight::tick);
             registered = true;
         }
+    }
+
+    /** Fall watch on/off (on by default): open the wings in a long fall and land. */
+    public static void setFallGlide(boolean on) { fallGlide = on; }
+
+    /** Start a flight; call on the client thread. */
+    public static synchronized Map<String, Object> start(double x, double y, double z) {
+        register();
+        rescue = false;
         tx = x;
         ty = y;
         tz = z;
@@ -66,6 +81,7 @@ public final class ElytraFlight {
         if (phase != Phase.DONE && phase != Phase.FAILED) {
             phase = Phase.IDLE;
             reason = "stopped";
+            armed = true; // still gliding: the fall watch lands it close by
             MinecraftClient.getInstance().execute(ElytraFlight::putRocketsAway);
         }
     }
@@ -126,7 +142,10 @@ public final class ElytraFlight {
 
     private static void tick(MinecraftClient client) {
         Phase ph = phase;
-        if (ph == Phase.IDLE || ph == Phase.DONE || ph == Phase.FAILED) return;
+        if (ph == Phase.IDLE || ph == Phase.DONE || ph == Phase.FAILED) {
+            watchFall(client);
+            return;
+        }
         ClientPlayerEntity p = client.player;
         if (p == null || client.world == null || client.interactionManager == null) {
             fail("not in game");
@@ -213,12 +232,65 @@ public final class ElytraFlight {
         }
         var v = p.getVelocity();
         ElytraPilot.Out o = pilot.step(p.getX(), p.getY(), p.getZ(), v.x, v.y, v.z,
-                tx, landingY(client), tz, terrainAhead(client, p), top(client, p.getX(), p.getZ()));
+                tx, landingY(client), tz, terrainAhead(client, p), top(client, p.getX(), p.getZ()),
+                runwayClear(client, p));
         lastOut = o;
         p.setYaw(o.yaw);
         p.setPitch(o.pitch);
-        if (o.boost && !boost(client, p)) pilot.boostFailed();
-        if (o.arrived) finish("arrived");
+        if (o.boost && !rescue && !boost(client, p)) pilot.boostFailed(); // a rescue glides, no rockets
+        if (o.arrived) finish(rescue ? "glided down" : "arrived");
+    }
+
+    /** Between flights: open the wings in a long fall; land a glide that is ours. */
+    private static void watchFall(MinecraftClient client) {
+        ClientPlayerEntity p = client.player;
+        if (!fallGlide || p == null || client.world == null) return;
+        if (deployCooldown > 0) deployCooldown--;
+        boolean gliding = adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p);
+        if (p.isOnGround() || p.isTouchingWater() || p.isInLava() || p.hasVehicle() || p.isClimbing()
+                || p.getAbilities().flying || !p.getEquippedStack(EquipmentSlot.CHEST).isOf(Items.ELYTRA)) {
+            armed = false;
+            return;
+        }
+        double height = p.getY() - top(client, p.getX(), p.getZ());
+        if (gliding) {
+            if (armed) startRescue(client, p, height);
+            return;
+        }
+        // About 6 blocks of free fall so far and more to go: a bucket clutch at this speed is a
+        // gamble, wings are not.
+        if (p.getVelocity().y < -0.6 && height > 4 && deployCooldown == 0) {
+            p.networkHandler.sendPacket(new ClientCommandC2SPacket(p, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+            deployCooldown = 5;
+            armed = true;
+        }
+    }
+
+    /** Land the glide at a spot ahead along the way it is going. */
+    private static void startRescue(MinecraftClient client, ClientPlayerEntity p, double height) {
+        var v = p.getVelocity();
+        double hs = Math.hypot(v.x, v.z);
+        double ahead = Math.max(14, Math.min(60, height * 2.5));
+        double dirX, dirZ;
+        if (hs > 0.1) {
+            dirX = v.x / hs;
+            dirZ = v.z / hs;
+        } else { // straight down: wherever the bot faces
+            double yawRad = Math.toRadians(p.getYaw());
+            dirX = -Math.sin(yawRad);
+            dirZ = Math.cos(yawRad);
+        }
+        tx = p.getX() + dirX * ahead;
+        tz = p.getZ() + dirZ * ahead;
+        ty = top(client, tx, tz);
+        ticks = takeoffTicks = boostCooldown = rocketsUsed = glideWait = 0;
+        pilot.resetForLanding(p.getYaw(), p.getPitch());
+        pilotReady = true;
+        lastOut = null;
+        rescue = true;
+        armed = false;
+        reason = "rescue";
+        phase = Phase.FLYING;
     }
 
     /** Ground height at x,z from the heightmap; the world bottom where the chunk is not loaded. */
@@ -231,6 +303,19 @@ public final class ElytraFlight {
         int cx = (int) Math.floor(tx) >> 4, cz = (int) Math.floor(tz) >> 4;
         if (!client.world.getChunkManager().isChunkLoaded(cx, cz)) return ty;
         return top(client, tx, tz);
+    }
+
+    /** Nothing standing into a 7-degree approach over the last 50 blocks: land like a plane. */
+    private static boolean runwayClear(MinecraftClient client, ClientPlayerEntity p) {
+        double ly = landingY(client);
+        double dx = p.getX() - tx, dz = p.getZ() - tz, d = Math.max(Math.hypot(dx, dz), 1e-6);
+        double tan = Math.tan(Math.toRadians(7));
+        for (double k = 2; k <= Math.min(50, d); k += 2) {
+            double h = top(client, tx + dx / d * k, tz + dz / d * k);
+            // Level ground is the runway itself; anything a block up, or into the slope, is not.
+            if (h > ly + 0.9 && h > ly + k * tan - 1.5) return false;
+        }
+        return true;
     }
 
     /** Highest ground every 8 blocks along the course, up to 120 blocks ahead. */

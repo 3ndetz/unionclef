@@ -343,6 +343,8 @@ public class AltoClef implements ModInitializer {
             throw new IllegalStateException("AltoClef already loaded!");
         }
         instance = this;
+        // Always-on elytra watch: open the wings in a long fall and glide down (agent tools).
+        adris.altoclef.util.agent.ElytraFlight.register();
     }
 
     public void onInitializeLoad() {
