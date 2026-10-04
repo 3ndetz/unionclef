@@ -16383,6 +16383,17 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   FPS22.5..30, cleanup[]. Independent complete gate/window/health/hash audit0
   at13:17:15.743750UTC. All42 full fixed2s film sheets actually viewed;
   final hash-bound review87736/144704 naturally0 at13:17:40.447474UTC.
+  Current prospective native6 stops naturally after three original PASS at
+  median23/24/25FPS and a fourth healthy26FPS coverageFAIL; two unrun.
+  Fourth Air never below184, zero GetToAir ticks, ordinary wander reaches
+  bank and dry NightShelter: absent rescue exposure, not witnessed failed
+  rescue. All four independent audits/full16 fixed2s pages reviewed.
+  Current bucket24 stops after first count2 median16FPS INVALID,23 unrun;
+  all1058 end ticksHP20, exact conserved1filled+1empty, positive completion/
+  active Idle handoff/runtime/logout gates; independent audit and both full
+  film pages reviewed. Original terminals unchanged, no automatic retries.
+  Request-owned placement budget alone is ready for narrow source commit;
+  complete native/bucket rates, remaining snapshots and full59 remain open.
   Six fresh currentc4f native trials155596/87632 start13:17:55.606951UTC;
   unchanged checkpoint120s/HP20/FPS20/atomic swim-recovery/logout gates.
   No completed current native rate yet; earlier114

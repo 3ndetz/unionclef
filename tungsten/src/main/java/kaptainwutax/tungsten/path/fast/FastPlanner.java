@@ -364,8 +364,6 @@ public final class FastPlanner {
         synchronized (AT_GOAL_WHO) { AT_GOAL_WHO.clear(); }
     }
 
-    public static volatile int placeBudget = Integer.MAX_VALUE;
-
     /**
      * The world this thread's search is reading, so {@link #relax} can refuse a hazardous
      * destination without every generator having to pass it down. Set for the duration of one
@@ -375,7 +373,7 @@ public final class FastPlanner {
     private static final ThreadLocal<WorldView> SEARCH_WORLD = new ThreadLocal<>();
 
     /**
-     * Blocks in the pocket THE EXECUTOR CAN REACH, i.e. the honest value for {@link #placeBudget}.
+     * Blocks in the pocket THE EXECUTOR CAN REACH, captured as {@link StartState#placeable()}.
      *
      * <p>This counted every {@link net.minecraft.item.BlockItem} in the inventory, which is wider
      * than the executor: tungsten never manipulates the inventory itself. What it can select on its
@@ -610,16 +608,13 @@ public final class FastPlanner {
                                        java.util.function.Predicate<BlockPos> condition,
                                        StartState startState) {
         long t0 = System.currentTimeMillis();
-        // ASK HOW MANY BLOCKS WE HAVE, EVERY PLAN. DO NOT TRUST A STATIC SOMEONE ELSE SET.
-        // placeBudget starts at MAX_VALUE and had exactly ONE writer, FastNavigator:443. Any plan
-        // reached by another route — which includes every step of the @gamer playthrough, since
-        // that goes through CustomBaritoneGoalTask — planned bridges and pillars against an
-        // infinite supply of blocks the bot did not have. Measured: the bot stood at a pond edge
-        // for ten minutes while the planner asked for a one-block bridge, and the executor
-        // answered "Bridge place aborted (no block in hand)" every tick — placeCalled=1219 with
-        // placeDeferred=0 and placeInRange=0, i.e. it never even got as far as the distance check.
-        // A move you cannot perform is not a move, so the count is taken here, where the plan is.
-        placeBudget = startState.placeable();
+        // Port request ownership from baritone/pathing/movement/CalculationContext.java:97-106:
+        // hasThrowaway belongs to one calculation. A client-captured count is not private when
+        // copied into a static: six controlled loaded-planner overlaps let a zero-block request
+        // plan a bridge using another request's eight blocks, while both sequential controls
+        // were correct. Pass this immutable count through the generators; never publish it
+        // to another search. World, tool and protection-hook snapshots remain separate C4.1 work.
+        final int placeBudget = startState.placeable();
         // PLAN FROM A CELL THAT ACTUALLY HAS A FLOOR.
         // 57 of 95 plans died with the START node expanded and childless, because
         // supportTop said NaN there. Faking support was tried and REJECTED (nav_water
@@ -812,7 +807,7 @@ public final class FastPlanner {
             // e1=134 against snap=5 says my fix targets the smaller half; measure the split
             // before touching it again.
             int beforeKids = open.count();
-            expand(world, current, support, goal, map, open, scratch);
+            expand(world, current, support, goal, map, open, scratch, placeBudget);
             if (expanded == 1 && open.count() == beforeKids) planStartSupportedNoKids++;
         }
         } finally {
@@ -883,14 +878,14 @@ public final class FastPlanner {
     // ── move generation ──────────────────────────────────────────────────────
 
     private static void expand(WorldView world, Node from, double support, BlockPos goal,
-                               NodeMap map, Heap open, BlockPos.Mutable scratch) {
+                               NodeMap map, Heap open, BlockPos.Mutable scratch, int placeBudget) {
         // A solid pool bottom does not turn swimming into ground movement.
         // Ground stepping also offers parkour, whose dry sprint range cannot be
         // assumed while submerged. Water strokes and bank exits live in special().
         if (!isWater(world, from.x, from.y, from.z, scratch)) {
             // straight + diagonal steps and one-block climbs
             for (int[] d : CARDINALS) {
-                step(world, from, support, d[0], d[1], goal, map, open, scratch, ActionCosts.WALK_ONE_BLOCK_COST);
+                step(world, from, support, d[0], d[1], goal, map, open, scratch, ActionCosts.WALK_ONE_BLOCK_COST, placeBudget);
             }
             for (int[] d : DIAGONALS) {
                 // no corner cutting: both orthogonal cells must be passable too
@@ -905,7 +900,7 @@ public final class FastPlanner {
                         || hazardAt(world, from.x, from.y, from.z + d[1], scratch)
                         || hazardAt(world, from.x, from.y - 1, from.z + d[1], scratch)) continue;
                 step(world, from, support, d[0], d[1], goal, map, open, scratch,
-                        ActionCosts.WALK_ONE_BLOCK_COST * SQRT2);
+                        ActionCosts.WALK_ONE_BLOCK_COST * SQRT2, placeBudget);
             }
         } else if (TungstenConfig.get().moveBreakThrough) {
             // Keep planned digging available from a shallow pool.
@@ -914,9 +909,9 @@ public final class FastPlanner {
         }
         if (TungstenConfig.get().planPlaceMoves) {
             if (TungstenConfig.get().movePlaceBridge)
-                for (int[] d : CARDINALS) placeAcross(world, from, d[0], d[1], support, goal, map, open, scratch);
+                for (int[] d : CARDINALS) placeAcross(world, from, d[0], d[1], support, goal, map, open, scratch, placeBudget);
             if (TungstenConfig.get().movePillar)
-                pillarUp(world, from, goal, map, open, scratch);
+                pillarUp(world, from, goal, map, open, scratch, placeBudget);
         }
         // Dig straight down (G1) — the descent move that reaches ore. Gated internally on allowBreak.
         if (TungstenConfig.get().moveDigDown)
@@ -1314,7 +1309,7 @@ public final class FastPlanner {
     /** One horizontal move, trying the same level, one up, and drops. */
     private static void step(WorldView world, Node from, double support, int dx, int dz,
                              BlockPos goal, NodeMap map, Heap open, BlockPos.Mutable scratch,
-                             double baseCost) {
+                             double baseCost, int placeBudget) {
         int nx = from.x + dx, nz = from.z + dz;
 
         // Mining is offered ALONGSIDE stepping, not only as a last resort. The loop below
@@ -1390,7 +1385,7 @@ public final class FastPlanner {
             // ...AND THE PLACE POLICY HAS TO ALLOW BUILDING AT ALL. Both of the executor's throwaway
             // gates (MovementPillar.java:445-447, MovementTraverse.java:556-558) return false the
             // moment allowPlace is off, so with it off this climb is a move no executor performs.
-            // placeBudget does not cover it: it is MAX_VALUE until a caller sets it.
+            // This calculation's budget does not replace the explicit placement-policy check.
             boolean climb = rise > PlayerFit.JUMP_HEIGHT;
             if (climb && (!TungstenConfig.get().planPlaceMoves || !TungstenConfig.get().allowPlace
                     || placeBudget <= 0)) {
@@ -1602,7 +1597,7 @@ public final class FastPlanner {
      */
     private static void placeAcross(WorldView world, Node from, int dx, int dz, double support,
                                     BlockPos goal, NodeMap map, Heap open,
-                                    BlockPos.Mutable scratch) {
+                                    BlockPos.Mutable scratch, int placeBudget) {
         if (from.placedDepth >= placeBudget) return;   // no more blocks in the pocket
         if (dx != 0 && dz != 0) return;                          // cardinal only
         int nx = from.x + dx, nz = from.z + dz;
@@ -1663,7 +1658,7 @@ public final class FastPlanner {
      * queue), and PillarTask already performs the manoeuvre when navigation asks for it.
      */
     private static void pillarUp(WorldView world, Node from, BlockPos goal,
-                                 NodeMap map, Heap open, BlockPos.Mutable scratch) {
+                                 NodeMap map, Heap open, BlockPos.Mutable scratch, int placeBudget) {
         if (from.placedDepth >= placeBudget) return;   // no more blocks in the pocket
         int upY = from.y + 1;
         // Room for the body one block higher, and nothing already occupying our own cell.
@@ -1792,7 +1787,7 @@ public final class FastPlanner {
      * block above it both matter only when the tower has to MINE its way up, and this planner only
      * ever pillars into a cell the body already fits in ({@code bodyFits} at {@code y+1} spans
      * {@code y+1} and {@code y+2}). The inventory clauses are not repeated either — {@link
-     * #placeBudget} and {@link kaptainwutax.tungsten.path.PlaceRules} model those, and asking the
+     * StartState#placeable()} and {@link kaptainwutax.tungsten.path.PlaceRules} model those, and asking the
      * main hand from the search thread would refuse every pillar planned while a pickaxe is held,
      * which the executor's equip step then fixes (MovementPillar.java:417-436).
      *
