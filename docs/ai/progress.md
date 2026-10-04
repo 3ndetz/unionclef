@@ -394,7 +394,7 @@ Completed Windows repair:
 ### Plan
 
 - [x] Original42 objectives, exact case log seals and complete actual film review.
-- [ ] Commit tested preparation/lifetime/observation bench changes narrowly;
+- [x] Commit tested preparation/lifetime/observation bench changes narrowly;
   retain Java/config/version/release WIP separately.
 - [ ] Native six exact cp1003-0401-t649 raw120s replays with original pack,
   all-tickHP20/FPS20/death3327/strict byte windows and25s offline hold.
@@ -426,6 +426,71 @@ Completed Windows repair:
   release scope. Next measurement is the exact saved native entry, not another
   artificial setup patch. VIDEO's heavy phase is complete; no foreign process,
   controller, Docker service or host GUI changed.
+
+STOP CONDITION CHECK:
+- Is the work actually finished?        -> no
+- Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
+- Did the customer say to stop?         -> no
+VERDICT: work continues immediately with the current focused pass.
+
+## 2026-10-04 — native coverage failure and retained bucket interaction
+
+### Investigate
+
+- Bench commit b9400fb42d2cfee412a0440f81b80a16ac5349a5 is owner-authored,
+  pushed to main/1.21.11; exact Wiki run37171612372 SUCCESS. Six tracked core/
+  config/version/navigation changes and the057 release draft remain separate.
+- Original six-native campaign72336/wrapper141524/log053901 naturally exits1
+  at02:50:33.732261UTC. Two executed: one PASS, one healthy FAIL, zero INVALID,
+  four unrun. No retry or new Java build/deployment. Same90faa8a4 candidate.
+- Both cases have medianFPS26, every retained tickHP20, finalHP20/deaths3327,
+  unchanged original player pack/checkpoint, strict runtime/cleanup[] and
+  unchanged offline player/stats over28.56/29.61s. First case has102 grid-log
+  witnesses; second has zero and fails the unchanged positive-producer gate.
+  No blocked original edge witnessed. This remains a failed campaign.
+- Actual end-client-tick rows: case1 2465/minAir92/air-task230/no digging child;
+  case2 2491/minAir124/air-task69/no digging child. Raw savedAir225 differs
+  from first runtimeAir300; do not claim the runtime begins at225.
+- Source CustomBaritoneGoalTask's grid log is on its distance>4 long-haul
+  branch. FastNavigator's nearest condition uses FastPlanner; absent grid logs
+  cannot establish absent oxygen navigation. The mandatory witness is not
+  weakened or retrospectively replaced.
+- Film2 shows long extra-bucket/interaction/adjacent holds, repeated FINISHED
+  at(-190,62,1022) for adjacent(-190,61,1022). Actual late ticks show stationary
+  body(-189.73046,62,1022.39641), water=true/ground=true/submerged=false,
+  all movement owners inactive, HP20/Air300. Target block and actual failed
+  reach/click cause are not yet measured. Night bed/wander is recorded context,
+  not a resumed operator-deferred night-policy task.
+
+### Plan
+
+- [x] Retain original first-red terminal and review all actual films/pages.
+- [x] Save and verify a light offline checkpoint of repeat2 before any reset.
+- [ ] Measure actual target/reach/raycast/click state on that checkpoint.
+- [ ] Correct the measured core cause and run repeated target plus adjacent
+  regressions; complete strict native coverage without erasing this red.
+- [ ] Scoped stable057/public class proof, edited HyperFrames/Telegram report,
+  then the next full59 audit; no release while native remains red.
+
+### Implement
+
+- Freezer54152/wrapper44428/log055204 naturally0 at02:52:29.170789UTC.
+  Both actual films/all eight fixed2s pages inspected before the journal:
+  native-oxygen-film-review-20261004-055204/actual-review.json SHA
+  0cba32e7539c4d08b61b3782ba1f733340664391c18b4c83b1e70dfb254e64a4.
+  Sampling claim only, not uninterrupted playback or every frame.
+- Save154620/wrapper72828/log060725 naturally0 at03:07:52.482462UTC:
+  native-waterbucket-hold-20261004-054502 has80,561,935 world bytes,
+  HP20/Air300/21 inventory stacks and exact terminal player/stat fields.
+  PlayerSHA eacffb2b2bee8ae37813ec4d292027ffe5e55aaa79dbc721e6c54ff16d19ce93;
+  statsSHA cae204a7dd3cd36ea142aada69ae63367da1856fb3a8f1f1f56c639c038237b6.
+  Offline/inactive checked before/after; budget verified conservatively with
+  whole-world size, no old checkpoint removed. Original cp1003 unchanged.
+- Assessment: no core comparative improvement claimed. Artificial hazard24
+  and adjacent42 are complete; native1/2 remains red because the required
+  branch witness is absent. The new checkpoint reduces reproduction to the
+  actual bucket hold instead of replaying inventory acquisition. Next pass
+  measures that hold's mechanism; no speculative goal/policy patch.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no

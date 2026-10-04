@@ -68,7 +68,21 @@
   Original42 navigation cases now all pass on the same candidate, minimum
   averageFPS29, all42 films/pages inspected at fixed2s cadence. Evidence:
   adjacent-route-film-review-20261004-052055/actual-review.json. Native six
-  exact checkpoint replays remain open; this does not establish native safety.
+  exact checkpoint campaign now ends after one PASS/one healthy coverage FAIL,
+  four unrun: repeat2 has zero required grid-producer witnesses at medianFPS26,
+  all-tickHP20/minAir124/endAir300/deaths3327. Original gate remains failed;
+  do not infer absent air navigation from this branch-specific log. All two
+  films/eight2s pages reviewed: native-oxygen-film-review-20261004-055204/
+  actual-review.json. Native safety and stable release remain open.
+- [ ] **Extra water-bucket interaction repeatedly accepts adjacency without completing (2026-10-04).**
+  Taking this focused diagnosis within the current full59/native pass. Native
+  repeat2 has743 ticks with GetRidOfExtraWaterBucketTask/InteractWithBlockTask/
+  GetAdjacentToBlockTask, stationary late body and repeated FINISHED at the
+  adjacent goal. Full hearts/air are retained; cause is not established by the
+  video alone. Freeze the actual offline endpoint as
+  native-waterbucket-hold-20261004-054502,76MB, exact terminal player/stat fields
+  preserved and no checkpoint pruning. Investigate actual target block, reach,
+  raycast and click counters before changing goal completion or bucket policy.
 - [x] **FIXED: a lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside
