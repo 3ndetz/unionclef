@@ -1,0 +1,14 @@
+.hyperframes/
+.media/
+snapshots/
+export-review/
+source-frame-*.png
+source-contact.png
+dependency-*.json
+verify-*.json
+telegram-attempt.json
+telegram-receipt.json
+AGENTS.md
+CLAUDE.md
+assets/*.mp4
+node_modules/

@@ -1,0 +1,7 @@
+unionclef: parallel searches now keep their own block stock.
+
+A zero-block search previously borrowed the stock of an overlapping eight-block search: 6/6 wrong bridge plans on the same private virtual fixture. After the fix: 0/6; the stocked request still passes6/6. The diagram illustrates planner-query results, not recorded gameplay before/after.
+
+Adjacent navigation:42/42 PASS across seven courses, six repeats each. Native rescue campaign:3 PASS,1 missing-coverage FAIL,2 unrun. Bucket campaign: first16FPS INVALID,23 unrun. Full rescue coverage and the original full59 lava stall remain open; no new stable release.
+
+Commit: https://github.com/3ndetz/unionclef/commit/7586c25b612a41ea344da4970acb8c1ffc5d1102

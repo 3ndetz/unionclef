@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><body><template><style>
+@font-face{font-family:"Montserrat";src:url("assets/montserrat-900.ttf");font-weight:900}
+@font-face{font-family:"IBM Plex Mono";src:url("assets/ibm-plex-mono-400.ttf");font-weight:400}
+*{box-sizing:border-box}
+body{margin:0;background:#181c16}
+.scene{position:absolute;inset:0;padding:56px 60px 42px;background:#181c16;color:#eeeede;font-family:"IBM Plex Mono",monospace;display:flex;flex-direction:column;gap:28px;overflow:hidden}
+.kicker{font-size:26px;color:#c8df81;letter-spacing:2px;display:flex;justify-content:space-between}
+h1,h2,p{margin:0}
+h1{font-family:"Montserrat",sans-serif;font-weight:900;font-size:64px;line-height:1.12}
+h2{font-family:"Montserrat",sans-serif;font-weight:900;font-size:42px;line-height:1.15}
+p{font-size:30px;line-height:1.4}
+.label{font-size:26px;color:#b7c0aa;line-height:1.4}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:1280px 460px;gap:60px;align-items:center}
+.media{width:1280px;height:720px;position:relative;overflow:hidden;border:2px solid #505b42}
+video{width:100%;height:100%;object-fit:contain;display:block}
+.side{display:flex;flex-direction:column;gap:32px}
+.stat{font-family:"Montserrat",sans-serif;font-weight:900;font-size:90px;line-height:1.08;color:#c8df81}
+.rule{height:3px;width:100%;background:#505b42;display:block;transform-origin:left}
+.track{height:16px;width:100%;background:#505b42;overflow:hidden}
+.fill{width:100%;height:100%;background:#c8df81;transform-origin:left}
+.footer{font-size:26px;color:#b7c0aa;display:flex;justify-content:space-between;gap:32px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;align-items:center;min-height:0}
+.panel{display:flex;flex-direction:column;gap:24px;border:2px solid #505b42;padding:32px;min-height:560px}
+.diagram{display:flex;gap:12px;height:64px;align-items:center;justify-content:space-between}
+.cell{width:70px;height:46px;border:2px solid #c8df81;background:#c8df81;display:block}
+.cell.missing{background:#181c16;border-style:dashed;border-color:#b7c0aa}
+.query-note{max-width:1500px;font-size:30px;line-height:1.4}
+.dual-media{height:493px;width:876px;border:2px solid #505b42;overflow:hidden}
+.dual{display:flex;flex-direction:column;gap:18px}
+.wide{display:flex;flex-direction:column;justify-content:center;gap:40px;flex:1;min-height:0}
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.limit{display:flex;flex-direction:column;gap:20px;padding:32px;border:2px solid #505b42}
+
+#query-root{position:absolute;inset:0;width:100%;height:100%}
+</style><div id="query-root" data-composition-id="query" data-width="1920" data-height="1080" data-duration="14"><div class="scene">
+<div class="kicker"><span>UNIONCLEF / CONTROLLED QUERY</span><span>04 OCT 2026</span></div>
+<h1 id="query-title">Zero stock. Seven missing floor cells.</h1><div class="rule" id="query-rule"></div><p class="query-note">Two requests overlap on the same private virtual bridge: one has 0 blocks, the other has 8.</p><div class="split"><div class="panel"><div class="label">BEFORE / SHARED STOCK</div><div class="diagram"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div><div class="stat">6 / 6</div><h2>Wrong bridge plans</h2><div class="track"><div class="fill"></div></div><p>The empty request borrows the other request’s stock.</p></div><div class="panel"><div class="label">AFTER / OWN STOCK</div><div class="diagram"><span class="cell"></span><span class="cell missing"></span><span class="cell missing"></span><span class="cell missing"></span><span class="cell missing"></span><span class="cell missing"></span><span class="cell missing"></span><span class="cell missing"></span><span class="cell"></span></div><div class="stat">0 / 6</div><h2>Wrong bridge plans</h2><div class="track"></div><p>The empty request refuses. The stocked request still passes 6 / 6.</p></div></div><div class="footer"><span>Illustration of retained planner results</span><span>Private query · no live gameplay</span></div>
+</div></div><script>
+const tl=gsap.timeline({paused:true});
+tl.fromTo("#query-title",{x:-28,opacity:0},{x:0,opacity:1,duration:0.55,ease:"power3.out"},0.1);
+tl.fromTo("#query-rule",{scaleX:0},{scaleX:1,duration:0.6,ease:"power2.out"},0.2);
+const stats=document.querySelectorAll(".stat");
+const fills=document.querySelectorAll(".fill");
+if(stats.length) tl.fromTo(stats,{y:22,opacity:0},{y:0,opacity:1,duration:0.55,ease:"power4.out",stagger:0.08},0.4);
+if(fills.length) tl.fromTo(fills,{scaleX:0},{scaleX:1,duration:1,ease:"power2.out",stagger:0.08},0.5);
+window.__timelines["query"]=tl;
+</script></template></body></html>

@@ -183,6 +183,28 @@ Previous evidence: [archive/04-10-2026-bucket-and-scanner-evidence.md](archive/0
 - Current read-only host-load155820/96136 naturally0 at13:52:01.651519UTC: three later5s CPU intervals67.044/62.5/60.820%, bench lock absent, Docker stats retained. These later intervals do not attribute the earlier16FPS failure or validate an admission threshold. Foreign processes/containers/GPU/settings unchanged.
 - Narrow request-budget source commit is now eligible from the loaded six-overlap mechanism proof, clean scoped build/final bytecode identity,42 original adjacent PASS/independent audits/all films. Commit only FastPlanner with the retained coverage documentation. Other frozen candidates remain uncommitted; no public057, C4 closure, complete native6/bucket24 rate or full59 cause claimed. Continue original full59 source/context diagnosis without replaying successful isolated controls.
 
+- Budget isolation source7586c25b is committed and immediately pushed to both
+  main and1.21.11; exact Wiki37207584072 succeeds. Other frozen candidates
+  remain WIP. New edited request-budget-audit-20261004 report uses audited
+  currentc4f navigation and native films, with explicitly illustrated private
+  query before/after6/6 wrong empty-stock plans ->0/6, stocked6/6 unchanged.
+  HyperFrames0.8.123 strict check has zero findings and52/52 contrast checks;
+  all16 mapped tweens inspected, intentional reading/gameplay holds retained.
+  All three complete exported fixed2s/cut-boundary pages actually opened.
+  Render108488/26588 naturally0 at14:40:45.346454UTC:56s/1680frames/
+  1920x1080/30fps/22,796,061bytes/SHA3c43727e. QC93828/44076 naturally0 at
+  14:45:26.042229UTC; one positive Telegram10046 receipt from40640/139212
+  naturally0 at14:47:53.874983UTC. Existing9917 not resent. No new release,
+  full native6/bucket24 rate, C4 closure or original full59 cause claimed.
+- Read-only original full59 log analysis28208/128324 naturally0 at14:35:21
+  (exact wrapper receipt retained), helper7208dc7b; original14892a7b log
+  unchanged. In23:10:00..23:50:36,48535 emitted FINISHED log entries refer
+  only to parent near(-289,52,965 r7);187 emitted no-leg refusals recur at
+  4.1->2.2 toward a goal3 below. There are no retained Task START/STOP lines
+  in that window. Counts are log emissions, not client ticks or a cause.
+  Startup version line says0.95.53; it cannot rule out later hotswap/deployment.
+  Next experiment must observe actual leaf goal/guide and mining-policy state,
+  not infer them from the finished parent or replay successful isolated pickup.
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

@@ -1,0 +1,258 @@
+[
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\reports\\hf\\oxygen-route-audit-20261004\\assets\\gsap.min.js",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\gsap.min.js",
+    "sha256": "c174bfce53a729418d57a8ad8625e7247c793a22fef8e2851e3cfa3de9cd8280",
+    "kind": "existing local dependency"
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\reports\\hf\\oxygen-route-audit-20261004\\assets\\GSAP-README.md",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\GSAP-README.md",
+    "sha256": "36224e521bdd9b79dc74ef262effc1a636d960b9be918bc2412ed69f9eee27b0",
+    "kind": "existing local dependency"
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\reports\\hf\\oxygen-route-audit-20261004\\assets\\montserrat-900.ttf",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\montserrat-900.ttf",
+    "sha256": "9d9bb42bdc0defdf103a4f41c4ec775c4bfc77014b0e2f4ecc69be874b10d58b",
+    "kind": "existing local dependency"
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\reports\\hf\\oxygen-route-audit-20261004\\assets\\montserrat-900-OFL.txt",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\montserrat-900-OFL.txt",
+    "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e",
+    "kind": "existing local dependency"
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\reports\\hf\\oxygen-route-audit-20261004\\assets\\ibm-plex-mono-400.ttf",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\ibm-plex-mono-400.ttf",
+    "sha256": "a7fdc993f9f0387caedba4e42521136fa97e4c0837ae6239bf0413ccf8af00c2",
+    "kind": "existing local dependency"
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\reports\\hf\\oxygen-route-audit-20261004\\assets\\ibm-plex-mono-400-OFL.txt",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\ibm-plex-mono-400-OFL.txt",
+    "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+    "kind": "existing local dependency"
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\request-budget-navigation-20261004-144837\\1\\nav_bridge\\nav_bridge.mp4",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\nav_bridge.mp4",
+    "sha256": "0e98b98c30ffba06a75afbc04fc3da42b2cdd960798ae171d88649e82c146c43",
+    "kind": "retained real gameplay",
+    "original": {
+      "id": "nav_bridge",
+      "tier": "gate",
+      "passed": true,
+      "invalid": false,
+      "invalid_reason": null,
+      "avg_fps": 28.0,
+      "clip": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\request-budget-navigation-20261004-144837\\1\\nav_bridge\\nav_bridge.mp4",
+      "criteria": [
+        {
+          "name": "reached goal (tol 2.5)",
+          "ok": true,
+          "detail": "t=15.4s final_dist=1.1",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "no self-fall",
+          "ok": true,
+          "detail": "self_falls=0",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "freezes == 0",
+          "ok": true,
+          "detail": "freezes=0",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "fps recorded",
+          "ok": true,
+          "detail": "avg_fps=28.0 samples=2",
+          "gate": false,
+          "load_sensitive": null
+        },
+        {
+          "name": "who drove (recorded, not gated)",
+          "ok": true,
+          "detail": "pdLegacy=0 pdEnter=0",
+          "gate": false,
+          "load_sensitive": null
+        },
+        {
+          "name": "no command errors in chat",
+          "ok": true,
+          "detail": "",
+          "gate": true,
+          "load_sensitive": null
+        }
+      ],
+      "flake_suspect": false,
+      "repeat": 1,
+      "pins": {
+        "botFpsNoIdleThrottle": "true"
+      },
+      "setting_readback": {
+        "pillarUsesBranchClearance": "true",
+        "pillarUsesSwimInputInWater": "true"
+      },
+      "candidate_sha256": "c4f80c08f0cbf09967077c174178545f1f65d3d79c5cc9596c45d9c62b6c7aea",
+      "runtime_matches": []
+    }
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\request-budget-navigation-20261004-144837\\1\\nav_wall2\\nav_wall2.mp4",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\nav_wall2.mp4",
+    "sha256": "624b106a1249ce289526db4ea0cc0f38edb64a17ab16030d9fa1727597e21f9e",
+    "kind": "retained real gameplay",
+    "original": {
+      "id": "nav_wall2",
+      "tier": "gate",
+      "passed": true,
+      "invalid": false,
+      "invalid_reason": null,
+      "avg_fps": 29.0,
+      "clip": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\request-budget-navigation-20261004-144837\\1\\nav_wall2\\nav_wall2.mp4",
+      "criteria": [
+        {
+          "name": "reached goal (tol 2.5)",
+          "ok": true,
+          "detail": "t=12.6s final_dist=0.5",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "no self-fall",
+          "ok": true,
+          "detail": "self_falls=0",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "freezes == 0",
+          "ok": true,
+          "detail": "freezes=0",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "fps recorded",
+          "ok": true,
+          "detail": "avg_fps=29.0 samples=2",
+          "gate": false,
+          "load_sensitive": null
+        },
+        {
+          "name": "who drove (recorded, not gated)",
+          "ok": true,
+          "detail": "pdLegacy=0 pdEnter=0",
+          "gate": false,
+          "load_sensitive": null
+        },
+        {
+          "name": "no command errors in chat",
+          "ok": true,
+          "detail": "",
+          "gate": true,
+          "load_sensitive": null
+        }
+      ],
+      "flake_suspect": false,
+      "repeat": 1,
+      "pins": {
+        "botFpsNoIdleThrottle": "true"
+      },
+      "setting_readback": {
+        "pillarUsesBranchClearance": "true",
+        "pillarUsesSwimInputInWater": "true"
+      },
+      "candidate_sha256": "c4f80c08f0cbf09967077c174178545f1f65d3d79c5cc9596c45d9c62b6c7aea",
+      "runtime_matches": []
+    }
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\request-budget-navigation-20261004-144837\\1\\nav_water\\nav_water.mp4",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\nav_water.mp4",
+    "sha256": "a5422a06f70bd4851e5cfeeda62ff6dc2dc94477867df3e33bff80e4608229da",
+    "kind": "retained real gameplay",
+    "original": {
+      "id": "nav_water",
+      "tier": "gate",
+      "passed": true,
+      "invalid": false,
+      "invalid_reason": null,
+      "avg_fps": 25.666666666666668,
+      "clip": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\request-budget-navigation-20261004-144837\\1\\nav_water\\nav_water.mp4",
+      "criteria": [
+        {
+          "name": "reached goal (tol 2.5)",
+          "ok": true,
+          "detail": "t=21.0s final_dist=1.2",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "no self-fall",
+          "ok": true,
+          "detail": "self_falls=0",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "freezes == 0",
+          "ok": true,
+          "detail": "freezes=0",
+          "gate": true,
+          "load_sensitive": null
+        },
+        {
+          "name": "fps recorded",
+          "ok": true,
+          "detail": "avg_fps=25.7 samples=3",
+          "gate": false,
+          "load_sensitive": null
+        },
+        {
+          "name": "who drove (recorded, not gated)",
+          "ok": true,
+          "detail": "pdLegacy=0 pdEnter=0",
+          "gate": false,
+          "load_sensitive": null
+        },
+        {
+          "name": "no command errors in chat",
+          "ok": true,
+          "detail": "",
+          "gate": true,
+          "load_sensitive": null
+        }
+      ],
+      "flake_suspect": false,
+      "repeat": 1,
+      "pins": {
+        "botFpsNoIdleThrottle": "true"
+      },
+      "setting_readback": {
+        "pillarUsesBranchClearance": "true",
+        "pillarUsesSwimInputInWater": "true"
+      },
+      "candidate_sha256": "c4f80c08f0cbf09967077c174178545f1f65d3d79c5cc9596c45d9c62b6c7aea",
+      "runtime_matches": []
+    }
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\request-budget-native-air-execution-20261004-162919\\probe.mp4",
+    "target": "C:\\Repos\\pet\\unionclef\\reports\\hf\\request-budget-audit-20261004\\assets\\native.mp4",
+    "sha256": "10d8df1d019dda9e6e6d10f93467eccaa55c28d403113b80b4a85161bf8f13f0",
+    "kind": "retained real gameplay",
+    "original": {
+      "verdict": "PASS",
+      "median_fps": 25.0
+    }
+  }
+]

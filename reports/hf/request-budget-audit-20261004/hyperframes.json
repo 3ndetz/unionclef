@@ -1,0 +1,30 @@
+{
+  "$schema": "https://hyperframes.heygen.com/schema/hyperframes.json",
+  "registry": "https://raw.githubusercontent.com/heygen-com/hyperframes/main/registry",
+  "paths": {
+    "blocks": "compositions",
+    "components": "compositions/components",
+    "assets": "assets"
+  },
+  "media": {
+    "autoProxy": true
+  },
+  "authoringSkill": "general-video",
+  "registryItems": [
+    {
+      "name": "comparison-split",
+      "type": "hyperframes:component",
+      "target": "compositions/components/comparison-split.html"
+    },
+    {
+      "name": "chart-story",
+      "type": "hyperframes:component",
+      "target": "compositions/components/chart-story.html"
+    },
+    {
+      "name": "panel-reveal",
+      "type": "hyperframes:component",
+      "target": "compositions/components/panel-reveal.html"
+    }
+  ]
+}
