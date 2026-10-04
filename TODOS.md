@@ -16356,8 +16356,16 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   capped edge absent/runtime+cleanup/offline25s/checkpoint gates pass. Whole
   fixed2s film inspected. FinalAir47/new rescue, bed-placement holds and distinct
   MovementSwim58->57 failure retained; no portal/night progression claim.
-  This is one pilot; five identical prospective repeats now active/first red
-  stops. Native six-repeat rate and broader integration remain pending.
+  Replication123692/85256 naturally1 at10:59:15.029950UTC: second trial
+  medianFPS13 INVALID under unchanged20 floor, four remaining trials unrun.
+  All2574 end ticksHP20/minAir101/46 atomic swim ticks then1171 full-air
+  ticks/finalAir300; no new deaths/checkpoint/offline30.11s/runtime errors.
+  Independent retained-gate audit0; all four fixed2s pages of184.9s film
+  actually inspected, receiptaec27bfc. Long roof/water/night holds and
+  repeated failed/partial physics searches remain visible. One healthy PASS/
+  one INVALID/four unrun gives no six-repeat rate. Later read-only host load
+  CPU62.64/79.76/68.27% is not retrospective FPS attribution; foreign
+  processes/containers/GPU/settings unchanged. Broader integration pending.
   No C4.1 closure or release claim.
   FastPlanner's state memo first misses still read live world. GetToAirTask:157
   captures live world in its condition; FleeLive.snapshotSafety:438-450 copies

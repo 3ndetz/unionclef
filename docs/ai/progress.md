@@ -486,7 +486,22 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   in the log. Survival protocol PASS does not certify night/portal progression.
   Replication123692/85256 starts10:53:13.743174UTC: this inspected pilot plus
   five prospective unchanged trials, helperaf779207; first red/INVALID stops.
-  One pilot is not a six-repeat rate; no source/release closure.
+  Natural terminal1 at10:59:15.029950UTC: repeat2 medianFPS13 INVALID;
+  four trials unrun. All114 FPS samples retained,2574 end ticksHP20/minAir101,
+  46 atomic air-task/swim ticks then1171 full-air recovery ticks/finalAir300,
+  unchanged deaths3327/checkpoint/offline30.11s/runtime+cleanup[]. These
+  physical observations do not pass the unchanged healthy20FPS floor.
+  Independent audit134172/105096 naturally0 at11:03:23.991141UTC;
+  original proofa59086fa/film0b941ef7184.9s unchanged. All four original-size
+  fixed2s pages actually inspected, actual-reviewaec27bfc: repeated failed
+  and partial physics searches beneath the stone roof, later air swim and
+  bridge/pillar motion, then a long night-shelter hold and real logout/menu.
+  One healthy pilot/one INVALID/four unrun is not a six-repeat rate.
+  Read-only current-load56588/77152 naturally0 at11:05:33.630562UTC:
+  three5s host CPU intervals62.64/79.76/68.27%, bench lock absent;
+  docker stats retained. This is later load, not attribution of the earlier
+  FPS13 or a demonstrated scanner regression. No foreign processes,
+  containers, GPU or settings changed; no source/release closure.
 - Assess: this establishes copy isolation and advances the open scanner
   ownership boundary; full-playthrough score/healthy current rate have not
   moved. The source candidate is uncommitted/unreleased until measured.
