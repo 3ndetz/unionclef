@@ -4,7 +4,7 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
-- [ ] **Client-log rollover discovery misses an exact completed-case window (2026-10-04).**
+- [x] **FIXED: client-log rollover discovery misses an exact completed-case window (2026-10-04).**
   Original activation diagnostic executes20 gameplay PASS, but seals only19
   summary rows and exits1 while collecting fifth mob's client log; four unrun.
   Separate later archive discovery reconstructs the frozen twentieth window,
@@ -13,8 +13,11 @@
   and bounded compression-readiness retries now pass Windows/Linux51 boundary
   tests and exact saved-byte replay. Original name set was not retained, so
   reused name versus asynchronous discovery is unresolved for this occurrence.
-  Validate the collector during the next actual campaign; no retroactive green.
-- [ ] **A spawned zombie attacks before the melee fixture activates defence (2026-10-04).**
+  Actual Windows Docker transport now reproduces the exact saved window using
+  preexisting names; all24 subsequent hazard cases seal their runtime windows.
+  Original failed terminal remains unchanged; a fresh live rollover was not
+  witnessed. Collector fix577d560d is pushed and Wiki-synced.
+- [x] **FIXED: a spawned zombie attacks before the melee fixture activates defence (2026-10-04).**
   Original90faa8a4 hazard audit ends after11 PASS/one third-repeat mob FAIL,
   12 cases unrun. At29.64FPS the zombie survives, sampledHP2, ctl0/cq0;
   film shows sword equipped but low-heart RunAwayFromHostilesTask throughout.
@@ -32,6 +35,13 @@
   failure is not reconstructed. Preserve initialized spawn/tracker wait, pause
   only during preparation, then resume immediately before the original command;
   protect setup failures and ordinary finish by logout before stopping defence.
+  Production preparation/finish boundaries pass Windows/Linux63 tests. The
+  same90faa8a4 candidate completes all24 original hazard objectives with the
+  declared prospective preparation phase: six actual melee fights beginHP20,
+  retainHP20 through confirmed logout and kill the resumed target. All24 films/
+  30 pages reviewed: prepared-mob-film-review-20261004-040646/actual-review.json.
+  This closes fixture preparation, not general combat or the old untracedHP2
+  mechanism; overriding mob subclasses retain their existing preparation.
 - [ ] **Air escape alternates digging and swimming as the body bobs (2026-10-04).**
   Two dry-entry eff tunnel traces start GetToAir at Air149/HP20, repeatedly
   cancel swimming for a grounded cap quote, then surface after Air-19/HP18.
@@ -52,6 +62,10 @@
   12 unrun, all12 films reviewed. Three in-prefix tunnels keepHP20/endAir300,
   minAir99..100/no dig child. Adjacent/native and complete hazards remain open;
   no release claim or combat regression assigned from the incomplete prefix.
+  Separate prepared-melee hazard series now24/24 valid PASS, FPS28..30;
+  six tunnel traces HP20/minAir100/finalAir300/no air-task dig child. Every
+  actual film reviewed. Original incomplete/red campaigns remain unchanged;
+  original42 navigation cases and native six checkpoint replays are still open.
 - [ ] **A lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside

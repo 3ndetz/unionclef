@@ -307,6 +307,60 @@ Completed Windows repair:
   Saved replay simulates preexisting names; it does not reconstruct the absent
   original name set. Actual next-campaign collector validation remains open.
 
+## 2026-10-04 — completed prepared-melee hazard campaign
+
+### Investigate
+
+- Initialized paused preparation preserves the original spawn, tracker wait,
+  kit and objective; AI resumes immediately before the original command.
+  Six traces startHP20, pre-submit/pre-first-owned minima20, first-ownedHP20;
+  terminal command-boundary receipt2a6fe75fd3a068b8d5e5f554b23b2c5b89a2721451f962d1a15a1be1489b0809.
+  Earlier healthyHP2 FAIL and diagnostic20/19-seal terminal1 remain unchanged.
+- New preparation changes exposure timing explicitly. There is no addedHP20
+  hazard judge gate, post-exposure healing or core combat-policy change.
+  This closes fixture preparation only; overriding mob subclasses are unchanged.
+
+### Plan
+
+- [x] Production preparation/failed activation/protective finish contracts:
+  Windows63/63 and actual Linux63/63, including12 new mob boundaries.
+- [x] Original24 hazard objectives with declared prospective preparation,
+  first-red/FPS20/HP12/Air200 gates; review every actual film and runtime seal.
+- [ ] Original42 adjacent navigation objectives on the same verified candidate.
+- [ ] Six native cp1003-0401-t649 trials with original pack/HP20/FPS20 gates.
+- [ ] Tested narrow commits, scoped stable release/public class proof, edited
+  HyperFrames/Telegram report, then full59 continuation.
+
+### Implement
+
+- Parent133000/wrapper33448/unified87474/log032212, source7cb60f9a,
+  naturally0 at2026-10-04T01:06:22.698007UTC:24/24 valid PASS, zero INVALID,
+  minimum averageFPS28, runtime/cleanup[]. All eight fixture sources frozen.
+  Same90faa8a4/no new Java build or deployment. Final confirmed offline/
+  inactive epoch1791075978567. Six actual initialized/paused targets resume
+  positive AI acknowledgement and exercise positive controller execution.
+- Freezer87344/wrapper78752/unified45768/log040646 naturally0 at
+  01:07:46.477149UTC. ALL24 films/all30 fixed2s pages actually inspected
+  before writing the journal. Actual-review SHA
+  a576d181f03a3576ee8e69d7b0db0d79b584dfc4e1feb40c1e0517a9fcfbd85e,
+  prepared-mob-film-review-20261004-040646. Six air traces1068/1076/1060/
+  1112/1057/1039 ticks, HP20/minAir100/finalAir300/no dig child. USER mining/
+  enclosure escape follows replenishment. Six mob traces290/300/328/293/
+  293/312 ticks, minimumHP20 through confirmed logout. Lava sampled minima
+  12/12/16/16/16/16; original resistance fixture, damage and HP12 gate retained.
+- Actual Windows Docker exec/list/cat/gzip transport independently reconstructs
+  original saved case20 bytes with all seven names preexisting: window SHA
+  0a25ec96a420a381e6db8c74610361e6ddf348a4ada6ca46d8283660835d36b9.
+  saved-log-docker-transport-66ea4f01f5b1/proof.json SHA
+  de1f3afae793f2249c4800d1c3dc4cbfab758585611549433c9aaa180193989f.
+  Only the created disposable containerbcc042cd45359ca4c2d768c9413481cb99dd9fc436410cb3e26d7107a7bfb3ef
+  was removed. This is saved-byte transport coverage, not a fresh live rollover
+  or reconstruction of the absent original archive-name set. All24 subsequent
+  live case seals pass; original failed log seal remains failed.
+- Collector577d560d is owner-authored/pushed to both branches; Wiki37164500639
+  SUCCESS. Fixture/core/config/version WIP preserved and not yet committed.
+  No057 public release, new report delivery, foreign process/container change.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
