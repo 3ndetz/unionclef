@@ -156,6 +156,18 @@ def py4j(op,t=30,**kw):
     r=sh(["docker","exec",CLIENT,"python3","-c",SNIP,json.dumps({"op":op,"port":PORT,**kw})],t)
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
+def restore_checkpoint(name):
+    """Cancel client reconnect intent before replacing the survival world."""
+    # A server kick lets GameMenuTaskChain schedule an automatic reconnect.
+    # Deliberate logout cancels it before the restored server becomes available.
+    # Refuse the swap if logout/stop was not confirmed; retain defence on failure.
+    boundary = py4j("disconnect-confirmed", t=35)
+    if (boundary.get("inGame") is not False
+            or not str(boundary.get("runner", "")).startswith("active=false")):
+        raise StandDown("checkpoint logout was not confirmed; world left unchanged")
+    return _cp.restore(name)
+
+
 def cp_save(name, note="", *, portals=None):
     """checkpoint.save plus what the client remembers and the world does not: the last nether
     portal used in each dimension. MiscBlockTracker holds it in memory only, so a resumed run used
@@ -844,7 +856,7 @@ def _run():
         # to move; what matters is that the swap happens right before @gamer and that the bot
         # rejoins the restored world with the position, inventory and armour the checkpoint holds.
         phase("resume"); print(f"[2c] resuming from checkpoint {FROM_CP} (the reset above is discarded with the world)...")
-        _cp_meta = _cp.restore(FROM_CP)
+        _cp_meta = restore_checkpoint(FROM_CP)
         joined = False
         for attempt in range(4):
             py4j("connect", ip="gamer-server")
