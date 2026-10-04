@@ -83,6 +83,16 @@
   native-waterbucket-hold-20261004-054502,76MB, exact terminal player/stat fields
   preserved and no checkpoint pruning. Investigate actual target block, reach,
   raycast and click counters before changing goal completion or bucket policy.
+  Exact inventory has one filled and one empty bucket. Healthy direct repeat
+  medianFPS26/19 observations confirms source-water target(-190,61,1022),
+  reach=false/CANT_REACH/NONE, iwCantReach delta189/iwClicked0/HP20. Earlier
+  medianFPS10 diagnostic remains INVALID; all four actual film pages reviewed.
+  Old dump-all/refill phase tries to empty the last retained bucket even when
+  caller count is met. Narrow count fix now built/actual final bytecode inspected:
+  424e6b87 differs from90fa only in GetRidOfExtraWaterBucketTask. Canonical
+  owned tester1 deployment verified; exact count-one six trials in progress.
+  Zero/multiple-bucket boundaries, source-water face selection if still red,
+  adjacent/native gates and stable release remain OPEN; no success claim yet.
 - [x] **FIXED: a lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside
