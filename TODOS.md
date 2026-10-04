@@ -16372,9 +16372,20 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   controlled overlaps give true/true. Shared static placeBudget borrows the
   other request's blocks. Baritone CalculationContext97-106 reviewed;
   candidate passes an immutable int through every placement generator.
-  Clean scoped build164852/83060 in progress; ten guarded source inputs.
-  Final recursive payload/actual bytecode review, same six fixed overlaps
-  and original adjacent nav gates pending. Original rejected fixtures and
+  Clean scoped build164852/83060 naturally0 at11:38:58.185900UTC; ten guarded
+  source inputs. Original verifier red retained: extra StartState class.
+  Separate actual bytecode inspection0 proves identical executable and only
+  line434->432 shifts. Revised verifier retains identical-code nested gates.
+  Final recursivec4f80c08/2215 proof0 and actual changed bytecode reviewed;
+  canonical tester1 loaded exact candidate. Same six fixed overlaps all
+  empty=false/stocked=true, sequential controls unchanged, menu/cleanup[].
+  Adjacent42 cases underway, original gates/FPS20/first-red stop retained.
+  First round7/7 passesFPS25.5..29.5; all seven fixed2s full-film sheets viewed.
+  Six fresh currentc4f native trials are prepared, not yet run; earlier114
+  pilot/INVALID do not count toward that prospective series. Retained trace
+  analysis distinguishes deliberate21.056s dry night-shelter waiting from
+  unresolved submerged bed/wander holds; no new gameplay or causal claim.
+  Original rejected fixtures and
   native FPS13 INVALID retained; no gameplay improvement/C4 closure claim.
   FastPlanner's state memo first misses still read live world. GetToAirTask:157
   captures live world in its condition; FleeLive.snapshotSafety:438-450 copies
