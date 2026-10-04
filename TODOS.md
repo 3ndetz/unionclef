@@ -16367,6 +16367,15 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   CPU62.64/79.76/68.27% is not retrospective FPS attribution; foreign
   processes/containers/GPU/settings unchanged. Broader integration pending.
   No C4.1 closure or release claim.
+  Request-budget subpass claimed by UNIONCLEF-HARD,2026-10-04: actual loaded114
+  planner on a private bridge, sequential budgets0/8 give false/true; six
+  controlled overlaps give true/true. Shared static placeBudget borrows the
+  other request's blocks. Baritone CalculationContext97-106 reviewed;
+  candidate passes an immutable int through every placement generator.
+  Clean scoped build164852/83060 in progress; ten guarded source inputs.
+  Final recursive payload/actual bytecode review, same six fixed overlaps
+  and original adjacent nav gates pending. Original rejected fixtures and
+  native FPS13 INVALID retained; no gameplay improvement/C4 closure claim.
   FastPlanner's state memo first misses still read live world. GetToAirTask:157
   captures live world in its condition; FleeLive.snapshotSafety:438-450 copies
   mob positions but still queries captured live world fluid. A snapshot passed
