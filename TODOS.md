@@ -90,9 +90,15 @@
   Old dump-all/refill phase tries to empty the last retained bucket even when
   caller count is met. Narrow count fix now built/actual final bytecode inspected:
   424e6b87 differs from90fa only in GetRidOfExtraWaterBucketTask. Canonical
-  owned tester1 deployment verified; exact count-one six trials in progress.
-  Zero/multiple-bucket boundaries, source-water face selection if still red,
-  adjacent/native gates and stable release remain OPEN; no success claim yet.
+  owned tester1 deployment verified. Count-one series ends1valid PASS,
+  1INVALID median15.5 and4unrun; both actual films reviewed. Declared count2
+  native-geometry kit fails healthy at23.5FPS/HP20: source-water target/reachfalse,
+  iwClicked0, final2filled0empty. All actual pages reviewed. Separate read-only
+  probe finds three reachable solid faces (two lead to air, one to water),
+  medianFPS20/HP20; original task still fails. Local vanilla bytecode confirms
+  filled-bucket NONE ray and sneak admission. Task-local supported-face selection
+  now in clean build; generic interaction/navigation unchanged. Zero/multiple
+  healthy repeats, adjacent/native gates and stable release remain OPEN.
 - [x] **FIXED: a lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside

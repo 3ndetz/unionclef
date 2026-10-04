@@ -44,7 +44,7 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
 
 - [x] Freeze endpoint and measure inventory/reach/click state.
 - [x] Correct phase: empty only extras; finish with one filled bucket.
-- [ ] Clean scoped build, final remapped bytecode inspection, canonical deploy.
+- [x] Clean scoped count-phase build, final remapped bytecode inspection, canonical deploy.
 - [ ] Six exact checkpoint count-one repeats; zero/multiple-bucket boundaries
   with declared separate kits and positive completion/bucket-total gates.
 - [ ] Diagnose count>1 over source water if placement boundary remains red.
@@ -57,7 +57,7 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
 - GetRidOfExtraWaterBucketTask reads count each tick, empties only if>1,
   collects if0 and finishes if==1. No dump/refill of retained bucket or generic
   interaction/navigation change. Count>1 still uses old floor target; its
-  source-water placement boundary is explicitly UNTESTED/open.
+  source-water placement boundary is independently red/open below.
 - Build165684/wrapper110156/unified42672 started03:27:49.260155UTC,
   script SHA9c43cee948272b4b9ccecdcd168159873a16c2c2785245fb7360f5651f1f6652.
   Offline/inactive, absent lock/host or owned JDWP/IDE bins verified. Reviewed
@@ -75,7 +75,69 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   Parent125468/wrapper169508/unified13471 started03:43:48.512773UTC for six
   exact endpoint count-one trials. Original pack/no kit, medianFPS20/retained
   tickHP20/live and offline bucket totals/task completion/strict runtime gates;
-  first red stops. Natural result and actual film review pending.
+  first red stops. Naturally1 at03:51:19.231587UTC: one valid PASS (median20),
+  one INVALID (15.5), four unrun. Both20-row traces retain finished=true,
+  live/offline one water+one empty bucket, minimumHP20 and runtime/cleanup[].
+  The INVALID remains invalid; there is no six-repeat healthy rate.
+- Freezer42552/wrapper166752 naturally0 at03:52:42.771618UTC. Both films/all
+  four fixed2s pages individually inspected: native pocket remains stationary,
+  full hearts, No chain running and Task finished in0.2/0.1s visible; no repeated
+  interaction/adjacent overlay. Film1 73.1s, film2 68.7s; actual-review SHA
+  fcd4edfddaf88b649854fd0ae07cb9c62be360ed43863d5292ce42a25c9e9971.
+  This is sampled inspection, not uninterrupted playback or every frame.
+- Live idle-limiter source inspected; declared no-idle throttle bypass does not
+  depend on runner activity. FPS rows are scattered, not a constant10 limiter:
+  second3..25FPS. Later read-only host snapshot has total2342/idle396 CPU units,
+  vmmemWSL684; own idle client27.88% CPU. This snapshot is later, not a trace
+  of the full failed run, and does not assign the cause to another process.
+- Only owned tester1 canonical refresh43452/wrapper36344/unified88269 started
+  03:55:49.207587UTC after the INVALID naturally ended and films were reviewed.
+  Same frozen424e6b87, original deployment receipt preserved; no Java rebuild.
+  Naturally0 at03:56:57.035690UTC, identical loaded SHA/offline/inactive;
+  original deployment receipt remains preserved.
+- Declared count2 native-geometry kit148668/wrapper145632/unified70451 starts
+  03:57:29.276217UTC and naturally1 at04:01:04.640778UTC. Exact original pack
+  restored, then empty slot1 converted to water: initial2 filled/0 empty/total2;
+  no health/terrain/day/air injection. Sixteen readings all target source water
+  (-190,61,1022) or(-190,60,1022), NONE/reach=false/CANT_REACH;
+  iwCantReach67->741/iwClicked0/iwStallFailed0->3. Final task unfinished and
+  live/offline buckets2/0;940 retained end ticks HP20/finalAir298;
+  medianFPS23.5 includes early3/14/10, runtime and cleanup[]. Healthy FAIL.
+  Both actual fixed2s film pages viewed: filled bucket held/full hearts,
+  repeated completed-adjacency goals followed by wandering/underwater movement;
+  film74.0s, SHA26f2de10b2a632153ddfbc63040fdc09b5cd526a24b2b0b9666675c3074448ce.
+  Actual-review SHA6c0cffe73ec23d04a1695f9384fa8338741cb1b9aebad7b60bc6b37453279f47.
+- Actual local named1.21.11 BucketItem.use bytecode uses NONE for filled buckets
+  and SOURCE_ONLY for empty ones; Item.raycast uses OUTLINE and current eye/
+  rotations. placeFluid rejects a non-air replacement under sneak when its
+  original hit is present (115..143); existing interaction constructors default
+  shiftClick=true. This is a separate admission boundary; do not pretend the
+  source-water target can be clicked or silently change fluid raycast handling.
+- Read-only supported-face diagnostic35588/wrapper123208/unified35343 started
+  04:17:05.654715UTC, sourceSHAe3c920a9e9b0b2a2a4afa21ef432f2725585a3fc1a23c315cc4b20e6754fa3b9.
+  Same frozen424 payload/exact restored checkpoint/declared count2 kit; query
+  actual supported faces, proposed ray hit side/destination and vanilla admission
+  through individual client barriers while the unchanged task runs. No face
+  mutation or primitive intervention. Naturally0 at04:20:58.772090UTC; after
+  nine scanned cells three actual faces lead to two air cells and one source
+  water, canBucketPlace=true. Original task remains unfinished/live+offline2/0;
+ 17 samples medianFPS20/1122 retained end ticks HP20/endAir300/runtime+cleanup[].
+  This diagnostic proves reachable alternatives, not a repaired task. Both
+  actual77.1s film pages viewed: repeated completed-adjacency goals, wandering/
+  underwater movement and later red path failures, full hearts/no completion.
+  Actual-review SHAc7b690d21d43b4a6cc2747933e9476ea4bfbf538f3af8e203dd0ad36b8492499.
+- Task-local face candidate now selects a reachable solid support near the eye,
+  confirms actual proposed hit side/destination and vanilla water admission,
+  avoids protected destinations/lava/interactable supports/block entities and
+  keeps its target only while valid. Existing InteractWithBlockTask performs the
+  actual aim/equip/use with shift=false; any admitted side suits emptying. No
+  generic direction/reach/adjacency edit, fake hit or liquid-ray override. If no
+  local support exists it reuses normal exploration, without a reactive stall
+  timeout. Count guard still retains one filled bucket; zero reuses collection.
+  Full boundary and no-local-face coverage remain pending, not a general guarantee.
+- Clean scoped build134944/wrapper137804/unified54335 starts04:24:41.595102UTC,
+  unchanged reviewed lifecycle9c43cee9, new task hash frozen alongside the five
+  earlier candidate sources. Natural terminal/final payload/deployment pending.
 - Assessment: mechanism measured; no post-fix score/comparative improvement.
   Earlier healthy native red and FPS10 direct diagnostic retained. Narrow
   phase fix preserves caller's required filled bucket and leaves independent
