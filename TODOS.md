@@ -16379,9 +16379,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   Final recursivec4f80c08/2215 proof0 and actual changed bytecode reviewed;
   canonical tester1 loaded exact candidate. Same six fixed overlaps all
   empty=false/stocked=true, sequential controls unchanged, menu/cleanup[].
-  Adjacent42 cases underway, original gates/FPS20/first-red stop retained.
-  First round7/7 passesFPS25.5..29.5; all seven fixed2s full-film sheets viewed.
-  Six fresh currentc4f native trials are prepared, not yet run; earlier114
+  Adjacent42 cases naturally0 at13:13:22.170968UTC: all42 original gatesPASS,
+  FPS22.5..30, cleanup[]. Independent complete gate/window/health/hash audit0
+  at13:17:15.743750UTC. All42 full fixed2s film sheets actually viewed;
+  final hash-bound review87736/144704 naturally0 at13:17:40.447474UTC.
+  Six fresh currentc4f native trials155596/87632 start13:17:55.606951UTC;
+  unchanged checkpoint120s/HP20/FPS20/atomic swim-recovery/logout gates.
+  No completed current native rate yet; earlier114
   pilot/INVALID do not count toward that prospective series. Retained trace
   analysis distinguishes deliberate21.056s dry night-shelter waiting from
   unresolved submerged bed/wander holds; no new gameplay or causal claim.
