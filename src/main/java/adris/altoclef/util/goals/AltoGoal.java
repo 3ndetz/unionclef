@@ -112,6 +112,11 @@ public interface AltoGoal {
 
     /** A goal that is a block, satisfied from anywhere within {@code range} of it. */
     record Near(BlockPos pos, int range) implements AltoGoal {
+        public Near {
+            // The condition search reads this goal on its worker, like AnyBlock.
+            pos = pos.toImmutable();
+        }
+
         @Override
         public Vec3d target() {
             return new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
@@ -120,6 +125,13 @@ public interface AltoGoal {
         @Override
         public boolean reached(BlockPos at) {
             return at.getSquaredDistance(pos) <= (double) range * range;
+        }
+
+        /** Center heuristic, with arrival decided by the entire radius.
+         * Port of baritone/src/main/java/baritone/api/pathing/goals/GoalNear.java:49-62.
+         * Use Tungsten's existing point costs rather than importing Baritone's engine. */
+        public double remaining(int x, int y, int z) {
+            return kaptainwutax.tungsten.path.fast.FastPlanner.pointEstimate(x, y, z, pos);
         }
 
         @Override

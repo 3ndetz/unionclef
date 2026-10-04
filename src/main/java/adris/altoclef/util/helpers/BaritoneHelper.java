@@ -1,5 +1,6 @@
 package adris.altoclef.util.helpers;
 
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.path.calculators.ActionCosts;
 import net.minecraft.util.math.Vec3d;
 
@@ -98,6 +99,11 @@ public class BaritoneHelper {
     private static final int FREE_FALL_BLOCKS = 3;
     private static final double DIG_ONE_BLOCK_TICKS = 23.0;
 
+    // Upstream GoalYLevel.java:52 reads FALL_N_BLOCKS_COST[2]; ActionCosts.java:67-73
+    // computes that table once. This ranking only needs distance 2, so retain its
+    // identical pure result without reintegrating Math.pow on every comparison.
+    private static final double TWO_BLOCK_FALL_TICKS = ActionCosts.distanceToTicks(2);
+
     private static double climbCost(int yDiff) {
         if (yDiff > 0) {
             // ⛔ A TARGET MORE THAN A FALL BELOW IS REACHED BY DIGGING, AND A DIG IS PRICED LIKE A
@@ -109,7 +115,9 @@ public class BaritoneHelper {
             // an empty pack for the whole run. The same chooser priced an iron pickaxe drop at
             // y=-19 the same way. Three blocks fall for free; below that every block is a dig.
             int free = Math.min(yDiff, FREE_FALL_BLOCKS);
-            double cost = ActionCosts.distanceToTicks(2) / 2 * free;
+            double fallTicks = TungstenConfig.get().cacheFixedFallHeuristic
+                    ? TWO_BLOCK_FALL_TICKS : ActionCosts.distanceToTicks(2);
+            double cost = fallTicks / 2 * free;
             if (yDiff > FREE_FALL_BLOCKS) cost += (yDiff - FREE_FALL_BLOCKS) * DIG_ONE_BLOCK_TICKS;
             return cost;
         }

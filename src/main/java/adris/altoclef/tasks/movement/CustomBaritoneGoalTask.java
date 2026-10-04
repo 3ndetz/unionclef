@@ -221,7 +221,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected void onStart() {
         Nav.cancel();
         if (goal(AltoClef.getInstance()) instanceof AltoGoal.FleeLive
-                || cachedAlto instanceof AltoGoal.AnyBlock) Nav.cancelAll();
+                || cachedAlto instanceof AltoGoal.AnyBlock
+                || usesNearRegion(cachedAlto)) Nav.cancelAll();
         TungstenHelper.reset();
         checker.reset();
         stuckCheck.reset();
@@ -482,7 +483,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // the requested cell is unstandable the bot can never occupy it, so the exact test could
         // never have passed. A goal that stood on its own keeps exact semantics -- snappedGoalCell
         // is null then.
-        if (!done && snappedGoalCell != null && snappedGoalCell.equals(at)
+        if (!done && !usesNearRegion(g) && snappedGoalCell != null && snappedGoalCell.equals(at)
                 && kaptainwutax.tungsten.TungstenConfig.get().arrivalAgreesWithTheSnap) {
             if (count) arrivedAtSnap++;
             done = true;
@@ -495,7 +496,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (Task.diagnosticEvents != null) Task.noteDiagnostic("drive-stop "
                 + getClass().getSimpleName() + " -> "
                 + (interruptTask == null ? "null" : interruptTask.getClass().getSimpleName()));
-        if (cachedAlto instanceof AltoGoal.FleeLive || cachedAlto instanceof AltoGoal.AnyBlock) Nav.cancelAll();
+        if (cachedAlto instanceof AltoGoal.FleeLive || cachedAlto instanceof AltoGoal.AnyBlock
+                || usesNearRegion(cachedAlto)) Nav.cancelAll();
         Nav.cancel();
         TungstenHelper.stop();
         // ⛔ THE ROUTE DIES WITH ITS DRIVE (G52, 2026-09-11). TungstenHelper.stop() ends the
@@ -613,6 +615,11 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     // (the two goal adapters documented here were deleted with the legacy type)
     // removed with the legacy goal type (G-0)
+
+    private static boolean usesNearRegion(AltoGoal goal) {
+        return goal instanceof AltoGoal.Near
+                && kaptainwutax.tungsten.TungstenConfig.get().nearGoalSearchesRegion;
+    }
 
     protected void onWander(AltoClef mod) {
     }
@@ -756,6 +763,26 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             }
             checker.reset();
             setDebugState("Routing to a reachable destination among " + any.cells().size() + " cells");
+            return true;
+        }
+        if (goal instanceof AltoGoal.Near near && usesNearRegion(near)) {
+            // GoalNear is a region, not a point to snap into terrain. Baritone's
+            // AStarPathFinder.java:97 tests goal.isInGoal for each expanded cell;
+            // GoalNear.java:49-62 pairs that radius with a center heuristic.
+            // On full59's saved entry, snapping Y53 to lava at Y52 repeatedly
+            // rejected the short partial leg even though a safe in-radius cell exists.
+            snappedGoalCell = null;
+            lastGoalVec = near.target();
+            lastGoalAtMs = System.currentTimeMillis();
+            lastGoalReachBlock = null;
+            kaptainwutax.tungsten.combat.CombatTrace.hostGoal = String.valueOf(near);
+            kaptainwutax.tungsten.combat.CombatTrace.hostOwner = getClass().getSimpleName();
+            if (!kaptainwutax.tungsten.task.FastNavigator.isNearestSearch(near)) {
+                kaptainwutax.tungsten.task.FastNavigator.startNearest(near::reached,
+                        near::remaining, near);
+            }
+            checker.reset();
+            setDebugState("Routing to a reachable cell within " + near.range() + " blocks");
             return true;
         }
         net.minecraft.util.math.Vec3d gp = goal.target();

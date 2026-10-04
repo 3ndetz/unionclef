@@ -5755,4 +5755,14 @@ public class TungstenConfig {
      * it fired -- 0 in control, non-zero in fix, or the pair measured nothing (rule 4a1).
      */
     public boolean arrivalAgreesWithTheSnap = false;
+
+    /** Search every valid feet cell of a fixed Near goal, rather than its snapped center.
+     * Uses the existing owned condition navigator and the same radius for search and arrival.
+     * False retains the old point drive for paired checkpoint controls. */
+    public boolean nearGoalSearchesRegion = true;
+
+    /** Reuse the fixed two-block fall estimate when ranking nearby blocks.
+     * Preserves the old costs and ordering; false reintegrates the same fall
+     * curve on each comparison for same-client A/B cost measurements. */
+    public boolean cacheFixedFallHeuristic = true;
 }
