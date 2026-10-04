@@ -1,210 +1,41 @@
 # Progress
 
-Previous evidence: [archive/04-10-2026-bucket-and-scanner-evidence.md](archive/04-10-2026-bucket-and-scanner-evidence.md). Exact retained checkpoint; unfinished work remains open.
+Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archive/04-10-2026-near-region-and-fixed-fall-cost.md), including earlier bucket/scanner and original invalid campaigns. Their original results remain unchanged.
 
-## Required water bucket and full59 continuation - active
-
-### Investigate
-- Earlier IPI, failed fixtures, measurements and films are retained in the archive. Full59 portal/food140 and bed/swim holds remain unresolved; stable057 is not released.
-- Current count2/3/0/1 twenty-four trials remain unrun. Previous bucket handoff9PASS/1INVALID/14unrun and scanner native one healthy pilot/oneINVALID/fourunrun are incomplete rates.
-
-### Plan
-- Complete unchanged positive bucket and native coverage gates with measured healthy FPS, retaining every red/INVALID without automatic refresh/filtering.
-- Validate adjacent behavior, commit only tested paths, scoped stable release and edited English HyperFrames/Telegram report, then resume full59.
-
-### Implement
-- Source candidates/checkpoints/exact payload identities and deliveredTG9917 preserved. Current focused C4 work precedes sensitive gameplay; no foreign process/container/GPU/settings changes.
-- Prepared currentc4f bucket/survival adapter3794081a and prospective24 parent1b66f0fb, not launched. Positive comparison binds the unchanged GetRidOfExtraWaterBucketTask executable e6f82c94 to retainedd583. Four prepare-only children naturally0 (36284/56948,162436/86932,56040/164224,98980/167816), game_executed=false; generated observers parse and preserve original48s/HP20/FPS20/positive completion/active Idle handoff/inventory/runtime/logout gates. Count1 retains the original already-satisfied pack; count0/2/3 are declared inventory-only kits on restored native geometry. Run only after current navigation and six native trials; this preparation supplies no gameplay verdict and changes neither prior9PASS/1INVALID/14unrun nor current24-unrun status.
-- Read-only original full59 saved-scene comparison61980/150080 naturally0 at12:25:31.755850UTC, helpereace641d/proof full59-saved-scene-20261004.json. Periodic cp1001-0119-t4230 (70min) andt5210 (86min) retain identical1089 cell palettes around the stall and identical tester1 pose(-290.7,55,965.4)/HP20/Air300/food18/stone-pick damage127. Source lava(-293,52,963) remains level0; feet support(-291,54,965) cobblestone, guide endpoint(-291,52,964) air, former armed dig(-290,53,967) diorite. These are saved palettes, not live collision/protection/task state or a reproduced cause. Current last is a later2026-10-03 native-water endpoint; use named original periodic snapshots, never assume last still identifies full59.
-
-## C4.1 — capture scanner block data before worker dispatch (2026-10-04)
+## Full59 lava-column stall — active
 
 ### Investigate
-- Stronger scheduling160684/159344 naturally2 at09:03:57.056653UTC, eighty
-  15s aggregate CPU intervals63.58..87.80%, no eligible interval/no bench lock,
-  game_executed=false. Proof41fbb3f8 retained; no gameplay verdict, refresh or
-  filtered retry. Current24 bucket boundaries remain unrun, prior9PASS/
-  1INVALID/14unrun unchanged. ActualFPS20 remains the gameplay gate.
-- Reopened complete BlockScanner and Baritone BlockStateInterface/provider/
-  chunk-array copy. Copied upstream lookup retains the same WorldChunk objects,
-  not deep block states. Current pre-change scanner already guards loaded
-  chunks; its worker still read their contents. Root Yarn build3 and tungsten
-  build4 cache both exist; both are1.21.11, no mapping changes.
-- Local vanilla bytecode116308/102848 naturally0 at08:55:30.281169UTC confirms
-  section copy invokes container copy/storage+palette copy. Signature docs and
-  inspected disassembly are mechanism evidence, not runtime publication tests.
-- Isolated section-setter probe160992/24624 naturally1 at09:14:45.590840UTC:
-  first private-copy mutation hits Lithium RandomTickingSectionDataHelper
-  removeAt null random-tick metadata. Zero completed query rows, no capture
-  timing result. Original exception/proofcea34c37/film396b5b3b28.1s retained;
-  full fixed2s sheet viewed. Sampled tickHP20/offline/inactive/runtime+cleanup[].
-  Post-query inventory/digest checks beyond the failed assertion did not run.
-- Separate private-container mutation68896/47220 naturally0 at
-  09:22:06.017601UTC: six actual client-thread captures, each157 loaded chunks/
-  3768 sections/1503 nonempty copies. Six palettes8,5,14,11,11,9 distinct
-  states; each round positively changes4096 cells of each copy and then checks
-  all4096 original and independent sibling cells unchanged. Zero live block
-  writes. Actual capture durations including reflection13.740/8.517/8.511/
-  13.541/11.824/12.899ms, no inferred gameplay FPS saving. All inventory rows
-  unchanged/use counter1 unchanged, sampled tickHP20/offlineHP20/Air300/one
-  filled+one empty, original checkpoint unchanged/runtime+cleanup[].
-  Proof4da05268/film2ce4f2a737.3s, complete original-size fixed2s sheet viewed.
-  Own diagnostic classes/loaders/files removed; original Lithium red preserved.
-- Air157 and FleeLive438-450 predicates still capture live world. Passing a
-  snapshot only to FastPlanner would leave those condition reads live. Mining
-  tool/global budget and other search-world debt also remain open.
+- Original full59 remained at (-290.7,55,965.4) for its final ~39 minutes. Named cp1001-0119-t4230 retains geometry/player pack, not the original cached Java tasks or behaviour. Historical isolated lava/portal controls did not reproduce the persistent stall.
+- Standalone original point/snap control on c4f stays incomplete for90s at26FPS. Near now uses the existing owned condition search and exact radius. Earlier c808 controls are FPS-invalid and kept separate; no original full59 cause is closed.
+- Profiling retains scanner stacks during both Idle and active task, including repeated pure distanceToTicks(2). Sampling is not wall-time attribution or proof of the previous FPS losses.
 
 ### Plan
-- Freeze loaded lookup membership and block containers on the client thread,
-  following Baritone's no-forced-load capture/section read. Preserve recency
-  traversal, prioritisation, blacklist, client completion/world-exit guards.
-- Measure actual production capture cost; validate negative coordinates,
-  height/empty sections, original mutations and unload isolation, distant
-  discovery and logout boundaries, then adjacent courses before any release.
+- Adjacent24 is independently audited and all24 film pages inspected; continue the real liquid/portal context from original cp70 after the sealed12 cost-arm traces and48 film pages.
+- Validate fresh real lava and portal tasks from the same original cp70, then the dense-checkpoint full @gamer chain without foreign-client quiescing. Preserve all red/INVALID outcomes without automatic refresh.
+- Narrowly commit/push tested owned source, scoped stable release plus edited English HyperFrames/Telegram milestone report, then continue the checklist. Other uncommitted source must remain untouched.
 
 ### Implement
-- Candidate ChunkBlockSnapshot exposes only block reads; copied containers/
-  arrays remain private. Scanner worker uses immutable loaded membership and
-  these copies, while world reference is only a client publication identity.
-  New capture cost/chunk counters are separate from existing worker cost.
-- Scoped clean build54156/124948 starts09:26:49.330587UTC, helper47579bb0,
-  successful host/owned-client JDWP and offline checks required before Gradle.
-  Compiler owns only its containers, capped2CPU/2workers; nine source inputs
-  bound before/after. Clean/build naturally0 at09:41:07.559311UTC.
-- Strict final verifier133860/168872 naturally0 at09:42:04.243394UTC:
-  candidate114eeeb0, recursive2215 vs D5832213, only scanner/Node/ScanRequest
-  changed, ScanInput/nested ChunkBlockSnapshot added, no removed classes.
-  Actual changed bytecode reviewed; proofbd9b2926. Canonical tester1-only
-  deployment74612/127464 naturally0 at09:50:24.335045UTC, exact loaded SHA,
-  offline/inactive/nine-source identity retained. No foreign process changes.
-- Installed production contract112304/161676 naturally0 at
-  09:56:37.744480UTC: six captures,4096 initial section cells+16 negative-height
-  cells each; actual emptyY96/height bounds/wrong chunk checks pass. Six declared
-  server stone-to-glass writes positively reach the live client, while snapshot
-  reads retain stone. Real logout then all six detached snapshot/empty reads
-  pass; gateway-thread capture rejects before a null chunk read. These are
-  actual installed helper calls, not the earlier API-copy diagnostic.
-  All259 sampled end ticksHP20/unchanged inventory/use0/offlineHP20/Air300/
-  one filled+one empty/exact original checkpoint/runtime+cleanup[]. Own Java
-  diagnostic loader/files removed. Proof0e916e40/film71f765cd40.9s, full
-  original-size fixed2s sheet viewed: menu/join/stone headspace/fullhearts/logout.
-  FPS7/10/15/12/16/21 retained; no healthy gameplay rate or speedup claim.
-  Scanner counters show three accepted natural scans; repeated non-atomic
-  capture observations3.901/15.117/8.841ms are not six independent timing runs.
-- Current distant-table/flat/staircase/descend original gates,24 planned/six
-  rounds, launched19336/149160 at09:57:57.154800UTC, helper8b94acb4.
-  Exact114eeeb0/source/default/FPS20 guards and first-red stop retained;
-  teardown deliberately logs out before stopping. Natural terminal0 at
-  10:34:46.813441UTC: all24 original gates PASS, FPS25..30, runtime/cleanup[].
-  Current logout23056 naturally0 at10:39:37.190274UTC: six boundaries,
-  FPS29..30, actual copied157/157 input, cancelled/completed request and empty
-  world/cache/worker state25s after exit, unchanged started/done counters,
-  runtime/cleanup[]. Unfinished request is observed before atomic capture;
-  this does not prove it remains unfinished at the exact logout instant.
-  Sequence144060/117552 naturally0 at10:40:40.864656UTC; independent original
-  navigation and strict logout audits0. All30 original-size fixed2s sheets
-  actually opened: table approaches/crafting, marker arrival/full hearts,
-  arena-to-menu/offline hold. This is sampled viewing, not every frame.
-  Actual-review receipts15c56c04/1750fe0b retain films/audits unchanged.
-  Native integration143132/166556 starts10:44:07.754939UTC on exact114,
-  helpere5c3f8f0: original cp1003-0401-t649 pack,120s actual @gamer defence,
-  atomic task/swim/oxygen recovery, HP20/FPS20/runtime/offline25s gates.
-  Natural terminal0 at10:49:23.866827UTC: medianFPS23 (all116 samples retained),
-  2514 contiguous trace rows/2460 end ticksHP20/minAir32, no new deaths3327,
-  123 atomic air-task/navigator/swim/keys/deficit ticks, first1990 then twelve
-  full-air ticks from2248. Final air47 belongs to another ongoing rescue,
-  not a final full-air state. Original capped edge absent/grid112, exact pack/
-  checkpoint/offline25s/runtime/cleanup gates pass. Film371e027e178.3s/all
-  four original-size fixed2s pages inspected; independent retained-gate audit
-  and actual-reviewacbd8185/proof77c25a9c. Bed-placement/wander holds remain
-  visible; distinct MovementSwim(-190,58,1017)->(-190,57,1017) FAILED remains
-  in the log. Survival protocol PASS does not certify night/portal progression.
-  Replication123692/85256 starts10:53:13.743174UTC: this inspected pilot plus
-  five prospective unchanged trials, helperaf779207; first red/INVALID stops.
-  Natural terminal1 at10:59:15.029950UTC: repeat2 medianFPS13 INVALID;
-  four trials unrun. All114 FPS samples retained,2574 end ticksHP20/minAir101,
-  46 atomic air-task/swim ticks then1171 full-air recovery ticks/finalAir300,
-  unchanged deaths3327/checkpoint/offline30.11s/runtime+cleanup[]. These
-  physical observations do not pass the unchanged healthy20FPS floor.
-  Independent audit134172/105096 naturally0 at11:03:23.991141UTC;
-  original proofa59086fa/film0b941ef7184.9s unchanged. All four original-size
-  fixed2s pages actually inspected, actual-reviewaec27bfc: repeated failed
-  and partial physics searches beneath the stone roof, later air swim and
-  bridge/pillar motion, then a long night-shelter hold and real logout/menu.
-  One healthy pilot/one INVALID/four unrun is not a six-repeat rate.
-  Read-only current-load56588/77152 naturally0 at11:05:33.630562UTC:
-  three5s host CPU intervals62.64/79.76/68.27%, bench lock absent;
-  docker stats retained. This is later load, not attribution of the earlier
-  FPS13 or a demonstrated scanner regression. No foreign processes,
-  containers, GPU or settings changed; no source/release closure.
-- Assess: this establishes copy isolation and advances the open scanner
-  ownership boundary; full-playthrough score/healthy current rate have not
-  moved. The source candidate is uncommitted/unreleased until measured.
+- Exact candidate8ae9b6f612b125fc6ef8092b36f31da84cc6cf4a15056e85f3fc4f348c871f4a clean-built, recursive2215 classes audited and canonically loaded only on tester1. Fixed fall cache adds only Config constructor and BaritoneHelper climbCost/static initializer vs c808; other classes identical.
+- Exact103,610 bit-equivalence vectors/112 retained-set cases and225 actual loaded-JVM vectors pass. False reintegrates the same fixed value; true precomputes it. No client-speed/FPS improvement established.
+- Cost parent66552/70052, unified79385 naturally0 at19:18:51.890184UTC, fixed-fall-near-pairs-20261004-211525. Six pairs order(true,false),(false,true), repeated3; Near region always true/smartMoves false. Every arm restores original cp70 and observes fixed90s protected Idle, exact live SNBT/pose, active+whole FPS20/HP20/actual arrival, protective logout/offline/source13/runtime gates.
+- All12 arms and all12 independent auditors naturally0. Final pair6 true56824/52940 proof48ab4ce62efaf72b412d8246314bdf5d0d63e49ab786f4d2b9d07b28c11faa47 finished19:18:51.825505UTC; auditor61004/36164 naturally0 at19:19:02.856703UTC. Arrivals3.282..3.337s, active medians29..30FPS;6/6 healthy arrivals per flag. Both flags passing does not establish a cache speed/FPS gain or explain older c808 invalids; no original parent stall closure.
+- Film extraction86172/65900, unified81725 naturally0 at19:21:22.647941UTC. Every48 contact sheets (4 per complete film,2s cadence through final cadence sample) was actually opened at original detail. Stone mining/down-step leads to dry bank/full hearts; long pre-task holds are declared protected Idle. Startup old red chat is distinguished from clean measured runtime windows. Seal65612/159312 naturally0 at19:29:34.898886UTC; actual-review.json SHAc1b6a4ae83bdb2cf84a131aac0b6888ae2b9289d0a203feb57c2cdc0abb29e85 binds films, pages, facts and audits. Lava collection/portal/full chain remain separate. Fixed cadence does not guarantee the exact final encoded frame; older wording saying it does is corrected here, original receipts unchanged.
+- Adjacent helper5a51e171, logical preparation e79fc5dd: six craft_at_distant_table/nav_flat/nav_staircase/nav_descend rounds, total24, original gates/FPS20/defaults/no refresh. Sole actual child128556/wrapper162920, unified58358, started19:30:31.468759UTC. No source/build/deploy changes during this campaign; retain first red and all unrun cases.
+- Fresh real lava/portal preparation only: ca042520ab533d663cea5b9e31ecc2c05fe54ecadccdc2ed47c5f49a094eefac /27274b9977e751b414d65f4ee59386021d6b9cb507f6337bafb9d6953f0f632a. Runner868e7caa prepare-only0, no game executed. Same original cp70/exact payload/preparation/healthy gates; declared180s/600s windows. Real inventory-filled lava or ten actual obsidian cells plus lit portal required; portalOrigin read-only getter executes on client thread, not forced.
+- Independent liquid auditor afdcf6d2 parsed before outcomes. Requires positive progression and retains healthy incomplete as incomplete; complete trace/entry/source/runtime/offline guards. No original cached parent state or whole-game/rate claim.
+- Final real-context runner d85b7baf and frozen lava59c211a9/portal d56fc79d prepare-only0 at19:07:08.624299/19:07:09.775211UTC. Saves an owned offline exit checkpoint after conservation, with resolved-path/15GB headroom/all historical folders protected/no overwrite; independent save failure does not bypass trace/debug/default cleanup, and save-on is guaranteed. No liquid gameplay or exit save executed. Earlier unexecuted preparations are superseded, never replay them.
+- Loaded liquid metadata helper82ab855f actual20108/103276 naturally0 at19:19:15.370569UTC. Exact lava/portal constructor signatures and Py4J factory names, mapped BlockPos getters and read-only origin getter are verified on the loaded candidate; offline/task/config identities unchanged. No task constructed or game executed. Checkpoint budget read-only:12882MB/15GB,120GB free; no pruning or snapshot changes. Independent exit checkpoint auditor is written/parsed prospectively, not executed.
+- Read-only cached-context preparation supersedes the still unexecuted plain liquid preparations. Helper934a0f51, frozen lava61d6840f/portal e4d870be;81592/62968 and112664/41376 naturally0 at19:48:04.298060/19:48:05.714607UTC, no game/save. Retains Task.sub descendants, GetClose approach radii and active/cached lava blacklists via client-thread FutureTask getters; never writes game fields. These sequential readouts may include inactive retained children and are not an atomic task-tree snapshot. Original cached Java objects still cannot be restored. All original task/window/FPS/HP20/entry/source/runtime/offline/exit-checkpoint gates stay unchanged.
+- Cached metadata helper9f42b88c,152528/93440 prepare-only naturally0 at19:48:40.616752UTC; actual loaded metadata must run offline after the adjacent boundary before any liquid task. Initial varargs-based metadata preparation039dcf7a remains unexecuted/superseded. Cached auditor3da09645,89444/47440 prepare-only naturally0 at19:50:02.970431UTC, immutable prepared gates/schema459197fc. Adjacent auditor e43d1a92,101252/20584 prepare-only naturally0 at19:32:34.677949UTC, original24 gates/preparation b93aba87 retained. No liquid gameplay or cached-state result claimed.
+- Adjacent child128556/wrapper162920 naturally0 at19:59:48.163555UTC:24/24 original objective gates, FPS28.5..30, runtime matches empty. Independent audit/extraction87956/130600, unified35044 started20:02:12.935134UTC; actual films still await inspection. No new source/build/deploy or game launch during extraction.
+- Final cached runner892e5144 starts the real actor only after metadata/diagnostic handle setup, preventing setup from hiding a fast active window. Frozen v2 lava0f553f63/portal9a69f133; prepare121240/159364 and166484/114908 naturally0 at20:01:28.515094/20:01:29.522782UTC. Previous cached934a0f51 preparations61d6840f/e4d870be were never game-executed and are superseded. Final cached auditor3874f0c9, preparation84008/109952 naturally0 at20:01:30.607952UTC, immutable c3b228a4. Use only these v2 preparations/auditor; all original liquid and checkpoint gates remain unchanged.
+- Near/cache source remains uncommitted. Current other bucket/native/scanner water WIP stays open. Earlier budget commits7586c25b/aef0d7d3 are pushed to both branches; TG9917/10046 delivered, never resend.
+- Adjacent independent audit/extraction87956/130600 naturally0 at20:02:42.839970UTC. All24 fixed2s film pages actually inspected: existing-table approach/craft, flat movement, staircase crest and descent, full hearts; preparation and post-arrival holds distinguished from active stalls. Visual seal148416/59324 naturally0 at20:13:44.639496UTC; actual-review.json SHA4943cbceccd669ed5985101ed2393bfea0393eb5a41a3edf4f6c00c84a6f9709. This is arena coverage, not native/full59 or an FPS improvement.
+- Cached metadata33104/162472 naturally0 at20:02:14.531548UTC verifies all four actual field read handles/offline inactivity. Its origin getter display label was shadowed by a loop variable; preserve that original record. Separate correction110836/79248 naturally0 at20:05:10.954277UTC, loaded-liquid-cached-metadata-v2.json actually reviewed: correct origin getter(BlockPos), identical valid fields/no task construction/game execution. The final game observer resolves its own origin getter independently.
+- Real lava71760/wrapper97672, unified19195 naturally0 at20:19:49.709849UTC; proofe5568121, first finish1.558696683s/27 task ticks/active29.5/whole30FPS/HP20. NEW lava bucket in inventory32, initial cached approach radius2/empty blacklist. Body mines downY55->53 with unchangedXZ; no original-target radius arrival is completed before pickup interrupts approach. No repeated rate/original parent stall or cache-FPS delta established.
+- Lava independent52080/166024 and exit-checkpoint140004/86144 naturally0 at20:20:35.976882/20:20:36.214107UTC. All original full gates pass; saved exit79,973,156B/player+stats equal conserved offline-last/original cp70 unchanged. Film extraction164980/94004 naturally0 at20:20:48.723236UTC; all four fixed2s pages actually opened: protected prep, short active stone mining/downstep/completion, full hearts, menu through final cadence sample. Seal152912/89552 naturally0 at20:23:01.211655UTC, actual-review.json SHA367ec4051669ea990a10d0864c0c2592ef5c1fcf5d4eaac6aa0522ac173af906. Bucket inventory witness is audited, not an invented hotbar visual.
+- Sole real portal146472/wrapper45148, unified23432 started20:23:02.432806UTC, logged-job-20261004-232302-45148, final892e5144/frozen9a69f133. Restores original cp70 independently; unchanged600s declared window/ten actual obsidian frame cells AND lit interior/current cached blacklists/full original gates. No result yet. No source/build/deploy or foreign controller/process changes.
 
-## C4.1 - request-local placement budget (2026-10-04)
-
-### Investigate
-- Actual FastPlanner publishes StartState.placeable into static volatile placeBudget read by step/placeAcross/pillarUp. Baritone CalculationContext.java97-106 freezes capability per calculation; actual source reviewed.
-- Loaded114 diagnostic158864/144392 naturally0 at11:20:15.999045UTC: private nine-cell bridge over64-deep gap, budgets0/8; sequential empty=false/stocked=true; six controlled overlaps empty=true/stocked=true. This proves budget borrowing, not FPS13 attribution. Existing policy hooks execute; no live game/block writes. Java4ea140ee/class e14c9516/query b092cbdc retained.
-- Original missing virtual WorldBorder and walkable-trench fixtures naturally failed; both remain retained, no race/gameplay verdict.
-
-### Plan
-- Pass immutable count explicitly through all placement generators; preserve geometry/costs/policies. Verify final classes and actual outer bytecode before canonical tester1 deployment.
-- Repeat same Java and ordering: sequential controls unchanged, six overlaps empty=false/stocked=true. Six original bridge/wall2/water/water-pillar/flat/staircase/descend rounds (42 planned), minimumFPS20/first-red stop. Wall2 exercises the planner's climb/pillar admission; water-pillar exercises direct pillar execution. Broader world/tool/protection/predicate snapshot debt remains open.
-
-### Implement
-- Candidate removes shared static budget, passes final int through expand/step/placeAcross/pillarUp. Narrow diff reviewed/diff-check0; other nine guarded inputs unchanged. Source4da7423af8a28acb36e176e93d2348b82a1e158ec9a45f6ca02b5c86b560eb99.
-- Build164852/83060 starts11:21:43.952009UTC, helperd6038f0a/request-budget-build-20261004-142147/. Successful JDWP/offline/inactive/noIDEbins/no bench-lock preflight, ten source hashes. Clean/build naturally0 at11:38:58.185900UTC.
-- Original verifier103056/87412 naturally1 at11:39:30.894425UTC: StartState was an additional changed class beyond the expected outer/Heap/NodeMap. No deployment. Separate inspection47720/131452 naturally0 at11:40:41.037857UTC: actual full old/new StartState executable disassembly identical; actual line diff only434->432. Retain original verifier red. New verifier139396/18224 starts11:41:17.785592UTC allowing this inspected class only with identical nested executable disassembly; final outcome/root outer review pending.
-- Prepared adapters require exact recursive2215 candidate, identical unrelated classes/canonical loaded identity. No core commit/release/C4 closure/gameplay improvement claim.
-- Revised verifier139396/18224 naturally0 at11:41:54.752044UTC: finalc4f80c08 recursively2215, only FastPlanner/Heap/NodeMap/StartState changed, no added/removed; nested executable disassemblies identical. Actual complete changed methods and initializer reviewed; all unrelated symbolic methods unchanged after reference-index masking. Proof2203ae48/actual-review438aaf76.
-- Canonical tester1-only deployment160288/32852 naturally0 at11:46:08.125934UTC, loaded exactc4f80c08/offline/inactive/ten-source guards. Same Java4ea140ee/class e14c9516 fixed query36096/56284 naturally0 at11:47:34.770445UTC: sequential0=false/8=true; all six overlaps0=false/8=true, no shared field/offline/cleanup[]. This is loaded-planner mechanism validation, not gameplay/FPS improvement.
-- Original adjacent42-course protocol118864/97968 starts11:48:37.590490UTC, helper1fe9ec1b. Original criteria/default/readback/runtime/FPS20 gates and first-red stop retained; every clip recorded, actual film review pending. No native/release/source closure yet.
-- First round7/7 original gates pass, FPS25.5..29.5; all seven complete films actually inspected at fixed2s cadence. Four-film prefix receipt actual-reviewed-prefix.json is write-once; the remaining three films await the final receipt. Campaign is incomplete, not42/42. Final all42 audit remains unrun.
-- Prepared six fresh prospective currentc4f native trials, helper8db869c5, unchanged original checkpoint120s/atomic air-swim-recovery/HP20/FPS20/runtime/offline25s gates. No earlier114 trial is counted. Launch only after the navigation campaign's natural terminal and review; first red stops without refresh/retry.
-- Separate retained-trace analysis116040/161892 naturally0 at12:01:03.865672UTC, helper18ab1a00: healthy114 active window2400 end ticks includes354 GetToAir and1809 bed/wander ticks; the3.141s surface hold presses JUMP while air replenishes. FPS13 INVALID remains INVALID: its21.056s dry NightShelter hold has no keys/Air300/HP20. Reopened NightShelterTask confirms deliberate waiting until morning; this hold is not an established navigation defect. Its5.843s submerged bed/wander hold and broader water/bed progression remain unresolved. Analysis changes no retained record or source input.
-- Round2 all7 original gates passFPS22.5..28.5; all seven full fixed2s pages actually viewed. Write-once round2 receipt169068/21472 naturally0 at12:28:06.892253UTC, helper4f32625b; round-2-actual-review.json. Fourteen total films viewed; navigation and native campaigns remain incomplete.
-- Round3 all7 original gates passFPS26.5..29.5; all seven complete original-size fixed2s pages actually opened. Preparation160540/144292 naturally0 at12:42:32.205765UTC, review74156/120820 naturally0 at12:43:43.422058UTC, helpercdaf3d7e/round-3-actual-review.json. Twenty-one films viewed; fourth round underway, final42 audit/native/bucket coverage and release remain open.
-- Round4 all7 original gates passFPS25..29.5; all seven complete original-size fixed2s pages actually opened. Preparation21384/89768 naturally0 at12:52:54.494106UTC; sealing54404/65856 naturally0 at12:54:09.442731UTC, helper3f17df64/round-4-actual-review.json. Twenty-eight films viewed; current42 campaign incomplete. Independent per-trial native auditor da68530f prepared/AST parsed only; no native trial or audit result asserted.
-
-- Round5 all7 original gates passFPS24.5..29.5; all seven complete original-size fixed2s pages actually opened. Preparation18284/117908 naturally0 at13:06:38.905413UTC; sealing12264/163896 naturally0 at13:07:11.654663UTC, unchanged helper3f17df64/round-5-actual-review.json. Thirty-five films viewed; sixth round and final independent42 audit remain open. No source/release/native coverage closure.
-
-- Navigation118864/97968 naturally0 at13:13:22.170968UTC: all42 original gates PASS, FPS22.5..30, cleanup[]. Round6 preparation70816/166680 naturally0 at13:14:57.385208UTC; all seven complete original-size fixed2s pages opened, sealing128560/140276 naturally0 at13:15:43.446089UTC. All42 films now viewed; first-round remaining3 reopened and sealed50968/85000 naturally0 at13:09:27.563365UTC. Full independent audit88228/48512 starts13:15:45.144474UTC, helperc5daf4c3; final hash-bound receipt pending. Native6/bucket24/source commit/release/C4 closure remain open.
-
-- Complete original42 audit88228/48512 naturally0 at13:17:15.743750UTC: all original gates, strict runtime hashes/windows, sampledHP20/deaths0, defaults and ten source identities retained. Final actual-review87736/144704 naturally0 at13:17:40.447474UTC, helper2425f411: all42 rebuilt pages and films match the prior actually viewed receipts. Prospective currentc4f native6 starts155596/87632 at13:17:55.606951UTC, helper8db869c5; earlier114 pilot/INVALID remain separate. No completed current native rate, bucket24, source commit, release, full59 cause or broader C4 closure claimed.
-
-- Currentc4f native trial1 child50392 naturally0 at13:23:31.732907UTC, proof f3e4a59. Independent120728/145168 naturally0 at13:24:15.383816UTC: all2385 actual end ticksHP20/minAir38, median23 across112 FPS samples,113 atomic air-task/swim ticks then12 full-air ticks from2243, no new deaths3327/blocked original edge/runtime/cleanup/checkpoint/offline gates. FinalAir57 follows a recovery and belongs to a later rescue. All four complete original-size fixed2s pages of173.933s film opened; actual-review128324/80912 naturally0 at13:26:14.672463UTC, helperdc29d06f. Extended stone-roof bed/wander holds and distinct MovementSwim58->57 FAILED remain. One currentPASS is not a six-repeat rate or sleep/portal/full59 progression. Trial2 child148236 starts13:23:31.810079UTC; no terminal at this read.
-
-- Currentc4f native parent155596/87632 naturally1 at13:40:06.972726UTC: three original PASS at median23/24/25FPS; fourth132340 naturally1 with healthy26FPS, all2483 end ticksHP20/minAir184/finalAir300 and zero GetToAir task/swim coverage. Two planned trials remain unrun. Four independent audits preserve all original terminals; all16 complete original-size fixed2s pages actually opened. Trial2 audit117608/46516 naturally0 at13:32:03.739613UTC, review164072/124488 naturally0 at13:39:04.909304UTC; trial3 audit167896/130876 naturally0 at13:39:22.731979UTC, review139524/54988 naturally0 at13:40:41.961949UTC; trial4 audit98864/141388 naturally0 at13:41:38.282391UTC, review51144/142980 naturally0 at13:44:25.441371UTC. Each actual-review.json binds original proof and page hashes, including the healthy coverage FAIL.
-- Four-trace analysis72588/53696 naturally0 at13:44:23.898315UTC, helper64f102a3: fourth has306 submerged active ticks, none below half air, zero GetToAir ticks; film shows ordinary wander reaching the bank, pillar/climb and dry NightShelter. Private shouldStart cost is unread; this is absent rescue exposure, not an observed failed rescue. First three have375/378/437 GetToAir ticks and positive atomic swim/recovery. The original analysis88568/111904 failed on the string-list task schema before writing any result; its terminal/log retained, corrected analysis uses actual string names. No full six-repeat rate, bed/portal/full59 completion or release inferred.
-- Currentc4f prospective bucket24 parent41228/wrapper70420/unified8980 starts13:44:43.836000UTC, helper1b66f0fb. Only active gameplay campaign; restored native geometry, declared count2/3/0/1 inventory boundaries, unchanged48s/HP20/FPS20/conservation/positive completion/active Idle handoff/runtime/logout gates. Prior bucket9PASS/1INVALID/14unrun stays separate. First red stops without refresh/retry/filtering. No completed current bucket rate yet; source WIP preserved.
-
-- Current bucket24 parent41228/70420 naturally1 at13:48:27.654274UTC after first count2 child162960 naturally1 at13:48:27.588223UTC: median16FPS INVALID,23 unrun. Independent audit167208/137836 naturally0 at13:49:23.014547UTC, helper3939ffb4, retains all20 FPS samples,1058 end ticksHP20/minAir293/no trace gaps, exactly1 filled+1 empty in every observed inventory and offline, positive task finish0.380s/19 active Idle handoffs, whole-window runtime/cleanup clean. Both complete fixed2s pages of72.333s film actually opened; actual-review111464/64968 naturally0 at13:51:18.497874UTC, helper48a1d21b. Original INVALID is unchanged; no healthy24 rate or automatic retry.
-- Current read-only host-load155820/96136 naturally0 at13:52:01.651519UTC: three later5s CPU intervals67.044/62.5/60.820%, bench lock absent, Docker stats retained. These later intervals do not attribute the earlier16FPS failure or validate an admission threshold. Foreign processes/containers/GPU/settings unchanged.
-- Narrow request-budget source commit is now eligible from the loaded six-overlap mechanism proof, clean scoped build/final bytecode identity,42 original adjacent PASS/independent audits/all films. Commit only FastPlanner with the retained coverage documentation. Other frozen candidates remain uncommitted; no public057, C4 closure, complete native6/bucket24 rate or full59 cause claimed. Continue original full59 source/context diagnosis without replaying successful isolated controls.
-
-- Budget isolation source7586c25b is committed and immediately pushed to both
-  main and1.21.11; exact Wiki37207584072 succeeds. Other frozen candidates
-  remain WIP. New edited request-budget-audit-20261004 report uses audited
-  currentc4f navigation and native films, with explicitly illustrated private
-  query before/after6/6 wrong empty-stock plans ->0/6, stocked6/6 unchanged.
-  HyperFrames0.8.123 strict check has zero findings and52/52 contrast checks;
-  all16 mapped tweens inspected, intentional reading/gameplay holds retained.
-  All three complete exported fixed2s/cut-boundary pages actually opened.
-  Render108488/26588 naturally0 at14:40:45.346454UTC:56s/1680frames/
-  1920x1080/30fps/22,796,061bytes/SHA3c43727e. QC93828/44076 naturally0 at
-  14:45:26.042229UTC; one positive Telegram10046 receipt from40640/139212
-  naturally0 at14:47:53.874983UTC. Existing9917 not resent. No new release,
-  full native6/bucket24 rate, C4 closure or original full59 cause claimed.
-- Read-only original full59 log analysis28208/128324 naturally0 at14:35:21
-  (exact wrapper receipt retained), helper7208dc7b; original14892a7b log
-  unchanged. In23:10:00..23:50:36,48535 emitted FINISHED log entries refer
-  only to parent near(-289,52,965 r7);187 emitted no-leg refusals recur at
-  4.1->2.2 toward a goal3 below. There are no retained Task START/STOP lines
-  in that window. Counts are log emissions, not client ticks or a cause.
-  Startup version line says0.95.53; it cannot rule out later hotswap/deployment.
-  Next experiment must observe actual leaf goal/guide and mining-policy state,
-  not infer them from the finished parent or replay successful isolated pickup.
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
