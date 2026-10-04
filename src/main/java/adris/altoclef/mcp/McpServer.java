@@ -254,6 +254,10 @@ public class McpServer {
                 "Creative mode only: put count of an item (e.g. 'firework_rocket', 'elytra') into free "
                 + "inventory slots, like taking it from the creative tab. ok=false with reason otherwise.",
                 schema("item:string", "count:int"), a -> api.creativeGive(argStr(a, "item"), argInt(a, "count")));
+        tool("tidyInventory",
+                "Free inventory slots until keepFree are empty. Creative: empties non-kit slots (elytra, "
+                + "fireworks, paper, gunpowder stay). Survival: throws only junk blocks (dirt, cobble...).",
+                schema("keepFree:int"), a -> api.tidyInventory(argInt(a, "keepFree")));
         tool("setBuildPolicy",
                 "Shared-server manners: breakOnlyNatural=true mines only dirt/grass/sand/gravel/leaves/"
                 + "snow/plants (never builds); allowPlace=false never places blocks.",

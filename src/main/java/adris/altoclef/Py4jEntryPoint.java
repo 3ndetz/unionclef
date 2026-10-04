@@ -5897,6 +5897,59 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Items an agent keeps whatever the mode: the flight kit and what rockets are made of. */
+    private static final java.util.Set<String> TIDY_KEEP = java.util.Set.of(
+            "elytra", "firework_rocket", "paper", "gunpowder", "sugar_cane");
+    /** Survival junk the pathfinder digs up; safe to throw away. */
+    private static final java.util.Set<String> TIDY_JUNK = java.util.Set.of(
+            "dirt", "coarse_dirt", "rooted_dirt", "cobblestone", "cobbled_deepslate", "gravel", "sand",
+            "red_sand", "netherrack", "andesite", "diorite", "granite", "tuff", "calcite", "dripstone_block",
+            "rotten_flesh", "wheat_seeds", "flint", "stick", "dead_bush", "short_grass", "tall_grass");
+
+    /** Keep at least keepFree empty slots in the main inventory. A full inventory breaks
+     *  creativeGive and, worse, the mod cannot move fireworks out of the hand before a right
+     *  click, so the bot fires them off on the spot. Creative: empty non-kit slots (the items
+     *  are free from the tab anyway). Survival: throw only obvious junk, never tools or loot. */
+    public Map<String, Object> tidyInventory(int keepFree) {
+        int want = Math.max(0, Math.min(keepFree, 27));
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            var me = client.player;
+            if (me == null || client.interactionManager == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            boolean creative = me.getAbilities().creativeMode;
+            var inv = me.getInventory();
+            int free = 0;
+            for (int i = 0; i < 36; i++) if (inv.getStack(i).isEmpty()) free++;
+            int freed = 0;
+            // Main inventory first, the hotbar last: what the player put in hand stays longest.
+            for (int k = 0; k < 36 && free < want; k++) {
+                int i = k < 27 ? k + 9 : k - 27;
+                net.minecraft.item.ItemStack st = inv.getStack(i);
+                if (st.isEmpty()) continue;
+                String id = net.minecraft.registry.Registries.ITEM.getId(st.getItem()).getPath();
+                if (TIDY_KEEP.contains(id)) continue;
+                int slot = i < 9 ? 36 + i : i;
+                if (creative) {
+                    inv.setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                    client.interactionManager.clickCreativeStack(net.minecraft.item.ItemStack.EMPTY, slot);
+                } else if (TIDY_JUNK.contains(id)) {
+                    client.interactionManager.clickSlot(me.playerScreenHandler.syncId, slot, 1,
+                            net.minecraft.screen.slot.SlotActionType.THROW, me);
+                } else {
+                    continue;
+                }
+                free++;
+                freed++;
+            }
+            out.put("ok", free >= want);
+            out.put("free", free);
+            out.put("freed", freed);
+            out.put("mode", creative ? "creative" : "survival");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Text of every sign within radius blocks (front and back), nearest first. Lets an agent
      *  learn place names ("Pink house", "Farm") instead of guessing from block colours. Reads
      *  block entities of the loaded chunks, so it costs nothing in world block lookups. */
