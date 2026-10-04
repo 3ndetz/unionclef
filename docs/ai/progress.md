@@ -349,8 +349,8 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   actual-review.json retained. Read-only host observer119116/68644 naturally0
   at08:19:35.534482UTC, errors[]; actual gameplay overlaps host aggregateCPU
   97.54/91.43% at08:18:25/08:18:58, not per-thread causal proof or blame.
-- New prospective native producer coverage follows GetToAirTask.java:115-121/
-  167-171 and FastNavigator.java:1476-1489 condition search, rather than assuming
+- New prospective native producer coverage follows GetToAirTask.java:112-115/
+  154-160 and FastNavigator.java:1476-1489 condition search, rather than assuming
   every air route emits gridBFS. Same-tick task+active navigation+MovementSwim+
   movement keys/oxygen deficit followed by full-air recovery is required.
   Original grid-positive1PASS/1healthy coverageFAIL/4unrun remains unchanged.
@@ -381,6 +381,64 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   stricter threshold is uncalibrated and never replaces actualFPS20. Only then
   may one unchanged current count2/3/0/1 six-round campaign run, stopping at its
   first red/INVALID. No process/GPU/settings intervention or automatic refresh.
+
+## C4.1 — capture scanner block data before worker dispatch (2026-10-04)
+
+### Investigate
+- Stronger scheduling160684/159344 naturally2 at09:03:57.056653UTC, eighty
+  15s aggregate CPU intervals63.58..87.80%, no eligible interval/no bench lock,
+  game_executed=false. Proof41fbb3f8 retained; no gameplay verdict, refresh or
+  filtered retry. Current24 bucket boundaries remain unrun, prior9PASS/
+  1INVALID/14unrun unchanged. ActualFPS20 remains the gameplay gate.
+- Reopened complete BlockScanner and Baritone BlockStateInterface/provider/
+  chunk-array copy. Copied upstream lookup retains the same WorldChunk objects,
+  not deep block states. Current pre-change scanner already guards loaded
+  chunks; its worker still read their contents. Root Yarn build3 and tungsten
+  build4 cache both exist; both are1.21.11, no mapping changes.
+- Local vanilla bytecode116308/102848 naturally0 at08:55:30.281169UTC confirms
+  section copy invokes container copy/storage+palette copy. Signature docs and
+  inspected disassembly are mechanism evidence, not runtime publication tests.
+- Isolated section-setter probe160992/24624 naturally1 at09:14:45.590840UTC:
+  first private-copy mutation hits Lithium RandomTickingSectionDataHelper
+  removeAt null random-tick metadata. Zero completed query rows, no capture
+  timing result. Original exception/proofcea34c37/film396b5b3b28.1s retained;
+  full fixed2s sheet viewed. Sampled tickHP20/offline/inactive/runtime+cleanup[].
+  Post-query inventory/digest checks beyond the failed assertion did not run.
+- Separate private-container mutation68896/47220 naturally0 at
+  09:22:06.017601UTC: six actual client-thread captures, each157 loaded chunks/
+  3768 sections/1503 nonempty copies. Six palettes8,5,14,11,11,9 distinct
+  states; each round positively changes4096 cells of each copy and then checks
+  all4096 original and independent sibling cells unchanged. Zero live block
+  writes. Actual capture durations including reflection13.740/8.517/8.511/
+  13.541/11.824/12.899ms, no inferred gameplay FPS saving. All inventory rows
+  unchanged/use counter1 unchanged, sampled tickHP20/offlineHP20/Air300/one
+  filled+one empty, original checkpoint unchanged/runtime+cleanup[].
+  Proof4da05268/film2ce4f2a737.3s, complete original-size fixed2s sheet viewed.
+  Own diagnostic classes/loaders/files removed; original Lithium red preserved.
+- Air157 and FleeLive438-450 predicates still capture live world. Passing a
+  snapshot only to FastPlanner would leave those condition reads live. Mining
+  tool/global budget and other search-world debt also remain open.
+
+### Plan
+- Freeze loaded lookup membership and block containers on the client thread,
+  following Baritone's no-forced-load capture/section read. Preserve recency
+  traversal, prioritisation, blacklist, client completion/world-exit guards.
+- Measure actual production capture cost; validate negative coordinates,
+  height/empty sections, original mutations and unload isolation, distant
+  discovery and logout boundaries, then adjacent courses before any release.
+
+### Implement
+- Candidate ChunkBlockSnapshot exposes only block reads; copied containers/
+  arrays remain private. Scanner worker uses immutable loaded membership and
+  these copies, while world reference is only a client publication identity.
+  New capture cost/chunk counters are separate from existing worker cost.
+- Scoped clean build54156/124948 starts09:26:49.330587UTC, helper47579bb0,
+  successful host/owned-client JDWP and offline checks required before Gradle.
+  Compiler owns only its containers, capped2CPU/2workers; nine source inputs
+  bound before/after. Final payload proof/deployment/bench tests pending.
+- Assess: this establishes copy isolation and advances the open scanner
+  ownership boundary; full-playthrough score/healthy current rate have not
+  moved. The source candidate is uncommitted/unreleased until measured.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no

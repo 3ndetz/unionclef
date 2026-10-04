@@ -16314,8 +16314,33 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   live stand (currently unavailable, see C8.1), rather than guessing from the number of nodes used.
 
 ### C4 — THREAD SAFETY / CORRECTNESS
-- [ ] **C4.1 All searches read the live `ClientWorld` off-thread**, from two worker pools, with no
-  `BlockStateInterface` equivalent and no chunk-loaded guard. `VoxelWorld` (the would-be cache) is dead.
+- [ ] **C4.1 Background searches still read live world/chunk contents**, without an
+  immutable block-state snapshot equivalent. The historical blanket statement
+  "no chunk-loaded guard" is too broad: before this pass, e784bfc4
+  BlockScanner.java:564 guards loaded chunks, but scanChunk:656-677 still
+  reads their live contents off-thread.
+  Its client-owned request/completion and world-exit invalidation do not freeze
+  block states. VoxelWorld was removed, not replaced with a working snapshot.
+  2026-10-04: reopened Baritone BlockStateInterface/MixinClientChunkProvider/
+  MixinChunkArray. Their copied lookup array retains the SAME WorldChunk objects;
+  do not describe it as a deep immutable block snapshot. Local vanilla1.21.11
+  bytecode confirms ChunkSection.copy calls container.copy, whose Data.copy
+  copies storage/palette. First isolated section-setter mutation fails in
+  Lithium random-tick metadata, zero completed query rows; preserve its original
+  exception/terminal/film. Separate container-only mutation probe6/6 passes:
+  157 loaded chunks/1503 nonempty sections, all4096 cells of six original and
+  sibling sections unchanged after positive copy writes; HP20/inventory/use
+  unchanged, exact checkpoint preserved, runtime/cleanup[]. Capture including
+  reflection8.511..13.740ms; not a gameplay/FPS/publication result. Both full
+  fixed2s film sheets viewed. Scanner now has a candidate client capture using
+  only private PalettedContainer copies and loaded membership; scoped clean
+  build active, exact final payload and discovery/logout/adjacent tests pending.
+  No C4.1 closure or release claim.
+  FastPlanner's state memo first misses still read live world. GetToAirTask:157
+  captures live world in its condition; FleeLive.snapshotSafety:438-450 copies
+  mob positions but still queries captured live world fluid. A snapshot passed
+  only to the planner cannot fix those condition closures. Preserve generation
+  guards and current-world arrival validation when binding request conditions.
   2026-10-03: native logout boundary6 logs "Running game timer while not in game"
   from BlockScanner worker completion (old BlockScanner.java:454). The strict
   audit fails even though the original wrapper missed this STDERR error.
