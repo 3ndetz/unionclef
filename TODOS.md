@@ -4,6 +4,16 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Client-log rollover discovery misses an exact completed-case window (2026-10-04).**
+  Original activation diagnostic executes20 gameplay PASS, but seals only19
+  summary rows and exits1 while collecting fifth mob's client log; four unrun.
+  Separate later archive discovery reconstructs the frozen twentieth window,
+  errors[], without rewriting that terminal. Collector previously excluded all
+  preexisting names, although Log4j may reuse names. Content-based discovery
+  and bounded compression-readiness retries now pass Windows/Linux51 boundary
+  tests and exact saved-byte replay. Original name set was not retained, so
+  reused name versus asynchronous discovery is unresolved for this occurrence.
+  Validate the collector during the next actual campaign; no retroactive green.
 - [ ] **A spawned zombie attacks before the melee fixture activates defence (2026-10-04).**
   Original90faa8a4 hazard audit ends after11 PASS/one third-repeat mob FAIL,
   12 cases unrun. At29.64FPS the zombie survives, sampledHP2, ctl0/cq0;
@@ -14,6 +24,14 @@
   and measure actual health/tasks around command submission before changing
   fight policy or assigning an air-route regression. All12 films/16 pages reviewed:
   air-route-film-review-20261004-021206/actual-review.json.
+  Five traced fights independently startHP20 and reachHP17 BEFORE command
+  submission, including passing fights. Terminal diagnostic20/24 gameplay PASS,
+  original19 runtime seals/exit1; supplemental twentieth window is separate.
+  All20 films/25 pages reviewed: air-route-film-review-20261004-030403/
+  actual-review.json. Preparation damage is proven; the entire previousHP20->2
+  failure is not reconstructed. Preserve initialized spawn/tracker wait, pause
+  only during preparation, then resume immediately before the original command;
+  protect setup failures and ordinary finish by logout before stopping defence.
 - [ ] **Air escape alternates digging and swimming as the body bobs (2026-10-04).**
   Two dry-entry eff tunnel traces start GetToAir at Air149/HP20, repeatedly
   cancel swimming for a grounded cap quote, then surface after Air-19/HP18.

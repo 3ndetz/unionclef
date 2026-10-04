@@ -9,6 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import time
 
 from . import process
 
@@ -81,11 +82,7 @@ class ClientLogWindow:
         (directory / 'client.log').write_bytes(latest)
         archives = []
         if not latest.startswith(self.before):
-            for name in self._archives():
-                if name not in self.old_archives:
-                    raw = self._read(name)
-                    (directory / name).write_bytes(raw)
-                    archives.append((name, gzip.decompress(raw)))
+            archives = self._collect_archives(directory)
         window, sources = window_bytes(self.before, latest, archives)
         (directory / 'client-case.log').write_bytes(window)
         (directory / 'client-window.json').write_text(json.dumps(dict(
@@ -94,3 +91,43 @@ class ClientLogWindow:
             window_sha256=hashlib.sha256(window).hexdigest(),
             scope='Exact byte-prefix boundary; any incomplete initial line is included in full.'), indent=2))
         return window.decode('utf-8', errors='replace').splitlines()
+
+    def _collect_archives(self, directory):
+        """Find the frozen prefix by content, including reused Log4j names.
+
+        Compression can finish after latest.log rolls. Retain each discovery
+        attempt and retry only unavailable/incomplete archives or a missing
+        prefix. Ambiguous history and intervening gaps still fail closed.
+        """
+        attempts = []
+        try:
+            for attempt in range(1, 4):
+                capture = directory / f'archive-attempt-{attempt}'
+                capture.mkdir()
+                row = dict(attempt=attempt, names=[], archive_sha256={})
+                attempts.append(row)
+                try:
+                    row['names'] = self._archives()
+                    archives = []
+                    for name in row['names']:
+                        raw = self._read(name)
+                        (capture / name).write_bytes(raw)
+                        row['archive_sha256'][name] = hashlib.sha256(raw).hexdigest()
+                        archives.append((name, gzip.decompress(raw)))
+                    matches = [name for name, data in archives if data.startswith(self.before)]
+                    row['prefix_matches'] = matches
+                    if len(matches) > 1:
+                        raise ValueError('Missing or ambiguous starting client-log archive')
+                    if not matches:
+                        raise FileNotFoundError('Starting client-log archive is not available')
+                    return archives
+                except (OSError, EOFError, process.CalledProcessError,
+                        process.TimeoutExpired) as error:
+                    row['error'] = f'{type(error).__name__}: {error}'
+                    if attempt == 3:
+                        raise
+                    time.sleep(0.2)
+        finally:
+            (directory / 'archive-discovery.json').write_text(json.dumps(dict(
+                initial_names=sorted(self.old_archives), attempts=attempts,
+                scope='Read-only bounded discovery; frozen start/end bytes never change. All archive names are searched by content, including reused names. Missing, ambiguous or incomplete history is not a passing runtime seal.'), indent=2))

@@ -273,6 +273,40 @@ Completed Windows repair:
   timestamps around the unchanged original suite prefix; no core fight-policy
   change or air-route causality claim. Remaining hazards/42/native6 stay open.
 
+- Diagnostic98412/wrapper51164/unified59204/log022351 naturally1 at
+  2026-10-04T00:00:07.625715UTC. Twenty gameplay cases PASS, zero INVALID;
+  original summary seals19 rows, then fifth mob's completed verdict is followed
+  by missing/ambiguous starting client-log archive. Four cases UNRUN. Cleanup[]
+  and confirmed offline/inactive. This is not a green24-case campaign.
+- Later read-only discovery reconstructs exact frozen twentieth before/end
+  bytes through2026-10-03-7.log.gz/latest.log, errors[]. Supplemental receipt
+  mob-rollover-recovery-20261004-0002/recovered-window.json SHA
+  2f2d52a35ba45e40be48e8af775ac4a0214959f6e1b3c08517f12a14524d9dd8.
+  Original collector's name set was not retained; reused name versus delayed
+  compression/discovery is unproven. Original terminal/summary remain unchanged.
+- Freezer65344/wrapper148428/unified25655/log030403 naturally0 at00:04:55.005901UTC.
+  ALL20 films/all25 fixed2s pages actually reviewed before writing the journal:
+  air-route-film-review-20261004-030403/actual-review.json SHA
+  6a5eed939a9ca771573e3fbc26f46333c8ae529a84409492e3760831d2a507ef.
+  Supplemental twentieth runtime seal explicitly separate. Five air traces keep
+  HP20/endAir300/minAir100/no dig child, endticks1219/1082/1112/1152/1196;
+  USER mining follows replenishment. Original resistance lava fixture retained.
+- All five command-boundary traces startHP20 and drop to17 BEFORE submission.
+  First ownedHP14/17/14/14/14; repeat4's final drop occurs on first owned tick,
+  not strictly before ownership. Receipt mob-command-boundary-natural-terminal-
+  20261004.json SHAf55e540a9e4f16767c5fb03d8cf97fb2d6d0f696cb484a7eabeb73094d996e6e.
+  Preparation damage is proven, not the entire old untracedHP20->2 mechanism.
+  Core low-heart flight remains expected; no fight policy or air causality change.
+- ClientLogWindow now searches all archive names by exact frozen prefix, keeps
+  each discovery attempt/hashes and initial names, and retries unavailable or
+  incomplete compression at most three times. Frozen ending bytes do not move.
+  Ambiguous starts/intervening gaps still fail; errors on both rollover sides
+  remain. Actual Windows51/51 and Linux51/51 boundary tests pass; exact saved
+  case20 byte replay matches0a25ec96a420a381e6db8c74610361e6ddf348a4ada6ca46d8283660835d36b9.
+  Linux proof client-log-collector-linux-20261004-proof.json binds source/log.
+  Saved replay simulates preexisting names; it does not reconstruct the absent
+  original name set. Actual next-campaign collector validation remains open.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
