@@ -1,0 +1,9 @@
+Unionclef development: Near goals search the requested radius.
+
+12/12 approaches and 24/24 adjacent checks passed. One fresh lava task collected a new bucket. Fixed fall cost caching preserves bit-identical costs; no FPS gain established.
+
+The portal observation failed after client exit. A separate 15-minute native continuation survived without deaths, but an open-table hold still needs investigation. The original long-running stall and whole playthrough remain open.
+
+Edited gameplay and labels. Historical/current footage shares a saved checkpoint but differs in preparation and smartMoves; it is not a matched timing comparison. This is a development milestone, not a release.
+
+https://github.com/3ndetz/unionclef

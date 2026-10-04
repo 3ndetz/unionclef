@@ -1,0 +1,2 @@
+# Frozen asset hashes must survive checkout on both Windows and Linux.
+assets/* -text

@@ -1,0 +1,96 @@
+{
+  "assets": [
+    {
+      "path": "assets/approach.mp4",
+      "source": "deploy/runner/artifacts/fixed-fall-near-cost-true-20261004-211527/probe.mp4",
+      "sha256": "d510d707083a7efda2105ae6f4627f8332a64d9c89bbc0f0789436479045d468",
+      "bytes": 23163418,
+      "rights": "Owner project gameplay recording"
+    },
+    {
+      "path": "assets/point-history.mp4",
+      "source": "deploy/runner/artifacts/full59-near-goal-entry-20261004-182426/probe.mp4",
+      "sha256": "eec6e4226c7c0af3724988cb4783bb1cf2b596393b026a48b581106373236b24",
+      "bytes": 20960505,
+      "rights": "Owner project gameplay recording"
+    },
+    {
+      "path": "assets/craft.mp4",
+      "source": "deploy/runner/artifacts/fixed-fall-adjacent-20261004-223031/1/craft_at_distant_table/craft_at_distant_table.mp4",
+      "sha256": "3caf90cab35cc9c27410cb26cad914d7dead65b04fa7b0956169d8545b41880c",
+      "bytes": 2974781,
+      "rights": "Owner project gameplay recording"
+    },
+    {
+      "path": "assets/stairs.mp4",
+      "source": "deploy/runner/artifacts/fixed-fall-adjacent-20261004-223031/1/nav_staircase/nav_staircase.mp4",
+      "sha256": "018eec7c16616d2d7d04d5d35a96e32eb59101bea050367e2e2a27d15f9ea061",
+      "bytes": 1623611,
+      "rights": "Owner project gameplay recording"
+    },
+    {
+      "path": "assets/lava.mp4",
+      "source": "deploy/runner/artifacts/fixed-fall-liquid-cached-checkpoint-lava-20261004-231429/probe.mp4",
+      "sha256": "9f7634abd196deda10b2ab3542ec99c7200388c6764d5495f18503c13a3e0dbb",
+      "bytes": 25281256,
+      "rights": "Owner project gameplay recording"
+    },
+    {
+      "path": "assets/portal-failed.mp4",
+      "source": "deploy/runner/artifacts/fixed-fall-liquid-cached-checkpoint-portal-20261004-232303/probe.mp4",
+      "sha256": "986550873511164fff5337f7caaa2c0bbf8f59ccceff09ed75a893fd1b30da12",
+      "bytes": 65018641,
+      "rights": "Owner project gameplay recording"
+    },
+    {
+      "path": "assets/native.mp4",
+      "source": "deploy/runner/artifacts/gamer_run1791147892.mp4",
+      "sha256": "5a7d62e22e7f65a3765f3d40770dcb3a02546b7d354a202b8163dd1885573691",
+      "bytes": 130785346,
+      "rights": "Owner project gameplay recording"
+    },
+    {
+      "path": "assets/montserrat-900.ttf",
+      "source": "reports/hf/request-budget-audit-20261004/assets/montserrat-900.ttf",
+      "sha256": "9d9bb42bdc0defdf103a4f41c4ec775c4bfc77014b0e2f4ecc69be874b10d58b",
+      "bytes": 183180,
+      "rights": "Local reused asset; original accompanying licence retained"
+    },
+    {
+      "path": "assets/ibm-plex-mono-400.ttf",
+      "source": "reports/hf/request-budget-audit-20261004/assets/ibm-plex-mono-400.ttf",
+      "sha256": "a7fdc993f9f0387caedba4e42521136fa97e4c0837ae6239bf0413ccf8af00c2",
+      "bytes": 128812,
+      "rights": "Local reused asset; original accompanying licence retained"
+    },
+    {
+      "path": "assets/gsap.min.js",
+      "source": "reports/hf/request-budget-audit-20261004/assets/gsap.min.js",
+      "sha256": "c174bfce53a729418d57a8ad8625e7247c793a22fef8e2851e3cfa3de9cd8280",
+      "bytes": 72779,
+      "rights": "Local reused asset; original accompanying licence retained"
+    },
+    {
+      "path": "assets/GSAP-README.md",
+      "source": "reports/hf/request-budget-audit-20261004/assets/GSAP-README.md",
+      "sha256": "36224e521bdd9b79dc74ef262effc1a636d960b9be918bc2412ed69f9eee27b0",
+      "bytes": 6199,
+      "rights": "Local reused asset; original accompanying licence retained"
+    },
+    {
+      "path": "assets/ibm-plex-mono-400-OFL.txt",
+      "source": "reports/hf/request-budget-audit-20261004/assets/ibm-plex-mono-400-OFL.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+      "bytes": 4456,
+      "rights": "Local reused asset; original accompanying licence retained"
+    },
+    {
+      "path": "assets/montserrat-900-OFL.txt",
+      "source": "reports/hf/request-budget-audit-20261004/assets/montserrat-900-OFL.txt",
+      "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e",
+      "bytes": 4400,
+      "rights": "Local reused asset; original accompanying licence retained"
+    }
+  ],
+  "footage_treatment": "Unaltered colour; silent presentation;1x authored ranges. No original result rewritten."
+}

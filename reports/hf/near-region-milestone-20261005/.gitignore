@@ -1,0 +1,7 @@
+/assets/*.mp4
+/renders/
+/snapshots/
+/.hyperframes/
+/export-review/
+/export-review-v2/
+/telegram-attempt.json

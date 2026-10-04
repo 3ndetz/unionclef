@@ -1,0 +1,15 @@
+{
+  "duration": 58,
+  "assertions": [
+    {"kind":"appearsBy","selector":"#approach-title","bySec":1},
+    {"kind":"appearsBy","selector":"#region-title","bySec":9},
+    {"kind":"appearsBy","selector":"#coverage-title","bySec":25},
+    {"kind":"appearsBy","selector":"#lava-title","bySec":39},
+    {"kind":"appearsBy","selector":"#limits-title","bySec":51},
+    {"kind":"staysInFrame","selector":"#approach-title"},
+    {"kind":"staysInFrame","selector":"#region-title"},
+    {"kind":"staysInFrame","selector":"#coverage-title"},
+    {"kind":"staysInFrame","selector":"#lava-title"},
+    {"kind":"staysInFrame","selector":"#limits-title"}
+  ]
+}
