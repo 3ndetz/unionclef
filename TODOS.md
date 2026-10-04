@@ -16344,8 +16344,20 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   checkpoint unchanged/runtime+cleanup[]; full40.9s fixed2s sheet viewed.
   FPS7..21 retained; no healthy gameplay/speed claim. Three distinct observed
   scanner captures3.901/15.117/8.841ms are non-atomic final-counter samples,
-  not six independent benchmark rounds. Distant/navigation24-case run active;
-  current active-worker logout/adjacent/native integration remain pending.
+  not six independent benchmark rounds. Current distant/navigation24/24
+  original gates PASS, FPS25..30, runtime/cleanup[]. Current logout6/6,
+  FPS29..30: actual157/157 copied input, cancelled/completed, no world/cache/
+  workers or late publication25s after exit/runtime[]. Request unfinished was
+  observed before capture, not proven at the exact logout instant. Independent
+  original/strict audits0; all30 fixed2s full-clip sheets actually inspected.
+  Natural sequence0 at10:40:40.864656UTC. Same-checkpoint120s native integration
+  on exact114 naturally0 at10:49:23.866827UTC: median23/allHP20/deaths unchanged,
+  positive123 atomic air-task/swim ticks followed by full-air recovery, original
+  capped edge absent/runtime+cleanup/offline25s/checkpoint gates pass. Whole
+  fixed2s film inspected. FinalAir47/new rescue, bed-placement holds and distinct
+  MovementSwim58->57 failure retained; no portal/night progression claim.
+  This is one pilot; five identical prospective repeats now active/first red
+  stops. Native six-repeat rate and broader integration remain pending.
   No C4.1 closure or release claim.
   FastPlanner's state memo first misses still read live world. GetToAirTask:157
   captures live world in its condition; FleeLive.snapshotSafety:438-450 copies

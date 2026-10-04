@@ -459,8 +459,34 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
 - Current distant-table/flat/staircase/descend original gates,24 planned/six
   rounds, launched19336/149160 at09:57:57.154800UTC, helper8b94acb4.
   Exact114eeeb0/source/default/FPS20 guards and first-red stop retained;
-  teardown deliberately logs out before stopping. Current logout6 and
-  full native/adjacent integration remain pending; no source/release closure.
+  teardown deliberately logs out before stopping. Natural terminal0 at
+  10:34:46.813441UTC: all24 original gates PASS, FPS25..30, runtime/cleanup[].
+  Current logout23056 naturally0 at10:39:37.190274UTC: six boundaries,
+  FPS29..30, actual copied157/157 input, cancelled/completed request and empty
+  world/cache/worker state25s after exit, unchanged started/done counters,
+  runtime/cleanup[]. Unfinished request is observed before atomic capture;
+  this does not prove it remains unfinished at the exact logout instant.
+  Sequence144060/117552 naturally0 at10:40:40.864656UTC; independent original
+  navigation and strict logout audits0. All30 original-size fixed2s sheets
+  actually opened: table approaches/crafting, marker arrival/full hearts,
+  arena-to-menu/offline hold. This is sampled viewing, not every frame.
+  Actual-review receipts15c56c04/1750fe0b retain films/audits unchanged.
+  Native integration143132/166556 starts10:44:07.754939UTC on exact114,
+  helpere5c3f8f0: original cp1003-0401-t649 pack,120s actual @gamer defence,
+  atomic task/swim/oxygen recovery, HP20/FPS20/runtime/offline25s gates.
+  Natural terminal0 at10:49:23.866827UTC: medianFPS23 (all116 samples retained),
+  2514 contiguous trace rows/2460 end ticksHP20/minAir32, no new deaths3327,
+  123 atomic air-task/navigator/swim/keys/deficit ticks, first1990 then twelve
+  full-air ticks from2248. Final air47 belongs to another ongoing rescue,
+  not a final full-air state. Original capped edge absent/grid112, exact pack/
+  checkpoint/offline25s/runtime/cleanup gates pass. Film371e027e178.3s/all
+  four original-size fixed2s pages inspected; independent retained-gate audit
+  and actual-reviewacbd8185/proof77c25a9c. Bed-placement/wander holds remain
+  visible; distinct MovementSwim(-190,58,1017)->(-190,57,1017) FAILED remains
+  in the log. Survival protocol PASS does not certify night/portal progression.
+  Replication123692/85256 starts10:53:13.743174UTC: this inspected pilot plus
+  five prospective unchanged trials, helperaf779207; first red/INVALID stops.
+  One pilot is not a six-repeat rate; no source/release closure.
 - Assess: this establishes copy isolation and advances the open scanner
   ownership boundary; full-playthrough score/healthy current rate have not
   moved. The source candidate is uncommitted/unreleased until measured.
