@@ -228,6 +228,44 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   phase fix preserves caller's required filled bucket and leaves independent
   placement boundary visible. Daily progress film delivered; no release claim.
 
+- Report source/documentation d4c19d4e is owner-authored and pushed to both
+  main/1.21.11; exact Wiki37184052967 SUCCESS, including export verification
+  and sync. Runtime composition hashes still match the delivered film. Seven
+  existing WIP paths and draft057 remain unstaged; adopted vendor bytes retain
+  their original whitespace. Disk budget12882MB/15GB, free125GB, no pruning.
+- Instrumented note preflight70752/wrapper153512 naturally1 at
+  06:56:31.865566UTC, before submitting the actual task. Actual196 central
+  floor cells are note blocks/note0/poweredfalse, but all nine sampled y62
+  clear cells reflood with source/flowing water;18 upper samples are air and
+  nine admission queries are false. Clear-air gate rejects the fixture; no
+  note-interception, FPS or gameplay rate verdict. Runtime/cleanup[] and
+  confirmed offline/inactive logout retained. Proof22974dfc,film4b3b7663/58.7s;
+  both complete original-resolution fixed2s sheets actually viewed: inactive
+  skyward pocket/filled bucket/full sampled hearts, then normal menu. This
+  is sampled review, not every-frame playback. Synthetic isolated foundation/
+  remote retaining walls are prepared separately; original rejection unchanged.
+  New isolated parent129956/wrapper166576 naturally1 at07:05:11.565946UTC:
+  actual196 note0 floor cells/27 air samples/nine positive admissions,15 rows
+  all choose note blocks and repeatedly change their notes. Live/offline pack
+  remains2filled0empty/taskunfinished; click counter delta612,1810 retained
+  end ticks HP20/endAir300/runtime+cleanup[]. MedianFPS15 INVALID; no healthy
+  rate, performance attribution or release validation. Proofc40dfe80,film
+  a360b15a/110.5s, all three actual original-resolution2s pages viewed. Local
+  vanilla NoteBlock.txt:208-234 and ClientPlayerInteractionManager.txt:820-842
+  corroborate the executed interception; individual getter rows are not atomic.
+  Supplemental vanilla inheritance confirms SmithingTableBlock extends the
+  already-excluded CraftingTableBlock; Jukebox/DaylightDetector have block
+  entities. No charged-anchor click or unverified new shared-helper policy.
+- GetRid now additionally rejects NoteBlock/RespawnAnchorBlock locally before
+  the existing support/raycast/destination checks. Baritone's ordinary placement
+  can sneak; BucketItem cannot replace existing water while sneaking, so retain
+  shift=false and reject these special activation supports. Count phases and
+  generic interaction/navigation are unchanged. Clean build29600/wrapper123948
+  starts07:09:51.852487UTC, reviewed build lifecycle9c43cee9/d4317f52; running,
+  not yet verified or deployed. Isolated no-face crafting centre and safe stone
+  perimeter probe is prepared, not launched, with positive real exploration/
+  movement/stone-selection and unchanged safety/FPS gates.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

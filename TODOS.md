@@ -116,7 +116,18 @@
   retainedHP20/live+offline1filled1empty/handoff/runtime+cleanup[]. Both actual
   film pages reviewed; actual-review00570c48. No positive selected-support or
   geometry witness, so neither confirmation nor refutation of interception.
-  Instrumented preflight/retained-target and no-local-face probes are prepared.
+  Instrumented preflight now rejects the synthetic setup before task submission:
+  actual196 note-floor cells exist, but all nine sampled y62 clear cells reflood
+  with water and nine admission queries are false. Both actual58.7s film pages
+  reviewed; runtime/cleanup[]. No interception or gameplay verdict. Separate
+  isolated support/no-face probes use a declared foundation and remote retaining
+  walls to prevent inflow; retain positive geometry/selected-target witnesses.
+  Isolated note experiment executes positive admission/note changes but retains
+  both filled buckets:15 rows,612 click-counter delta,HP20/endAir300, no handoff;
+  medianFPS15 INVALID, not a healthy rate. All three actual110.5s film pages
+  reviewed. Task-local NoteBlock/RespawnAnchorBlock rejection is now under clean
+  build; no anchor clicked, generic interaction unchanged. Native/support/
+  no-face/healthy-repeat and adjacent validation remain open before release.
   Daily58s edited HyperFrames report delivered to Telegram9917,1080p/30FPS,
   SHA684c1ede; original failures and incomplete denominators remain explicit.
   Complete healthy repeats, remaining support
