@@ -1,0 +1,123 @@
+{
+  "duration": 58,
+  "assertions": [
+    {
+      "kind": "appearsBy",
+      "selector": "#air-heading",
+      "bySec": 0.5
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#bucket-heading",
+      "bySec": 8.5
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#bucket-empty-label",
+      "bySec": 11.8
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#lifetime-heading",
+      "bySec": 24.5
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#measured-heading",
+      "bySec": 34.5
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#next-heading",
+      "bySec": 48.5
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-empty-ring"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#air-heading"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-heading"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#lifetime-heading"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#measured-heading"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#next-heading"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#air-source"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-left-label"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-right-label"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-left-result"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-right-result"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-policy"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#lifetime-old-source"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#lifetime-new-source"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#measured-caption"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#next-source"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#next-link"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#air-picture"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-before"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#bucket-after"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#lifetime-picture"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#next-picture"
+    }
+  ]
+}

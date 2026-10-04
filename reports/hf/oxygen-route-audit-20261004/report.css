@@ -1,0 +1,11 @@
+@font-face{font-family:Montserrat;src:url('assets/montserrat-900.ttf');font-weight:900;font-display:block}
+@font-face{font-family:Plex;src:url('assets/ibm-plex-mono-400.ttf');font-weight:400;font-display:block}
+*{box-sizing:border-box}html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#111713}
+#report{width:100%;height:100%;position:relative;color:#F5F2E8;font-family:Plex,monospace;--bg:#111713;--ink:#F5F2E8;--muted:#C8CBBF;--accent:#B4E481;--red:#F1B68D}
+.clip{position:absolute;inset:0;width:100%;height:100%}.scene{position:absolute;inset:0;background:var(--bg)}
+.heading{position:absolute;left:72px;right:72px;top:60px}.heading h1{font-family:Montserrat,sans-serif;font-weight:900;font-size:70px;line-height:1.12;letter-spacing:-2px;margin:0 0 22px}.heading p{font-size:30px;line-height:1.4;color:var(--muted);margin:0;max-width:1776px}
+.picture{position:absolute;overflow:hidden;background:#060a07}.picture video{width:100%;height:100%;object-fit:contain;display:block}.source{position:absolute;font-size:28px;line-height:36px;color:var(--muted);margin:0}
+.strong{color:var(--accent)}.red{color:var(--red)}
+.source.clip{height:36px}
+.panel{--hf-panel-open:1;position:absolute;padding:36px;background:#202a21;border:1px solid #5d6956;clip-path:inset(0 calc(100% * (1 - var(--hf-panel-open))) 0 0);font-size:32px;line-height:1.5}
+.panel h2{font-family:Montserrat,sans-serif;font-weight:900;font-size:42px;line-height:1.2;margin:0 0 28px}.panel p{margin:0 0 22px}.panel p:last-child{margin-bottom:0}.small{font-size:28px;line-height:1.45}

@@ -1,0 +1,153 @@
+[
+  {
+    "id": "air",
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\check_air_route_lifetime-20261004-013004\\1\\drown_tunnel\\drown_tunnel.mp4",
+    "path": "assets\\air.mp4",
+    "sha256": "35ced2105f0b056f3bd56a441e61d0eaa1022a81c87a1557803a55329deb36aa",
+    "proof": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\air-route-film-review-20261004-014458\\prepared.json",
+    "proof_sha256": "4dd478f876a633640166369c8c7dfba127be9f3074212640b97770d73fe11f06",
+    "candidate": "90faa8a492d824b6728b61003618ed808fad1d94d5dfbc77fd8a6514b680820a",
+    "range_start_seconds": 14,
+    "range_end_seconds": 18,
+    "additional_range": {"start_seconds": 38, "end_seconds": 42, "event": "Task resumed", "playback_rate": 1},
+    "original_media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480,
+          "r_frame_rate": "15/1"
+        }
+      ],
+      "format": {
+        "duration": "53.000000"
+      }
+    },
+    "provenance": {
+      "provider": "local.uctest",
+      "operation": "unchanged local adoption",
+      "scope": "Reviewed actual gameplay, original films retained; clip windows authored by framework."
+    }
+  },
+  {
+    "id": "old-bucket",
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\native-bucket-boundary-2-20261004-065732\\probe.mp4",
+    "path": "assets\\old-bucket.mp4",
+    "sha256": "26f2de10b2a632153ddfbc63040fdc09b5cd526a24b2b0b9666675c3074448ce",
+    "proof": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\native-bucket-boundary-2-20261004-065732\\proof.json",
+    "proof_sha256": "1ed0b6a8c74b01a972b520743f09cfaf969e46a0dbd3027b177754a725053313",
+    "candidate": "424e6b87c1d801155d519d34d0458137dbb9c33a90cf2f0f5e36845252eb7453",
+    "range_start_seconds": 24,
+    "range_end_seconds": 40,
+    "original_media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480,
+          "r_frame_rate": "15/1"
+        }
+      ],
+      "format": {
+        "duration": "74.000000"
+      }
+    },
+    "provenance": {
+      "provider": "local.uctest",
+      "operation": "unchanged local adoption",
+      "scope": "Reviewed actual gameplay, original films retained; clip windows authored by framework."
+    }
+  },
+  {
+    "id": "new-bucket",
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\native-bucket-handoff-2-20261004-075617\\probe.mp4",
+    "path": "assets\\new-bucket.mp4",
+    "sha256": "f20a0b5d7c7ac83c15d407d6c56a7eabdd41d67c2439d631e0ed40f9602e5f4d",
+    "proof": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\native-bucket-handoff-2-20261004-075617\\proof.json",
+    "proof_sha256": "70eace64ab0df43710480fa950bc058b06bb26099736c4b328aa7901d68b3aec",
+    "candidate": "89b3dd10f13553d5cfd2e69ec8d32647589ca17e60ec93c693be8cdd76a894f5",
+    "range_start_seconds": 18,
+    "range_end_seconds": 34,
+    "original_media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480,
+          "r_frame_rate": "15/1"
+        }
+      ],
+      "format": {
+        "duration": "73.266667"
+      }
+    },
+    "provenance": {
+      "provider": "local.uctest",
+      "operation": "unchanged local adoption",
+      "scope": "Reviewed actual gameplay, original films retained; clip windows authored by framework."
+    }
+  },
+  {
+    "id": "inactive",
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\native-bucket-boundary-2-20261004-074703\\probe.mp4",
+    "path": "assets\\inactive.mp4",
+    "sha256": "3c5e7bd05dd31cd801ca0fe782b54198145e70beda8945c25e41914a11946df3",
+    "proof": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\native-bucket-boundary-2-20261004-074703\\proof.json",
+    "proof_sha256": "b83bbae2a2717becbb7b070ea8afd7538cdf458ca2fa7122da21e06b4e8c804c",
+    "candidate": "89b3dd10f13553d5cfd2e69ec8d32647589ca17e60ec93c693be8cdd76a894f5",
+    "range_start_seconds": 49,
+    "range_end_seconds": 59,
+    "original_media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480,
+          "r_frame_rate": "15/1"
+        }
+      ],
+      "format": {
+        "duration": "81.400000"
+      }
+    },
+    "provenance": {
+      "provider": "local.uctest",
+      "operation": "unchanged local adoption",
+      "scope": "Reviewed actual gameplay, original films retained; clip windows authored by framework."
+    }
+  },
+  {
+    "id": "native",
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\saved-swim-post-logout-trace-20261004-053903\\probe.mp4",
+    "path": "assets\\native.mp4",
+    "sha256": "854e0c70a613a79b912b49340059f6608d33f30cb1afe3489e8aaf2456a52ef5",
+    "proof": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\native-oxygen-film-review-20261004-055204\\prepared.json",
+    "proof_sha256": "e22dae952f823a9e8c1a9ed782522d8e3988f6dbf5b962e069e4cdd0b15babec",
+    "candidate": "90faa8a492d824b6728b61003618ed808fad1d94d5dfbc77fd8a6514b680820a",
+    "range_start_seconds": 74,
+    "range_end_seconds": 84,
+    "original_media": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 854,
+          "height": 480,
+          "r_frame_rate": "15/1"
+        }
+      ],
+      "format": {
+        "duration": "172.933333"
+      }
+    },
+    "provenance": {
+      "provider": "local.uctest",
+      "operation": "unchanged local adoption",
+      "scope": "Reviewed actual gameplay, original films retained; clip windows authored by framework."
+    }
+  }
+]

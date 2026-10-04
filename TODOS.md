@@ -110,9 +110,16 @@
   and conserved totals/runtime+cleanup[]. All ten films/all twenty2s pages
   actually viewed: bucket-handoff-film-review-20261004-083715/actual-review.json.
   Original drowning remains failed; no six-repeat healthy boundary rate.
-  Vanilla NoteBlock accepts normal use before bucket placement and is omitted
-  from the current support filter; real-task admission/no-local-face probes
-  are prepared, not yet measured. Complete healthy repeats, remaining support
+  Local vanilla NoteBlock accepts normal use before bucket placement and is
+  omitted from the current support filter. First synthetic note-floor probe
+  ends INVALID medianFPS14.5,18 rows already finished/support trace empty;
+  retainedHP20/live+offline1filled1empty/handoff/runtime+cleanup[]. Both actual
+  film pages reviewed; actual-review00570c48. No positive selected-support or
+  geometry witness, so neither confirmation nor refutation of interception.
+  Instrumented preflight/retained-target and no-local-face probes are prepared.
+  Daily58s edited HyperFrames report delivered to Telegram9917,1080p/30FPS,
+  SHA684c1ede; original failures and incomplete denominators remain explicit.
+  Complete healthy repeats, remaining support
   boundaries, adjacent/native gates and stable release OPEN.
 - [x] **FIXED: a lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film

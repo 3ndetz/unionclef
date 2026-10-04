@@ -1,0 +1,11 @@
+{
+  "name": "oxygen-route-audit-20261004",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.119 preview",
+    "check": "npx --yes hyperframes@0.8.119 check",
+    "render": "npx --yes hyperframes@0.8.119 render",
+    "publish": "npx --yes hyperframes@0.8.119 publish"
+  }
+}

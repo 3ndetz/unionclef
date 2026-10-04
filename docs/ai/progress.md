@@ -188,15 +188,45 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
 - Local vanilla named1.21.11 bytecode opened: NoteBlock.onUse changes its note
   and returns SUCCESS; normal interaction accepts that action before held-item
   use. WorldHelper's current interactive list omits this non-block-entity block.
-  This is an admission hypothesis, not yet a witnessed task failure. Prepared
-  real-task note-floor and no-local-face probes declare synthetic terrain and
-  preserve original48s/health/FPS/inventory/runtime/logout gates; not native
-  replays. Charged respawn-anchor clicks are not used to prove an explosion.
+  This is an admission hypothesis, not yet a witnessed task failure. Synthetic
+  note-floor parent97904/20260 naturally1 at05:52:15.116913UTC:18 rows,
+  medianFPS14.5 INVALID, task already finished at first1.345s sample, support
+  trace empty; retainedHP20/finalAir300/live+offline1filled1empty/positive
+  IdleTask/runtime+cleanup[]. Proof08f68588,film1c8d76a3/81.3s. Both actual
+  original-resolution2s pages viewed; actual-review00570c485d9afe082aa558f8ba1541dabe7e5844280338ae42668c473d02a626.
+  Actual clicked surface and complete geometry are unwitnessed; declared fill
+  commands alone do not settle interception. Instrumented preflight/retained
+  selected-support and no-face probes are prepared, not run. They preserve
+  original48s/health/FPS/inventory/runtime/logout gates; synthetic, not native
+  replays. No charged respawn-anchor click to re-prove an explosion.
+- Daily report oxygen-route-audit-20261004 now authored inline as five short
+  English HyperFrames scenes,58s/1080p30/silent, unchanged hash-adopted actual
+  gameplay. Same checkpoint/count2 split:424e6b87 failure versus89b3dd10
+  conversion; prospective ordinary-survival callback labelled and original
+  inactive drowning retained. Prior90fa24/24+42/42 and incomplete89b3/native
+  denominators remain separate; food140/portal/stable057 explicitly open.
+  Full HUD preserved, one ring/word around emptied bucket, supplied bars.
+  Project pin advances0.8.118->0.8.119; final check123656/45892 naturally0 at
+  06:31:42.610252UTC, runtime/layout/motion0errors,300motion samples,32/32
+  contrast. Three lint warnings reviewed: resumed-caption StudioID missing;
+  two intentionally scene-local media starts4/5. Six actual midpoint/end
+  snapshots and required animation map/keyframes reviewed. Reading/video holds
+  are deliberate; container/header map collision is not a text collision.
+  Render114736/62164 job0e028802-77be-48da-af35-c7c3e979f9bf naturally0 at
+  06:35:59.338253UTC:1740frames,39697779bytes,58.000s,hardwareGPU/screenshot
+  capture. Actual encoded2s sheets/both pages and five full-resolution frames
+  viewed; proof and actual-review retained in reports/out. SHA
+  684c1ede63a40f62ac54c3d78eede3d5375461be2fd00249c06b668b3ae6dd29.
+  Telegram one-shot send18416/128068 naturally0 at06:40:04.776928UTC,
+  message9917; verified video metadata58s/1920x1080/39697779bytes. Receipt
+  retained; no ambiguous retry. HAPI original too large; same58s 720p
+  compression2373722bytes/SHA83fa9230 displayed successfully. No repeat TG
+  delivery or release claim. Latest usage remains unknown/http_403.
 - Assessment: nine valid boundary passes in an incomplete campaign; no healthy
   six-repeat rate or comparative improvement claim.
   Earlier healthy native red and FPS10 direct diagnostic retained. Narrow
   phase fix preserves caller's required filled bucket and leaves independent
-  placement boundary visible. No release or new video delivery claim.
+  placement boundary visible. Daily progress film delivered; no release claim.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
