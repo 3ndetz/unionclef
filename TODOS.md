@@ -125,9 +125,20 @@
   Isolated note experiment executes positive admission/note changes but retains
   both filled buckets:15 rows,612 click-counter delta,HP20/endAir300, no handoff;
   medianFPS15 INVALID, not a healthy rate. All three actual110.5s film pages
-  reviewed. Task-local NoteBlock/RespawnAnchorBlock rejection is now under clean
-  build; no anchor clicked, generic interaction unchanged. Native/support/
-  no-face/healthy-repeat and adjacent validation remain open before release.
+  reviewed. Task-local NoteBlock/RespawnAnchorBlock rejection clean-builds0;
+  final d58394bc recursive2213-class proof changes only GetRid versus90fa and
+  canonical owned offline deployment matches. Query-only support matrix13/13
+  passes, including charged/uncharged anchors without activation and own placement
+  predicate true->false->true; clicked0/full inventory unchanged/HP20. Original
+  wrong-overload preflight rejection retained separately. Real no-face search
+  converts on stone/HP20/live+offline1filled1empty but medianFPS13 INVALID.
+  Same isolated note geometry now denies all nine positively reachable supports,
+  explores591ticks/16.378m and empties on stone, six Idle handoffs/2196HP20ticks/
+  live+offline1filled1empty; medianFPS8 INVALID. All actual films reviewed;
+  originals retained, no healthy rate or timing comparison. Read-only stand-load
+  diagnosis precedes more campaigns. No anchor clicked, generic interaction
+  unchanged. Native/support/no-face/healthy-repeat and adjacent validation
+  remain open before release.
   Daily58s edited HyperFrames report delivered to Telegram9917,1080p/30FPS,
   SHA684c1ede; original failures and incomplete denominators remain explicit.
   Complete healthy repeats, remaining support

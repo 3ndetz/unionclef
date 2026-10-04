@@ -266,6 +266,81 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   perimeter probe is prepared, not launched, with positive real exploration/
   movement/stone-selection and unchanged safety/FPS gates.
 
+- Local special-support candidate build29600/123948 naturally0 at
+  07:26:26.429593UTC; clean/build both0, six frozen sources stable. Verifier
+  68716/105804 naturally0 at07:27:18.654609UTC, final d58394bc fullSHA
+  d58394bc608039116a9e0839efdf3f2141d5438ff39cb1b7a461ffc7ed399c05.
+  All2213 recursive class keys match90fa, only GetRid differs. Both actual
+  remapped javap files read; local NoteBlock/RespawnAnchor exclusion and
+  unchanged real support/raycast/destination/count phases confirmed. Canonical
+  owned tester1 deploy145752/60936 naturally0 at07:30:07.672662UTC; exact
+  loaded hash/offline/inactive receipt read. Local comparison14512/56644
+  naturally0 at07:43:49.019870UTC also compares all public0562212/current2213
+  classes: thirteen existing classes differ, ScanRequest added, none removed.
+  This is packaging identity, not current gameplay/native or release proof.
+- Query-only admission20940/21524 naturally1 at07:38:41.943973UTC before
+  first case seal. Generated query line48 selects the wrong isChunkLoaded
+  overload (ChunkPos instead of BlockPos); actual SimpleChunkTracker overloads
+  re-opened. No admission/task/use/anchor verdict; cases empty,122 retained
+  end ticks HP20/endAir300/runtime+cleanup[], confirmed offline/inactive.
+  Proofbe0436bb,film77a68c0b/44.8s; entire single original-resolution fixed2s
+  sheet actually viewed, join/inactive skyward pocket/full sampled hearts/menu.
+  Offline final pack and complete terrain readback were not sealed. Original
+  helper/terminal preserved. Separate v2 explicitly selects the BlockPos
+  signature and retains every original gate; AST PASS,118084/49408 starts
+  07:41:21.772606UTC, running. Future real no-face/filtered-note observers
+  use the same exact diagnostic dispatch. No mod change for this harness error.
+- Separate admission v2 naturally0 at07:45:28.657195UTC. All thirteen actual
+  private-gate cases pass: stone/glass positive; reachable loaded full-cube
+  note and anchors charges0/4 negative with no block entity/shared interactive
+  flag. Crafting/smithing/jukebox/chest/furnace/slab/scaffolding excluded.
+  Own placement predicate stone true->false->true and removed in client-thread
+  finally; clicked0/full inventory unchanged,1069 retained end ticks HP20,
+  offlineHP20/Air300/one filled+one empty, original checkpoint digest unchanged,
+  runtime+cleanup[]. Proofd3bf72d9,film b88e1c94/76.6s, both full original-size
+  fixed2s pages actually viewed. Query-only, no task/use/anchor activation or
+  gameplay/FPS rate. Real isolated no-face71532/24560 starts07:47:01.453350UTC,
+  helper e466d867, prepared source d5ada7e2, running with original safety gates.
+- Isolated no-face71532/24560 naturally1 at07:52:09.698638UTC. Actual196
+  crafting floor/27air/nine denied reachable interactive supports/four stone
+  perimeter cells match declared geometry. Real TimeoutWander one row/38 ticks,
+  horizontal maximum6.780m, selected stone(-182,61,1022), click delta1 and
+  first finished row4.895s. Fifteen ordinary Idle handoff observations;
+  live/offline1filled1empty,1891 retained HP20 ticks/endHP20/Air300/runtime+
+  cleanup[]. All16 FPS samples retained; median13 INVALID, no healthy rate,
+  timing comparison or release validation. Proof2ded1bfc,film0f7b8464/116s;
+  all three complete original-size fixed2s sheets viewed, water spreads across
+  crafting floor after emptying, full hearts through sampled logout. Later
+  Idle/Unstuck overlays retained, not edited out. Later read-only host snapshot
+  is not a trace of this run and does not assign its FPS to another process.
+
+- Filtered-note139972/147400 naturally1 at08:03:26.573606UTC. Same declared
+  isolated geometry196note0/27air/nine positively loaded/reachable full-cube
+  supports now all denied. Real TimeoutWander nine rows/591 retained ticks,
+  horizontal maximum16.378m; selected stone(-209,63,1022), click delta1,
+  first finished row31.422s and six ordinary Idle handoff observations.
+  Live/offline1filled1empty,2196 retained ticksHP20/endHP20/Air300/runtime+
+  cleanup[]. All15 FPS samples retained; median8 INVALID. Proof3ac02cec,
+  filmec6b81c7/153.7s, all four complete original-size fixed2s sheets actually
+  viewed. Pre-task hold through98.5s, repeated search overlays and later
+  Unstuck retained. No healthy rate/comparative timing/native/release claim.
+  Fresh same-d583 canonical owned offline refresh156628/98392 naturally0
+  at07:57:03.198177UTC preceded this run; refresh alone did not remove low FPS.
+  Next focused step is read-only stand-load diagnosis before another campaign;
+  no foreign processes/containers/GPU settings changed.
+- Post-run load85032/111284 naturally0 at08:11:22.996214UTC; three read-only
+  host/container snapshots retained. Top foreign clients and host load are facts
+  at these later times, not a causal profile of the earlier run. Existing stand
+  options audit94684/96004 naturally0 at08:12:49.680675UTC: no CPU quota/cpuset/
+  memory limit, maxFps30/renderDistance5/simulationDistance5/aofalse/particles2.
+  Four offline-menu samplesFPS10 are not an in-game measurement. Reused audit
+  retains old scope wording about both native arms; actual binding is current
+  filtered-note terminal, without changing its original proof. Current exact
+  native count1/handoff167120/50912 starts08:14:08.545863UTC with unchanged
+  original48s/HP20/FPS20/inventory/runtime/logout gates, no synthetic geometry.
+  Read-only host sampler119116/68644 runs alongside it, no extra game calls;
+  result/film review pending. Java/source/deployment remain unchanged.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
