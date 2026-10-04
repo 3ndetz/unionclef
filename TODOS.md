@@ -97,8 +97,15 @@
   probe finds three reachable solid faces (two lead to air, one to water),
   medianFPS20/HP20; original task still fails. Local vanilla bytecode confirms
   filled-bucket NONE ray and sneak admission. Task-local supported-face selection
-  now in clean build; generic interaction/navigation unchanged. Zero/multiple
-  healthy repeats, adjacent/native gates and stable release remain OPEN.
+  now clean-built/actual bytecode inspected/canonically deployed89b3; generic
+  interaction/navigation unchanged. First count2 conversion finishes in0.4s,
+  then original48s direct observer leaves runner inactive underwater: drowning,
+  empty pack after respawn, retained minimumHP0 and separately median18 INVALID.
+  Original terminal/all actual film pages retained;23 boundaries unrun.
+  Prospective existing client-tick completion callback starts IdleTask to retain
+  ordinary survival; unchanged health/FPS/inventory/runtime/logout gates plus
+  positive handoff witness. New six-round series in progress, not a result.
+  Zero/multiple healthy repeats, adjacent/native gates and stable release OPEN.
 - [x] **FIXED: a lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside

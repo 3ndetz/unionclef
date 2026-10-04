@@ -137,7 +137,40 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   Full boundary and no-local-face coverage remain pending, not a general guarantee.
 - Clean scoped build134944/wrapper137804/unified54335 starts04:24:41.595102UTC,
   unchanged reviewed lifecycle9c43cee9, new task hash frozen alongside the five
-  earlier candidate sources. Natural terminal/final payload/deployment pending.
+  earlier candidate sources. Naturally0 at04:36:50.783355UTC, clean/build0.
+  Final verifier168084/123100 naturally0:89b3dd10 fullSHA
+  89b3dd10f13553d5cfd2e69ec8d32647589ca17e60ec93c693be8cdd76a894f5,
+  all2213 recursive class keys unchanged, only GetRid differs from90fa.
+  Both actual final javap files read in full again after compaction and bound
+  by actual-bytecode-review.json. Canonical owned deploy51168/105928 naturally0
+  at04:46:40.266780UTC, exact loaded89b3/offline/inactive.
+- Original48s direct observer parent97216/97584 naturally1 at04:51:05.468511UTC:
+  first count2 executes,23 planned boundaries unrun. MedianFPS18 is INVALID;
+  independently the player drowns after the task naturally completes. At0.678s
+  first row finished=true/live1filled1empty/HP20/Air300/active=false. Ten rows
+  through25.17s keep1/1 while inactive air300->13->0 and health20->4; row28.02s
+  reflects respawn/empty pack. Final bucket totals0/0 and retained minimumHP0
+  fail original safety gates. Whole-join runtime/cleanup[] do not erase death.
+  Actual log finish04:50:11/drowning04:50:38. Both complete fixed2s film pages
+  individually viewed: menus/loading0.5..28.5; empty bucket/full hearts/finish
+  at30.5, underwater inactive body32.5..46.5, dwindling hearts48.5..54.5,
+  respawn58.5..78.5, menu80.5. Film81.4s; actual-review SHA
+  c625f32911babe5030d77edf3396a722185e5a249ee0e251d17b56a0d7fe0ebf.
+  This is an observed count conversion followed by an unsafe inactive fixture,
+  not a healthy post-fix result or six-repeat rate; original terminal retained.
+- TaskRunner.tick returns before survival when inactive; UserTaskChain's
+  ordinary finish disables it. Direct-task completion differs from a child of
+  continuing Gamer. Existing runUserTask(Task,Runnable) executes its callback
+  on the client tick after clearing the old task; binding a Java Runnable to
+  existing runUserTask(IdleTask) preserves normal survival with no Python poll
+  gap. IdleTask never finishes and Playground's idle tick is empty. No core
+  lifecycle or global idle-setting change. Four prospective observer adapters
+  retain original48s/median20/all-tickHP20/bucket total/runtime/logout gates and
+  add positive IdleTask/continued active-runner witnesses; AST contracts PASS.
+  New parent165400/34140/unified60949 starts04:56:15.174196UTC, sourceSHA
+  00c5b9908a245398dfd63b5d02132ae54cb45a48466935593328c6915a83b5ec.
+  Six interleaved2/3/0/1 rounds planned, first red/INVALID stops. Natural result
+  pending; this declared callback fixture never relabels the old drowning.
 - Assessment: mechanism measured; no post-fix score/comparative improvement.
   Earlier healthy native red and FPS10 direct diagnostic retained. Narrow
   phase fix preserves caller's required filled bucket and leaves independent
