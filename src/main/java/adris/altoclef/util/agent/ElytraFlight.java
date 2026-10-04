@@ -21,8 +21,9 @@ import java.util.Map;
  *
  * <p>The pathfinder (tungsten) has no flight at all, and baritone's ElytraBehavior is not
  * compiled and is built around a native nether pathfinder. This is a small open-air controller
- * for the overworld: it steers by yaw/pitch every client tick and spends a rocket when the
- * speed drops. It does not route around mountains; it flies high enough to clear them.
+ * for the overworld. Flying itself is ElytraPilot: flight-path angle held like a plane, rate-
+ * limited controls, rockets as throttle, a glide slope and a flare. It does not route around
+ * mountains; it looks 120 blocks ahead and climbs over them.
  */
 public final class ElytraFlight {
 
@@ -32,13 +33,14 @@ public final class ElytraFlight {
     private static volatile String reason = "";
     private static double tx, ty, tz;
     private static int ticks, takeoffTicks, boostCooldown, rocketsUsed;
-    private static int glideWait, climbTicks;
+    private static int glideWait;
+    private static final ElytraPilot pilot = new ElytraPilot();
+    private static boolean pilotReady;
+    private static volatile ElytraPilot.Out lastOut;
     private static boolean glideSent;
     private static boolean registered;
 
     private static final int TIMEOUT_TICKS = 20 * 180;
-    private static final int CRUISE_ABOVE_TERRAIN = 24;
-    private static final double ARRIVE_DIST = 4.0;
 
     private ElytraFlight() {}
 
@@ -51,8 +53,10 @@ public final class ElytraFlight {
         tx = x;
         ty = y;
         tz = z;
-        ticks = takeoffTicks = boostCooldown = rocketsUsed = glideWait = climbTicks = 0;
+        ticks = takeoffTicks = boostCooldown = rocketsUsed = glideWait = 0;
         glideSent = false;
+        pilotReady = false;
+        lastOut = null;
         reason = "";
         phase = Phase.EQUIP;
         return status();
@@ -77,6 +81,13 @@ public final class ElytraFlight {
             m.put("pos", String.format(java.util.Locale.ROOT, "%.1f,%.1f,%.1f", p.getX(), p.getY(), p.getZ()));
             m.put("distance", Math.round(Math.hypot(tx - p.getX(), tz - p.getZ())));
             m.put("gliding", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p));
+        }
+        ElytraPilot.Out o = lastOut;
+        if (o != null) { // flight telemetry, for tuning from the agent's log
+            m.put("mode", o.mode.name().toLowerCase(java.util.Locale.ROOT));
+            m.put("speed", Math.round(o.speed * 100) / 100.0);
+            m.put("pitch", Math.round(o.pitch));
+            m.put("climbAngle", Math.round(o.gamma));
         }
         return m;
     }
@@ -155,9 +166,7 @@ public final class ElytraFlight {
                     p.sendAbilitiesUpdate();
                 }
                 if (adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) {
-                    phase = Phase.FLYING;
-                    climbTicks = 30; // steep climb first, or the first glide scrapes the ground
-                    boost(client, p);
+                    phase = Phase.FLYING; // the pilot fires the first rocket on its first tick
                     return;
                 }
                 if (++takeoffTicks > 20 * 12) {
@@ -189,40 +198,49 @@ public final class ElytraFlight {
         double dx = tx - p.getX(), dz = tz - p.getZ();
         double dist = Math.hypot(dx, dz);
         if (!adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) {
-            if (p.isOnGround() && dist < ARRIVE_DIST * 3) {
+            // Down within 30 blocks: good enough, the agent walks the rest. Further: fly again.
+            if (p.isOnGround() && dist < 30) {
                 finish("landed");
             } else if (p.isOnGround()) {
                 takeoffTicks = 0;
-                phase = Phase.TAKEOFF; // touched down early: take off again
+                phase = Phase.TAKEOFF;
             }
             return;
         }
-        int terrain = Math.max(
-                client.world.getTopY(Heightmap.Type.MOTION_BLOCKING, (int) p.getX(), (int) p.getZ()),
-                client.world.getTopY(Heightmap.Type.MOTION_BLOCKING, (int) tx, (int) tz));
-        double cruise = Math.max(ty, terrain) + CRUISE_ABOVE_TERRAIN;
-        double above = p.getY() - ty;
-        double speed = p.getVelocity().length();
-
-        float pitch;
-        if (dist < Math.max(12, above * 1.4)) {
-            // Final approach: aim straight at the landing spot, nose down at most 45 degrees.
-            pitch = (float) Math.min(45, Math.max(5, Math.toDegrees(Math.atan2(above, Math.max(dist, 1)))));
-            if (dist < ARRIVE_DIST && above < 3) {
-                finish("arrived");
-            }
-        } else if (climbTicks > 0) {
-            climbTicks--;
-            pitch = -50; // right after take-off: get away from the ground
-            if (speed < 1.5) boost(client, p);
-        } else if (p.getY() < cruise) {
-            pitch = -30; // climb
-            if (speed < 1.1) boost(client, p);
-        } else {
-            pitch = 3; // cruise: shallow glide keeps speed
-            if (speed < 0.7) boost(client, p);
+        if (!pilotReady) {
+            pilot.reset(p.getYaw(), p.getPitch());
+            pilotReady = true;
         }
-        aim(p, dx, dz, pitch);
+        var v = p.getVelocity();
+        ElytraPilot.Out o = pilot.step(p.getX(), p.getY(), p.getZ(), v.x, v.y, v.z,
+                tx, landingY(client), tz, terrainAhead(client, p), top(client, p.getX(), p.getZ()));
+        lastOut = o;
+        p.setYaw(o.yaw);
+        p.setPitch(o.pitch);
+        if (o.boost && !boost(client, p)) pilot.boostFailed();
+        if (o.arrived) finish("arrived");
+    }
+
+    /** Ground height at x,z from the heightmap; the world bottom where the chunk is not loaded. */
+    private static double top(MinecraftClient client, double x, double z) {
+        return client.world.getTopY(Heightmap.Type.MOTION_BLOCKING, (int) Math.floor(x), (int) Math.floor(z));
+    }
+
+    /** Land on the ground at the target when its chunk is loaded, else at the height asked for. */
+    private static double landingY(MinecraftClient client) {
+        int cx = (int) Math.floor(tx) >> 4, cz = (int) Math.floor(tz) >> 4;
+        if (!client.world.getChunkManager().isChunkLoaded(cx, cz)) return ty;
+        return top(client, tx, tz);
+    }
+
+    /** Highest ground every 8 blocks along the course, up to 120 blocks ahead. */
+    private static double terrainAhead(MinecraftClient client, ClientPlayerEntity p) {
+        double dx = tx - p.getX(), dz = tz - p.getZ(), dist = Math.max(Math.hypot(dx, dz), 1e-6);
+        double m = landingY(client);
+        for (double k = 0; k <= Math.min(120, dist); k += 8) {
+            m = Math.max(m, top(client, p.getX() + dx / dist * k, p.getZ() + dz / dist * k));
+        }
+        return m;
     }
 
     private static void aim(ClientPlayerEntity p, double dx, double dz, float pitch) {
@@ -231,18 +249,20 @@ public final class ElytraFlight {
         p.setPitch(pitch);
     }
 
-    private static void boost(MinecraftClient client, ClientPlayerEntity p) {
+    /** Fire a rocket; false when it could not be used this tick (the pilot asks again). */
+    private static boolean boost(MinecraftClient client, ClientPlayerEntity p) {
         // A rocket used on the ground just flies off on its own: only while gliding.
-        if (boostCooldown > 0 || !adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) return;
+        if (boostCooldown > 0 || !adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) return false;
         if (!holdInHotbar(client, p, Items.FIREWORK_ROCKET)) {
             reason = "out of fireworks";
-            return;
+            return false;
         }
         // The swap into the hotbar lands next tick: use the rocket only once it is in hand.
-        if (!p.getMainHandStack().isOf(Items.FIREWORK_ROCKET)) return;
+        if (!p.getMainHandStack().isOf(Items.FIREWORK_ROCKET)) return false;
         client.interactionManager.interactItem(p, Hand.MAIN_HAND);
         rocketsUsed++;
-        boostCooldown = 30;
+        boostCooldown = 10; // the pilot paces rockets; this only stops double clicks
+        return true;
     }
 
     /** Inventory index (0..35) of the item, or -1. */
