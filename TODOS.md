@@ -104,8 +104,16 @@
   Original terminal/all actual film pages retained;23 boundaries unrun.
   Prospective existing client-tick completion callback starts IdleTask to retain
   ordinary survival; unchanged health/FPS/inventory/runtime/logout gates plus
-  positive handoff witness. New six-round series in progress, not a result.
-  Zero/multiple healthy repeats, adjacent/native gates and stable release OPEN.
+  positive handoff witness. New six-round series naturally ends1 after10/24:
+  nine valid PASS/count3-repeat3 INVALID medianFPS19.5/fourteen unrun. Every
+  completed case retains tickHP20/endHP20/Air300/live+offline one filled bucket
+  and conserved totals/runtime+cleanup[]. All ten films/all twenty2s pages
+  actually viewed: bucket-handoff-film-review-20261004-083715/actual-review.json.
+  Original drowning remains failed; no six-repeat healthy boundary rate.
+  Vanilla NoteBlock accepts normal use before bucket placement and is omitted
+  from the current support filter; real-task admission/no-local-face probes
+  are prepared, not yet measured. Complete healthy repeats, remaining support
+  boundaries, adjacent/native gates and stable release OPEN.
 - [x] **FIXED: a lava escape can cross the nearby verdict window between samples (2026-10-04).**
   Same campaign repeat2 lava FAIL at26.78FPS/HP12/no deaths; the98s film
   shows dry stone at26.5s. Sequential timeline sampling jumps from inside

@@ -169,9 +169,31 @@ Previous evidence: [archive/04-10-2026-preparation-and-native-bucket.md](archive
   add positive IdleTask/continued active-runner witnesses; AST contracts PASS.
   New parent165400/34140/unified60949 starts04:56:15.174196UTC, sourceSHA
   00c5b9908a245398dfd63b5d02132ae54cb45a48466935593328c6915a83b5ec.
-  Six interleaved2/3/0/1 rounds planned, first red/INVALID stops. Natural result
-  pending; this declared callback fixture never relabels the old drowning.
-- Assessment: mechanism measured; no post-fix score/comparative improvement.
+  Six interleaved2/3/0/1 rounds planned, first red/INVALID stops. Naturally1
+  at05:34:14.499796UTC after10/24: nine valid PASS, count3/repeat3 INVALID
+  at medianFPS19.5, fourteen unrun. All ten retain tickHP20/finalHP20/Air300,
+  positive IdleTask handoff, live/offline exactly one water bucket and conserved
+  totals; runtime/cleanup[]. First nine medians20..28; all early samples remain.
+  Read-only prefix audit verifies immutable proof/clip hashes, actual inventories,
+  all ticks and unfiltered FPS rows. This declared callback fixture never
+  relabels the old drowning or supplies a six-repeat healthy boundary rate.
+- Freezer109944/wrapper86336 naturally0 at05:38:04.389291UTC. All ten films/
+  all twenty original-resolution fixed2s pages actually viewed, including the
+  INVALID. Menus/join/native pocket, observed bucket conversion for extra/zero
+  kits, ordinary IdleTask survival/bobbing and full hearts through sampled
+  logout; no respawn. Already-satisfied count1 tests retention, not conversion.
+  Evidence: bucket-handoff-film-review-20261004-083715/actual-review.json,
+  SHAa8a7cfa63adaacb01e4564d69fad14e3a1ec07dce4a5c42642b7b1e5b93a95e7.
+  Fixed-cadence sampling is not uninterrupted inspection of every frame.
+- Local vanilla named1.21.11 bytecode opened: NoteBlock.onUse changes its note
+  and returns SUCCESS; normal interaction accepts that action before held-item
+  use. WorldHelper's current interactive list omits this non-block-entity block.
+  This is an admission hypothesis, not yet a witnessed task failure. Prepared
+  real-task note-floor and no-local-face probes declare synthetic terrain and
+  preserve original48s/health/FPS/inventory/runtime/logout gates; not native
+  replays. Charged respawn-anchor clicks are not used to prove an explosion.
+- Assessment: nine valid boundary passes in an incomplete campaign; no healthy
+  six-repeat rate or comparative improvement claim.
   Earlier healthy native red and FPS10 direct diagnostic retained. Narrow
   phase fix preserves caller's required filled bucket and leaves independent
   placement boundary visible. No release or new video delivery claim.
