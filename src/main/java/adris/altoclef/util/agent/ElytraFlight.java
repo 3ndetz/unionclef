@@ -47,6 +47,9 @@ public final class ElytraFlight {
     private static volatile String leader;
     private static double lastLx, lastLy, lastLz, lvx, lvy, lvz;
     private static boolean leaderSeen;
+    // Progress watchdog: the best distance to the target and when it last improved.
+    private static double bestDist;
+    private static int bestTick;
     private static int deployCooldown;
     private static boolean glideSent;
     private static boolean registered;
@@ -100,6 +103,8 @@ public final class ElytraFlight {
         ticks = takeoffTicks = boostCooldown = rocketsUsed = glideWait = 0;
         glideSent = false;
         pilotReady = false;
+        bestDist = Double.MAX_VALUE;
+        bestTick = 0;
         lastOut = null;
         reason = "";
         phase = Phase.EQUIP;
@@ -219,6 +224,13 @@ public final class ElytraFlight {
                     fail("in water");
                     return;
                 }
+                // A roof over the head (a bunker, a house): a take-off there glides into the ceiling
+                // and burns rockets against it. Walk out first.
+                if (!adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)
+                        && top(client, p.getX(), p.getZ()) > p.getY() + 2.5) {
+                    fail("under a roof");
+                    return;
+                }
                 if (adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) {
                     phase = Phase.FLYING; // the pilot fires the first rocket on its first tick
                     return;
@@ -273,6 +285,17 @@ public final class ElytraFlight {
         lastOut = o;
         p.setYaw(o.yaw);
         p.setPitch(o.pitch);
+        // No progress for 6 s outside a landing (boxed in, a ceiling, a wall): give up rather than
+        // burn rockets against it -- 36 went into a bunker roof once.
+        boolean landingPhase = o.mode == ElytraPilot.Mode.FLARE || o.mode == ElytraPilot.Mode.SINK
+                || o.mode == ElytraPilot.Mode.FINAL;
+        if (dist < bestDist - 3 || landingPhase) {
+            bestDist = Math.min(bestDist, dist);
+            bestTick = ticks;
+        } else if (ticks - bestTick > 120) {
+            fail("blocked");
+            return;
+        }
         if (o.boost && !rescue && !boost(client, p)) pilot.boostFailed(); // a rescue glides, no rockets
         if (o.arrived) finish(rescue ? "glided down" : "arrived");
     }
@@ -320,6 +343,8 @@ public final class ElytraFlight {
         tz = p.getZ() + dirZ * ahead;
         ty = top(client, tx, tz);
         ticks = takeoffTicks = boostCooldown = rocketsUsed = glideWait = 0;
+        bestDist = Double.MAX_VALUE;
+        bestTick = 0;
         pilot.resetForLanding(p.getYaw(), p.getPitch());
         pilotReady = true;
         lastOut = null;
