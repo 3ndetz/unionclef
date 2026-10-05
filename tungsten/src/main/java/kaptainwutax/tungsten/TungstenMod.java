@@ -127,14 +127,26 @@ public class TungstenMod implements ClientModInitializer {
 		targetIsReal = false;
 		kaptainwutax.tungsten.task.FastNavigator.stop();
 		kaptainwutax.tungsten.task.BlockPathWalker.stop();
-		kaptainwutax.tungsten.task.BridgeTask.stop();
-		kaptainwutax.tungsten.task.PillarTask.stop();
-		kaptainwutax.tungsten.task.SwimOutTask.stop();
+		// baritone/src/main/java/baritone/behavior/PathingBehavior.java:353-366
+		// clears owned inputs only when a current path exists. Inactive builders do
+		// not own them: their unconditional stop erased a fresh independent aim
+		// even with no route or block job (measured before its 600 ms stale expiry).
+		if (kaptainwutax.tungsten.task.BridgeTask.isActive()) kaptainwutax.tungsten.task.BridgeTask.stop();
+		if (kaptainwutax.tungsten.task.PillarTask.isActive()) kaptainwutax.tungsten.task.PillarTask.stop();
+		if (kaptainwutax.tungsten.task.SwimOutTask.isActive()) kaptainwutax.tungsten.task.SwimOutTask.stop();
 		var pf = TungstenModDataContainer.PATHFINDER;
 		var ex = TungstenModDataContainer.EXECUTOR;
 		kaptainwutax.tungsten.path.PathFinder.noteStop("TungstenMod@136");
 		if (pf != null) pf.stop.set(true);
-		if (ex != null) ex.stop = true;
+		if (ex != null) {
+			// Port baritone/src/main/java/baritone/behavior/PathingBehavior.java:353-366:
+			// cancel the route's block breaker and inputs with an explicit navigation stop.
+			// An empty-path dig intentionally ignores replay drift (PathExecutor.tick),
+			// so setting that flag alone kept mining after Near handed off to a click.
+			// No block work means cancelBlockWork leaves an independent combat aim alone.
+			ex.cancelBlockWork();
+			ex.stop = true;
+		}
 	}
 
 	/**

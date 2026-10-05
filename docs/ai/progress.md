@@ -117,6 +117,11 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Nonheavy report preparation created payoff/comparison/regressions scene HTML and staged two already-reviewed adjacent clips. Stage142064/wrapper127040 naturally0 at04:55:21.177957UTC, helpere988277f. These scenes have not been checked/rendered; checkpoint/end scenes and final assembly are incomplete. Prepared native helper9c0f096d/auditor279f77a2 and executor-place helperecb95097/auditore7229444 were never launched. Preparatory file creation is not gameplay coverage.
 - Verified GitHub still publishes v0.95.55 and v0.95.56 with the correct1.21.11 assets. Three own Java overlays, all foreign WIP and private preparations remain preserved. Pause is not task completion or hardware failure. Continue only after a new owner instruction, beginning with the retained lava films and the unfinished cancellation validation; never automatically revive historical requests or resend delivered reports.
 
+### Owner-authorized release of current result, 2026-10-05
+
+- Owner explicitly requested saving/pushing and releasing the current result, then returning to pause. This authorizes only the bounded release, not the prepared builder/placement/native campaigns or unfinished video. Version0.95.58 reserves the existing0.95.57 draft for its excluded unfinished water work. Commit exactly the three reviewed cancellation source files, the version and honest release notes; preserve the owned video draft separately and leave unrelated WIP intact.
+- Release compilation/publication must use a new committed-source archive, preserving the immutable0ce8 candidate and original measured inputs. Compare all recursively bundled classes and metadata before the scoped1.21.11 Gradle publication. Main and1.21.11 must name the same committed source. No claim that full59, the complete game or pending validation/video is finished.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

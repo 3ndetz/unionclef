@@ -1,0 +1,20 @@
+[
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\navigation-cancel-adjacent-20261005-063326\\1\\nav_bridge\\nav_bridge.mp4",
+    "destination": "C:\\Repos\\pet\\unionclef\\reports\\hf\\navigation-cancel-milestone-20261005\\assets\\adjacent-bridge.mp4",
+    "sha256": "e88cc7cff06488c546ce15bf809585501d5ab0358c82612185cc6f28e228d79c",
+    "case": "nav_bridge",
+    "repeat": 1,
+    "actual_review_sha256": "7ed95b5f6b5623d985bd094902ab1a70edf89b254f76e48ffbd5c6db9fcc3f6e",
+    "cadence_s": 2
+  },
+  {
+    "source": "C:\\Repos\\pet\\unionclef\\deploy\\runner\\artifacts\\navigation-cancel-adjacent-20261005-063326\\1\\craft_at_distant_table\\craft_at_distant_table.mp4",
+    "destination": "C:\\Repos\\pet\\unionclef\\reports\\hf\\navigation-cancel-milestone-20261005\\assets\\adjacent-craft.mp4",
+    "sha256": "a188be8854bfd3764e55be62e0ad49d323a5c7c6bdf838b7118c8abf3b3afe1c",
+    "case": "craft_at_distant_table",
+    "repeat": 1,
+    "actual_review_sha256": "7ed95b5f6b5623d985bd094902ab1a70edf89b254f76e48ffbd5c6db9fcc3f6e",
+    "cadence_s": 2
+  }
+]

@@ -1,0 +1,74 @@
+{
+  "staged_utc": "2026-10-05T04:15:04.595019+00:00",
+  "assets": [
+    {
+      "file": "cancel-before.mp4",
+      "source": "deploy/runner/artifacts/navigation-cancel-mechanism-20261005-052133/probe.mp4",
+      "sha256": "27119d1514073e93d9dcd163f356892d9253b54cca582bfb0c15fdd9a81ce1ec",
+      "bytes": 2607003
+    },
+    {
+      "file": "cancel-after.mp4",
+      "source": "deploy/runner/artifacts/navigation-cancel-regression-central-20261005-061525/probe.mp4",
+      "sha256": "e9db1e8538ec997cfd5c9882c932ab76e6f2741e756b4e08717153aaca806385",
+      "bytes": 2641736
+    },
+    {
+      "file": "independent-aim.mp4",
+      "source": "deploy/runner/artifacts/inactive-cancel-aim-regression-20261005-062942/probe.mp4",
+      "sha256": "00bd999d1c241cc246699a561c9ad40147fc6fdb07e164827a5ab15b9ba77f09",
+      "bytes": 1152955
+    },
+    {
+      "file": "gsap.min.js",
+      "source": "reports/hf/near-region-milestone-20261005/assets/gsap.min.js",
+      "sha256": "c174bfce53a729418d57a8ad8625e7247c793a22fef8e2851e3cfa3de9cd8280",
+      "bytes": 72779
+    },
+    {
+      "file": "GSAP-README.md",
+      "source": "reports/hf/near-region-milestone-20261005/assets/GSAP-README.md",
+      "sha256": "36224e521bdd9b79dc74ef262effc1a636d960b9be918bc2412ed69f9eee27b0",
+      "bytes": 6199
+    },
+    {
+      "file": "montserrat-900.ttf",
+      "source": "reports/hf/near-region-milestone-20261005/assets/montserrat-900.ttf",
+      "sha256": "9d9bb42bdc0defdf103a4f41c4ec775c4bfc77014b0e2f4ecc69be874b10d58b",
+      "bytes": 183180
+    },
+    {
+      "file": "montserrat-900-OFL.txt",
+      "source": "reports/hf/near-region-milestone-20261005/assets/montserrat-900-OFL.txt",
+      "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e",
+      "bytes": 4400
+    },
+    {
+      "file": "ibm-plex-mono-400.ttf",
+      "source": "reports/hf/near-region-milestone-20261005/assets/ibm-plex-mono-400.ttf",
+      "sha256": "a7fdc993f9f0387caedba4e42521136fa97e4c0837ae6239bf0413ccf8af00c2",
+      "bytes": 128812
+    },
+    {
+      "file": "ibm-plex-mono-400-OFL.txt",
+      "source": "reports/hf/near-region-milestone-20261005/assets/ibm-plex-mono-400-OFL.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+      "bytes": 4456
+    }
+  ],
+  "reviews": {
+    "baseline": {
+      "path": "deploy/runner/artifacts/navigation-cancel-mechanism-20261005-052133/actual-film-review.json",
+      "sha256": "dcf5ee8e0308509ed2c7c34602830f94e6931ea828ed20886fe88eea20550867"
+    },
+    "fixed_six": {
+      "path": "deploy/runner/artifacts/navigation-cancel-six-20261005-061524/actual-film-review.json",
+      "sha256": "62042353d4537e952a8a2040564439acc7136b4a18bea3037f368b3f0bffba70"
+    },
+    "independent_aim": {
+      "path": "deploy/runner/artifacts/inactive-cancel-aim-regression-20261005-062942/actual-film-review.json",
+      "sha256": "176c2aa6522a41d0b9d6c5b19971e361aee24cbbe384956b1935a0b177394068"
+    }
+  },
+  "scope": "Readonly adoption of already actually reviewed original local films and the same project licensed fonts/GSAP. No new gameplay, styling/media processing, provider action, snapshots or render. Baseline and fixed mining entries recreate the same arena, not a saved checkpoint. Pending new cp70/adjacent footage excluded until original audits and actual film reviews complete."
+}

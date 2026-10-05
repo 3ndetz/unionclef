@@ -698,7 +698,12 @@ public class TungstenHelper {
             kaptainwutax.tungsten.path.PathFinder.noteStop("TungstenHelper@600");
             TungstenModDataContainer.PATHFINDER.stop.set(true);
             PathExecutor exec = TungstenModDataContainer.EXECUTOR;
-            if (exec != null) exec.stop = true;
+            if (exec != null) {
+                // Match the explicit block-work cancellation in TungstenMod.stopNavigation;
+                // the replay drift flag alone preserves empty-path mining/placing jobs.
+                exec.cancelBlockWork();
+                exec.stop = true;
+            }
             active = false;
             lockUntil = 0;
             lockedEntity = null;

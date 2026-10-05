@@ -1,0 +1,3 @@
+{"id":"video_001","type":"video","path":"assets/cancel-after.mp4","source":"existing","description":"cancel after","duration":18.7,"width":854,"height":480,"provenance":{"provider":"local","adopted":true}}
+{"id":"video_002","type":"video","path":"assets/cancel-before.mp4","source":"existing","description":"cancel before","duration":18,"width":854,"height":480,"provenance":{"provider":"local","adopted":true}}
+{"id":"video_003","type":"video","path":"assets/independent-aim.mp4","source":"existing","description":"independent aim","duration":9.1,"width":854,"height":480,"provenance":{"provider":"local","adopted":true}}

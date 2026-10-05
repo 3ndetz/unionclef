@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><body><template>
+<link rel="stylesheet" href="compositions/scene.css">
+<style>#cancel-regressions-root{position:absolute;inset:0;width:100%;height:100%}</style>
+<div id="cancel-regressions-root" data-composition-id="cancel-regressions" data-width="1920" data-height="1080" data-duration="13"><div class="cancel-scene">
+<div class="cancel-kicker"><span>SEPARATE REGRESSION CHECKS</span><span>ORIGINAL FILMS REVIEWED</span></div>
+<h1><span id="regressions-word-1" class="cancel-word">Stop.</span> <span id="regressions-word-2" class="cancel-word">Then</span> <span id="regressions-word-3" class="cancel-word">keep</span> <span id="regressions-word-4" class="cancel-word">working.</span></h1>
+<div class="cancel-body"><div class="cancel-rail">
+<div class="cancel-stat"><div class="cancel-stat-row"><h2>Queued dig</h2><span class="cancel-count">6/6</span></div><div class="cancel-track"><div id="cancel-dig-fill" class="cancel-fill"></div></div><p class="cancel-note">Central / helper: three each</p></div>
+<div class="cancel-stat"><div class="cancel-stat-row"><h2>Adjacent courses</h2><span class="cancel-count">42/42</span></div><div class="cancel-track"><div id="cancel-adjacent-fill" class="cancel-fill"></div></div><p class="cancel-note">Craft, flat, stairs, down, dig, bridge, gaps</p></div>
+<p class="cancel-note">Separate fresh-aim fixture: all three arms preserve the target.</p>
+</div><div class="cancel-media">
+<video id="cancel-bridge-video" class="clip" src="assets/adjacent-bridge.mp4" muted playsinline data-start="0" data-duration="6" data-media-start="3" data-track-index="0"></video>
+<video id="cancel-craft-video" class="clip" src="assets/adjacent-craft.mp4" muted playsinline data-start="6" data-duration="7" data-media-start="8" data-track-index="0"></video>
+</div></div>
+<div class="cancel-footer"><span id="cancel-bridge-label" class="clip" data-start="0" data-duration="6" data-track-index="2">Bridge crossing · 1×</span><span id="cancel-craft-label" class="clip" data-start="6" data-duration="7" data-track-index="2">Distant table approach + craft · 1×</span><span>Arena checks · not the full game</span></div>
+</div></div>
+<script>const tl=gsap.timeline({paused:true});const ids=["#regressions-word-1","#regressions-word-2","#regressions-word-3","#regressions-word-4"];const starts=[.1,.27,.41,.54];const travel=[75,45,55,40];ids.forEach((id,i)=>{tl.set(id,{opacity:1,y:travel[i]},starts[i]);tl.to(id,{y:0,duration:i===0?.18:.15,ease:"power4.out"},starts[i]);});tl.fromTo("#cancel-dig-fill",{scaleX:0},{scaleX:1,duration:.85,ease:"power2.out"},.7);tl.fromTo("#cancel-adjacent-fill",{scaleX:0},{scaleX:1,duration:1,ease:"power2.out"},1);window.__timelines["cancel-regressions"]=tl;</script>
+</template></body></html>

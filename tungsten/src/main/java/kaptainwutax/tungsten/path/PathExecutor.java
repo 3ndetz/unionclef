@@ -47,6 +47,8 @@ public class PathExecutor {
     /** The planner-side estimate the current budget was sized from, for the abort line. */
     private double breakBudgetEstimate = 0;
     public static volatile int breakBudgetSized = 0;
+    /** Actual block jobs abandoned by an explicit owner handoff, not stop calls. */
+    public static volatile int cancelledBlockWorkJobs = 0;
 
     /**
      * HAND THE EXECUTOR A NEW BREAK JOB. Use this instead of assigning {@link #breakQueue}.
@@ -70,11 +72,11 @@ public class PathExecutor {
      *  string. Added because //replace alternates pass/fail run after run, which is not noise —
      *  it is state carried across runs, and the only way to name it is to look at it. */
     public String debugState() {
-        return String.format("stop=%b path=%d tick=%d breakQ=%s placeQ=%s breakTicks=%d liveLanding=%d/%d/%d liveLandingMaxNs=%d",
+        return String.format("stop=%b path=%d tick=%d breakQ=%s placeQ=%s breakTicks=%d cancelledBlockWork=%d liveLanding=%d/%d/%d liveLandingMaxNs=%d",
                 stop, path == null ? -1 : path.size(), tick,
                 breakQueue == null ? "null" : String.valueOf(breakQueue.size()),
                 placeQueue == null ? "null" : String.valueOf(placeQueue.size()),
-                breakingTicks, replayLiveChecks, replayLiveUnsafe, replayLiveRefused, replayLiveMaxNanos);
+                breakingTicks, cancelledBlockWorkJobs, replayLiveChecks, replayLiveUnsafe, replayLiveRefused, replayLiveMaxNanos);
     }
 
     /** Queue mining after the current replay, preserving its index and armed state. */
@@ -114,6 +116,7 @@ public class PathExecutor {
      */
     public synchronized boolean cancelBlockWork() {
         if (!isBreakingNow() && !isPlacingNow()) return false;
+        cancelledBlockWorkJobs++;
         breakQueue = null;
         placeQueue = null;
         breakingTicks = 0;

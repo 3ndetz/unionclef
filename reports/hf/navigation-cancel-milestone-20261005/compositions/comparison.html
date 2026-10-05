@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><body><template>
+<link rel="stylesheet" href="compositions/scene.css">
+<style>#cancel-comparison-root{position:absolute;inset:0;width:100%;height:100%}</style>
+<div id="cancel-comparison-root" data-composition-id="cancel-comparison" data-width="1920" data-height="1080" data-duration="12"><div class="cancel-scene">
+<div class="cancel-kicker"><span>EXPLICIT STOP / QUEUED OBSIDIAN DIG</span><span>SAME RECREATED ARENA</span></div>
+<h1><span id="comparison-word-1" class="cancel-word">One</span> <span id="comparison-word-2" class="cancel-word">stop.</span> <span id="comparison-word-3" class="cancel-word">Two</span> <span id="comparison-word-4" class="cancel-word">outcomes.</span></h1>
+<div class="cancel-pairs"><div class="cancel-pair"><div class="cancel-label">OLD / mining continued</div><div class="cancel-media"><video id="cancel-old-video" class="clip" src="assets/cancel-before.mp4" muted playsinline data-start="0" data-duration="12" data-media-start="3" data-track-index="0"></video></div><p class="cancel-note">Attack, aim and the queue remained active.</p></div>
+<div class="cancel-pair"><div class="cancel-label">FIXED / mining stopped</div><div class="cancel-media"><video id="cancel-fixed-video" class="clip" src="assets/cancel-after.mp4" muted playsinline data-start="0" data-duration="12" data-media-start="3" data-track-index="0"></video></div><p class="cancel-note">Queue cleared. Pick rests. Obsidian intact.</p></div></div>
+<div class="cancel-footer"><span>Normal speed · each source 3–15s</span><span>Own clip clocks · not historical full59</span></div>
+</div></div>
+<script>const tl=gsap.timeline({paused:true});const ids=["#comparison-word-1","#comparison-word-2","#comparison-word-3","#comparison-word-4"];const starts=[.1,.27,.41,.54];const travel=[75,45,55,40];ids.forEach((id,i)=>{tl.set(id,{opacity:1,y:travel[i]},starts[i]);tl.to(id,{y:0,duration:i===0?.18:.15,ease:"power4.out"},starts[i]);});window.__timelines["cancel-comparison"]=tl;</script>
+</template></body></html>
