@@ -5853,6 +5853,16 @@ public class Py4jEntryPoint {
         return adris.altoclef.util.agent.ElytraFlight.status();
     }
 
+    /** Swim to the nearest dry shore within radius (the pathfinder is poor in water). */
+    public Map<String, Object> swimToShore(int radius) {
+        return onClientThread(() -> adris.altoclef.util.agent.SwimToShore.start(radius),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    public Map<String, Object> swimStatus() {
+        return adris.altoclef.util.agent.SwimToShore.status();
+    }
+
     public Map<String, Object> flyStop() {
         adris.altoclef.util.agent.ElytraFlight.stop();
         return adris.altoclef.util.agent.ElytraFlight.status();
@@ -6064,6 +6074,7 @@ public class Py4jEntryPoint {
                 self.put("gameMode", client.interactionManager.getCurrentGameMode().name().toLowerCase(java.util.Locale.ROOT));
             }
             self.put("flying", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(me));
+            self.put("inWater", adris.altoclef.util.agent.SwimToShore.inWater(me));
             out.put("self", self);
 
             List<Map<String, Object>> players = new ArrayList<>();

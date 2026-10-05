@@ -250,6 +250,12 @@ public class McpServer {
                 a -> api.flyStatus());
         tool("flyStop", "Abort the elytra flight (the bot glides down on its own).", schema(),
                 a -> api.flyStop());
+        tool("swimToShore",
+                "Get out of water: swim on the surface to the nearest dry shore within radius and climb "
+                + "out. Poll swimStatus (phase: swimming/done/failed).",
+                schema("radius:int"), a -> api.swimToShore(argInt(a, "radius")));
+        tool("swimStatus", "Current swim to shore: phase, reason, distance, inWater.", schema(),
+                a -> api.swimStatus());
         tool("creativeGive",
                 "Creative mode only: put count of an item (e.g. 'firework_rocket', 'elytra') into free "
                 + "inventory slots, like taking it from the creative tab. ok=false with reason otherwise.",
