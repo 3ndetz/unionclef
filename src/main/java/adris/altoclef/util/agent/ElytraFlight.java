@@ -47,6 +47,7 @@ public final class ElytraFlight {
     private static volatile String leader;
     private static double lastLx, lastLy, lastLz, lvx, lvy, lvz;
     private static boolean leaderSeen;
+    private static net.minecraft.util.math.BlockPos openSky; // where to walk for a take-off
     // Progress watchdog: the best distance to the target and when it last improved.
     private static double bestDist;
     private static int bestTick;
@@ -102,6 +103,7 @@ public final class ElytraFlight {
         tz = z;
         ticks = takeoffTicks = boostCooldown = rocketsUsed = glideWait = 0;
         glideSent = false;
+        openSky = null;
         pilotReady = false;
         bestDist = Double.MAX_VALUE;
         bestTick = 0;
@@ -125,6 +127,8 @@ public final class ElytraFlight {
         m.put("phase", phase.name().toLowerCase(java.util.Locale.ROOT));
         m.put("reason", reason);
         m.put("rocketsUsed", rocketsUsed);
+        var sky = openSky;
+        if (phase == Phase.FAILED && sky != null) m.put("openSky", sky.getX() + "," + sky.getY() + "," + sky.getZ());
         if (leader != null) m.put("leader", leader);
         m.put("target", String.format(java.util.Locale.ROOT, "%.0f,%.0f,%.0f", tx, ty, tz));
         var p = MinecraftClient.getInstance().player;
@@ -228,6 +232,7 @@ public final class ElytraFlight {
                 // and burns rockets against it. Walk out first.
                 if (!adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)
                         && top(client, p.getX(), p.getZ()) > p.getY() + 2.5) {
+                    openSky = nearestOpenSky(client, p, 16); // a forest canopy is a roof too
                     fail("under a roof");
                     return;
                 }
@@ -393,6 +398,34 @@ public final class ElytraFlight {
         p.setPitch(o.pitch);
         if (o.boost && !boost(client, p)) pilot.boostFailed();
         return true;
+    }
+
+    /** Nearest column within radius with open sky at about the bot's level (no canopy, no roof,
+     *  ground within 3 blocks up or down): a place to take off from. Null when none. */
+    private static net.minecraft.util.math.BlockPos nearestOpenSky(MinecraftClient client, ClientPlayerEntity p, int radius) {
+        int px = p.getBlockX(), pz = p.getBlockZ();
+        for (int r = 1; r <= radius; r++) {
+            net.minecraft.util.math.BlockPos best = null;
+            double bestD = Double.MAX_VALUE;
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    int x = px + dx, z = pz + dz;
+                    if (!client.world.getChunkManager().isChunkLoaded(x >> 4, z >> 4)) continue;
+                    int topY = client.world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+                    if (Math.abs(topY - p.getY()) > 3) continue; // a tree top or a pit, not open ground
+                    var ground = client.world.getBlockState(new net.minecraft.util.math.BlockPos(x, topY - 1, z));
+                    if (!ground.getFluidState().isEmpty() || ground.isIn(net.minecraft.registry.tag.BlockTags.LEAVES)) continue;
+                    double d = dx * dx + dz * dz;
+                    if (d < bestD) {
+                        bestD = d;
+                        best = new net.minecraft.util.math.BlockPos(x, topY, z);
+                    }
+                }
+            }
+            if (best != null) return best;
+        }
+        return null;
     }
 
     /** Ground height at x,z from the heightmap; the world bottom where the chunk is not loaded. */
