@@ -54,7 +54,78 @@ public class ElytraPilotSim {
             System.out.printf("%-22s ok %2d/20  time avg %4.1fs max %4.1fs  last 25 blocks max %4.1fs  rockets %4.1f  clearance %5.1f  %s%n",
                     s.name, ok, sumT / 20, maxT, maxApp, sumR / 20, worstClear, firstFail);
         }
+        if (only == null || "follow".startsWith(only)) {
+            int ok = 0;
+            double worstMean = 0, worstMax = 0, sumR = 0;
+            for (long seed = 0; seed < 20; seed++) {
+                double[] r = runFollow(seed, traceSeed == seed);
+                if (r[0] < 12 && r[1] < 45 && r[3] > 0) ok++;
+                worstMean = Math.max(worstMean, r[0]);
+                worstMax = Math.max(worstMax, r[1]);
+                sumR += r[2];
+            }
+            if (ok < 20) fails++;
+            System.out.printf("%-22s ok %2d/20  gap to slot: worst mean %4.1f, worst max %4.1f  rockets %4.1f%n",
+                    "follow a leader", ok, worstMean, worstMax, sumR / 20);
+        }
         System.out.println(fails == 0 ? "ALL OK" : fails + " scene(s) failed");
+    }
+
+    /** Leader flight: 10 s straight, a left turn, a climb, a glide down; flat ground at 70.
+     *  Returns {mean gap to the slot, max gap, rockets, 1 if never touched the ground else 0}. */
+    static double[] runFollow(long seed, boolean trace) {
+        java.util.Random rnd = new java.util.Random(seed);
+        ElytraPilot pilot = new ElytraPilot();
+        double x = -12, y = 100, z = 3, vx = 1.2, vy = 0, vz = 0;
+        double lx = 0, ly = 100, lz = 0, heading = 0;
+        pilot.resetForLanding(-90, 0);
+        int rocketLeft = 0, rockets = 0;
+        double sumGap = 0, maxGap = 0;
+        int n = 0;
+        boolean clean = true;
+        for (int t = 0; t < 20 * 40; t++) {
+            // Leader script.
+            double sp = 1.4, lvy = 0;
+            if (t >= 200 && t < 300) heading += Math.PI / 2 / 100;    // quarter turn left in 5 s
+            if (t >= 300 && t < 450) lvy = 0.35;                       // climb
+            if (t >= 550) { lvy = -0.25; sp = 1.2; }                   // glide down
+            if (ly + lvy < 80) lvy = 0;                                // levels off 10 over the ground
+            double lvx = Math.cos(heading) * sp, lvz = Math.sin(heading) * sp;
+            lx += lvx; ly += lvy; lz += lvz;
+
+            double obstacle = y + vy * 30 < 70 ? Math.max(1, (y - 70) / Math.max(-vy, 0.01)) : Double.POSITIVE_INFINITY;
+            ElytraPilot.Out o = pilot.stepFollow(x, y, z, vx, vy, vz, lx, ly, lz, lvx, lvy, lvz, 70, 70, obstacle);
+            if (o.boost) { rocketLeft = 20 + rnd.nextInt(6) + rnd.nextInt(7); rockets++; }
+            double p = Math.toRadians(o.pitch), w = Math.toRadians(o.yaw);
+            double ex = -Math.sin(w) * Math.cos(p), ey = -Math.sin(p), ez = Math.cos(w) * Math.cos(p);
+            if (rocketLeft > 0) {
+                rocketLeft--;
+                vx += ex * 0.1 + (ex * 1.5 - vx) * 0.5;
+                vy += ey * 0.1 + (ey * 1.5 - vy) * 0.5;
+                vz += ez * 0.1 + (ez * 1.5 - vz) * 0.5;
+            }
+            double d = Math.sqrt(ex * ex + ez * ez), e = Math.hypot(vx, vz), h = Math.cos(p) * Math.cos(p);
+            vy += 0.08 * (-1.0 + h * 0.75);
+            if (vy < 0 && d > 0) { double i = vy * -0.1 * h; vx += ex * i / d; vy += i; vz += ez * i / d; }
+            if (p < 0 && d > 0) { double i = e * -Math.sin(p) * 0.04; vx += -ex * i / d; vy += i * 3.2; vz += -ez * i / d; }
+            if (d > 0) { vx += (ex / d * e - vx) * 0.1; vz += (ez / d * e - vz) * 0.1; }
+            vx *= 0.99; vy *= 0.98; vz *= 0.99;
+            x += vx; y += vy; z += vz;
+            if (y <= 70) clean = false;
+
+            double lh = Math.max(Math.hypot(lvx, lvz), 1e-6);
+            double ux = lvx / lh, uz = lvz / lh;
+            double sx = lx - ux * 2 - uz * 5, sz = lz - uz * 2 + ux * 5, sy = ly + 1;
+            double gap = Math.sqrt((sx - x) * (sx - x) + (sy - y) * (sy - y) + (sz - z) * (sz - z));
+            if (t > 100) { sumGap += gap; n++; maxGap = Math.max(maxGap, gap); } // after joining up
+            if (trace && t % 20 == 0) {
+                double al = (x - sx) * ux + (z - sz) * uz, cr = (x - sx) * -uz + (z - sz) * ux;
+                System.out.printf("  t=%3d ahead=%6.1f right=%6.1f up=%5.1f  gap=%5.1f v=%.2f lead v=%.2f pitch=%5.1f yaw-course=%5.0f %s%s%n",
+                        t, al, cr, y - sy, gap, o.speed, Math.hypot(lvx, lvz), o.pitch,
+                        wrap((float) (o.yaw - Math.toDegrees(Math.atan2(-ux, uz)))), o.mode, o.boost ? " ROCKET" : "");
+            }
+        }
+        return new double[] {sumGap / n, maxGap, rockets, clean ? 1 : 0};
     }
 
     record Result(boolean ok, String verdict, double seconds, int rockets, double minClear, double end, double approach) {}

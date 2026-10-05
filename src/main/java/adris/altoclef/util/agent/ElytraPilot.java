@@ -12,7 +12,7 @@ package adris.altoclef.util.agent;
  */
 public final class ElytraPilot {
 
-    public enum Mode { CLIMB, CRUISE, DESCENT, FINAL, FLARE, SINK, AVOID }
+    public enum Mode { CLIMB, CRUISE, DESCENT, FINAL, FLARE, SINK, AVOID, FOLLOW }
 
     public static final class Out {
         public float yaw, pitch;
@@ -37,6 +37,7 @@ public final class ElytraPilot {
     private int boostCooldown;
     private Mode mode = Mode.CLIMB;
     private int climbOut;
+    private int weaveTicks;
 
     public void reset(float yaw, float pitch) {
         this.yaw = yaw;
@@ -175,25 +176,87 @@ public final class ElytraPilot {
             pitchCmd = -8; // round out over the ground
             integral = 0;
         } else {
-            double err = gammaCmd - gamma;
-            integral = Math.max(-12, Math.min(12, integral + err * K_INT));
-            pitchCmd = (float) -(gammaCmd + K_GAMMA * err + integral);
-            // Stall guard: without thrust and slow, the nose goes down to win speed back.
-            if (speed < 0.5 && boostCooldown == 0 && mode != Mode.SINK) pitchCmd = Math.max(pitchCmd, 12);
-            pitchCmd = Math.max(-40, Math.min(40, pitchCmd));
+            pitchCmd = holdGamma(gammaCmd, gamma, speed, mode != Mode.SINK);
         }
+        o.arrived = (mode == Mode.FLARE || mode == Mode.SINK) && dist < 4 && above < 3;
+        return steer(o, pitchCmd, (float) Math.toDegrees(Math.atan2(-dx, dz)), wantBoost, gamma, gammaCmd, speed);
+    }
 
-        // Rate-limited controls, like a hand on a mouse: arcs and smooth pitch changes.
+    /**
+     * One tick in formation with a leader who is flying: a wingman slot beside and a little behind
+     * the leader, led by half a second of the leader's motion, speed matched with rockets and
+     * S-turns. Terrain and obstacles still come first.
+     */
+    public Out stepFollow(double x, double y, double z, double vx, double vy, double vz,
+                          double lx, double ly, double lz, double lvx, double lvy, double lvz,
+                          double terrainAhead, double groundBelow, double obstacleDist) {
+        Out o = new Out();
+        if (boostCooldown > 0) boostCooldown--;
+        double hs = Math.hypot(vx, vz);
+        double speed = Math.sqrt(hs * hs + vy * vy);
+        double gamma = Math.toDegrees(Math.atan2(vy, Math.max(hs, 1e-6)));
+        double lhs = Math.hypot(lvx, lvz);
+        double lspeed = Math.sqrt(lhs * lhs + lvy * lvy);
+        double ux, uz;
+        if (lhs > 0.2) {
+            ux = lvx / lhs;
+            uz = lvz / lhs;
+        } else { // the leader hangs still: just close in
+            double d = Math.max(Math.hypot(lx - x, lz - z), 1e-6);
+            ux = (lx - x) / d;
+            uz = (lz - z) / d;
+        }
+        // Wingman slot: 5 to the leader's right, 2 back, 1 up -- where the leader can see the bot.
+        // (Right of a heading (ux, uz) in Minecraft's x/z is (-uz, ux).)
+        double sx = lx - ux * 2 - uz * 5, sz = lz - uz * 2 + ux * 5, sy = ly + lvy * 10 + 1;
+        // Along-track error against the slot itself: > 0 the slot is ahead of the bot.
+        double along = (sx - x) * ux + (sz - z) * uz;
+        // Aim at a point well ahead of the slot on the leader's line (half a second of the
+        // leader's motion plus 10): the bot converges from behind or from the side and never
+        // turns back towards a slot it overshot.
+        double ax = sx + lvx * 10 + ux * 10, az = sz + lvz * 10 + uz * 10;
+        double dx = ax - x, dz = az - z;
+        double gammaCmd = Math.max(-30, Math.min(30, Math.toDegrees(Math.atan2(sy - y, Math.max(Math.hypot(dx, dz), 8)))));
+        // Speed: the leader's, plus a little to close a gap, minus a little when ahead.
+        double want = lspeed + Math.max(-0.4, Math.min(0.6, along * 0.04));
+        if (speed > want + 0.15) gammaCmd += Math.min(15, (speed - want) * 25); // trade speed for height
+        if (y - Math.max(terrainAhead, groundBelow) < 8) gammaCmd = Math.max(gammaCmd, 15); // not into the ground
+        boolean avoid = speed > 0.45 && obstacleDist < Math.max(10, speed * 28);
+        mode = avoid ? Mode.AVOID : Mode.FOLLOW;
+        if (avoid) gammaCmd = 35;
+        boolean wantBoost = avoid ? speed < 1.5 : speed < 0.6 || along > 6 && speed < want - 0.1;
+        // Ahead of the slot: S-turns either side of the leader's course, as formation pilots do --
+        // the longer path lets the leader catch up; a rocket cannot be throttled back.
         float yawCmd = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        weaveTicks++;
+        if (along < -3 && !avoid) {
+            float course = (float) Math.toDegrees(Math.atan2(-ux, uz));
+            yawCmd = course + ((weaveTicks / 40) % 2 == 0 ? 40 : -40);
+        }
+        float pitchCmd = holdGamma(gammaCmd, gamma, speed, true);
+        o.arrived = false;
+        return steer(o, pitchCmd, yawCmd, wantBoost, gamma, gammaCmd, speed);
+    }
+
+    /** Pitch that holds a flight-path angle: proportional + integral on the angle error. */
+    private float holdGamma(double gammaCmd, double gamma, double speed, boolean stallGuard) {
+        double err = gammaCmd - gamma;
+        integral = Math.max(-12, Math.min(12, integral + err * K_INT));
+        float pitchCmd = (float) -(gammaCmd + K_GAMMA * err + integral);
+        // Stall guard: without thrust and slow, the nose goes down to win speed back.
+        if (stallGuard && speed < 0.5 && boostCooldown == 0) pitchCmd = Math.max(pitchCmd, 12);
+        return Math.max(-40, Math.min(40, pitchCmd));
+    }
+
+    /** Rate-limited controls, like a hand on a mouse: arcs and smooth pitch changes. */
+    private Out steer(Out o, float pitchCmd, float yawCmd, boolean wantBoost, double gamma, double gammaCmd, double speed) {
         float dyaw = wrap(yawCmd - yaw);
         yaw = wrap(yaw + (float) clamp(dyaw * 0.35, MAX_YAW_RATE));
         pitch += (float) clamp(pitchCmd - pitch, mode == Mode.AVOID ? MAX_PITCH_RATE * 2 : MAX_PITCH_RATE);
-
         if (wantBoost && boostCooldown == 0) {
             o.boost = true;
             boostCooldown = (int) ROCKET_TICKS;
         }
-        o.arrived = (mode == Mode.FLARE || mode == Mode.SINK) && dist < 4 && above < 3;
         o.yaw = yaw;
         o.pitch = pitch;
         o.mode = mode;

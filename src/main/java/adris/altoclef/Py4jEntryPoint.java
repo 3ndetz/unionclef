@@ -5853,6 +5853,12 @@ public class Py4jEntryPoint {
         return adris.altoclef.util.agent.ElytraFlight.status();
     }
 
+    /** Fly as a wingman beside a player who is flying an elytra; lands next to them. */
+    public Map<String, Object> flyFollow(String nick) {
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.startFollow(nick),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
     /** Swim to the nearest dry shore within radius (the pathfinder is poor in water). */
     public Map<String, Object> swimToShore(int radius) {
         return onClientThread(() -> adris.altoclef.util.agent.SwimToShore.start(radius),
@@ -6088,6 +6094,7 @@ public class Py4jEntryPoint {
                 pm.put("distance", String.format(java.util.Locale.ROOT, "%.1f", dist));
                 pm.put("hp", p.getHealth());          // visible for tracked players
                 pm.put("sprinting", p.isSprinting());
+                pm.put("gliding", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p));
                 players.add(pm);
             }
             players.sort((a, b) -> Double.compare(

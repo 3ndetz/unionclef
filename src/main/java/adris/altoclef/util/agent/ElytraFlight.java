@@ -42,6 +42,11 @@ public final class ElytraFlight {
     // flying this account by hand is never taken over.
     private static volatile boolean fallGlide = true;
     private static boolean armed, rescue;
+    // Wingman flight: the leader's name, and their velocity estimated from positions -- the
+    // client does not get other players' velocity, only where they are.
+    private static volatile String leader;
+    private static double lastLx, lastLy, lastLz, lvx, lvy, lvz;
+    private static boolean leaderSeen;
     private static int deployCooldown;
     private static boolean glideSent;
     private static boolean registered;
@@ -61,10 +66,34 @@ public final class ElytraFlight {
     /** Fall watch on/off (on by default): open the wings in a long fall and land. */
     public static void setFallGlide(boolean on) { fallGlide = on; }
 
+    /** Fly beside a player who is flying; call on the client thread. */
+    public static synchronized Map<String, Object> startFollow(String nick) {
+        var lead = findPlayer(MinecraftClient.getInstance(), nick);
+        if (lead == null) {
+            Map<String, Object> m = status();
+            m.put("phase", "failed");
+            m.put("reason", "not in sight");
+            return m;
+        }
+        Map<String, Object> m = start(lead.getX(), lead.getY(), lead.getZ());
+        leader = lead.getName().getString();
+        leaderSeen = false;
+        return m;
+    }
+
+    private static net.minecraft.entity.player.PlayerEntity findPlayer(MinecraftClient client, String nick) {
+        if (client.world == null || nick == null) return null;
+        for (var pl : client.world.getPlayers()) {
+            if (pl != client.player && pl.getName().getString().equalsIgnoreCase(nick)) return pl;
+        }
+        return null;
+    }
+
     /** Start a flight; call on the client thread. */
     public static synchronized Map<String, Object> start(double x, double y, double z) {
         register();
         rescue = false;
+        leader = null;
         tx = x;
         ty = y;
         tz = z;
@@ -91,6 +120,7 @@ public final class ElytraFlight {
         m.put("phase", phase.name().toLowerCase(java.util.Locale.ROOT));
         m.put("reason", reason);
         m.put("rocketsUsed", rocketsUsed);
+        if (leader != null) m.put("leader", leader);
         m.put("target", String.format(java.util.Locale.ROOT, "%.0f,%.0f,%.0f", tx, ty, tz));
         var p = MinecraftClient.getInstance().player;
         if (p != null) {
@@ -236,6 +266,7 @@ public final class ElytraFlight {
             pilotReady = true;
         }
         var v = p.getVelocity();
+        if (leader != null && wingman(client, p, v)) return;
         ElytraPilot.Out o = pilot.step(p.getX(), p.getY(), p.getZ(), v.x, v.y, v.z,
                 tx, landingY(client), tz, terrainAhead(client, p), top(client, p.getX(), p.getZ()),
                 runwayClear(client, p), obstacleAhead(client, p));
@@ -296,6 +327,47 @@ public final class ElytraFlight {
         armed = false;
         reason = "rescue";
         phase = Phase.FLYING;
+    }
+
+    /** One wingman tick; false when the leader landed or vanished and a normal landing follows. */
+    private static boolean wingman(MinecraftClient client, ClientPlayerEntity p, net.minecraft.util.math.Vec3d v) {
+        var lead = findPlayer(client, leader);
+        if (lead == null) { // out of render distance: land where they were last seen
+            leader = null;
+            return false;
+        }
+        double lx = lead.getX(), ly = lead.getY(), lz = lead.getZ();
+        if (leaderSeen) { // smoothed: position updates come in steps
+            lvx += ((lx - lastLx) - lvx) * 0.3;
+            lvy += ((ly - lastLy) - lvy) * 0.3;
+            lvz += ((lz - lastLz) - lvz) * 0.3;
+        } else {
+            lvx = lvy = lvz = 0;
+            leaderSeen = true;
+        }
+        lastLx = lx;
+        lastLy = ly;
+        lastLz = lz;
+        tx = lx;
+        ty = ly;
+        tz = lz;
+        if (!adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(lead)) {
+            // The leader landed: put down a few blocks to their right, on the ground there.
+            double h = Math.max(Math.hypot(lvx, lvz), 1e-6);
+            tx = lx - lvz / h * 4;
+            tz = lz + lvx / h * 4;
+            ty = top(client, tx, tz);
+            leader = null;
+            pilot.resetForLanding(p.getYaw(), p.getPitch());
+            return false;
+        }
+        ElytraPilot.Out o = pilot.stepFollow(p.getX(), p.getY(), p.getZ(), v.x, v.y, v.z, lx, ly, lz, lvx, lvy, lvz,
+                terrainAhead(client, p), top(client, p.getX(), p.getZ()), obstacleAhead(client, p));
+        lastOut = o;
+        p.setYaw(o.yaw);
+        p.setPitch(o.pitch);
+        if (o.boost && !boost(client, p)) pilot.boostFailed();
+        return true;
     }
 
     /** Ground height at x,z from the heightmap; the world bottom where the chunk is not loaded. */

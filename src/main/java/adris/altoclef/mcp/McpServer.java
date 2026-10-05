@@ -250,6 +250,10 @@ public class McpServer {
                 a -> api.flyStatus());
         tool("flyStop", "Abort the elytra flight (the bot glides down on its own).", schema(),
                 a -> api.flyStop());
+        tool("flyFollow",
+                "Fly as a wingman beside a player who is flying an elytra (take off, hold a slot to "
+                + "their right, match speed); when they land, land next to them. Poll flyStatus.",
+                schema("nick:string"), a -> api.flyFollow(argStr(a, "nick")));
         tool("swimToShore",
                 "Get out of water: swim on the surface to the nearest dry shore within radius and climb "
                 + "out. Poll swimStatus (phase: swimming/done/failed).",
