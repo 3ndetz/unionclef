@@ -184,6 +184,11 @@ public final class ElytraFlight {
                     p.getAbilities().flying = false;
                     p.sendAbilitiesUpdate();
                 }
+                // Wings do not open in water: say so at once instead of jumping for 12 seconds.
+                if (p.isTouchingWater() || p.isInLava()) {
+                    fail("in water");
+                    return;
+                }
                 if (adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) {
                     phase = Phase.FLYING; // the pilot fires the first rocket on its first tick
                     return;
