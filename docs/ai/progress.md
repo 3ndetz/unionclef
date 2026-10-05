@@ -2,7 +2,7 @@
 
 Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archive/04-10-2026-near-region-and-fixed-fall-cost.md), including earlier bucket/scanner and original invalid campaigns. Their original results remain unchanged.
 
-## Full59 lava-column stall — active
+## Full59 lava-column stall — paused by owner
 
 ### Investigate
 - Original full59 remained at (-290.7,55,965.4) for its final ~39 minutes. Named cp1001-0119-t4230 retains geometry/player pack, not the original cached Java tasks or behaviour. Historical isolated lava/portal controls did not reproduce the persistent stall.
@@ -109,8 +109,16 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Sole new lava-six parent117216/wrapper83556/unified67036 started04:31:13.556999UTC, logged-job-20261005-073113-83556, helpere7bdfedc; directory navigation-cancel-lava-six-20261005-073113. Original cp70/fixed90s protected Idle/new filled lava bucket/active+wholeFPS20/HP20/full trace/runtime/source744/working runner guards/offline25/owned light end snapshots; direct Near text/reflected child/actual ticks, sparse1Hz occupancy retained separately, actual cancellation deltas observational. First red/INVALID stops without replay/refresh. Actual checkpoint list14103MB/15GB and108GB free, no pruning. Outcomes/independent audits/all films pending, then active-builder/executor placement/native regressions before source commit/stable release. Foreign WIP preserved.
 - Edited cancellation milestone has only nonheavy preparation in reports/hf/navigation-cancel-milestone-20261005, HyperFrames0.8.127/55s brief/design/storyboard/source review, local licensed fonts/GSAP and three retained recordings. Stage91196/wrapper88824 naturally0 at04:15:04.615284UTC, provenance3e730add. Initial media adoption hit shared npm lock ECOMPROMISED, a probed cache alias had no CLI; original failures retained without removing global locks/cache. Actual complete cached0.8.127 CLI adopted three clips locally. Baseline and fixed mining contact pages actually reopened for edit selection; new lava/adjacent clip selection follows completed actual audits. HTML/check/snapshot/render/delivery remain unexecuted; no heavy video during FPS-sensitive gameplay, no provider generation or new Telegram send. Existing10099 remains delivered.
 
+### Owner-requested pause, 2026-10-05
+
+- Owner explicitly requested a report and temporary stop. Goal status is PAUSED; no new game actors, builds, video checks/renders, releases or Telegram sends follow that request. The already-running final lava trial was allowed to finish its existing cleanup/checkpoint boundary, not replayed or interrupted.
+- Lava-six117216/wrapper83556 naturally0 at05:06:31.514870UTC. All12 original actor/auditor jobs naturally0, six fresh cp70 tasks complete with a new filled bucket, minimum HP20, active29.5..30FPS/whole29.5..30FPS, actual Near ticks25..26, complete declared source744/runner/runtime/offline25/owned end-checkpoint gates. Observer first-finish1.529875..1.612619s is not an exact film pickup timestamp or an old/new speed comparison. All six films remain UNREVIEWED; extractor24cf5cec/seal373fc10d were not run. Original full59 cached-parent cause remains open.
+- Latest cancellation change remains exactly three own uncommitted Java files: central/helper stop calls existing cancelBlockWork, only active builders receive stop, actual abandoned-job counter added. Clean isolated candidate0ce8 is deployed and independently bytecode-audited; explicit mining-stop6/6, fresh-aim three-arm fixture and adjacent42/42 have completed independent audits and actual film reviews. Public builder cancellations, executor placeQueue cancellation and a new native15 on this candidate are prepared but UNEXECUTED. No stable cancellation release exists.
+- Nonheavy report preparation created payoff/comparison/regressions scene HTML and staged two already-reviewed adjacent clips. Stage142064/wrapper127040 naturally0 at04:55:21.177957UTC, helpere988277f. These scenes have not been checked/rendered; checkpoint/end scenes and final assembly are incomplete. Prepared native helper9c0f096d/auditor279f77a2 and executor-place helperecb95097/auditore7229444 were never launched. Preparatory file creation is not gameplay coverage.
+- Verified GitHub still publishes v0.95.55 and v0.95.56 with the correct1.21.11 assets. Three own Java overlays, all foreign WIP and private preparations remain preserved. Pause is not task completion or hardware failure. Continue only after a new owner instruction, beginning with the retained lava films and the unfinished cancellation validation; never automatically revive historical requests or resend delivered reports.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
-- Did the customer say to stop?         -> no
-VERDICT: work continues immediately with the current focused pass.
+- Did the customer say to stop?         -> yes, temporary owner-requested pause
+VERDICT: PAUSED. No further task execution until the owner resumes it.
