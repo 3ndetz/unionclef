@@ -12,7 +12,7 @@ package adris.altoclef.util.agent;
  */
 public final class ElytraPilot {
 
-    public enum Mode { CLIMB, CRUISE, DESCENT, FINAL, FLARE, SINK }
+    public enum Mode { CLIMB, CRUISE, DESCENT, FINAL, FLARE, SINK, AVOID }
 
     public static final class Out {
         public float yaw, pitch;
@@ -63,10 +63,13 @@ public final class ElytraPilot {
      * @param runwayClear  nothing sticks up into a shallow approach over the last ~50 blocks: land
      *                     like a plane (long glide, round-out, touch down rolling); else steep
      *                     approach and a pull-up over the spot
+     * @param obstacleDist distance to the first solid block along the flight direction (a ray
+     *                     through real block shapes: towers, bridges, trees), not counting the
+     *                     landing ground; infinity when clear
      */
     public Out step(double x, double y, double z, double vx, double vy, double vz,
                     double tx, double ty, double tz, double terrainAhead, double groundBelow,
-                    boolean runwayClear) {
+                    boolean runwayClear, double obstacleDist) {
         Out o = new Out();
         double dx = tx - x, dz = tz - z;
         double dist = Math.hypot(dx, dz);
@@ -106,8 +109,15 @@ public final class ElytraPilot {
         boolean ridge = dist > 50 && terrainAhead > ty + 2 && y - terrainAhead < 12
                 && mode != Mode.FLARE && mode != Mode.SINK && mode != Mode.FINAL;
         if (ridge) mode = Mode.CLIMB;
+        // Something solid straight ahead, closer than ~1.4 s of flight: pull up hard now, with
+        // power. On an approach this is a go-around: the next ticks plan a new one.
+        // Slow (a landing sink, a stall) a bump does no harm -- elytra hurt only on a sharp loss of
+        // horizontal speed -- and pulling up there just starts go-around after go-around.
+        boolean avoid = speed > 0.45 && obstacleDist < Math.max(10, speed * 28)
+                && mode != Mode.FLARE && mode != Mode.SINK;
+        if (avoid) mode = Mode.AVOID;
         // Terrain right under the wings beats any plan.
-        boolean low = y - groundBelow < 6 && dist > 16 && mode != Mode.FLARE && mode != Mode.SINK
+        boolean low = !avoid && y - groundBelow < 6 && dist > 16 && mode != Mode.FLARE && mode != Mode.SINK
                 && mode != Mode.FINAL && !(mode == Mode.DESCENT && runwayClear && dist < 50);
         if (low) mode = Mode.CLIMB;
 
@@ -135,6 +145,10 @@ public final class ElytraPilot {
                 // Below the slope (a long, shallow glide ran out of height): add power.
                 wantBoost = path < slope - (runwayClear ? 4 : 7) && above < 12 && dist > 25
                         || speed < 0.7 && dist > 40; // a long descent from high up ran out of speed
+            }
+            case AVOID -> {
+                gammaCmd = 35;
+                wantBoost = speed < 1.5;
             }
             case FINAL -> {
                 gammaCmd = above > 1.2 ? -4 : -1.5; // flatten out and let it settle
@@ -173,7 +187,7 @@ public final class ElytraPilot {
         float yawCmd = (float) Math.toDegrees(Math.atan2(-dx, dz));
         float dyaw = wrap(yawCmd - yaw);
         yaw = wrap(yaw + (float) clamp(dyaw * 0.35, MAX_YAW_RATE));
-        pitch += (float) clamp(pitchCmd - pitch, MAX_PITCH_RATE);
+        pitch += (float) clamp(pitchCmd - pitch, mode == Mode.AVOID ? MAX_PITCH_RATE * 2 : MAX_PITCH_RATE);
 
         if (wantBoost && boostCooldown == 0) {
             o.boost = true;

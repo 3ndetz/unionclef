@@ -25,6 +25,11 @@ public class ElytraPilotSim {
             new Scene("target 40 lower", 250, -100, 30, (x, z) -> 70 - 40 * Math.min(1, Math.max(0, (x - 120) / 60))),
             new Scene("target 30 higher", 200, 150, 100, (x, z) -> 70 + 30 * Math.min(1, Math.max(0, (x - 60) / 60))),
             new Scene("behind, u-turn", -180, 20, 70, (x, z) -> 70),
+            // A 3x3 tower 60 high right on the course: thinner than the old 8-block sampling step.
+            new Scene("thin tower", 300, 3, 70, (x, z) -> Math.abs(x - 150) <= 1 && Math.abs(z - 1.5) <= 1 ? 130 : 70),
+            // A bridge deck at y 84..86 across the course, open below: invisible to a heightmap
+            // under it, only its top shows -- the climb must start before the deck, not under it.
+            new Scene("bridge deck", 260, 0, 70, (x, z) -> Math.abs(x - 130) <= 3 ? 86 : 70),
             new Scene("long 900", 0, 900, 70, (x, z) -> 70 + 15 * Math.sin(z / 60)),
         };
         int fails = 0;
@@ -69,11 +74,11 @@ public class ElytraPilotSim {
         int near = -1; // first tick within 25 blocks: the approach should not drag on from there
         boolean ok = false;
         for (; ticks < 20 * 180; ticks++) {
-            double ahead = terrainAhead(s, x, z);
+            double ahead = terrainAhead(s, x, z, vx, vz);
             double ground = s.t.h(x, z);
             // The landing height is the ground at the target, as the mod reads it from the heightmap.
             ElytraPilot.Out o = pilot.step(x, y, z, vx, vy, vz, s.tx, s.t.h(s.tx, s.tz), s.tz, ahead, ground,
-                    runwayClear(s, x, z));
+                    runwayClear(s, x, z), obstacle(s, x, y, z, vx, vy, vz));
             if (o.mode != null) modes.add(o.mode.name());
             maxDPitch = Math.max(maxDPitch, Math.abs(o.pitch - lastPitch));
             maxDYaw = Math.max(maxDYaw, Math.abs(wrap(o.yaw - lastYaw)));
@@ -126,7 +131,8 @@ public class ElytraPilotSim {
                 double rx = x, rz = z, rvx = vx, rvz = vz;
                 while (Math.hypot(rvx, rvz) > 0.01) { rx += rvx; rz += rvz; rvx *= 0.546; rvz *= 0.546; }
                 double rolled = Math.hypot(s.tx - rx, s.tz - rz);
-                if (rolled < 30 && vy > -0.5 && s.t.h(rx, rz) - s.t.h(x, z) < 1) {
+                // A step on the roll-out hurts only above ~0.3 of horizontal speed (elytra wall damage).
+                if (rolled < 30 && vy > -0.5 && (s.t.h(rx, rz) - s.t.h(x, z) < 1 || vh < 0.4)) {
                     verdict = String.format("touchdown vh=%.2f vy=%.2f", vh, vy);
                     ok = true;
                     dist = rolled;
@@ -152,14 +158,38 @@ public class ElytraPilotSim {
         return true;
     }
 
-    /** What the mod samples: max ground height every 8 blocks along the course, up to 80 ahead, and the target. */
-    static double terrainAhead(Scene s, double x, double z) {
-        double dx = s.tx - x, dz = s.tz - z, dist = Math.hypot(dx, dz);
+    /** As the mod: highest ground in a 5-block corridor every 2 blocks, 120 along the line to the
+     *  target and 60 along the current direction of flight (turns fly arcs), and the target. */
+    static double terrainAhead(Scene s, double x, double z, double vx, double vz) {
         double m = s.t.h(s.tx, s.tz);
-        for (double k = 0; k <= Math.min(120, dist); k += 8) {
-            m = Math.max(m, s.t.h(x + dx / dist * k, z + dz / dist * k));
+        m = Math.max(m, corridor(s, x, z, s.tx - x, s.tz - z, Math.min(120, Math.hypot(s.tx - x, s.tz - z))));
+        if (Math.hypot(vx, vz) > 0.2) m = Math.max(m, corridor(s, x, z, vx, vz, 60));
+        return m;
+    }
+
+    static double corridor(Scene s, double x, double z, double dx, double dz, double len) {
+        double d = Math.max(Math.hypot(dx, dz), 1e-6), ux = dx / d, uz = dz / d, m = -1e9;
+        for (double k = 0; k <= len; k += 2) {
+            for (double w = -2; w <= 2; w += 2) {
+                m = Math.max(m, s.t.h(x + ux * k - uz * w, z + uz * k + ux * w));
+            }
         }
         return m;
+    }
+
+    /** As the mod's ray along the velocity: distance to the first block, landing ground excluded. */
+    static double obstacle(Scene s, double x, double y, double z, double vx, double vy, double vz) {
+        double sp = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        if (sp < 0.05) return Double.POSITIVE_INFINITY;
+        double ty = s.t.h(s.tx, s.tz), look = Math.max(12, sp * 30);
+        for (double k = 0.5; k <= look; k += 0.5) {
+            double px = x + vx / sp * k, py = y + vy / sp * k, pz = z + vz / sp * k;
+            if (py <= s.t.h(px, pz)) {
+                boolean landingGround = py <= ty + 1.5 && Math.hypot(s.tx - px, s.tz - pz) < 30;
+                return landingGround ? Double.POSITIVE_INFINITY : k;
+            }
+        }
+        return Double.POSITIVE_INFINITY;
     }
 
     static float wrap(float a) {

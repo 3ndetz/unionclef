@@ -238,7 +238,7 @@ public final class ElytraFlight {
         var v = p.getVelocity();
         ElytraPilot.Out o = pilot.step(p.getX(), p.getY(), p.getZ(), v.x, v.y, v.z,
                 tx, landingY(client), tz, terrainAhead(client, p), top(client, p.getX(), p.getZ()),
-                runwayClear(client, p));
+                runwayClear(client, p), obstacleAhead(client, p));
         lastOut = o;
         p.setYaw(o.yaw);
         p.setPitch(o.pitch);
@@ -323,14 +323,51 @@ public final class ElytraFlight {
         return true;
     }
 
-    /** Highest ground every 8 blocks along the course, up to 120 blocks ahead. */
+    /** Highest ground in a 5-block corridor every 2 blocks: 120 blocks along the line to the
+     *  target and 60 along the current direction of flight (a turn flies an arc), and the target.
+     *  Sparser sampling let a thin tower slip between two samples. */
     private static double terrainAhead(MinecraftClient client, ClientPlayerEntity p) {
-        double dx = tx - p.getX(), dz = tz - p.getZ(), dist = Math.max(Math.hypot(dx, dz), 1e-6);
         double m = landingY(client);
-        for (double k = 0; k <= Math.min(120, dist); k += 8) {
-            m = Math.max(m, top(client, p.getX() + dx / dist * k, p.getZ() + dz / dist * k));
+        double dx = tx - p.getX(), dz = tz - p.getZ();
+        m = Math.max(m, corridor(client, p.getX(), p.getZ(), dx, dz, Math.min(120, Math.hypot(dx, dz))));
+        var v = p.getVelocity();
+        if (Math.hypot(v.x, v.z) > 0.2) m = Math.max(m, corridor(client, p.getX(), p.getZ(), v.x, v.z, 60));
+        return m;
+    }
+
+    private static double corridor(MinecraftClient client, double x, double z, double dx, double dz, double len) {
+        double d = Math.max(Math.hypot(dx, dz), 1e-6), ux = dx / d, uz = dz / d, m = -1e9;
+        for (double k = 0; k <= len; k += 2) {
+            for (double w = -2; w <= 2; w += 2) {
+                double sx = x + ux * k - uz * w, sz = z + uz * k + ux * w;
+                if (!client.world.getChunkManager().isChunkLoaded((int) Math.floor(sx) >> 4, (int) Math.floor(sz) >> 4)) continue;
+                m = Math.max(m, top(client, sx, sz));
+            }
         }
         return m;
+    }
+
+    /** Distance to the first solid block along the velocity (rays through real block shapes, so
+     *  bridges, overhangs and treetops count), ~1.5 s of flight ahead; the landing ground near
+     *  the target does not count. Infinity when clear. */
+    private static double obstacleAhead(MinecraftClient client, ClientPlayerEntity p) {
+        var v = p.getVelocity();
+        double sp = v.length();
+        if (sp < 0.05) return Double.POSITIVE_INFINITY;
+        var dir = v.multiply(1 / sp);
+        double look = Math.max(12, sp * 30);
+        double ly = landingY(client), best = Double.POSITIVE_INFINITY;
+        for (double up : new double[] {0.1, 0.5, 0.9}) { // the gliding hitbox is 0.6 high: three rays
+            var from = p.getPos().add(0, up, 0);
+            var hit = client.world.raycast(new net.minecraft.world.RaycastContext(from, from.add(dir.multiply(look)),
+                    net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                    net.minecraft.world.RaycastContext.FluidHandling.NONE, p));
+            if (hit.getType() != net.minecraft.util.hit.HitResult.Type.BLOCK) continue;
+            var at = hit.getPos();
+            boolean landingGround = at.y <= ly + 1.5 && Math.hypot(tx - at.x, tz - at.z) < 30;
+            if (!landingGround) best = Math.min(best, at.distanceTo(from));
+        }
+        return best;
     }
 
     private static void aim(ClientPlayerEntity p, double dx, double dz, float pitch) {
