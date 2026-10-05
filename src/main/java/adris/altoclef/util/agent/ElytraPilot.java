@@ -94,7 +94,9 @@ public final class ElytraPilot {
         }
         if (landing) {
             if (mode == Mode.FLARE && speed < 0.5) mode = Mode.SINK;
-            else if (mode == Mode.SINK && speed > 0.95 && above > 4) mode = Mode.FLARE;
+            else if (mode == Mode.SINK && speed > 1.15 && above > 4) mode = Mode.FLARE; // hysteresis: no see-saw
+        } else if (mode == Mode.FINAL && above > 3.5) {
+            mode = Mode.SINK; // the round-out ballooned: settle down slowly instead
         } else if (runwayClear && (mode == Mode.FINAL || nearEnd && above < 2.2 && dist < 35)) {
             mode = Mode.FINAL; // round-out: a few blocks over the ground, ease the sink to nothing
         } else if (nearEnd && dist < 6 + speed * 12 && (!runwayClear && above < 18 || above > 6)) {
@@ -158,7 +160,7 @@ public final class ElytraPilot {
             case SINK -> {
                 // Slow, straight at the spot: steep enough to come down, never a dive.
                 double path = Math.toDegrees(Math.atan2(Math.max(above, 0), Math.max(dist, 1)));
-                gammaCmd = -Math.max(8, Math.min(35, path));
+                gammaCmd = -Math.max(8, Math.min(25, path)); // steeper only gathers speed again
                 wantBoost = false;
             }
             default -> { // FLARE
