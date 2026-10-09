@@ -4,6 +4,16 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **The night shelter sits out a daytime thunderstorm as if it were night (2026-10-09).**
+  `WorldHelper.canSleep()` (WorldHelper.java:670-680) is true in any thunderstorm, which is
+  right for a bed (vanilla lets you sleep through one). But BeatMinecraftTask opens
+  NightShelterTask on that same predicate, and `NightShelterTask.isFinished` waits for
+  `!canSleep()`. On the 0.95.59 native15 run from `full59-before-portal` (restored at time
+  2079, morning) the bot spent ~10 of 15 minutes in a dirt hole across two daytime storm
+  shelters (t=95-351 s, 492-913 s); the film shows rain outside, not night. Decide with
+  evidence: hostiles can spawn on the surface in a storm, so the question is whether the
+  storm shelter costs more than it saves. Not a 0.95.59 regression.
+
 - [x] **FIXED: client-log rollover discovery misses an exact completed-case window (2026-10-04).**
   Original activation diagnostic executes20 gameplay PASS, but seals only19
   summary rows and exits1 while collecting fifth mob's client log; four unrun.

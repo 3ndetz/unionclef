@@ -96,7 +96,14 @@ public class BridgeTask {
         active = false;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.options != null) {
+            // RELEASE EVERY KEY tick() CAN PRESS, backKey included. The backplace below added
+            // backKey and this list never learned it: a stop at the lip released sneak but kept
+            // MOVE_BACK held, so the body walked backwards off its own bridge -- measured
+            // 2026-10-09, one central stop, then y -60 -> -248 under MLGBucketTask.
+            // baritone/src/main/java/baritone/behavior/PathingBehavior.java:122,132 clears all
+            // owned keys on cancel for the same reason.
             mc.options.sneakKey.setPressed(false);
+            mc.options.backKey.setPressed(false);
             mc.options.forwardKey.setPressed(false);
             mc.options.useKey.setPressed(false);
             mc.options.sprintKey.setPressed(false);
