@@ -140,6 +140,9 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Executor placeQueue fixture never reaches the executor: with its pinned fastBlockFirst=false the planner finds "No block path" over the open 5-gap; with defaults the body jumps it; with nav_bridge walls MovementQueue places 2 blocks then jumps. Re-targeted to stop while MovementQueue places: first run failed only on the leftover "executor exposure" gate (behaviour correct, retained), gate widened to executor-or-queue, then 3/3 PASS at 29-30 FPS. The executor placeQueue path itself stays untested under defaults.
 - Native15 from full59-before-portal: GAMER_SMOKE PASS, 0 deaths, 30 FPS, iron ore 47.5 s / iron 117.7 s, film reviewed. ~10 min of it is the night shelter during a daytime thunderstorm (canSleep is true in any storm) -> new TODOS item.
 
+- Released [v0.95.59](https://github.com/3ndetz/unionclef/releases/tag/v0.95.59): fix ce8b9580 (+ TODOS line-ending repair b61a7bd1), tag b61a7bd1 on main/1.21.11. Release built from a fresh archive of the committed HEAD (`artifacts/release-0.95.59-20261009`); all 2213 recursive classes byte-identical to the tested ad57 candidate, only fabric.mod.json differs. Published asset unionclef-1.21.11-0.95.59.jar SHA f1e44213, re-downloaded and matched.
+- Next: edited Cave Johnson 0.95.59 video (sub-agent), then the storm-shelter TODOS item with evidence.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
