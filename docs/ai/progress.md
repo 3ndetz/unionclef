@@ -126,8 +126,14 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Scoped Gradle githubRelease0 at06:01:05.240077UTC; post-publication2213-class identity remains exact. [v0.95.58](https://github.com/3ndetz/unionclef/releases/tag/v0.95.58) published06:00:28UTC with unionclef-1.21.11-0.95.58.jar, including nested Tungsten. Public verification92584/wrapper162352 naturally0 at06:02:33.159390UTC confirms tag0f0322f1 and downloaded asset SHA256 above; public-release-proof.json retains the receipt. Initial new verifier incorrectly expected a separate Tungsten asset, exited1 before downloading; corrected packaging expectation matches both the actual nested payload and preceding0.95.56 release. Original failed terminal retained, no publication retry or asset mutation.
 - Bounded release is delivered. Return to the owner's pause; no pending game/video campaign or Telegram resend launched. All earlier coverage limits remain open and are explicit in0.95.58 notes.
 
+### Owner resumed the work, 2026-10-09
+
+- Owner asked to continue and to publish a short Cave Johnson-style video about the improvements (reference: `reports/pitch`). UNIONCLEF-HARD (codex, same checkout) was told by ping-peer not to launch actors/builds/commits meanwhile; its water WIP stays untouched. A sub-agent builds the video in `reports/hf/cave-johnson-0.95.58/`; gameplay waits until its render ends (FPS gates).
+- Six cancellation lava films reviewed: whole-duration 4s contact sheets in `deploy/runner/artifacts/lava-six-review-20261009/`. Every film shows the protected idle, a short dig at ~110s, a filled lava bucket in hand at ~1:52 and a menu exit; full hearts, no unexplained hold. `navigation-cancel-lava-six-20261005-073113/actual-film-review.json` (SHA 795d8d4f) records it and unblocks the prepared builder-six v2, executor-place and native15 campaigns, in that order.
+- Bench containers (uctest-server, uctest-gamer-server, uctest-mc-tester1) were found exited (137) three days ago; restart with `docker start`, no recreate.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
-- Did the customer say to stop?         -> yes, temporary owner-requested pause
-VERDICT: PAUSED. No further task execution until the owner resumes it.
+- Did the customer say to stop?         -> no, resumed 2026-10-09
+VERDICT: CONTINUE.

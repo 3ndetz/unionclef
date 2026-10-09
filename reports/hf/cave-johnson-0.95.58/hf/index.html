@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Bebas"; src: url("assets/BebasNeue-Regular.ttf"); }
+@font-face { font-family: "Serif"; src: url("assets/DMSerifDisplay-Regular.ttf"); }
+@font-face { font-family: "SerifI"; src: url("assets/DMSerifDisplay-Italic.ttf"); }
+@font-face { font-family: "Mono"; src: url("assets/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "MonoB"; src: url("assets/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "Inter"; src: url("assets/Inter.ttf"); }
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1920px; height:1080px; overflow:hidden; background:#1d2a2f; }
+body { font-family:"Inter", sans-serif; color:#1d2a2f; }
+#root { position:relative; width:100%; height:100%; overflow:hidden; background:#1d2a2f; }
+.clip { position:absolute; inset:0; }
+.card { pointer-events:none; }
+.vid { width:1920px; height:1080px; object-fit:cover; transform-origin:50% 50%; }
+.bgimg { position:absolute; inset:0; width:1920px; height:1080px; object-fit:cover; }
+.vign { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 45%, rgba(20,16,10,0.55) 100%); }
+.edgevig { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 62%, rgba(25,18,8,0.35) 100%); }
+.grain { position:absolute; inset:-200px; background:url("assets/grain.png"); opacity:0.07; mix-blend-mode:overlay; }
+.paper { position:absolute; inset:0; background:radial-gradient(circle at 30% 25%, #fbf3df 0%, #efe2c4 60%, #e2d0a8 100%); }
+.paper.dark { background:radial-gradient(circle at 50% 40%, #27383e 0%, #1d2a2f 55%, #141d20 100%); }
+.reel { position:absolute; top:34px; right:40px; font-family:"MonoB"; font-size:22px; letter-spacing:3px; color:#f3e9d2;
+         background:rgba(29,42,47,0.8); padding:8px 16px; border-left:6px solid #d8453a; }
+.speed { position:absolute; top:36px; right:44px; font-family:"MonoB"; font-size:30px; color:#f3e9d2; background:#1d2a2f;
+          padding:4px 16px; border:3px solid #f3e9d2; }
+.hspeed { position:absolute; top:205px; left:1790px; font-family:"MonoB"; font-size:26px; color:#f3e9d2; background:#1d2a2f;
+          padding:2px 12px; border:3px solid #f3e9d2; }
+.stampbox { position:absolute; width:0; height:0; display:flex; align-items:center; justify-content:center; }
+.stamp { font-family:"Bebas"; white-space:nowrap; letter-spacing:6px; padding:6px 28px 0; border:9px solid; border-radius:14px;
+          background:rgba(243,233,210,0.92); box-shadow:0 0 0 6px rgba(243,233,210,0.92), 10px 12px 0 6px rgba(29,42,47,0.55); }
+.kin { position:absolute; padding:10px 30px 4px 26px; background:#f3e9d2; border-left:14px solid #d8453a; box-shadow:10px 10px 0 rgba(29,42,47,0.85); max-width:1500px; }
+.kin.teal { border-left-color:#1f6f78; }
+.kin.bl { left:60px; bottom:150px; } .kin.tl { left:60px; top:70px; }
+.kin-s { font-family:"MonoB"; font-size:30px; letter-spacing:2px; color:#1f6f78; text-transform:uppercase; }
+.kin-b { font-family:"Bebas"; font-size:110px; line-height:1; color:#1d2a2f; }
+/* halves */
+.half { position:absolute; top:170px; width:930px; height:523px; object-fit:cover; border:6px solid #f3e9d2; }
+.half.left { left:20px; } .half.right { left:970px; }
+.halflab { position:absolute; top:60px; width:930px; text-align:center; font-family:"Bebas"; font-size:84px; letter-spacing:6px; }
+.halflab.left { left:20px; } .halflab.right { left:970px; }
+.halfcap { position:absolute; top:712px; left:0; right:0; text-align:center; font-family:"Mono"; font-size:28px; color:#c9d4d3; }
+.bad { color:#ff7a6a; } .good { color:#7fe0a6; }
+.ring { position:absolute; border:8px solid #e3a73a; border-radius:50%; box-shadow:0 0 0 4px rgba(29,42,47,0.6); }
+.ring span { position:absolute; left:50%; top:100%; transform:translate(-50%, 10px); white-space:nowrap; font-family:"Bebas";
+              font-size:52px; letter-spacing:3px; color:#1d2a2f; background:#e3a73a; padding:2px 16px 0; }
+.nearstat { position:absolute; left:220px; top:740px; width:1480px; background:#f3e9d2; border:5px solid #1d2a2f; padding:14px 30px;
+             box-shadow:12px 12px 0 rgba(0,0,0,0.5); font-family:"Mono"; font-size:34px; color:#1d2a2f; line-height:1.45; }
+.nearstat b { font-family:"Bebas"; font-size:54px; color:#2f7d5b; font-weight:normal; display:inline-block; min-width:170px; }
+/* stat */
+.stat { position:absolute; left:110px; top:120px; width:1700px; }
+.sth { font-family:"Bebas"; font-size:120px; color:#1d2a2f; }
+.srow { display:flex; align-items:center; gap:34px; height:210px; }
+.sl { font-family:"SerifI"; font-size:66px; width:440px; text-align:right; }
+.sbar { height:130px; width:900px; } .sbar.good { background:#2f7d5b; }
+.sv { font-family:"Bebas"; font-size:140px; white-space:nowrap; } .sv.good { color:#2f7d5b; }
+.snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:20px; }
+/* grid */
+.gridhead { position:absolute; left:80px; top:70px; font-family:"MonoB"; font-size:36px; letter-spacing:4px; color:#1f6f78; }
+.grid { position:absolute; left:80px; top:140px; width:1150px; display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; }
+.tile { height:118px; background:#fbf3df; border:4px solid #1d2a2f; display:flex; align-items:center; justify-content:space-between;
+         padding:0 26px; font-family:"MonoB"; font-size:40px; }
+.tile .tk { font-family:"Bebas"; font-size:70px; }
+.tile.ghost { border-style:dashed; border-color:#d8453a; color:#d8453a; background:transparent; }
+.score { position:absolute; right:70px; top:250px; font-family:"Bebas"; font-size:330px; line-height:1; color:#2f7d5b; }
+.score .of { color:#1d2a2f; font-size:160px; }
+.foot { position:absolute; left:80px; top:880px; font-family:"Mono"; font-size:28px; color:#4a5a5f; }
+/* diagram */
+.diag { position:absolute; left:110px; top:160px; width:756px; height:588px; }
+.dgrid { position:absolute; inset:0; display:grid; grid-template-columns:repeat(9, 84px); grid-auto-rows:84px; }
+.cell { border:2px solid rgba(29,42,47,0.25); background:#fbf3df; }
+.cell.wl { background:#6d7478; } .cell.lv { background:#e8692d; }
+.dcirc { position:absolute; border:7px dashed #1f6f78; border-radius:50%; }
+.dx { position:absolute; width:84px; height:84px; display:flex; align-items:center; justify-content:center; font-family:"Inter";
+       font-weight:800; font-size:70px; color:#d8453a; text-shadow:0 0 6px #fff; }
+.dlegend { position:absolute; left:960px; top:200px; width:880px; }
+.dh { font-family:"Bebas"; font-size:100px; color:#1d2a2f; line-height:1; margin-bottom:30px; }
+.dl1, .dl2 { font-family:"SerifI"; font-size:50px; display:flex; align-items:center; gap:22px; margin-bottom:26px; }
+.dl1 { color:#a2382f; } .dl2 { color:#2f7d5b; }
+.sw { width:60px; height:60px; flex:none; border:3px solid #1d2a2f; } .sw.wl { background:#6d7478; } .sw.ok { background:#7fbf8f; }
+.dnote { font-family:"Mono"; font-size:26px; color:#4a5a5f; margin-top:30px; }
+/* close */
+.labname { font-family:"Serif"; font-size:64px; color:#f3e9d2; letter-spacing:10px; text-shadow:0 4px 0 #1d2a2f, 0 0 30px rgba(0,0,0,0.6); }
+.labname.big { font-size:96px; }
+.closebox { position:absolute; left:0; right:0; top:80px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.closet { font-family:"Bebas"; font-size:210px; line-height:1; color:#d8453a; letter-spacing:10px; }
+.closeu { font-family:"MonoB"; font-size:56px; color:#f3e9d2; }
+.closef { font-family:"Mono"; font-size:32px; color:#c9d4d3; }
+.credit { position:absolute; left:0; right:0; bottom:40px; text-align:center; font-family:"Mono"; font-size:26px; color:#8fa3a6; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="77.900" data-width="1920" data-height="1080">
+<video id="v1" class="clip vid" style="z-index:1;" src="videos/v1.mp4" muted playsinline data-start="0.000" data-duration="6.430"></video>
+<div id="c2" class="clip card " style="z-index:46" data-start="0.000" data-duration="6.430"><div class="speed" style="top:100px">x0.5</div></div>
+<div id="c3" class="clip card " style="z-index:45" data-start="0.000" data-duration="6.430"><div class="reel">3NDETZ LABS &middot; FIELD REPORT &middot; RELEASE 0.95.58</div></div>
+<div id="c5" class="clip card " style="z-index:40" data-start="0.600" data-duration="4.550"><div id="k4" class="kin tl teal"><div class="kin-s">explicit stop coming up</div><div class="kin-b">MINING OBSIDIAN</div></div></div>
+<div id="c7" class="clip card " style="z-index:40" data-start="5.150" data-duration="1.280"><div id="k6" class="kin tl red"><div class="kin-s">swing ends · obsidian intact</div><div class="kin-b">A STOP NOW STOPS</div></div></div>
+<div id="c8" class="clip card " style="z-index:0" data-start="6.430" data-duration="11.803"><div class="paper dark"></div></div>
+<video id="v9" class="clip half left" style="z-index:3;" src="videos/v9.mp4" muted playsinline data-start="6.430" data-duration="11.803"></video>
+<div class="clip" style="z-index:3" data-start="6.430" data-duration="5.357"><img id="i10" class="half right" src="videos/rightstill.png" style="transform-origin:50% 50%;filter:brightness(0.45) saturate(0.6)"></div>
+<video id="v11" class="clip half right" style="z-index:4;" src="videos/v11.mp4" muted playsinline data-start="11.787" data-duration="6.446"></video>
+<div id="c12" class="clip card " style="z-index:10" data-start="6.430" data-duration="11.803"><div class="halflab left bad">BEFORE &middot; OLD BUILD</div><div class="halflab right good">AFTER &middot; 0.95.58</div><div class="halfcap">same recreated obsidian arena &middot; one explicit stop &middot; normal speed</div></div>
+<div id="c14" class="clip card " style="z-index:55" data-start="10.768" data-duration="1.359"><div id="r13" class="ring" style="left:335px;top:280px;width:300px;height:300px"><span>STILL SWINGING</span></div></div>
+<div id="c16" class="clip card " style="z-index:55" data-start="14.687" data-duration="3.546"><div id="r15" class="ring" style="left:1285px;top:280px;width:300px;height:300px"><span>STOPPED</span></div></div>
+<video id="v17" class="clip vid" style="z-index:1;" src="videos/v17.mp4" muted playsinline data-start="18.233" data-duration="2.627"></video>
+<div id="c19" class="clip card " style="z-index:40" data-start="18.333" data-duration="2.527"><div id="k18" class="kin tl teal"><div class="kin-s">after one stop · 0.95.58</div><div class="kin-b">OBSIDIAN: INTACT</div></div></div>
+<div id="c21" class="clip card " style="z-index:60" data-start="20.224" data-duration="0.636"><div class="stampbox" style="left:1420px;top:640px"><div id="s20" class="stamp" style="font-size:110px;color:#d8453a;border-color:#d8453a">FRAMED</div></div></div>
+<div id="c22" class="clip card " style="z-index:0" data-start="20.860" data-duration="2.650"><div class="paper"></div></div>
+<div id="c23" class="clip card " style="z-index:5" data-start="20.860" data-duration="2.650"><div class="stat"><div class="sth">EXPLICIT STOP, MINING IN PROGRESS</div><div class="srow"><span class="sl">job cancelled</span><div id="sa1" class="sbar good"></div><span id="sv1" class="sv good">6 / 6</span></div><div class="srow"><span class="sl">fresh aim kept</span><div id="sa2" class="sbar good"></div><span id="sv2" class="sv good">3 / 3</span></div><div class="snote">0.95.58 candidate · ;stop and stopPathing() · separate aim fixture</div></div></div>
+<video id="v24" class="clip vid" style="z-index:1;" src="videos/v24.mp4" muted playsinline data-start="23.510" data-duration="0.929"></video>
+<div id="c25" class="clip card " style="z-index:31" data-start="23.510" data-duration="0.929"><div class="speed">x3</div></div>
+<div id="c27" class="clip card " style="z-index:40" data-start="23.510" data-duration="0.929"><div id="k26" class="kin bl teal"><div class="kin-s">adjacent course · 0.95.58</div><div class="kin-b">WALKS</div></div></div>
+<video id="v28" class="clip vid" style="z-index:1;" src="videos/v28.mp4" muted playsinline data-start="24.439" data-duration="0.641"></video>
+<div id="c29" class="clip card " style="z-index:31" data-start="24.439" data-duration="0.641"><div class="speed">x3</div></div>
+<div id="c31" class="clip card " style="z-index:40" data-start="24.439" data-duration="0.641"><div id="k30" class="kin bl teal"><div class="kin-s">adjacent course · 0.95.58</div><div class="kin-b">CRAFTS</div></div></div>
+<video id="v32" class="clip vid" style="z-index:1;" src="videos/v32.mp4" muted playsinline data-start="25.080" data-duration="1.039"></video>
+<div id="c33" class="clip card " style="z-index:31" data-start="25.080" data-duration="1.039"><div class="speed">x3</div></div>
+<div id="c35" class="clip card " style="z-index:40" data-start="25.080" data-duration="1.039"><div id="k34" class="kin bl teal"><div class="kin-s">adjacent course · 0.95.58</div><div class="kin-b">STAIRS</div></div></div>
+<video id="v36" class="clip vid" style="z-index:1;" src="videos/v36.mp4" muted playsinline data-start="26.119" data-duration="0.720"></video>
+<div id="c37" class="clip card " style="z-index:31" data-start="26.119" data-duration="0.720"><div class="speed">x3</div></div>
+<div id="c39" class="clip card " style="z-index:40" data-start="26.119" data-duration="0.720"><div id="k38" class="kin bl teal"><div class="kin-s">adjacent course · 0.95.58</div><div class="kin-b">BREAKS WALLS</div></div></div>
+<video id="v40" class="clip vid" style="z-index:1;" src="videos/v40.mp4" muted playsinline data-start="26.839" data-duration="0.530"></video>
+<div id="c41" class="clip card " style="z-index:31" data-start="26.839" data-duration="0.530"><div class="speed">x3</div></div>
+<div id="c43" class="clip card " style="z-index:40" data-start="26.839" data-duration="0.530"><div id="k42" class="kin bl teal"><div class="kin-s">adjacent course · 0.95.58</div><div class="kin-b">BRIDGES</div></div></div>
+<video id="v44" class="clip vid" style="z-index:1;" src="videos/v44.mp4" muted playsinline data-start="27.369" data-duration="1.002"></video>
+<div id="c45" class="clip card " style="z-index:31" data-start="27.369" data-duration="1.002"><div class="speed">x3</div></div>
+<div id="c47" class="clip card " style="z-index:40" data-start="27.369" data-duration="1.002"><div id="k46" class="kin bl teal"><div class="kin-s">adjacent course · 0.95.58</div><div class="kin-b">GAPS</div></div></div>
+<div id="c48" class="clip card " style="z-index:0" data-start="28.371" data-duration="4.999"><div class="paper"></div></div>
+<div id="c49" class="clip card " style="z-index:5" data-start="28.371" data-duration="4.999"><div class="gridhead">ADJACENT COURSES · SIX RUNS EACH · 0.95.58</div><div class="grid"><div class="tile"><span class="tn">craft</span><span class="tk">6/6</span></div><div class="tile"><span class="tn">flat</span><span class="tk">6/6</span></div><div class="tile"><span class="tn">stairs</span><span class="tk">6/6</span></div><div class="tile"><span class="tn">descent</span><span class="tk">6/6</span></div><div class="tile"><span class="tn">breaking</span><span class="tk">6/6</span></div><div class="tile"><span class="tn">bridging</span><span class="tk">6/6</span></div><div class="tile"><span class="tn">gaps</span><span class="tk">6/6</span></div><div id="ghost" class="tile ghost"><span class="tn">course 43</span><span class="tk">?</span></div></div><div class="score"><span id="scn">0</span><span class="of">/42</span></div><div class="foot">health 20 throughout · lava trials ran at 29.5–30 FPS · no speed gain claimed</div></div>
+<div id="c51" class="clip card " style="z-index:60" data-start="32.411" data-duration="0.959"><div class="stampbox" style="left:1250px;top:790px"><div id="s50" class="stamp" style="font-size:90px;color:#d8453a;border-color:#d8453a">BUDGET CUTS</div></div></div>
+<video id="v52" class="clip vid" style="z-index:1;" src="videos/v52.mp4" muted playsinline data-start="33.370" data-duration="6.109"></video>
+<div id="c54" class="clip card " style="z-index:40" data-start="33.570" data-duration="3.689"><div id="k53" class="kin tl red"><div class="kin-s">get near that lava</div><div class="kin-b">PROBLEM NO. 2</div></div></div>
+<div id="c56" class="clip card " style="z-index:40" data-start="37.259" data-duration="2.220"><div id="k55" class="kin tl red"><div class="kin-s">or nothing</div><div class="kin-b">OLDER BUILD: THE EXACT POINT</div></div></div>
+<video id="v57" class="clip vid" style="z-index:1;" src="videos/v57.mp4" muted playsinline data-start="39.479" data-duration="4.831"></video>
+<div id="c59" class="clip card " style="z-index:40" data-start="39.479" data-duration="4.831"><div id="k58" class="kin tl red"><div class="kin-s">older build · near-goal approach, stalled</div><div class="kin-b">THE POINT WAS INSIDE A WALL</div></div></div>
+<div id="c61" class="clip card " style="z-index:60" data-start="42.460" data-duration="1.850"><div class="stampbox" style="left:1350px;top:640px"><div id="s60" class="stamp" style="font-size:96px;color:#d8453a;border-color:#d8453a">VERY LOYAL</div></div></div>
+<div id="c62" class="clip card " style="z-index:0" data-start="44.310" data-duration="5.275"><div class="paper"></div></div>
+<div id="c63" class="clip card " style="z-index:5" data-start="44.310" data-duration="5.275"><div class="diag"><div class="dgrid"><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell ok"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell ok"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell ok"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell wl"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell ok"></div><div class="cell ok"></div><div class="cell ok"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell lv"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div><div class="cell fl"></div></div><div id="dcirc" class="dcirc" style="left:168.0px;top:84.0px;width:420.0px;height:420.0px"></div><div class="dx" style="left:336px;top:252px">✕</div></div><div class="dlegend"><div class="dh">GET NEAR (X, RADIUS 2)</div><div id="dl1" class="dl1"><span class="sw wl"></span>older build: stand on X. X is in a wall.</div><div id="dl2" class="dl2"><span class="sw ok"></span>0.95.58: any safe cell inside the circle</div><div class="dnote">illustration, not the real map</div></div></div>
+<div id="c64" class="clip card " style="z-index:0" data-start="49.585" data-duration="7.735"><div class="paper dark"></div></div>
+<video id="v65" class="clip half left" style="z-index:3;" src="videos/v65.mp4" muted playsinline data-start="49.585" data-duration="7.735"></video>
+<video id="v66" class="clip half right" style="z-index:3;" src="videos/v66.mp4" muted playsinline data-start="49.585" data-duration="7.735"></video>
+<div id="c67" class="clip card " style="z-index:10" data-start="49.585" data-duration="7.735"><div class="halflab left bad">OLDER BUILD &middot; POINT</div><div class="halflab right good">0.95.58 &middot; RADIUS</div><div class="hspeed">x0.5</div><div id="nearstat" class="nearstat"><div><b>6 / 6</b> fresh lava trials · new bucket filled</div><div><b>≈ 3.3 s</b> to arrive · 6 / 6 isolated near-goal trials</div></div></div>
+<div id="c69" class="clip card " style="z-index:55" data-start="52.566" data-duration="4.754"><div id="r68" class="ring" style="left:1630px;top:400px;width:240px;height:240px"><span>LAVA BUCKET</span></div></div>
+<div class="clip" style="z-index:0" data-start="57.320" data-duration="10.260"><img id="i70" class="bgimg" src="assets/lab.jpg" style="transform-origin:50% 30%;"></div>
+<div id="c71" class="clip card " style="z-index:5" data-start="57.320" data-duration="10.260"><div class="vign"></div></div>
+<div id="c73" class="clip card " style="z-index:40" data-start="59.001" data-duration="1.052"><div id="k72" class="kin tl red"><div class="kin-s">no such claim here</div><div class="kin-b">THE WHOLE GAME: NOT YET</div></div></div>
+<div id="c75" class="clip card " style="z-index:40" data-start="60.053" data-duration="7.527"><div id="k74" class="kin tl teal"><div class="kin-s">full59 · being hunted</div><div class="kin-b">STILL OPEN: THE LONG LAVA STALL</div></div></div>
+<div id="c77" class="clip card " style="z-index:60" data-start="65.913" data-duration="1.667"><div class="stampbox" style="left:1250px;top:700px"><div id="s76" class="stamp" style="font-size:84px;color:#d8453a;border-color:#d8453a">SEND MORE LAB BOYS</div></div></div>
+<div id="c78" class="clip card " style="z-index:0" data-start="67.580" data-duration="10.320"><div class="paper dark"></div></div>
+<div id="c79" class="clip card " style="z-index:5" data-start="67.580" data-duration="10.320"><div class="closebox"><div id="cl-badge"><svg width="150" height="150" viewBox="0 0 200 200"><defs><radialGradient id="lgg" cx="40%" cy="35%"><stop offset="0" stop-color="#fff6df"/><stop offset="1" stop-color="#e9d9b4"/></radialGradient></defs><circle cx="100" cy="100" r="94" fill="url(#lgg)" stroke="#1d2a2f" stroke-width="6"/><circle cx="100" cy="100" r="80" fill="none" stroke="#d8453a" stroke-width="3" stroke-dasharray="4 7"/><g fill="none" stroke="#1f6f78" stroke-width="6"><ellipse cx="100" cy="100" rx="70" ry="24"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(60 100 100)"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(-60 100 100)"/></g><g transform="translate(100 100)"><polygon points="0,-26 23,-13 0,0 -23,-13" fill="#6fbf4a"/><polygon points="-23,-13 0,0 0,26 -23,13" fill="#8a5a33"/><polygon points="23,-13 0,0 0,26 23,13" fill="#6b4426"/><polygon points="0,-26 23,-13 0,0 -23,-13 0,-26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/><path d="M-23,-13 L-23,13 L0,26 L23,13 L23,-13 M0,0 L0,26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/></g><circle cx="170" cy="100" r="7" fill="#d8453a"/><circle cx="65" cy="40" r="7" fill="#d8453a"/></svg></div><div id="cl-lab" class="labname big">3NDETZ LABS</div><div id="cl-t" class="closet">unionclef 0.95.58</div><div id="cl-u" class="closeu">github.com/3ndetz/unionclef</div><div id="cl-f" class="closef">open source · GPL-3.0 · Minecraft 1.21 · Fabric</div></div><div id="cl-credit" class="credit">Music: “Hep Cats” by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0</div></div>
+<div id="c81" class="clip card " style="z-index:60" data-start="74.450" data-duration="3.450"><div class="stampbox" style="left:1500px;top:830px"><div id="s80" class="stamp" style="font-size:110px;color:#d8453a;border-color:#d8453a">STOP</div></div></div>
+<div id="c82" class="clip card " style="z-index:90" data-start="0.000" data-duration="77.900"><div id="grain" class="grain"></div><div class="edgevig"></div></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo('#v1',{scale:1.0},{scale:1.08,duration:6.430,ease:'none'},0.000);
+tl.fromTo('.reel',{opacity:0},{opacity:1,duration:0.4},0.1);
+tl.fromTo('#k4',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},0.600);
+tl.fromTo('#k6',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},5.150);
+tl.fromTo('.halflab.left',{opacity:0,y:-20},{opacity:1,y:0,duration:0.3},6.530);
+tl.fromTo('.halflab.right',{opacity:0.25},{opacity:1,duration:0.3},12.127);
+tl.fromTo('.half.left',{opacity:1},{opacity:0.55,duration:0.4},12.127);
+tl.fromTo('#r13',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},10.768);
+tl.fromTo('#r15',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},14.687);
+tl.fromTo('#v17',{scale:1.05},{scale:1.18,duration:2.627,ease:'none'},18.233);
+tl.fromTo('#k18',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},18.333);
+tl.fromTo('#s20',{scale:2.6,opacity:0,rotation:-23},{scale:1,opacity:0.95,rotation:-9,duration:0.28,ease:'power4.in'},20.224);
+tl.fromTo('#s20',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},20.504);
+tl.fromTo('#sa1',{width:0},{width:900,duration:0.6,ease:'power3.out'},21.440);
+tl.fromTo('#sv1',{opacity:0},{opacity:1,duration:0.2},22.179);
+tl.fromTo(['#sa2','#sv2'],{opacity:0},{opacity:1,duration:0.3},22.579);
+tl.fromTo('#v24',{scale:1.0},{scale:1.05,duration:0.929,ease:'none'},23.510);
+tl.fromTo('#k26',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},23.510);
+tl.fromTo('#v28',{scale:1.0},{scale:1.05,duration:0.641,ease:'none'},24.439);
+tl.fromTo('#k30',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},24.439);
+tl.fromTo('#v32',{scale:1.0},{scale:1.05,duration:1.039,ease:'none'},25.080);
+tl.fromTo('#k34',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},25.080);
+tl.fromTo('#v36',{scale:1.0},{scale:1.05,duration:0.720,ease:'none'},26.119);
+tl.fromTo('#k38',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},26.119);
+tl.fromTo('#v40',{scale:1.0},{scale:1.05,duration:0.530,ease:'none'},26.839);
+tl.fromTo('#k42',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},26.839);
+tl.fromTo('#v44',{scale:1.0},{scale:1.05,duration:1.002,ease:'none'},27.369);
+tl.fromTo('#k46',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},27.369);
+tl.fromTo('.tile:not(.ghost)',{opacity:0,y:30},{opacity:1,y:0,duration:0.25,stagger:0.05},28.371);
+tl.to('.tile:not(.ghost)',{backgroundColor:'#2f7d5b',color:'#f3e9d2',duration:0.15,stagger:0.08},29.331);
+(function(){var o={v:0};tl.to(o,{v:42,duration:1.0,ease:'power1.out',onUpdate:function(){document.getElementById('scn').textContent=Math.round(o.v)}},28.471);})();
+tl.fromTo('#ghost',{opacity:0,scale:0.5},{opacity:1,scale:1,duration:0.3,ease:'back.out(2)'},31.212);
+tl.fromTo('#s50',{scale:2.6,opacity:0,rotation:-21},{scale:1,opacity:0.95,rotation:-7,duration:0.28,ease:'power4.in'},32.411);
+tl.fromTo('#s50',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},32.691);
+tl.fromTo('#v52',{scale:1.0},{scale:1.08,duration:6.109,ease:'none'},33.370);
+tl.fromTo('#k53',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},33.570);
+tl.fromTo('#k55',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},37.259);
+tl.fromTo('#v57',{scale:1.0},{scale:1.1,duration:4.831,ease:'none'},39.479);
+tl.fromTo('#k58',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},39.479);
+tl.fromTo('#s60',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},42.460);
+tl.fromTo('#s60',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},42.740);
+tl.fromTo('.dgrid .cell',{opacity:0},{opacity:1,duration:0.3,stagger:0.004},44.360);
+tl.fromTo('.dx',{scale:3,opacity:0},{scale:1,opacity:1,duration:0.3,ease:'power4.in'},44.710);
+tl.fromTo('#dl1',{opacity:0,x:-30},{opacity:1,x:0,duration:0.3},44.810);
+tl.fromTo('#dcirc',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.5,ease:'back.out(1.6)'},45.905);
+tl.fromTo('.cell.ok',{backgroundColor:'#fbf3df'},{backgroundColor:'#7fbf8f',duration:0.2,stagger:0.03},47.685);
+tl.fromTo('#dl2',{opacity:0,x:-30},{opacity:1,x:0,duration:0.3},47.685);
+tl.fromTo('.halflab',{opacity:0,y:-20},{opacity:1,y:0,duration:0.3},49.635);
+tl.fromTo('#r68',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},52.566);
+tl.fromTo('#nearstat',{opacity:0,y:30},{opacity:1,y:0,duration:0.35},54.178);
+tl.fromTo('#i70',{scale:1.12},{scale:1.0,duration:10.260,ease:'sine.inOut'},57.320);
+tl.fromTo('#k72',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},59.001);
+tl.fromTo('#k74',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},60.053);
+tl.fromTo('#s76',{scale:2.6,opacity:0,rotation:-21},{scale:1,opacity:0.95,rotation:-7,duration:0.28,ease:'power4.in'},65.913);
+tl.fromTo('#s76',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},66.193);
+tl.fromTo('#cl-badge',{scale:0,rotation:180},{scale:1,rotation:0,duration:0.8,ease:'back.out(1.5)'},67.680);
+tl.fromTo('#cl-lab',{opacity:0,y:30},{opacity:1,y:0,duration:0.5},67.880);
+tl.fromTo('#cl-t',{opacity:0,scale:1.6},{opacity:1,scale:1,duration:0.5,ease:'expo.out'},68.561);
+tl.fromTo(['#cl-u','#cl-f'],{opacity:0,y:20},{opacity:1,y:0,duration:0.4,stagger:0.2},72.721);
+tl.fromTo('#s80',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},74.450);
+tl.fromTo('#s80',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},74.730);
+tl.fromTo('#cl-credit',{opacity:0},{opacity:1,duration:0.6},74.600);
+tl.to('#grain',{backgroundPosition:'173px 97px',duration:0.08,repeat:486,yoyo:true,ease:'steps(1)'},0);
+window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

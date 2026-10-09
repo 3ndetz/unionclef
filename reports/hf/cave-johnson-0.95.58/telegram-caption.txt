@@ -1,0 +1,9 @@
+Unionclef 0.95.58: a stop now actually stops.
+
+An explicit stop (stopPathing / ;stop) now abandons the queued mining or placing job and releases keys and aim. Before: the bot kept hitting obsidian for ~9 s after one stop. Now: 6/6 stops end the swing, the block stays intact; 42/42 adjacent courses still pass.
+
+Near goals (since 0.95.56) route to any safe cell inside the radius, so a point inside a wall no longer stalls the approach. 6/6 fresh lava pickups from the same save.
+
+Not claimed: speed or FPS gain. The long full59 lava stall and the whole playthrough are still open.
+
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.58

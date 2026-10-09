@@ -1,0 +1,133 @@
+{
+ "total": 77.89999999999998,
+ "voice": [
+  [
+   "l01",
+   0.3
+  ],
+  [
+   "l02",
+   6.7299999999999995
+  ],
+  [
+   "l03",
+   21.11
+  ],
+  [
+   "l04",
+   33.669999999999995
+  ],
+  [
+   "l05",
+   44.559999999999995
+  ],
+  [
+   "l06",
+   57.62
+  ],
+  [
+   "l07",
+   67.97999999999999
+  ]
+ ],
+ "clips": [
+  {
+   "key": "v1",
+   "file": "cancel-after.mp4",
+   "src_in": 3.02,
+   "src_out": 6.24,
+   "speed": 0.5
+  },
+  {
+   "key": "v9",
+   "file": "cancel-before.mp4",
+   "src_in": 3.0,
+   "src_out": 14.8,
+   "speed": 1.0
+  },
+  {
+   "key": "v11",
+   "file": "cancel-after.mp4",
+   "src_in": 3.1,
+   "src_out": 9.55,
+   "speed": 1.0
+  },
+  {
+   "key": "v17",
+   "file": "cancel-after.mp4",
+   "src_in": 8.0,
+   "src_out": 10.63,
+   "speed": 1.0
+  },
+  {
+   "key": "v24",
+   "file": "adjacent-nav_flat.mp4",
+   "src_in": 1.5,
+   "src_out": 4.29,
+   "speed": 3
+  },
+  {
+   "key": "v28",
+   "file": "adjacent-craft.mp4",
+   "src_in": 10.6,
+   "src_out": 12.52,
+   "speed": 3
+  },
+  {
+   "key": "v32",
+   "file": "adjacent-nav_staircase.mp4",
+   "src_in": 1.5,
+   "src_out": 4.62,
+   "speed": 3
+  },
+  {
+   "key": "v36",
+   "file": "adjacent-nav_break.mp4",
+   "src_in": 2.0,
+   "src_out": 4.16,
+   "speed": 3
+  },
+  {
+   "key": "v40",
+   "file": "adjacent-bridge.mp4",
+   "src_in": 4.0,
+   "src_out": 5.59,
+   "speed": 3
+  },
+  {
+   "key": "v44",
+   "file": "adjacent-nav_gaps.mp4",
+   "src_in": 5.6,
+   "src_out": 8.61,
+   "speed": 3
+  },
+  {
+   "key": "v52",
+   "file": "point-history.mp4",
+   "src_in": 17.0,
+   "src_out": 23.11,
+   "speed": 1.0
+  },
+  {
+   "key": "v57",
+   "file": "point-history.mp4",
+   "src_in": 60.0,
+   "src_out": 64.83,
+   "speed": 1.0
+  },
+  {
+   "key": "v65",
+   "file": "point-history.mp4",
+   "src_in": 66.0,
+   "src_out": 73.74,
+   "speed": 1.0
+  },
+  {
+   "key": "v66",
+   "file": "lava-trial1.mp4",
+   "src_in": 111.56,
+   "src_out": 115.43,
+   "speed": 0.5
+  }
+ ]
+}
