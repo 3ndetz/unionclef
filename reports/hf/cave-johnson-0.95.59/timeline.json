@@ -1,0 +1,62 @@
+{
+ "total": 41.65,
+ "voice": [
+  [
+   "l01",
+   0.3
+  ],
+  [
+   "l02",
+   6.28
+  ],
+  [
+   "l03",
+   16.12
+  ],
+  [
+   "l04",
+   24.39
+  ],
+  [
+   "l05",
+   33.29
+  ]
+ ],
+ "clips": [
+  {
+   "key": "v1",
+   "file": "bridge-after.mp4",
+   "src_in": 4.28,
+   "src_out": 10.26,
+   "speed": 1.0
+  },
+  {
+   "key": "v8",
+   "file": "bridge-before.mp4",
+   "src_in": 4.51,
+   "src_out": 9.43,
+   "speed": 0.5
+  },
+  {
+   "key": "v9",
+   "file": "bridge-after.mp4",
+   "src_in": 5.16,
+   "src_out": 10.08,
+   "speed": 0.5
+  },
+  {
+   "key": "v21",
+   "file": "bridge-before.mp4",
+   "src_in": 5.45,
+   "src_out": 7.4,
+   "speed": 0.5
+  },
+  {
+   "key": "v25",
+   "file": "bridge-before.mp4",
+   "src_in": 11.3,
+   "src_out": 15.72,
+   "speed": 1.0
+  }
+ ]
+}

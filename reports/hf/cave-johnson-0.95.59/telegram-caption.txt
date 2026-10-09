@@ -1,0 +1,9 @@
+Unionclef 0.95.59: a stopped bridge stays on the bridge.
+
+The bridge walks backwards while it places. Its stop released sneak but kept MOVE_BACK held, so after a stop the bot walked backwards off its own bridge into the void (y -60 -> -248). Found by the 0.95.58 regression tests; the bug is older. The stop now releases that key too.
+
+Bridge and pillar stops 6/6, stop mid-gap 3/3, 15-minute native playthrough 0 deaths at 30 FPS. All release classes byte-identical to the tested build.
+
+Not claimed: speed or FPS gain. Still open: the long full59 lava stall, and the night shelter treating a daytime thunderstorm as night.
+
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.59

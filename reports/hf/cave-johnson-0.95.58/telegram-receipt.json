@@ -1,0 +1,7 @@
+{
+  "delivered_utc": "2026-10-09T16:10:57.732877+00:00",
+  "ok": true,
+  "message_id": 10100,
+  "video_sha256": "044ac6595eb37fb3927aab128a3bf1e874aa4a9ae141cc4f00a553fcdf3b993e",
+  "via": "host http proxy (TG_PROXY of le_bot); direct api.telegram.org timed out"
+}

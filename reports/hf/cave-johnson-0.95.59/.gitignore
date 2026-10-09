@@ -1,0 +1,12 @@
+hf/videos/
+hf/renders/
+hf/assets/grain.png
+hf/assets/Inter.ttf
+out/
+work/
+voice/
+footage/
+review/
+*.log
+*.mp4
+*.wav
