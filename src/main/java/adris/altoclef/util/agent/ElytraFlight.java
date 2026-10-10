@@ -215,7 +215,12 @@ public final class ElytraFlight {
     private static void tick(MinecraftClient client) {
         Phase ph = phase;
         if (manualInput(client)) {
+            long last = manualMs;
             manualMs = System.currentTimeMillis();
+            // A new spell of steering by hand while the agent drives: stop the walk, the follow and
+            // a show at once. The pathfinder writes the movement keys over the player's, so
+            // waiting for the agent's next poll (and its own @stop) felt like a fight for the keys.
+            if (manualMs - last > 3000 && manualMs - agentMs < 30_000) stopEverything();
             if (client.player != null && !client.player.isOnGround()) handsOn = true;
             if (ph == Phase.EQUIP || ph == Phase.TAKEOFF || ph == Phase.FLYING) {
                 // No putRocketsAway: the player flying on by hand wants the rockets in hand.
@@ -393,6 +398,20 @@ public final class ElytraFlight {
             deployCooldown = 5;
             armed = true;
         }
+    }
+
+    /** Hands the controls back: tungsten's navigation and follow, altoclef's task, a show. */
+    private static void stopEverything() {
+        try {
+            kaptainwutax.tungsten.TungstenMod.stopNavigation();
+            if (kaptainwutax.tungsten.task.PunkPlayerTask.isActive()) kaptainwutax.tungsten.task.PunkPlayerTask.stop();
+            if (kaptainwutax.tungsten.task.FollowPlayerTask.isActive()) kaptainwutax.tungsten.task.FollowPlayerTask.stop();
+            else if (kaptainwutax.tungsten.task.FollowEntityTask.isActive()) kaptainwutax.tungsten.task.FollowEntityTask.stop();
+            adris.altoclef.AltoClef.getInstance().getCommandExecutor().executeWithPrefix("stop");
+        } catch (Exception e) {
+            adris.altoclef.Debug.logInternal("hand stop: " + e);
+        }
+        Salute.stop();
     }
 
     /** Physical input from the player at the keyboard: the mouse turning the view, or a movement
