@@ -574,7 +574,9 @@ public final class ElytraFlight {
                     int x = px + dx, z = pz + dz;
                     if (!client.world.getChunkManager().isChunkLoaded(x >> 4, z >> 4)) continue;
                     int topY = client.world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
-                    if (Math.abs(topY - p.getY()) > 3) continue; // a tree top or a pit, not open ground
+                    // Open: nothing above a one-block step over the feet (a low roof next to the
+                    // bot is no way out), and not a pit far below.
+                    if (topY > p.getY() + 1 || topY < p.getY() - 3) continue;
                     var ground = client.world.getBlockState(new net.minecraft.util.math.BlockPos(x, topY - 1, z));
                     if (!ground.getFluidState().isEmpty() || ground.isIn(net.minecraft.registry.tag.BlockTags.LEAVES)) continue;
                     double d = dx * dx + dz * dz;
