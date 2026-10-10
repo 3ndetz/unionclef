@@ -311,6 +311,9 @@ public final class ElytraPilot {
         double gamma = Math.toDegrees(Math.atan2(vy, Math.max(hs, 1e-6)));
         double lhs = Math.hypot(lvx, lvz);
         double lspeed = Math.sqrt(lhs * lhs + lvy * lvy);
+        // The leader hangs in the air or drifts slower than an elytra can fly (creative flight):
+        // circle round them, a little above, like a gull round a mast, the circle moving with them.
+        if (lhs < ORBIT_BELOW) return orbit(o, x, y, z, speed, gamma, lx, ly, lz, lvx, lvz, terrainAhead, groundBelow, obstacleDist);
         double ux, uz;
         if (lhs > 0.2) {
             ux = lvx / lhs;
@@ -347,6 +350,34 @@ public final class ElytraPilot {
             float course = (float) Math.toDegrees(Math.atan2(-ux, uz));
             yawCmd = course + ((weaveTicks / 40) % 2 == 0 ? 40 : -40);
         }
+        float pitchCmd = holdGamma(gammaCmd, gamma, speed, true);
+        o.arrived = false;
+        return steer(o, pitchCmd, yawCmd, wantBoost, gamma, gammaCmd, speed);
+    }
+
+    /** Orbit radius round a hovering leader, and how far ahead on the circle the bot aims. */
+    static final double ORBIT_R = 14, ORBIT_LEAD = Math.toRadians(55);
+    /** A leader slower than this (blocks a tick) is circled, not flown beside: an elytra glides
+     *  at 1+ and would leave them behind. */
+    static final double ORBIT_BELOW = 0.8;
+
+    private Out orbit(Out o, double x, double y, double z, double speed, double gamma,
+                      double lx, double ly, double lz, double lvx, double lvz,
+                      double terrainAhead, double groundBelow, double obstacleDist) {
+        // The circle's centre is where the leader will be in a second: it keeps up with a drift.
+        double cx = lx + lvx * 20, cz = lz + lvz * 20;
+        double bearing = Math.atan2(z - cz, x - cx);
+        double ax = cx + ORBIT_R * Math.cos(bearing + ORBIT_LEAD), az = cz + ORBIT_R * Math.sin(bearing + ORBIT_LEAD);
+        double dx = ax - x, dz = az - z;
+        double sy = ly + 4;
+        double gammaCmd = Math.max(-25, Math.min(25, Math.toDegrees(Math.atan2(sy - y, Math.max(Math.hypot(dx, dz), 8)))));
+        if (speed > 1.3) gammaCmd += Math.min(15, (speed - 1.3) * 25); // too fast for the circle: climb it off
+        if (y - Math.max(terrainAhead, groundBelow) < 8) gammaCmd = Math.max(gammaCmd, 15);
+        boolean avoid = speed > 0.45 && obstacleDist < Math.max(10, speed * 28);
+        mode = avoid ? Mode.AVOID : Mode.FOLLOW;
+        if (avoid) gammaCmd = 35;
+        boolean wantBoost = avoid ? speed < 1.5 : speed < 0.7;
+        float yawCmd = (float) Math.toDegrees(Math.atan2(-dx, dz));
         float pitchCmd = holdGamma(gammaCmd, gamma, speed, true);
         o.arrived = false;
         return steer(o, pitchCmd, yawCmd, wantBoost, gamma, gammaCmd, speed);
