@@ -46,12 +46,10 @@ public final class ElytraFlight {
     // flying this account by hand is never taken over.
     private static volatile boolean fallGlide = true;
     private static boolean armed, rescue;
-    // Hands on the controls: a player steering this account by hand (the mouse, movement keys)
+    // Hands on the controls: a player steering this account by hand (W/A/S/D)
     // takes over at once. The pilot lets go and the fall watch stays off until the feet are down.
     // The fall watch also needs the agent to be attached: playing alone, nothing is taken over.
     private static volatile long manualMs, agentMs;
-    private static double lastMouseX = Double.NaN, lastMouseY;
-    private static int mouseSettle; // ticks the mouse is not read after a screen closes
     private static boolean handsOn;
     // Wingman flight: the leader's name, and their velocity estimated from positions -- the
     // client does not get other players' velocity, only where they are.
@@ -472,28 +470,12 @@ public final class ElytraFlight {
         Salute.stop();
     }
 
-    /** Physical input from the player: the mouse turning the view, or W/A/S/D held. Read from the
-     *  window, so keys the bot presses itself do not count. Esc, menus, the map and other keys do
-     *  not count either: closing a screen re-captures the cursor and jumps it to the middle of the
-     *  window, which read as a flick of the mouse and stopped the bot -- the mouse is ignored for a
-     *  few ticks after every screen. */
+    /** Physical input from the player: W/A/S/D held, read from the window, so keys the bot
+     *  presses itself do not count. Not the mouse: looking around while the bot walks or flies
+     *  is watching, not taking over (and closing a screen jumps the cursor, which read as a flick).
+     *  Not Esc, menus, the map or any other key either. */
     private static boolean manualInput(MinecraftClient client) {
-        var m = client.mouse;
-        boolean free = client.player == null || client.currentScreen != null || !client.isWindowFocused()
-                || !m.isCursorLocked();
-        if (free) {
-            lastMouseX = Double.NaN;
-            mouseSettle = 5;
-            return false;
-        }
-        double mx = m.getX(), my = m.getY();
-        boolean moved = !Double.isNaN(lastMouseX) && mouseSettle == 0
-                // About 4 degrees of turn at the default sensitivity: a hand resting on the mouse is not it.
-                && Math.abs(mx - lastMouseX) + Math.abs(my - lastMouseY) > 25;
-        if (mouseSettle > 0) mouseSettle--;
-        lastMouseX = mx;
-        lastMouseY = my;
-        if (moved) return true;
+        if (client.player == null || client.currentScreen != null || !client.isWindowFocused()) return false;
         var o = client.options;
         for (KeyBinding kb : new KeyBinding[]{o.forwardKey, o.backKey, o.leftKey, o.rightKey}) {
             InputUtil.Key key = KeyBindingHelper.getBoundKeyOf(kb);
