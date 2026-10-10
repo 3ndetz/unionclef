@@ -5871,6 +5871,16 @@ public class Py4jEntryPoint {
                 Map.of("phase", "failed", "reason", "client thread timeout"));
     }
 
+    /** A fireworks show from the ground: count colored rockets in a fan ahead (creative). */
+    public Map<String, Object> salute(int count) {
+        return onClientThread(() -> adris.altoclef.util.agent.Salute.start(count),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    public Map<String, Object> saluteStatus() {
+        return adris.altoclef.util.agent.Salute.status();
+    }
+
     public Map<String, Object> swimStatus() {
         return adris.altoclef.util.agent.SwimToShore.status();
     }

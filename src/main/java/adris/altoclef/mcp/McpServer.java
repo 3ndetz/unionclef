@@ -260,6 +260,12 @@ public class McpServer {
                 "Get out of water: swim on the surface to the nearest dry shore within radius and climb "
                 + "out. Poll swimStatus (phase: swimming/done/failed).",
                 schema("radius:int"), a -> api.swimToShore(argInt(a, "radius")));
+        tool("salute",
+                "Fireworks show from the ground: count (1..12) colored rockets launched in a fan a few "
+                + "blocks ahead, each with its own stars. Creative only. Poll saluteStatus (phase: firing/done/failed).",
+                schema("count:int"), a -> api.salute(argInt(a, "count")));
+        tool("saluteStatus", "Current fireworks show: phase, reason, fired, total.", schema(),
+                a -> api.saluteStatus());
         tool("swimStatus", "Current swim to shore: phase, reason, distance, inWater.", schema(),
                 a -> api.swimStatus());
         tool("creativeGive",
