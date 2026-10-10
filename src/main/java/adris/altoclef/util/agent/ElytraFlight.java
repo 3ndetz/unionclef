@@ -277,7 +277,13 @@ public final class ElytraFlight {
             fail("not in game");
             return;
         }
-        if (++ticks > TIMEOUT_TICKS) {
+        // A wingman flies as long as the leader does. Out of time in the air: glide down rather
+        // than let go (that is a fall).
+        if (++ticks > TIMEOUT_TICKS && leader == null) {
+            if (adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p) && !rescue) {
+                startRescue(client, p, p.getY() - top(client, p.getX(), p.getZ()));
+                return;
+            }
             fail("timeout");
             return;
         }
