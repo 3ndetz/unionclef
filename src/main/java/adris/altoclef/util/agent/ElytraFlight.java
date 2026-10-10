@@ -384,6 +384,14 @@ public final class ElytraFlight {
         }
         if (handsOn || System.currentTimeMillis() - agentMs > 30_000) {
             armed = false;
+            // Steering by hand (or no agent at all): no autopilot. In survival a long fall still
+            // gets the wings opened -- a parachute; where to glide stays the player's call.
+            boolean survival = !p.getAbilities().creativeMode;
+            if (survival && !gliding && p.getVelocity().y < -0.9 && p.getY() - top(client, p.getX(), p.getZ()) > 8
+                    && deployCooldown == 0) {
+                p.networkHandler.sendPacket(new ClientCommandC2SPacket(p, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+                deployCooldown = 10;
+            }
             return;
         }
         double height = p.getY() - top(client, p.getX(), p.getZ());
