@@ -278,9 +278,12 @@ public class McpServer {
                 schema("keepFree:int"), a -> api.tidyInventory(argInt(a, "keepFree")));
         tool("setBuildPolicy",
                 "Shared-server manners: breakOnlyNatural=true mines only dirt/grass/sand/gravel/leaves/"
-                + "snow/plants (never builds); allowPlace=false never places blocks.",
+                + "snow/plants (never builds); allowPlace=false never places blocks. Optional "
+                + "allowBreak=false: never mine through anything at all.",
                 schema("breakOnlyNatural:bool", "allowPlace:bool"),
-                a -> api.setBuildPolicy(argBool(a, "breakOnlyNatural"), argBool(a, "allowPlace")));
+                a -> a.has("allowBreak")
+                        ? api.setBuildPolicy(argBool(a, "breakOnlyNatural"), argBool(a, "allowPlace"), argBool(a, "allowBreak"))
+                        : api.setBuildPolicy(argBool(a, "breakOnlyNatural"), argBool(a, "allowPlace")));
         tool("readSigns",
                 "Text of signs within radius blocks (front/back), nearest first: place names and notes "
                 + "players left. Radius capped at 64.",

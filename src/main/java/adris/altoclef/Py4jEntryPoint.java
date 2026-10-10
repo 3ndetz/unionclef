@@ -1562,10 +1562,18 @@ public class Py4jEntryPoint {
     /** Building policy for shared servers: mine only natural terrain, and optionally never
      *  place blocks (no pillars or bridges left behind). */
     public Map<String, Object> setBuildPolicy(boolean breakOnlyNatural, boolean allowPlace) {
+        return setBuildPolicy(breakOnlyNatural, allowPlace, kaptainwutax.tungsten.TungstenConfig.get().allowBreak);
+    }
+
+    /** As above, plus allowBreak: false = the pathfinder never mines its way through anything
+     *  (on a shared server even "natural" grass, sand and leaves are someone's build). */
+    public Map<String, Object> setBuildPolicy(boolean breakOnlyNatural, boolean allowPlace, boolean allowBreak) {
         kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
         cfg.breakOnlyNatural = breakOnlyNatural;
         cfg.allowPlace = allowPlace;
-        return Map.of("ok", true, "breakOnlyNatural", cfg.breakOnlyNatural, "allowPlace", cfg.allowPlace);
+        cfg.allowBreak = allowBreak;
+        return Map.of("ok", true, "breakOnlyNatural", cfg.breakOnlyNatural, "allowPlace", cfg.allowPlace,
+                "allowBreak", cfg.allowBreak);
     }
 
     /** Clear all runtime protected areas (place + break deny zones). */
