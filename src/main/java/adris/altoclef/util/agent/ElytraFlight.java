@@ -400,6 +400,14 @@ public final class ElytraFlight {
             bestDist = Math.min(bestDist, dist);
             bestTick = ticks;
         } else if (ticks - bestTick > 120) {
+            // In the air, giving up is letting go of a glide: it fell into a lake from the middle
+            // of a figure once. Glide down ahead instead, as the fall watch does; a rescue glide
+            // ends on the ground whatever its progress.
+            if (adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) {
+                if (!rescue) startRescue(client, p, p.getY() - top(client, p.getX(), p.getZ()));
+                bestTick = ticks;
+                return;
+            }
             fail("blocked");
             return;
         }
