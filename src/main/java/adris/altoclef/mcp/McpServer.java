@@ -256,6 +256,12 @@ public class McpServer {
                 schema("points:string"),
                 a -> api.flyRoute(a.get("points").getAsString(), a.has("low") && a.get("low").getAsBoolean(),
                         a.has("tricks") ? a.get("tricks").getAsInt() : 0));
+        tool("hoverFollow",
+                "Creative only: fly (creative flight, no elytra) beside a player who is creative-flying; "
+                + "when they stand on the ground, come down next to them. WASD by hand lets go. Poll hoverStatus.",
+                schema("nick:string"), a -> api.hoverFollow(argStr(a, "nick")));
+        tool("hoverStatus", "Creative wingman: phase (flying/landing/done/failed), reason, gap to the slot.", schema(),
+                a -> api.hoverStatus());
         tool("flyStatus", "Current elytra flight: phase, reason, distance, rockets used.", schema(),
                 a -> api.flyStatus());
         tool("flyStop", "Abort the elytra flight (the bot glides down on its own).", schema(),

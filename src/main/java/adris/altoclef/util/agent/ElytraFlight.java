@@ -77,6 +77,7 @@ public final class ElytraFlight {
     public static synchronized void register() {
         if (!registered) {
             ClientTickEvents.END_CLIENT_TICK.register(ElytraFlight::tick);
+            ClientTickEvents.END_CLIENT_TICK.register(CreativeWingman::tick);
             registered = true;
         }
     }
@@ -468,13 +469,14 @@ public final class ElytraFlight {
             adris.altoclef.Debug.logInternal("hand stop: " + e);
         }
         Salute.stop();
+        CreativeWingman.stop("by hand");
     }
 
     /** Physical input from the player: W/A/S/D held, read from the window, so keys the bot
      *  presses itself do not count. Not the mouse: looking around while the bot walks or flies
      *  is watching, not taking over (and closing a screen jumps the cursor, which read as a flick).
      *  Not Esc, menus, the map or any other key either. */
-    private static boolean manualInput(MinecraftClient client) {
+    static boolean manualInput(MinecraftClient client) {
         if (client.player == null || client.currentScreen != null || !client.isWindowFocused()) return false;
         var o = client.options;
         for (KeyBinding kb : new KeyBinding[]{o.forwardKey, o.backKey, o.leftKey, o.rightKey}) {

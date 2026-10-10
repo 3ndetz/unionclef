@@ -5918,7 +5918,19 @@ public class Py4jEntryPoint {
 
     public Map<String, Object> flyStop() {
         adris.altoclef.util.agent.ElytraFlight.stop();
+        adris.altoclef.util.agent.CreativeWingman.stop("stopped");
         return adris.altoclef.util.agent.ElytraFlight.status();
+    }
+
+    /** Creative only: fly beside a player who creative-flies (hovers), land when they stand. */
+    public Map<String, Object> hoverFollow(String nick) {
+        adris.altoclef.util.agent.ElytraFlight.register();
+        return onClientThread(() -> adris.altoclef.util.agent.CreativeWingman.start(nick),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    public Map<String, Object> hoverStatus() {
+        return adris.altoclef.util.agent.CreativeWingman.status();
     }
 
     /** Creative mode only: take an item from the creative inventory into a free slot, the same
@@ -6143,6 +6155,7 @@ public class Py4jEntryPoint {
                 pm.put("hp", p.getHealth());          // visible for tracked players
                 pm.put("sprinting", p.isSprinting());
                 pm.put("gliding", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p));
+                pm.put("hovering", adris.altoclef.util.agent.CreativeWingman.hovering(client, p));
                 players.add(pm);
             }
             players.sort((a, b) -> Double.compare(
