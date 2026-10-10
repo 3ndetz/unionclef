@@ -46,7 +46,10 @@ public class Py4jEntryPoint {
     // 300 lines is less than ONE scenario of verbose tungsten logging, so an error early in a
     // run was evicted long before any test read the ring.
     private static final int CHAT_LOG_MAX = 2000;
-    private final java.util.concurrent.ConcurrentLinkedDeque<String> _chatLog = new java.util.concurrent.ConcurrentLinkedDeque<>();
+    // STATIC, one ring for every instance: AltoClef builds this class twice at start-up (once on
+    // init, again when the settings load), the MCP server keeps the first, chat is recorded into
+    // the second -- an agent over MCP saw an empty chat and answered nobody.
+    private static final java.util.concurrent.ConcurrentLinkedDeque<String> _chatLog = new java.util.concurrent.ConcurrentLinkedDeque<>();
     Executor _executor;
     public static String last_talking_player = "";
 
@@ -741,10 +744,8 @@ public class Py4jEntryPoint {
     }
 
     public void onChatMessage(String msg) {
-        if (msg != null) {                       // buffer EVERY incoming line (works even with no callback, e.g. the local client)
-            _chatLog.addLast(msg);
-            while (_chatLog.size() > CHAT_LOG_MAX) _chatLog.pollFirst();
-        }
+        // The ring already has the line: recordChat runs first for every incoming message, and
+        // adding it here as well put each line in twice.
         executeInNetworkThread(() -> {
             if (IsCallbackServerStarted()) {
                 _cb.onChatMessage(msg);
