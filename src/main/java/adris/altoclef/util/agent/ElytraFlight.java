@@ -65,6 +65,7 @@ public final class ElytraFlight {
     private static boolean glideSent;
     private static volatile boolean lowLevel; // бреющий: a few blocks over the ground all the way
     private static boolean registered;
+    private static int handCheck;
 
     private static final int TIMEOUT_TICKS = 20 * 180;
 
@@ -194,16 +195,21 @@ public final class ElytraFlight {
         if (p == null) return;
         var inv = p.getInventory();
         if (!inv.getStack(PlayerVer.getSelectedSlot(inv)).isOf(Items.FIREWORK_ROCKET)) return;
-        int fallback = -1;
+        // An empty slot, else a block, else anything that is not a rocket: with a hotbar of tools
+        // and food the rockets stayed in hand, and every click on a door or a sign on the way
+        // launched one off the ground.
+        int block = -1, other = -1;
         for (int i = 0; i < 9; i++) {
             var st = inv.getStack(i);
             if (st.isEmpty()) {
                 PlayerVer.setSelectedSlot(inv, i);
                 return;
             }
-            if (fallback < 0 && st.getItem() instanceof net.minecraft.item.BlockItem) fallback = i;
+            if (block < 0 && st.getItem() instanceof net.minecraft.item.BlockItem) block = i;
+            if (other < 0 && !st.isOf(Items.FIREWORK_ROCKET)) other = i;
         }
-        if (fallback >= 0) PlayerVer.setSelectedSlot(inv, fallback);
+        if (block >= 0) PlayerVer.setSelectedSlot(inv, block);
+        else if (other >= 0) PlayerVer.setSelectedSlot(inv, other);
     }
 
     private static void tick(MinecraftClient client) {
@@ -222,6 +228,7 @@ public final class ElytraFlight {
         }
         if (ph == Phase.IDLE || ph == Phase.DONE || ph == Phase.FAILED) {
             watchFall(client);
+            keepRocketsOutOfHand(client);
             return;
         }
         ClientPlayerEntity p = client.player;
@@ -344,6 +351,18 @@ public final class ElytraFlight {
         }
         if (o.boost && !rescue && !boost(client, p)) pilot.boostFailed(); // a rescue glides, no rockets
         if (o.arrived) finish(rescue ? "glided down" : "arrived");
+    }
+
+    /** Between flights, while the agent drives: no rockets in hand on the ground, once a second.
+     *  Not while the player steers by hand -- they may be about to take off themselves. */
+    private static void keepRocketsOutOfHand(MinecraftClient client) {
+        var p = client.player;
+        if (p == null || ++handCheck % 20 != 0) return;
+        long manual = msSinceManual();
+        boolean agentDrives = System.currentTimeMillis() - agentMs < 30_000 && (manual < 0 || manual > 45_000);
+        if (!agentDrives || Salute.status().get("phase").equals("firing")) return;
+        if (adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p)) return;
+        if (p.getMainHandStack().isOf(Items.FIREWORK_ROCKET)) putRocketsAway();
     }
 
     /** Between flights: open the wings in a long fall; land a glide that is ours. */
