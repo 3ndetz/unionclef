@@ -481,8 +481,12 @@ public class AltoClef implements ModInitializer {
                 // bot's own log lines as server chat; it must not also blind the chat ring, which
                 // is the only channel a test has for seeing the mod's own errors.
                 if (getInfoSender() != null) getInfoSender().recordChat(msg);
+                boolean modLine = msg.contains(_modChatPrefixNoCodes) || msg.contains("[Tungsten]")
+                        || msg.startsWith("WARNING:") || msg.startsWith("ERROR:");
                 if (!msg.contains(_modChatPrefixNoCodes) && getButler() != null)
                     getButler().onReceiveChat(msg);
+                // Recorded above; off the screen when asked (hideModChat).
+                if (modLine && getModSettings() != null && getModSettings().shouldHideModChat()) return false;
             }
             return true;
         });
