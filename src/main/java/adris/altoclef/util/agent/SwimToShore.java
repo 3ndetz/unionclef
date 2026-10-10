@@ -60,6 +60,7 @@ public final class SwimToShore {
         ty = shore.getY();
         tz = shore.getZ() + 0.5;
         ticks = dryTicks = stuckTicks = 0;
+        tried.clear();
         lastX = p.getX();
         lastZ = p.getZ();
         reason = "";
@@ -92,6 +93,16 @@ public final class SwimToShore {
         return p.isTouchingWater() || p.isSubmergedInWater();
     }
 
+    /** Banks swum into without getting out, this swim: skipped with a little margin. */
+    private static final java.util.List<double[]> tried = new java.util.ArrayList<>();
+
+    private static boolean triedNear(int x, int z) {
+        for (double[] t : tried) {
+            if (Math.hypot(x + 0.5 - t[0], z + 0.5 - t[1]) < 3) return true;
+        }
+        return false;
+    }
+
     /** Nearest column whose top block is dry ground, in rings outward; null when all water. */
     private static BlockPos nearestShore(MinecraftClient client, ClientPlayerEntity p, int radius) {
         int px = p.getBlockX(), pz = p.getBlockZ();
@@ -107,8 +118,10 @@ public final class SwimToShore {
                     BlockPos ground = new BlockPos(x, top - 1, z);
                     var st = client.world.getBlockState(ground);
                     if (!st.getFluidState().isEmpty() || st.isAir()) continue;
-                    // A bank more than a block above the water cannot be climbed by swimming.
-                    if (top - p.getY() > 2.2) continue;
+                    // A bank more than a block above the water cannot be climbed by swimming (the
+                    // swimmer floats about half a block under the surface: one block up is +1.6).
+                    if (top - p.getY() > 1.7) continue;
+                    if (triedNear(x, z)) continue; // a bank it already swam into and could not climb
                     double d = dx * dx + dz * dz;
                     if (d < bestD) {
                         bestD = d;
@@ -140,6 +153,7 @@ public final class SwimToShore {
         // No progress for 3 s (a wall of a bank too high): try the next shore over.
         if (ticks % 60 == 0) {
             if (Math.hypot(p.getX() - lastX, p.getZ() - lastZ) < 1.0 && ++stuckTicks >= 1) {
+                tried.add(new double[]{tx, tz}); // searched from here again, it would be the same bank
                 BlockPos other = nearestShore(client, p, 48);
                 if (other == null) {
                     end(Phase.FAILED, "stuck");
