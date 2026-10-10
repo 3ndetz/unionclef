@@ -12,7 +12,17 @@ package adris.altoclef.util.agent;
  */
 public final class ElytraPilot {
 
-    public enum Mode { CLIMB, CRUISE, DESCENT, FINAL, FLARE, SINK, AVOID, FOLLOW }
+    public enum Mode { CLIMB, CRUISE, DESCENT, FINAL, FLARE, SINK, AVOID, FOLLOW, TRICK }
+
+    /** Show figures. Minecraft has no roll and clamps pitch to +-90, so no true loop or roll: the
+     *  game banks the player's model by how far the look leads the flight path, and these paths
+     *  are built so that, seen from the ground, it reads as aerobatics. */
+    public enum Trick {
+        ROLL,    // a corkscrew: one full turn in two seconds, the nose swinging up and down
+        CANDLE,  // straight up on rockets, a hammerhead turn at the top, a dive and a pull-out
+        SPIRAL,  // two turns climbing on rockets, a trail of sparks
+        EIGHT    // a figure eight: a circle one way, then the other
+    }
 
     public static final class Out {
         public float yaw, pitch;
@@ -39,7 +49,13 @@ public final class ElytraPilot {
     static final double LOW_SPEED = 1.3;
     static final double LOW_DIVE = 30;           // steepest dive into a valley
     static final double LOW_PITCH_RATE = 7;      // quicker hands close to the ground
-    static final double FLARE_BELOW = 14;        // brake over the spot only this low
+    static final double FLARE_BELOW = 14;
+    // Figures: only this high over everything ahead, at least TRICK_GAP ticks apart, and broken off
+    // the moment the ground comes within TRICK_ABORT or something solid is close ahead.
+    static final double TRICK_HEIGHT = 28;
+    static final double TRICK_ABORT = 12;
+    static final int TRICK_GAP = 100;
+    static final double SHOW_CLEARANCE = 36;     // cruise this high while figures are still to come        // brake over the spot only this low
     // Braking turn: looking this far off the way it flies, elytra lose 8-10 % of their speed a
     // tick (vanilla blends the velocity towards the look 10 % a tick) instead of 1 % flying
     // straight -- and, unlike a pull-up, without climbing away from the ground.
@@ -54,6 +70,12 @@ public final class ElytraPilot {
     private int weaveTicks;
     private int brakeSide; // +1 or -1: which way the braking turn goes; 0 when not braking
     private boolean lowLevel;
+    // Figures and routes.
+    private int tricksLeft, tricksDone, sinceTrick, nextTrick;
+    private Trick trick;
+    private int trickT, trickPhase, trickPhaseT, trickDir = 1;
+    private float trickYaw;
+    private boolean passThrough;
     private double lowGuide = Double.NaN;
 
     public void reset(float yaw, float pitch) {
@@ -63,6 +85,9 @@ public final class ElytraPilot {
         boostCooldown = 0;
         mode = Mode.CLIMB;
         climbOut = 30;
+        trick = null;
+        tricksLeft = tricksDone = sinceTrick = 0;
+        passThrough = false;
     }
 
     /** Take over a glide already in the air (a fall, a stopped flight): no climb-out. */
@@ -83,6 +108,16 @@ public final class ElytraPilot {
      *  max over k of atan((ground_k + clearance - y) / k)). */
     public void setLowGuide(double degrees) { lowGuide = degrees; }
 
+    /** Aerobatics: fly n figures on the way, when high and clear enough (call after reset). */
+    public void setTricks(int n) { tricksLeft = Math.max(0, n); }
+
+    /** A waypoint of a route, not the landing spot: fly through it, no descent. */
+    public void setPassThrough(boolean on) { passThrough = on; }
+
+    public Trick trick() { return trick; }
+
+    public int tricksDone() { return tricksDone; }
+
     /**
      * One tick.
      * @param terrainAhead highest ground on the next ~80 blocks of the course (and at the target)
@@ -100,13 +135,25 @@ public final class ElytraPilot {
         Out o = new Out();
         double dx = tx - x, dz = tz - z;
         double dist = Math.hypot(dx, dz);
+        // A waypoint: everything that plans a descent or a landing sees it far away.
+        if (passThrough) dist += 400;
         double hs = Math.hypot(vx, vz);
         double speed = Math.sqrt(hs * hs + vy * vy);
         double gamma = Math.toDegrees(Math.atan2(vy, Math.max(hs, 1e-6)));
         double above = y - ty;
+        sinceTrick++;
+        if (trick != null) {
+            if (y - groundBelow < TRICK_ABORT || obstacleDist < 20) {
+                trick = null; // the ground or a wall: the normal pilot takes it from here
+                sinceTrick = 0;
+                integral = 0;
+            } else {
+                return trickStep(o, speed, gamma);
+            }
+        }
         // Low: over the ground just ahead, not up to the landing spot's height while still far.
         double cruise = lowLevel ? (dist > 60 ? terrainAhead : Math.max(terrainAhead, ty)) + LOW_CLEARANCE
-                : Math.max(terrainAhead, ty) + CLEARANCE;
+                : Math.max(terrainAhead, ty) + (tricksLeft > 0 ? SHOW_CLEARANCE : CLEARANCE);
         if (boostCooldown > 0) boostCooldown--;
         if (climbOut > 0) climbOut--;
 
@@ -158,6 +205,16 @@ public final class ElytraPilot {
         boolean low = !avoid && y - groundBelow < (lowLevel ? 2 : 6) && dist > 16 && mode != Mode.FLARE && mode != Mode.SINK
                 && mode != Mode.FINAL && !(mode == Mode.DESCENT && runwayClear && dist < 50);
         if (low) mode = Mode.CLIMB;
+        // A figure, when one is due: cruising, high over everything ahead, clear, fast enough.
+        if (tricksLeft > 0 && mode == Mode.CRUISE && sinceTrick > TRICK_GAP && dist > 150 && speed > 0.9
+                && y - Math.max(groundBelow, terrainAhead) > TRICK_HEIGHT && obstacleDist > 60) {
+            trick = Trick.values()[nextTrick++ % Trick.values().length];
+            trickT = trickPhase = trickPhaseT = 0;
+            trickDir = (nextTrick % 2 == 0) ? 1 : -1;
+            trickYaw = yaw;
+            tricksLeft--;
+            return trickStep(o, speed, gamma);
+        }
 
         double gammaCmd;
         boolean wantBoost;
@@ -295,6 +352,67 @@ public final class ElytraPilot {
         return steer(o, pitchCmd, yawCmd, wantBoost, gamma, gammaCmd, speed);
     }
 
+    /** One tick of the current figure: yaw and pitch along a script, rockets where it climbs. */
+    private Out trickStep(Out o, double speed, double gamma) {
+        trickT++;
+        trickPhaseT++;
+        float yawCmd = yaw, pitchCmd;
+        boolean boost = false, done = false;
+        double gammaCmd = 0;
+        switch (trick) {
+            case ROLL -> {
+                double k = Math.min(1, trickT / 40.0);
+                yawCmd = trickYaw + trickDir * 360f * (float) k;
+                pitchCmd = (float) (-8 + 28 * Math.sin(2 * Math.PI * k)); // negative pitch is nose up
+                boost = trickT == 1;
+                done = trickT >= 46;
+            }
+            case SPIRAL -> {
+                yawCmd = trickYaw + trickDir * 8f * trickT; // two turns in 90 ticks
+                pitchCmd = -38;
+                boost = trickT % 22 == 1;
+                done = trickT >= 90;
+            }
+            case EIGHT -> {
+                int half = 50; // 7.2 degrees a tick: a circle in 50 ticks, then back the other way
+                double turn = trickT <= half ? trickT * 7.2 : 360 - (trickT - half) * 7.2;
+                yawCmd = trickYaw + trickDir * (float) turn;
+                pitchCmd = holdGamma(0, gamma, speed, true);
+                boost = speed < 0.95;
+                done = trickT >= 2 * half + 4;
+            }
+            default -> { // CANDLE
+                if (trickPhase == 0) { // straight up on two rockets until the speed is gone
+                    pitchCmd = -80;
+                    boost = trickT == 1 || trickT == 20;
+                    if (trickT > 30 && speed < 0.45 || trickT > 80) { trickPhase = 1; trickPhaseT = 0; }
+                } else if (trickPhase == 1) { // hammerhead: swing the nose over and down
+                    yawCmd = trickYaw + 180;
+                    pitchCmd = 75;
+                    if (trickPhaseT > 14) { trickPhase = 2; trickPhaseT = 0; }
+                } else if (trickPhase == 2) { // dive until the speed is back (the height guard watches)
+                    yawCmd = trickYaw + 180;
+                    pitchCmd = 60;
+                    if (speed >= 1.15 || trickPhaseT > 60) { trickPhase = 3; trickPhaseT = 0; }
+                } else { // pull out to level
+                    yawCmd = trickYaw + 180;
+                    pitchCmd = holdGamma(-2, gamma, speed, false);
+                    done = gamma > -10 || trickPhaseT > 40;
+                }
+            }
+        }
+        mode = Mode.TRICK;
+        if (done) {
+            trick = null;
+            tricksDone++;
+            sinceTrick = 0;
+            integral = 0;
+            mode = Mode.CLIMB;
+        }
+        o.arrived = false;
+        return steer(o, pitchCmd, yawCmd, boost, gamma, gammaCmd, speed);
+    }
+
     /** Pitch that holds a flight-path angle: proportional + integral on the angle error. */
     private float holdGamma(double gammaCmd, double gamma, double speed, boolean stallGuard) {
         double err = gammaCmd - gamma;
@@ -308,8 +426,10 @@ public final class ElytraPilot {
     /** Rate-limited controls, like a hand on a mouse: arcs and smooth pitch changes. */
     private Out steer(Out o, float pitchCmd, float yawCmd, boolean wantBoost, double gamma, double gammaCmd, double speed) {
         float dyaw = wrap(yawCmd - yaw);
-        yaw = wrap(yaw + (float) clamp(dyaw * 0.35, mode == Mode.FLARE ? MAX_YAW_RATE * 2.5 : MAX_YAW_RATE));
-        pitch += (float) clamp(pitchCmd - pitch, mode == Mode.AVOID ? MAX_PITCH_RATE * 2 : lowLevel && mode == Mode.CRUISE ? LOW_PITCH_RATE : MAX_PITCH_RATE);
+        double yawRate = mode == Mode.TRICK ? 20 : mode == Mode.FLARE ? MAX_YAW_RATE * 2.5 : MAX_YAW_RATE;
+        yaw = wrap(yaw + (float) clamp(dyaw * (mode == Mode.TRICK ? 0.6 : 0.35), yawRate));
+        pitch += (float) clamp(pitchCmd - pitch, mode == Mode.AVOID || mode == Mode.TRICK ? MAX_PITCH_RATE * 2
+                : lowLevel && mode == Mode.CRUISE ? LOW_PITCH_RATE : MAX_PITCH_RATE);
         if (wantBoost && boostCooldown == 0) {
             o.boost = true;
             boostCooldown = (int) ROCKET_TICKS;

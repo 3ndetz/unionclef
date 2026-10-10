@@ -12,8 +12,11 @@ public class ElytraPilotSim {
 
     interface Terrain { double h(double x, double z); }
 
-    record Scene(String name, double tx, double tz, double ty, Terrain t, boolean low) {
-        Scene(String name, double tx, double tz, double ty, Terrain t) { this(name, tx, tz, ty, t, false); }
+    /** tricks: figures to fly on the way; via: waypoints to fly through before the target. */
+    record Scene(String name, double tx, double tz, double ty, Terrain t, boolean low, int tricks, double[][] via) {
+        Scene(String name, double tx, double tz, double ty, Terrain t) { this(name, tx, tz, ty, t, false, 0, new double[0][]); }
+        Scene(String name, double tx, double tz, double ty, Terrain t, boolean low) { this(name, tx, tz, ty, t, low, 0, new double[0][]); }
+        Scene at(double[] p) { return new Scene(name, p[0], p[1], t.h(p[0], p[1]), t, low, tricks, via); }
     }
 
     public static void main(String[] args) {
@@ -38,6 +41,10 @@ public class ElytraPilotSim {
             new Scene("low hills 500", 500, 0, 70, (x, z) -> x < 40 || x > 460 ? 70 : 70 + 10 * Math.sin((x - 40) / 35) + 6 * Math.sin((x - 40) / 13 + z / 20), true),
             new Scene("low town 300", 300, 40, 70, (x, z) -> x < 40 || x > 270 ? 70 : 70 + ((((int) Math.floor(x / 9)) * 31 + ((int) Math.floor(z / 9)) * 17) & 7) * 1.5, true),
             new Scene("low cliff 400", 400, 0, 70, (x, z) -> x > 150 && x < 260 ? 95 : 70, true),
+            // Aerobatics on a long flight over rolling ground; a route round a square and back.
+            new Scene("figures 1600", 1600, 0, 70, (x, z) -> 70 + 12 * Math.sin(x / 90), false, 4, new double[0][]),
+            new Scene("route square", 0, 0, 70, (x, z) -> 70 + 8 * Math.sin(x / 70) + 6 * Math.cos(z / 55), false, 0,
+                    new double[][] {{260, 0}, {260, 260}, {0, 260}}),
         };
         int fails = 0;
         for (Scene s : scenes) {
@@ -49,6 +56,7 @@ public class ElytraPilotSim {
             // Rocket burn time is random (20..31 ticks): judge the worst of many runs, not one.
             int ok = 0;
             double sumT = 0, maxT = 0, worstClear = 1e9, sumR = 0, maxApp = 0, worstMean = 0;
+            int fewestFigures = Integer.MAX_VALUE;
             String firstFail = "";
             for (long seed = 0; seed < 20; seed++) {
                 Result r = run(s, false, seed);
@@ -57,6 +65,12 @@ public class ElytraPilotSim {
                 worstClear = Math.min(worstClear, r.minClear);
                 maxApp = Math.max(maxApp, r.approach);
                 worstMean = Math.max(worstMean, r.meanClear);
+                fewestFigures = Math.min(fewestFigures, r.figures);
+            }
+            // Figures: at least three of four flown, and every flight still lands.
+            if (s.tricks > 0 && fewestFigures < s.tricks - 1) {
+                ok = Math.min(ok, 19);
+                firstFail = "only " + fewestFigures + " figures";
             }
             // Low-level: well under a normal cruise over the same ground (20-27 on average there).
             if (s.low && worstMean > 13) {
@@ -66,7 +80,8 @@ public class ElytraPilotSim {
             if (ok < 20) fails++;
             System.out.printf("%-22s ok %2d/20  time avg %4.1fs max %4.1fs  last 25 blocks max %4.1fs  rockets %4.1f  clearance %5.1f%s  %s%n",
                     s.name, ok, sumT / 20, maxT, maxApp, sumR / 20, worstClear,
-                    s.low ? String.format(" (mean %.1f)", worstMean) : "", firstFail);
+                    s.low ? String.format(" (mean %.1f)", worstMean) : s.tricks > 0 ? " figures >= " + fewestFigures : "",
+                    firstFail);
         }
         if (only == null || "follow".startsWith(only)) {
             int ok = 0;
@@ -142,9 +157,12 @@ public class ElytraPilotSim {
         return new double[] {sumGap / n, maxGap, rockets, clean ? 1 : 0};
     }
 
-    record Result(boolean ok, String verdict, double seconds, int rockets, double minClear, double end, double approach, double meanClear) {}
+    record Result(boolean ok, String verdict, double seconds, int rockets, double minClear, double end, double approach,
+                  double meanClear, int figures) {}
 
-    static Result run(Scene s, boolean trace, long seed) {
+    static Result run(Scene scene, boolean trace, long seed) {
+        Scene s = scene;
+        int leg = 0, legs = scene.via.length; // waypoints passed
         java.util.Random rnd = new java.util.Random(seed);
         ElytraPilot pilot = new ElytraPilot();
         double sumClear = 0;
@@ -154,6 +172,7 @@ public class ElytraPilotSim {
         float yaw0 = (float) Math.toDegrees(Math.atan2(-(s.tx - x), s.tz - z));
         pilot.reset(yaw0 + 30, 0); // a player rarely faces the target exactly
         pilot.setLowLevel(s.low && !Boolean.getBoolean("nolow"));
+        pilot.setTricks(s.tricks);
         int rocketLeft = 0, rockets = 0, ticks = 0;
         double minClear = 1e9, maxDPitch = 0, maxDYaw = 0;
         float lastPitch = 0, lastYaw = yaw0 + 30;
@@ -162,6 +181,8 @@ public class ElytraPilotSim {
         int near = -1; // first tick within 25 blocks: the approach should not drag on from there
         boolean ok = false;
         for (; ticks < 20 * 180; ticks++) {
+            s = leg < legs ? scene.at(scene.via[leg]) : scene; // as the mod: the next waypoint, then the spot
+            pilot.setPassThrough(leg < legs);
             double ahead = terrainAhead(s, x, z, vx, vz);
             if (s.low && !Boolean.getBoolean("nolow")) pilot.setLowGuide(lowGuide(s, x, y, z, vx, vz));
             double ground = s.t.h(x, z);
@@ -206,6 +227,7 @@ public class ElytraPilotSim {
             x += vx; y += vy; z += vz;
 
             double dist = Math.hypot(s.tx - x, s.tz - z);
+            if (leg < legs && dist < 20) leg++; // waypoint passed
             double clear = y - s.t.h(x, z);
             if (near < 0 && dist < 25) near = ticks;
             if (dist > 20 && ticks > 30) minClear = Math.min(minClear, clear);
@@ -222,7 +244,7 @@ public class ElytraPilotSim {
                 while (Math.hypot(rvx, rvz) > 0.01) { rx += rvx; rz += rvz; rvx *= 0.546; rvz *= 0.546; }
                 double rolled = Math.hypot(s.tx - rx, s.tz - rz);
                 // A step on the roll-out hurts only above ~0.3 of horizontal speed (elytra wall damage).
-                if (rolled < 30 && vy > -0.5 && (s.t.h(rx, rz) - s.t.h(x, z) < 1 || vh < 0.4)) {
+                if (leg >= legs && rolled < 30 && vy > -0.5 && (s.t.h(rx, rz) - s.t.h(x, z) < 1 || vh < 0.4)) {
                     verdict = String.format("touchdown vh=%.2f vy=%.2f", vh, vy);
                     ok = true;
                     dist = rolled;
@@ -233,8 +255,8 @@ public class ElytraPilotSim {
         }
         double dist = Math.hypot(s.tx - x, s.tz - z);
         if (trace) System.out.println("  modes: " + modes);
-        return new Result(ok, verdict, ticks / 20.0, rockets, minClear, dist, near < 0 ? 0 : (ticks - near) / 20.0,
-                nClear == 0 ? 0 : sumClear / nClear);
+        return new Result(ok && leg >= legs, verdict, ticks / 20.0, rockets, minClear, dist, near < 0 ? 0 : (ticks - near) / 20.0,
+                nClear == 0 ? 0 : sumClear / nClear, pilot.tricksDone());
     }
 
     /** Nothing standing into a 7-degree slope (1.5 blocks margin) on the last 50 blocks before the target. */

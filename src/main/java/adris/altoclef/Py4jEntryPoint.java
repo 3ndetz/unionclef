@@ -5859,7 +5859,29 @@ public class Py4jEntryPoint {
 
     /** Elytra flight; low = low-level (бреющий), a few blocks over the ground all the way. */
     public Map<String, Object> flyTo(int x, int y, int z, boolean low) {
-        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.start(x + 0.5, y, z + 0.5, low),
+        return flyTo(x, y, z, low, 0);
+    }
+
+    /** Elytra flight with figures on the way (tricks: how many, 0..8): rolls, candles, spirals,
+     *  figure eights, flown only high over everything and clear ahead. */
+    public Map<String, Object> flyTo(int x, int y, int z, boolean low, int tricks) {
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.start(x + 0.5, y, z + 0.5, low, tricks),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    /** Elytra route: "x,z;x,z;..." flown through without landing, landing at the last point. */
+    public Map<String, Object> flyRoute(String points, boolean low, int tricks) {
+        java.util.List<double[]> pts = new java.util.ArrayList<>();
+        for (String part : points.split(";")) {
+            String[] xz = part.trim().split(",");
+            if (xz.length < 2) continue;
+            try {
+                pts.add(new double[] {Integer.parseInt(xz[0].trim()) + 0.5, 70, Integer.parseInt(xz[1].trim()) + 0.5});
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        double[][] arr = pts.toArray(new double[0][]);
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.startRoute(arr, low, tricks),
                 Map.of("phase", "failed", "reason", "client thread timeout"));
     }
 

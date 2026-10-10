@@ -64,6 +64,9 @@ public final class ElytraFlight {
     private static int deployCooldown;
     private static boolean glideSent;
     private static volatile boolean lowLevel; // бреющий: a few blocks over the ground all the way
+    private static int tricksWanted;          // figures to fly on the way (пилотаж)
+    private static double[][] route;          // waypoints {x, y, z}, the last one is the landing spot
+    private static int routeIdx;
     private static boolean registered;
     private static int handCheck;
 
@@ -121,8 +124,34 @@ public final class ElytraFlight {
 
     /** Start a flight, low-level (бреющий) when low; call on the client thread. */
     public static synchronized Map<String, Object> start(double x, double y, double z, boolean low) {
+        return start(x, y, z, low, 0);
+    }
+
+    /** A flight with figures on the way (tricks: how many); call on the client thread. */
+    public static synchronized Map<String, Object> start(double x, double y, double z, boolean low, int tricks) {
+        route = null;
+        return begin(x, y, z, low, tricks);
+    }
+
+    /** A route: fly through each point without landing, land at the last; call on the client thread. */
+    public static synchronized Map<String, Object> startRoute(double[][] points, boolean low, int tricks) {
+        if (points.length == 0) {
+            Map<String, Object> m = status();
+            m.put("phase", "failed");
+            m.put("reason", "no points");
+            return m;
+        }
+        Map<String, Object> m = begin(points[0][0], points[0][1], points[0][2], low, tricks);
+        route = points;
+        routeIdx = 0;
+        m.put("waypoint", "1/" + points.length);
+        return m;
+    }
+
+    private static Map<String, Object> begin(double x, double y, double z, boolean low, int tricks) {
         register();
         lowLevel = low;
+        tricksWanted = Math.max(0, Math.min(tricks, 8));
         rescue = false;
         leader = null;
         tx = x;
@@ -155,6 +184,11 @@ public final class ElytraFlight {
         m.put("reason", reason);
         m.put("rocketsUsed", rocketsUsed);
         if (lowLevel) m.put("low", true);
+        var r = route;
+        if (r != null) m.put("waypoint", (routeIdx + 1) + "/" + r.length);
+        var tr = pilot.trick();
+        if (tr != null) m.put("trick", tr.name().toLowerCase(java.util.Locale.ROOT));
+        m.put("figures", pilot.tricksDone());
         var sky = openSky;
         if (phase == Phase.FAILED && sky != null) m.put("openSky", sky.getX() + "," + sky.getY() + "," + sky.getZ());
         if (leader != null) m.put("leader", leader);
@@ -331,8 +365,23 @@ public final class ElytraFlight {
         }
         if (!pilotReady) {
             pilot.reset(p.getYaw(), p.getPitch());
+            pilot.setTricks(rescue ? 0 : tricksWanted);
             pilotReady = true;
         }
+        // A route: a waypoint passed within 20 blocks -- on to the next one, no landing.
+        var r = route;
+        if (r != null && !rescue && routeIdx < r.length - 1 && dist < 20) {
+            routeIdx++;
+            tx = r[routeIdx][0];
+            ty = r[routeIdx][1];
+            tz = r[routeIdx][2];
+            dx = tx - p.getX();
+            dz = tz - p.getZ();
+            dist = Math.hypot(dx, dz);
+            bestDist = Double.MAX_VALUE;
+            bestTick = ticks;
+        }
+        pilot.setPassThrough(r != null && !rescue && routeIdx < r.length - 1);
         pilot.setLowLevel(lowLevel && !rescue);
         if (lowLevel && !rescue) pilot.setLowGuide(lowGuide(client, p));
         var v = p.getVelocity();
@@ -346,7 +395,7 @@ public final class ElytraFlight {
         // No progress for 6 s outside a landing (boxed in, a ceiling, a wall): give up rather than
         // burn rockets against it -- 36 went into a bunker roof once.
         boolean landingPhase = o.mode == ElytraPilot.Mode.FLARE || o.mode == ElytraPilot.Mode.SINK
-                || o.mode == ElytraPilot.Mode.FINAL;
+                || o.mode == ElytraPilot.Mode.FINAL || o.mode == ElytraPilot.Mode.TRICK; // figures circle on purpose
         if (dist < bestDist - 3 || landingPhase) {
             bestDist = Math.min(bestDist, dist);
             bestTick = ticks;
@@ -470,6 +519,8 @@ public final class ElytraFlight {
         lastOut = null;
         rescue = true;
         lowLevel = false;
+        route = null;
+        tricksWanted = 0;
         armed = false;
         reason = "rescue";
         phase = Phase.FLYING;

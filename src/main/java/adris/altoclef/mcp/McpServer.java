@@ -244,10 +244,18 @@ public class McpServer {
         tool("flyTo",
                 "Elytra flight to a point: equip, take off, climb on fireworks above terrain, glide down "
                 + "near it. Needs elytra + fireworks in inventory. Poll flyStatus (phase: equip/takeoff/"
-                + "flying/done/failed). Optional low:true = low-level flight a few blocks over the ground.",
+                + "flying/done/failed). Optional low:true = low-level flight a few blocks over the ground; "
+                + "tricks:n = n aerobatic figures on the way (rolls, candles, spirals, eights).",
                 schema("x:int", "y:int", "z:int"),
                 a -> api.flyTo(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"),
-                        a.has("low") && a.get("low").getAsBoolean()));
+                        a.has("low") && a.get("low").getAsBoolean(), a.has("tricks") ? a.get("tricks").getAsInt() : 0));
+        tool("flyRoute",
+                "Elytra route: points \"x,z;x,z;...\" flown through without landing, landing at the last one "
+                + "(a tour of places, a patrol round home). Optional low, tricks as in flyTo. Poll flyStatus "
+                + "(waypoint: k/n).",
+                schema("points:string"),
+                a -> api.flyRoute(a.get("points").getAsString(), a.has("low") && a.get("low").getAsBoolean(),
+                        a.has("tricks") ? a.get("tricks").getAsInt() : 0));
         tool("flyStatus", "Current elytra flight: phase, reason, distance, rockets used.", schema(),
                 a -> api.flyStatus());
         tool("flyStop", "Abort the elytra flight (the bot glides down on its own).", schema(),
