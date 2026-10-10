@@ -34,6 +34,11 @@ public final class ElytraPilot {
     static final double SINK_FAST = 0.42;        // blocks a tick down while high over the spot
     static final double SINK_SLOW = 0.25;        // ... and over the last 10 blocks
     static final double SINK_MAX_ANGLE = 60;
+    // Low-level flight (бреющий): this high over the ground just ahead, kept fast with rockets.
+    static final double LOW_CLEARANCE = 4;
+    static final double LOW_SPEED = 1.3;
+    static final double LOW_DIVE = 30;           // steepest dive into a valley
+    static final double LOW_PITCH_RATE = 7;      // quicker hands close to the ground
     static final double FLARE_BELOW = 14;        // brake over the spot only this low
     // Braking turn: looking this far off the way it flies, elytra lose 8-10 % of their speed a
     // tick (vanilla blends the velocity towards the look 10 % a tick) instead of 1 % flying
@@ -48,6 +53,8 @@ public final class ElytraPilot {
     private int climbOut;
     private int weaveTicks;
     private int brakeSide; // +1 or -1: which way the braking turn goes; 0 when not braking
+    private boolean lowLevel;
+    private double lowGuide = Double.NaN;
 
     public void reset(float yaw, float pitch) {
         this.yaw = yaw;
@@ -66,6 +73,15 @@ public final class ElytraPilot {
     }
 
     public Mode mode() { return mode; }
+
+    /** Low-level flight: hug the terrain a few blocks up instead of cruising 20 over the highest
+     *  ground ahead. terrainAhead must then cover only the next second or so of the course. */
+    public void setLowLevel(boolean on) { lowLevel = on; }
+
+    /** Low-level flight, each tick before step(): the steepest flight-path angle that passes
+     *  LOW_CLEARANCE over every point of the ground profile just ahead (terrain-following radar:
+     *  max over k of atan((ground_k + clearance - y) / k)). */
+    public void setLowGuide(double degrees) { lowGuide = degrees; }
 
     /**
      * One tick.
@@ -88,7 +104,9 @@ public final class ElytraPilot {
         double speed = Math.sqrt(hs * hs + vy * vy);
         double gamma = Math.toDegrees(Math.atan2(vy, Math.max(hs, 1e-6)));
         double above = y - ty;
-        double cruise = Math.max(terrainAhead, ty) + CLEARANCE;
+        // Low: over the ground just ahead, not up to the landing spot's height while still far.
+        double cruise = lowLevel ? (dist > 60 ? terrainAhead : Math.max(terrainAhead, ty)) + LOW_CLEARANCE
+                : Math.max(terrainAhead, ty) + CLEARANCE;
         if (boostCooldown > 0) boostCooldown--;
         if (climbOut > 0) climbOut--;
 
@@ -115,26 +133,29 @@ public final class ElytraPilot {
             // Steep approach, or a plane approach that came in far too high: brake over the spot
             // when low, spiral down onto it when high.
             mode = above < FLARE_BELOW ? Mode.FLARE : Mode.SINK;
-        } else if (dist < slopeDist + 6 + (runwayClear ? speed * 10 : 0) && climbOut == 0) {
+        } else if (dist < slopeDist + 6 + (runwayClear ? speed * 10 : 0) && climbOut == 0
+                && !(lowLevel && terrainAhead > ty + 2)) { // low over high ground: follow it down first
             mode = Mode.DESCENT;
-        } else if (climbOut > 0 || y < cruise - 8) {
+        } else if (climbOut > 0 || !lowLevel && y < cruise - 8) { // low: the guide climbs in cruise
             mode = Mode.CLIMB;
         } else {
             mode = Mode.CRUISE;
         }
         // Higher ground than the landing spot still ahead and not far below: climb over it first.
-        boolean ridge = dist > 50 && terrainAhead > ty + 2 && y - terrainAhead < 12
+        boolean ridge = !lowLevel && dist > 50 && terrainAhead > ty + 2 && y - terrainAhead < 12
                 && mode != Mode.FLARE && mode != Mode.SINK && mode != Mode.FINAL;
         if (ridge) mode = Mode.CLIMB;
         // Something solid straight ahead, closer than ~1.4 s of flight: pull up hard now, with
         // power. On an approach this is a go-around: the next ticks plan a new one.
         // Slow (a landing sink, a stall) a bump does no harm -- elytra hurt only on a sharp loss of
         // horizontal speed -- and pulling up there just starts go-around after go-around.
-        boolean avoid = speed > 0.45 && obstacleDist < Math.max(10, speed * 28)
+        // Low over the ground the ray meets every rise ahead: react later -- the climb below
+        // follows the terrain, the pull-up only takes what comes too fast for it.
+        boolean avoid = speed > 0.45 && obstacleDist < Math.max(lowLevel ? 8 : 10, speed * (lowLevel ? 16 : 28))
                 && mode != Mode.FLARE && mode != Mode.SINK;
         if (avoid) mode = Mode.AVOID;
         // Terrain right under the wings beats any plan.
-        boolean low = !avoid && y - groundBelow < 6 && dist > 16 && mode != Mode.FLARE && mode != Mode.SINK
+        boolean low = !avoid && y - groundBelow < (lowLevel ? 2 : 6) && dist > 16 && mode != Mode.FLARE && mode != Mode.SINK
                 && mode != Mode.FINAL && !(mode == Mode.DESCENT && runwayClear && dist < 50);
         if (low) mode = Mode.CLIMB;
 
@@ -143,15 +164,23 @@ public final class ElytraPilot {
         switch (mode) {
             case CLIMB -> {
                 gammaCmd = Math.max(8, Math.min(30, (cruise - y) * 0.9));
+                if (lowLevel && climbOut > 0) gammaCmd = Math.max(gammaCmd, 20); // clear the take-off spot first
                 if (speed < 0.9 && boostCooldown == 0) gammaCmd = Math.min(gammaCmd, 4); // no stall
                 // Close to the descent a rocket only adds speed the landing must bleed off.
                 wantBoost = low || ridge || speed < 0.8 || speed < 1.3 && (climbOut > 0 || dist > slopeDist + 30);
             }
             case CRUISE -> {
-                // Soar: glide down gently through an 8-block band, a rocket only at its bottom
-                // or when the speed sags -- long quiet glides between short pushes.
-                gammaCmd = Math.max(-4, Math.min(6, (cruise - y) * 0.5));
-                wantBoost = dist > slopeDist + 45 && (speed < 0.95 || (cruise - y > 6 && speed < 1.25));
+                if (lowLevel) {
+                    // Follow the ground by the guide; fast all the way, with power up a climb.
+                    double guide = Double.isNaN(lowGuide) ? (cruise - y) * 0.8 : lowGuide;
+                    gammaCmd = Math.max(-LOW_DIVE, Math.min(35, guide));
+                    wantBoost = dist > slopeDist + 25 && (speed < LOW_SPEED || gammaCmd > 12 && speed < 1.6);
+                } else {
+                    // Soar: glide down gently through an 8-block band, a rocket only at its bottom
+                    // or when the speed sags -- long quiet glides between short pushes.
+                    gammaCmd = Math.max(-4, Math.min(6, (cruise - y) * 0.5));
+                    wantBoost = dist > slopeDist + 45 && (speed < 0.95 || (cruise - y > 6 && speed < 1.25));
+                }
             }
             case DESCENT -> {
                 double path = Math.toDegrees(Math.atan2(Math.max(above - 1, 0), Math.max(dist - 3, 1)));
@@ -280,7 +309,7 @@ public final class ElytraPilot {
     private Out steer(Out o, float pitchCmd, float yawCmd, boolean wantBoost, double gamma, double gammaCmd, double speed) {
         float dyaw = wrap(yawCmd - yaw);
         yaw = wrap(yaw + (float) clamp(dyaw * 0.35, mode == Mode.FLARE ? MAX_YAW_RATE * 2.5 : MAX_YAW_RATE));
-        pitch += (float) clamp(pitchCmd - pitch, mode == Mode.AVOID ? MAX_PITCH_RATE * 2 : MAX_PITCH_RATE);
+        pitch += (float) clamp(pitchCmd - pitch, mode == Mode.AVOID ? MAX_PITCH_RATE * 2 : lowLevel && mode == Mode.CRUISE ? LOW_PITCH_RATE : MAX_PITCH_RATE);
         if (wantBoost && boostCooldown == 0) {
             o.boost = true;
             boostCooldown = (int) ROCKET_TICKS;

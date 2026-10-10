@@ -8,10 +8,13 @@ import adris.altoclef.util.agent.ElytraPilot;
  *   java -cp out ElytraPilotSim [trace]
  */
 public class ElytraPilotSim {
+    static final int TRACE_EVERY = Integer.getInteger("every", 10);
 
     interface Terrain { double h(double x, double z); }
 
-    record Scene(String name, double tx, double tz, double ty, Terrain t) {}
+    record Scene(String name, double tx, double tz, double ty, Terrain t, boolean low) {
+        Scene(String name, double tx, double tz, double ty, Terrain t) { this(name, tx, tz, ty, t, false); }
+    }
 
     public static void main(String[] args) {
         String only = args.length > 0 ? args[0] : null;
@@ -31,6 +34,10 @@ public class ElytraPilotSim {
             // under it, only its top shows -- the climb must start before the deck, not under it.
             new Scene("bridge deck", 260, 0, 70, (x, z) -> Math.abs(x - 130) <= 3 ? 86 : 70),
             new Scene("long 900", 0, 900, 70, (x, z) -> 70 + 15 * Math.sin(z / 60)),
+            // Low-level flight (бреющий): rolling hills, a town, a 25-block cliff up and down.
+            new Scene("low hills 500", 500, 0, 70, (x, z) -> x < 40 || x > 460 ? 70 : 70 + 10 * Math.sin((x - 40) / 35) + 6 * Math.sin((x - 40) / 13 + z / 20), true),
+            new Scene("low town 300", 300, 40, 70, (x, z) -> x < 40 || x > 270 ? 70 : 70 + ((((int) Math.floor(x / 9)) * 31 + ((int) Math.floor(z / 9)) * 17) & 7) * 1.5, true),
+            new Scene("low cliff 400", 400, 0, 70, (x, z) -> x > 150 && x < 260 ? 95 : 70, true),
         };
         int fails = 0;
         for (Scene s : scenes) {
@@ -41,7 +48,7 @@ public class ElytraPilotSim {
             }
             // Rocket burn time is random (20..31 ticks): judge the worst of many runs, not one.
             int ok = 0;
-            double sumT = 0, maxT = 0, worstClear = 1e9, sumR = 0, maxApp = 0;
+            double sumT = 0, maxT = 0, worstClear = 1e9, sumR = 0, maxApp = 0, worstMean = 0;
             String firstFail = "";
             for (long seed = 0; seed < 20; seed++) {
                 Result r = run(s, false, seed);
@@ -49,10 +56,17 @@ public class ElytraPilotSim {
                 sumT += r.seconds; maxT = Math.max(maxT, r.seconds); sumR += r.rockets;
                 worstClear = Math.min(worstClear, r.minClear);
                 maxApp = Math.max(maxApp, r.approach);
+                worstMean = Math.max(worstMean, r.meanClear);
+            }
+            // Low-level: well under a normal cruise over the same ground (20-27 on average there).
+            if (s.low && worstMean > 13) {
+                ok = Math.min(ok, 19);
+                firstFail = String.format("not low-level: mean %.1f min %.1f", worstMean, worstClear);
             }
             if (ok < 20) fails++;
-            System.out.printf("%-22s ok %2d/20  time avg %4.1fs max %4.1fs  last 25 blocks max %4.1fs  rockets %4.1f  clearance %5.1f  %s%n",
-                    s.name, ok, sumT / 20, maxT, maxApp, sumR / 20, worstClear, firstFail);
+            System.out.printf("%-22s ok %2d/20  time avg %4.1fs max %4.1fs  last 25 blocks max %4.1fs  rockets %4.1f  clearance %5.1f%s  %s%n",
+                    s.name, ok, sumT / 20, maxT, maxApp, sumR / 20, worstClear,
+                    s.low ? String.format(" (mean %.1f)", worstMean) : "", firstFail);
         }
         if (only == null || "follow".startsWith(only)) {
             int ok = 0;
@@ -128,15 +142,18 @@ public class ElytraPilotSim {
         return new double[] {sumGap / n, maxGap, rockets, clean ? 1 : 0};
     }
 
-    record Result(boolean ok, String verdict, double seconds, int rockets, double minClear, double end, double approach) {}
+    record Result(boolean ok, String verdict, double seconds, int rockets, double minClear, double end, double approach, double meanClear) {}
 
     static Result run(Scene s, boolean trace, long seed) {
         java.util.Random rnd = new java.util.Random(seed);
         ElytraPilot pilot = new ElytraPilot();
+        double sumClear = 0;
+        int nClear = 0;
         double x = 0, z = 0, y = s.t.h(0, 0) + 1.6;
         double vx = 0, vy = -0.05, vz = 0;
         float yaw0 = (float) Math.toDegrees(Math.atan2(-(s.tx - x), s.tz - z));
         pilot.reset(yaw0 + 30, 0); // a player rarely faces the target exactly
+        pilot.setLowLevel(s.low && !Boolean.getBoolean("nolow"));
         int rocketLeft = 0, rockets = 0, ticks = 0;
         double minClear = 1e9, maxDPitch = 0, maxDYaw = 0;
         float lastPitch = 0, lastYaw = yaw0 + 30;
@@ -146,6 +163,7 @@ public class ElytraPilotSim {
         boolean ok = false;
         for (; ticks < 20 * 180; ticks++) {
             double ahead = terrainAhead(s, x, z, vx, vz);
+            if (s.low && !Boolean.getBoolean("nolow")) pilot.setLowGuide(lowGuide(s, x, y, z, vx, vz));
             double ground = s.t.h(x, z);
             // The landing height is the ground at the target, as the mod reads it from the heightmap.
             ElytraPilot.Out o = pilot.step(x, y, z, vx, vy, vz, s.tx, s.t.h(s.tx, s.tz), s.tz, ahead, ground,
@@ -191,7 +209,8 @@ public class ElytraPilotSim {
             double clear = y - s.t.h(x, z);
             if (near < 0 && dist < 25) near = ticks;
             if (dist > 20 && ticks > 30) minClear = Math.min(minClear, clear);
-            if (trace && ticks % 10 == 0) {
+            if (o.mode == ElytraPilot.Mode.CRUISE) { sumClear += clear; nClear++; } // the cruise, not climb-out or landing
+            if (trace && ticks % TRACE_EVERY == 0) {
                 System.out.printf("  t=%4d %-7s pos=%6.0f %5.1f %6.0f dist=%5.0f clear=%5.1f v=%.2f gam=%5.1f cmd=%5.1f pitch=%5.1f%s%n",
                         ticks, o.mode, x, y, z, dist, clear, o.speed, o.gamma, o.gammaCmd, o.pitch, o.boost ? " ROCKET" : "");
             }
@@ -214,7 +233,8 @@ public class ElytraPilotSim {
         }
         double dist = Math.hypot(s.tx - x, s.tz - z);
         if (trace) System.out.println("  modes: " + modes);
-        return new Result(ok, verdict, ticks / 20.0, rockets, minClear, dist, near < 0 ? 0 : (ticks - near) / 20.0);
+        return new Result(ok, verdict, ticks / 20.0, rockets, minClear, dist, near < 0 ? 0 : (ticks - near) / 20.0,
+                nClear == 0 ? 0 : sumClear / nClear);
     }
 
     /** Nothing standing into a 7-degree slope (1.5 blocks margin) on the last 50 blocks before the target. */
@@ -232,10 +252,29 @@ public class ElytraPilotSim {
     /** As the mod: highest ground in a 5-block corridor every 2 blocks, 120 along the line to the
      *  target and 60 along the current direction of flight (turns fly arcs), and the target. */
     static double terrainAhead(Scene s, double x, double z, double vx, double vz) {
+        if (s.low && !Boolean.getBoolean("nolow")) { // as the mod in low-level flight: only the next second or so of the course
+            double dist = Math.hypot(s.tx - x, s.tz - z), reach = Math.max(16, Math.hypot(vx, vz) * 25);
+            double m = corridor(s, x, z, s.tx - x, s.tz - z, Math.min(reach, dist));
+            if (Math.hypot(vx, vz) > 0.2) m = Math.max(m, corridor(s, x, z, vx, vz, reach));
+            return dist < 60 ? Math.max(m, s.t.h(s.tx, s.tz)) : m;
+        }
         double m = s.t.h(s.tx, s.tz);
         m = Math.max(m, corridor(s, x, z, s.tx - x, s.tz - z, Math.min(120, Math.hypot(s.tx - x, s.tz - z))));
         if (Math.hypot(vx, vz) > 0.2) m = Math.max(m, corridor(s, x, z, vx, vz, 60));
         return m;
+    }
+
+    /** As the mod: the steepest angle passing LOW_CLEARANCE (4) over the ground just ahead. */
+    static double lowGuide(Scene s, double x, double y, double z, double vx, double vz) {
+        double hs = Math.hypot(vx, vz), dx = hs > 0.2 ? vx : s.tx - x, dz = hs > 0.2 ? vz : s.tz - z;
+        double d = Math.max(Math.hypot(dx, dz), 1e-6), ux = dx / d, uz = dz / d;
+        double reach = Math.max(16, hs * 25), best = -90;
+        for (double k = 2; k <= reach; k += 2) {
+            double g = -1e9;
+            for (double w = -2; w <= 2; w += 2) g = Math.max(g, s.t.h(x + ux * k - uz * w, z + uz * k + ux * w));
+            best = Math.max(best, Math.toDegrees(Math.atan2(g + 4 - y, k)));
+        }
+        return best;
     }
 
     static double corridor(Scene s, double x, double z, double dx, double dz, double len) {

@@ -5846,7 +5846,12 @@ public class Py4jEntryPoint {
      *  glides down near the target. Fire-and-poll with flyStatus. Needs an elytra and
      *  fireworks in the inventory (creativeGive them in creative). */
     public Map<String, Object> flyTo(int x, int y, int z) {
-        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.start(x + 0.5, y, z + 0.5),
+        return flyTo(x, y, z, false);
+    }
+
+    /** Elytra flight; low = low-level (бреющий), a few blocks over the ground all the way. */
+    public Map<String, Object> flyTo(int x, int y, int z, boolean low) {
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.start(x + 0.5, y, z + 0.5, low),
                 Map.of("phase", "failed", "reason", "client thread timeout"));
     }
 

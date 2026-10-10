@@ -63,6 +63,7 @@ public final class ElytraFlight {
     private static int bestTick;
     private static int deployCooldown;
     private static boolean glideSent;
+    private static volatile boolean lowLevel; // бреющий: a few blocks over the ground all the way
     private static boolean registered;
 
     private static final int TIMEOUT_TICKS = 20 * 180;
@@ -114,7 +115,13 @@ public final class ElytraFlight {
 
     /** Start a flight; call on the client thread. */
     public static synchronized Map<String, Object> start(double x, double y, double z) {
+        return start(x, y, z, false);
+    }
+
+    /** Start a flight, low-level (бреющий) when low; call on the client thread. */
+    public static synchronized Map<String, Object> start(double x, double y, double z, boolean low) {
         register();
+        lowLevel = low;
         rescue = false;
         leader = null;
         tx = x;
@@ -146,6 +153,7 @@ public final class ElytraFlight {
         m.put("phase", phase.name().toLowerCase(java.util.Locale.ROOT));
         m.put("reason", reason);
         m.put("rocketsUsed", rocketsUsed);
+        if (lowLevel) m.put("low", true);
         var sky = openSky;
         if (phase == Phase.FAILED && sky != null) m.put("openSky", sky.getX() + "," + sky.getY() + "," + sky.getZ());
         if (leader != null) m.put("leader", leader);
@@ -313,6 +321,8 @@ public final class ElytraFlight {
             pilot.reset(p.getYaw(), p.getPitch());
             pilotReady = true;
         }
+        pilot.setLowLevel(lowLevel && !rescue);
+        if (lowLevel && !rescue) pilot.setLowGuide(lowGuide(client, p));
         var v = p.getVelocity();
         if (leader != null && wingman(client, p, v)) return;
         ElytraPilot.Out o = pilot.step(p.getX(), p.getY(), p.getZ(), v.x, v.y, v.z,
@@ -413,6 +423,7 @@ public final class ElytraFlight {
         pilotReady = true;
         lastOut = null;
         rescue = true;
+        lowLevel = false;
         armed = false;
         reason = "rescue";
         phase = Phase.FLYING;
@@ -516,12 +527,39 @@ public final class ElytraFlight {
      *  target and 60 along the current direction of flight (a turn flies an arc), and the target.
      *  Sparser sampling let a thin tower slip between two samples. */
     private static double terrainAhead(MinecraftClient client, ClientPlayerEntity p) {
-        double m = landingY(client);
         double dx = tx - p.getX(), dz = tz - p.getZ();
+        var vel = p.getVelocity();
+        if (lowLevel && !rescue) { // only the next second or so of the course: it hugs the ground
+            double dist = Math.hypot(dx, dz), hs = Math.hypot(vel.x, vel.z), reach = Math.max(16, hs * 25);
+            double m = corridor(client, p.getX(), p.getZ(), dx, dz, Math.min(reach, dist));
+            if (hs > 0.2) m = Math.max(m, corridor(client, p.getX(), p.getZ(), vel.x, vel.z, reach));
+            return dist < 60 ? Math.max(m, landingY(client)) : m;
+        }
+        double m = landingY(client);
         m = Math.max(m, corridor(client, p.getX(), p.getZ(), dx, dz, Math.min(120, Math.hypot(dx, dz))));
         var v = p.getVelocity();
         if (Math.hypot(v.x, v.z) > 0.2) m = Math.max(m, corridor(client, p.getX(), p.getZ(), v.x, v.z, 60));
         return m;
+    }
+
+    /** Low-level flight: the steepest flight-path angle that passes 4 blocks over every point of
+     *  the ground in the next ~1.2 s along the way it flies (as ElytraPilotSim.lowGuide). */
+    private static double lowGuide(MinecraftClient client, ClientPlayerEntity p) {
+        var v = p.getVelocity();
+        double hs = Math.hypot(v.x, v.z);
+        double dx = hs > 0.2 ? v.x : tx - p.getX(), dz = hs > 0.2 ? v.z : tz - p.getZ();
+        double d = Math.max(Math.hypot(dx, dz), 1e-6), ux = dx / d, uz = dz / d;
+        double reach = Math.max(16, hs * 25), best = -90;
+        for (double k = 2; k <= reach; k += 2) {
+            double g = -1e9;
+            for (double w = -2; w <= 2; w += 2) {
+                double sx = p.getX() + ux * k - uz * w, sz = p.getZ() + uz * k + ux * w;
+                if (!client.world.getChunkManager().isChunkLoaded((int) Math.floor(sx) >> 4, (int) Math.floor(sz) >> 4)) continue;
+                g = Math.max(g, top(client, sx, sz));
+            }
+            if (g > -1e8) best = Math.max(best, Math.toDegrees(Math.atan2(g + 4 - p.getY(), k)));
+        }
+        return best;
     }
 
     private static double corridor(MinecraftClient client, double x, double z, double dx, double dz, double len) {
