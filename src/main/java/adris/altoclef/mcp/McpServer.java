@@ -185,6 +185,7 @@ public class McpServer {
     }
 
     private JsonObject toolsCallResult(JsonObject params) {
+        adris.altoclef.util.agent.ElytraFlight.agentSeen();
         String name = params.get("name").getAsString();
         JsonObject args = params.has("arguments") && params.get("arguments").isJsonObject()
                 ? params.getAsJsonObject("arguments") : new JsonObject();

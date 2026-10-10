@@ -4971,6 +4971,7 @@ public class Py4jEntryPoint {
             if (me == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
             out.put("ok", true);
             out.put("busy", hasActiveTask());
+            out.put("manualMs", adris.altoclef.util.agent.ElytraFlight.msSinceManual()); // the player steering by hand
             out.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
             if (_gotoGoal != null) {
                 double dx = _gotoGoal[0] + 0.5 - me.getX(), dy = _gotoGoal[1] - me.getY(), dz = _gotoGoal[2] + 0.5 - me.getZ();
@@ -6043,6 +6044,7 @@ public class Py4jEntryPoint {
             self.put("saturation", me.getHungerManager().getSaturationLevel());
             self.put("pos", String.format(java.util.Locale.ROOT, "%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
             self.put("onGround", me.isOnGround());
+            self.put("manualMs", adris.altoclef.util.agent.ElytraFlight.msSinceManual()); // the player steering by hand
             // WHICH WORLD AM I IN? There was no way to ask over py4j at all, which a playthrough
             // needs constantly -- overworld, nether, end are three different sets of rules, and an
             // agent that cannot tell them apart cannot plan across a portal. Found while writing the

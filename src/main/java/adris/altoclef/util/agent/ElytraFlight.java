@@ -1,9 +1,13 @@
 package adris.altoclef.util.agent;
 
 import adris.altoclef.multiversion.entity.PlayerVer;
+import adris.altoclef.util.helpers.InputHelper;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
@@ -42,6 +46,12 @@ public final class ElytraFlight {
     // flying this account by hand is never taken over.
     private static volatile boolean fallGlide = true;
     private static boolean armed, rescue;
+    // Hands on the controls: a player steering this account by hand (the mouse, movement keys)
+    // takes over at once. The pilot lets go and the fall watch stays off until the feet are down.
+    // The fall watch also needs the agent to be attached: playing alone, nothing is taken over.
+    private static volatile long manualMs, agentMs;
+    private static double lastMouseX = Double.NaN, lastMouseY;
+    private static boolean handsOn;
     // Wingman flight: the leader's name, and their velocity estimated from positions -- the
     // client does not get other players' velocity, only where they are.
     private static volatile String leader;
@@ -65,6 +75,15 @@ public final class ElytraFlight {
             ClientTickEvents.END_CLIENT_TICK.register(ElytraFlight::tick);
             registered = true;
         }
+    }
+
+    /** The agent called in; the fall watch works only while one is attached. */
+    public static void agentSeen() { agentMs = System.currentTimeMillis(); }
+
+    /** Milliseconds since the player last steered by hand, -1 if never. */
+    public static long msSinceManual() {
+        long t = manualMs;
+        return t == 0 ? -1 : System.currentTimeMillis() - t;
     }
 
     /** Fall watch on/off (on by default): open the wings in a long fall and land. */
@@ -181,6 +200,18 @@ public final class ElytraFlight {
 
     private static void tick(MinecraftClient client) {
         Phase ph = phase;
+        if (manualInput(client)) {
+            manualMs = System.currentTimeMillis();
+            if (client.player != null && !client.player.isOnGround()) handsOn = true;
+            if (ph == Phase.EQUIP || ph == Phase.TAKEOFF || ph == Phase.FLYING) {
+                // No putRocketsAway: the player flying on by hand wants the rockets in hand.
+                phase = Phase.FAILED;
+                reason = "by hand";
+                rescue = armed = false;
+                leader = null;
+                return;
+            }
+        }
         if (ph == Phase.IDLE || ph == Phase.DONE || ph == Phase.FAILED) {
             watchFall(client);
             return;
@@ -314,6 +345,11 @@ public final class ElytraFlight {
         if (p.isOnGround() || p.isTouchingWater() || p.isInLava() || p.hasVehicle() || p.isClimbing()
                 || p.getAbilities().flying || !p.getEquippedStack(EquipmentSlot.CHEST).isOf(Items.ELYTRA)) {
             armed = false;
+            if (!p.getAbilities().flying) handsOn = false; // feet down: watch again from here
+            return;
+        }
+        if (handsOn || System.currentTimeMillis() - agentMs > 30_000) {
+            armed = false;
             return;
         }
         double height = p.getY() - top(client, p.getX(), p.getZ());
@@ -328,6 +364,29 @@ public final class ElytraFlight {
             deployCooldown = 5;
             armed = true;
         }
+    }
+
+    /** Physical input from the player at the keyboard: the mouse turning the view, or a movement
+     *  key held. Read from the window, so keys the bot presses itself do not count. */
+    private static boolean manualInput(MinecraftClient client) {
+        var m = client.mouse;
+        double mx = m.getX(), my = m.getY();
+        // About 4 degrees of turn at the default sensitivity: a hand resting on the mouse is not it.
+        boolean moved = !Double.isNaN(lastMouseX) && Math.abs(mx - lastMouseX) + Math.abs(my - lastMouseY) > 25;
+        lastMouseX = mx;
+        lastMouseY = my;
+        if (client.player == null || client.currentScreen != null || !client.isWindowFocused() || !m.isCursorLocked()) {
+            return false;
+        }
+        if (moved) return true;
+        var o = client.options;
+        for (KeyBinding kb : new KeyBinding[]{o.forwardKey, o.backKey, o.leftKey, o.rightKey, o.jumpKey, o.sneakKey}) {
+            InputUtil.Key key = KeyBindingHelper.getBoundKeyOf(kb);
+            if (key.getCategory() == InputUtil.Type.KEYSYM && key.getCode() > 0 && InputHelper.isKeyPressed(key.getCode())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Land the glide at a spot ahead along the way it is going. */
