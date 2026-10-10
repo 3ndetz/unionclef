@@ -6175,6 +6175,7 @@ public class Py4jEntryPoint {
             }
             self.put("flying", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(me));
             self.put("inWater", adris.altoclef.util.agent.SwimToShore.inWater(me));
+            self.put("name", me.getName().getString()); // which client this is, with two running
             out.put("self", self);
 
             List<Map<String, Object>> players = new ArrayList<>();

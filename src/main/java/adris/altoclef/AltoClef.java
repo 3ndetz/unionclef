@@ -222,8 +222,19 @@ public class AltoClef implements ModInitializer {
                 ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
             }
             _mcpServer = new adris.altoclef.mcp.McpServer(_py4jEntryPoint, token);
+            // Two game clients from one folder share the settings: the second finds the port
+            // taken. Take the next free one (not saved: the first client keeps its own); an agent
+            // finds its client by the player's name in getGameState.
             int mport = getModSettings().getMcpPort();
-            _mcpServer.start(mport);
+            for (int i = 0; ; i++) {
+                try {
+                    _mcpServer.start(mport + i);
+                    mport += i;
+                    break;
+                } catch (java.net.BindException taken) {
+                    if (i >= 9) throw taken;
+                }
+            }
             Debug.logMessage("MCP server started on 0.0.0.0:" + mport + " (http://<lan-ip>:" + mport
                     + "/mcp) — auth token in " + adris.altoclef.Settings.SETTINGS_PATH
                     + " (mcpAuthToken), required as 'Authorization: Bearer <token>'");
