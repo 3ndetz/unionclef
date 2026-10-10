@@ -5955,6 +5955,14 @@ public class Py4jEntryPoint {
             int left = Math.max(1, Math.min(count, 64 * 9));
             int given = 0;
             var inv = me.getInventory();
+            // Already carried (or worn): nothing more. Every take-off asked for 64 rockets and
+            // filled a new slot each time until the whole inventory was rockets.
+            int had = me.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST).isOf(item) ? 1 : 0;
+            for (int i = 0; i < 36; i++) if (inv.getStack(i).isOf(item)) had += inv.getStack(i).getCount();
+            if (had >= Math.min(left, item.getMaxCount())) {
+                out.put("ok", true); out.put("given", 0); out.put("had", had);
+                return out;
+            }
             for (int i = 0; i < 36 && left > 0; i++) {
                 if (!inv.getStack(i).isEmpty()) continue;
                 int n = Math.min(left, item.getMaxCount());
@@ -5974,7 +5982,10 @@ public class Py4jEntryPoint {
 
     /** Items an agent keeps whatever the mode: the flight kit and what rockets are made of. */
     private static final java.util.Set<String> TIDY_KEEP = java.util.Set.of(
-            "elytra", "firework_rocket", "paper", "gunpowder", "sugar_cane");
+            "elytra", "firework_rocket", "paper", "gunpowder", "sugar_cane", "netherite_sword");
+    /** Creative: how many stacks of each kit item are worth keeping; more are spare copies. */
+    private static final Map<String, Integer> TIDY_KEEP_STACKS = Map.of(
+            "elytra", 1, "firework_rocket", 2, "paper", 1, "gunpowder", 1, "sugar_cane", 1, "netherite_sword", 1);
     /** Survival junk the pathfinder digs up; safe to throw away. */
     private static final java.util.Set<String> TIDY_JUNK = java.util.Set.of(
             "dirt", "coarse_dirt", "rooted_dirt", "cobblestone", "cobbled_deepslate", "gravel", "sand",
@@ -5997,6 +6008,29 @@ public class Py4jEntryPoint {
             int free = 0;
             for (int i = 0; i < 36; i++) if (inv.getStack(i).isEmpty()) free++;
             int freed = 0;
+            // In creative, kit stacks beyond these are spare copies the creative tab gave out:
+            // they go first. Counted hotbar first, so the stacks at hand are the ones kept.
+            java.util.Set<Integer> spare = new java.util.HashSet<>();
+            if (creative) {
+                Map<String, Integer> seen = new HashMap<>();
+                for (int k = 0; k < 36; k++) {
+                    int i = k; // hotbar 0..8 first, then main 9..35
+                    net.minecraft.item.ItemStack st = inv.getStack(i);
+                    if (st.isEmpty()) continue;
+                    String id = net.minecraft.registry.Registries.ITEM.getId(st.getItem()).getPath();
+                    Integer cap = TIDY_KEEP_STACKS.get(id);
+                    if (cap == null) continue;
+                    int n = seen.merge(id, 1, Integer::sum);
+                    if (n > cap) spare.add(i);
+                }
+            }
+            for (int i : spare) {
+                if (free >= want) break;
+                inv.setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                client.interactionManager.clickCreativeStack(net.minecraft.item.ItemStack.EMPTY, i < 9 ? 36 + i : i);
+                free++;
+                freed++;
+            }
             // Main inventory first, the hotbar last: what the player put in hand stays longest.
             for (int k = 0; k < 36 && free < want; k++) {
                 int i = k < 27 ? k + 9 : k - 27;
