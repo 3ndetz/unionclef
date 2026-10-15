@@ -142,6 +142,18 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 
 - Released [v0.95.59](https://github.com/3ndetz/unionclef/releases/tag/v0.95.59): fix ce8b9580 (+ TODOS line-ending repair b61a7bd1), tag b61a7bd1 on main/1.21.11. Release built from a fresh archive of the committed HEAD (`artifacts/release-0.95.59-20261009`); all 2213 recursive classes byte-identical to the tested ad57 candidate, only fabric.mod.json differs. Published asset unionclef-1.21.11-0.95.59.jar SHA f1e44213, re-downloaded and matched.
 - Next: edited Cave Johnson 0.95.59 video (sub-agent), then the storm-shelter TODOS item with evidence.
+- 0.95.59 video delivered: Telegram 10101 (sources `reports/hf/cave-johnson-0.95.59/`, commit 78c9565c). Never resend 10100/10101.
+
+### Host crash, resumed 2026-10-13
+
+- Host machine died. After restart local main == origin/main == 78c9565c: nothing lost. The shell (pac-bridge:8790) refuses connections, so no git/Docker/build/test is possible; only file reads/edits.
+- Storm-shelter A/B prepared, UNCOMPILED: `TungstenConfig.nightShelterInStorm` (default true = shipped behaviour), `WorldHelper.isShelterNight()` (canSleep() when on, time-of-day window only when off), used by `NightShelterTask.isFinished` and the shelter entry in BeatMinecraftTask (the bed/sleep branch keeps canSleep()). TungstenConfig also holds UNIONCLEF-HARD's water WIP: stage only this hunk (git apply --cached of a one-hunk patch), never `git add` the whole file.
+- When the shell is back: (1) compile an isolated build = HEAD + these three files; (2) start the bench, confirm the deployed jar; (3) paired 15-min native runs from one checkpoint that hits a daytime storm, arms interleaved ON/OFF/OFF/ON (CHECKLIST 4q/4r), outcome = rungs and deaths and damage taken, not stall time; (4) decide the default from that, then the full59 lava stall.
+
+- Shell back 2026-10-15. Isolated build `artifacts/storm-shelter-build-20261015` (HEAD 78c9565c + my storm-shelter hunks only), jar c63a3f0a: vs 0.95.59 only TungstenConfig/NightShelterTask/BeatMinecraftTask(+inner)/WorldHelper differ. Deployed as the only unionclef jar.
+- gamer_smoke gains `--tset KEY=VALUE` (asserts the pin took, resetcfg in finally) and `--weather KIND[:TICKS]`.
+- Storm A/B `artifacts/storm-ab-20261015`, 15-min native from full59-before-portal, thunder:6000, arms on/off/off/on: all PASS, 0 deaths, 29-30 FPS. on: items 146/393, dmg 5/0, 7 idle polls each (shelter); off: items 290/72, dmg 6/6, 0 idle polls. No winner, default stays true.
+- Run 3 (off) stalls 11 min at (-184.5,49,1029) under Construct Nether Portal -> "Getting within 7 blocks of -114,44,1070": busy (pdEnter ~450, mqSteps ~110 per 22 s poll), camera spinning, water source beside a narrow shaft marked red, chat looping "Duct tape: Refreshing inventory again". Same class as full59. No checkpoint (I ran with --checkpoint-every 0, wrong per 0a); next: reproduce with dense checkpoints + movement trace.
 
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no

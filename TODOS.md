@@ -4,7 +4,7 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
-- [ ] **The night shelter sits out a daytime thunderstorm as if it were night (2026-10-09).**
+- [x] **MEASURED, default kept: the night shelter sits out a daytime thunderstorm as if it were night (2026-10-09).**
   `WorldHelper.canSleep()` (WorldHelper.java:670-680) is true in any thunderstorm, which is
   right for a bed (vanilla lets you sleep through one). But BeatMinecraftTask opens
   NightShelterTask on that same predicate, and `NightShelterTask.isFinished` waits for
@@ -13,6 +13,11 @@
   shelters (t=95-351 s, 492-913 s); the film shows rain outside, not night. Decide with
   evidence: hostiles can spawn on the surface in a storm, so the question is whether the
   storm shelter costs more than it saves. Not a 0.95.59 regression.
+  2026-10-15: `TungstenConfig.nightShelterInStorm` (default true) makes it a lever. Four
+  interleaved 15-min native runs from full59-before-portal, forced 5-min daytime thunder
+  (on/off/off/on): 0 deaths everywhere, items 146/393 vs 290/72, damage 5/0 vs 6/6. No arm
+  wins; default stays true. Run 3 (off) reproduced an 11-minute portal-approach stall, see the
+  next item.
 
 - [x] **FIXED: client-log rollover discovery misses an exact completed-case window (2026-10-04).**
   Original activation diagnostic executes20 gameplay PASS, but seals only19

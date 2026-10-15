@@ -682,6 +682,18 @@ public interface WorldHelper {
         return false;
     }
 
+    /**
+     * Night for the no-bed shelter. Same as {@link #canSleep()} unless
+     * {@code TungstenConfig.nightShelterInStorm} is off, in which case a thunderstorm alone does not
+     * count: only the time-of-day night window does.
+     */
+    static boolean isShelterNight() {
+        if (kaptainwutax.tungsten.TungstenConfig.get().nightShelterInStorm) return canSleep();
+        if (MinecraftClient.getInstance().world == null) return false;
+        int time = getTimeOfDay();
+        return 12542 <= time && time <= 23992;
+    }
+
     static int getTimeOfDay() {
         ClientWorld world = MinecraftClient.getInstance().world;
         if (world != null) {

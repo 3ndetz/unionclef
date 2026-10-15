@@ -52,6 +52,13 @@ SAVE_END = (sys.argv[sys.argv.index("--save-end") + 1] if "--save-end" in sys.ar
 # forces day for a fresh run; this carries the same to a --from resume, whose checkpoint may be
 # night. It does NOT touch difficulty -- mobs can still exist, day just stops surface spawns.
 DAYLOCK = "--daylock" in sys.argv
+# --tset KEY=VALUE (repeatable): pin a tungsten setting for this run, after the reset to shipped
+# defaults, so an A/B arm needs no rebuild; the finally resets the config again so the pin does not
+# outlive the run (checklist 4x). --weather KIND[:TICKS] forces the restored world's weather, e.g.
+# thunder:6000, so both arms of a weather-dependent A/B meet the same sky.
+TSET = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--tset"]
+assert all("=" in kv for kv in TSET), TSET
+WEATHER = sys.argv[sys.argv.index("--weather") + 1] if "--weather" in sys.argv else None
 if FROM_CP:
     # the reset and the fresh-start spiral below still run (their world is discarded with the
     # swap); pin the spawn so the spiral's forest search does not spend minutes on ground the
@@ -900,6 +907,9 @@ def _run():
             grcon(f"data merge entity {BOT} {{Health:20.0f,foodLevel:20,foodSaturationLevel:20.0f}}")
             time.sleep(2)
             print("  post-restore safety: forced day, cleared hostiles (r<=64), healed + fed")
+    if WEATHER:
+        _kind, _, _ticks = WEATHER.partition(":")
+        print(f"  weather forced: {grcon(f'weather {_kind} {_ticks or 6000}')}")
     if DAYLOCK:
         grcon("gamerule doDaylightCycle false")
         grcon("gamerule doWeatherCycle false")
@@ -951,6 +961,12 @@ def _run():
         print("  botFpsNoIdleThrottle:", str(py4j("tset", k="botFpsNoIdleThrottle", v="true").get("r"))[:80])
     except Exception as _tp:
         print(f"  botFpsNoIdleThrottle pin FAILED: {str(_tp)[:100]}")
+    for _kv in TSET:
+        _k, _v = _kv.split("=", 1)
+        _r = str(py4j("tset", k=_k, v=_v).get("r"))
+        print(f"  --tset {_k}: {_r[:80]}")
+        # an arm whose pin did not take measures the other arm; refuse to run it
+        assert _r == f"{_k}={_v}", f"--tset {_kv} not applied: {_r}"
     RENDER_FLAGS = ("renderVisualization", "renderPathMoves", "renderCombat",
                     "renderBreakPlan", "renderPlacePlan")
     for flag in RENDER_FLAGS:
@@ -1667,6 +1683,11 @@ def main():
                 raise RuntimeError(f"gamer stop not confirmed: {_stopped}")
         except Exception as _error:
             _cleanup_errors.append(f"gamer stop: {_error}")
+        if TSET:
+            try:
+                py4j("resetcfg")
+            except Exception as _error:
+                _cleanup_errors.append(f"tset reset: {_error}")
         if "--record" in sys.argv:
             try:
                 finish_recording(CLIENT)

@@ -226,7 +226,7 @@ public class NightShelterTask extends Task {
         // there and burn only once the sun is up. Measured on the rung-bucket replay: a shelter
         // left at dawn met them at once, 20 -> 10 health chasing a zombie. Stay until time 1000.
         int t = WorldHelper.getTimeOfDay();
-        return !WorldHelper.canSleep() && t >= 1000;
+        return !WorldHelper.isShelterNight() && t >= 1000;
     }
 
     @Override

@@ -56,6 +56,24 @@ public class TungstenConfig {
     // they are discarded once (see load()).
     private static final int CURRENT_CONFIG_VERSION = 2;
 
+    /**
+     * Does a daytime thunderstorm count as night for the no-bed night shelter (2026-10-09)?
+     *
+     * <p>{@code WorldHelper.canSleep()} is true in any thunderstorm -- right for a bed, vanilla
+     * lets you sleep through one -- and BeatMinecraftTask opened {@code NightShelterTask} on that
+     * same predicate, whose {@code isFinished} waits for {@code !canSleep()}. On the 0.95.59
+     * native15 run from full59-before-portal (restored at time 2079, morning) that meant ~10 of 15
+     * minutes in a dirt hole during daytime storms. Hostiles can spawn on the surface in a storm
+     * and do not burn in rain, so hiding is not obviously wrong; this flag exists to measure it.
+     * true keeps the shipped behaviour; false shelters by time of day only.
+     *
+     * <p>Measured 2026-10-15, four interleaved 15-min native runs from full59-before-portal with a
+     * forced 5-min daytime thunderstorm (on/off/off/on): no deaths in any arm; items 146/393 (on)
+     * vs 290/72 (off), damage 5/0 vs 6/6. No arm wins, so the default stays true; the flag is a
+     * lever for the agent, not a verdict.
+     */
+    public boolean nightShelterInStorm = true;
+
     /** If true: on position mismatch > driftThreshold, setPosition() to simulation value.
      *  If false: stop executor and let path recalculate from real position. */
     public boolean driftCorrectionEnabled = false;

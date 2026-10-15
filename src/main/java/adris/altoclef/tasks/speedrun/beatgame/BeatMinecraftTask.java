@@ -1873,7 +1873,10 @@ public class BeatMinecraftTask extends Task {
                     // health in four minutes, and full47 died there. Underground the night changes
                     // nothing; on the surface, dig in and wait for the morning (NightShelterTask).
                     BlockPos head = mod.getPlayer().getBlockPos().up();
+                    // canSleep() is also true in a daytime thunderstorm (right for a bed);
+                    // whether that alone is a shelter night is TungstenConfig.nightShelterInStorm.
                     if (kaptainwutax.tungsten.TungstenConfig.get().nightShelterOnSurface
+                            && WorldHelper.isShelterNight()
                             && mod.getWorld().isSkyVisible(head)) {
                         // No block needed up front: the two cells it digs drop the cap (full50 spent
                         // its first night on the surface for want of one, with 25 items in the pack).
