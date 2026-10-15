@@ -1,0 +1,87 @@
+{
+ "total": 53.57,
+ "voice": [
+  [
+   "l01",
+   0.3
+  ],
+  [
+   "l02",
+   8.440000000000001
+  ],
+  [
+   "l03",
+   20.42
+  ],
+  [
+   "l04",
+   27.73
+  ],
+  [
+   "l05",
+   37.75
+  ],
+  [
+   "l06",
+   45.37
+  ]
+ ],
+ "clips": [
+  {
+   "key": "v1",
+   "file": "after1.mp4",
+   "src_in": 403.95,
+   "src_out": 412.59,
+   "speed": 1.5
+  },
+  {
+   "key": "v2",
+   "file": "after1.mp4",
+   "src_in": 415.0,
+   "src_out": 416.6,
+   "speed": 2.0
+  },
+  {
+   "key": "v3",
+   "file": "after1.mp4",
+   "src_in": 419.35,
+   "src_out": 420.93,
+   "speed": 1.0
+  },
+  {
+   "key": "v12",
+   "file": "before-run2.mp4",
+   "src_in": 220.0,
+   "src_out": 315.84,
+   "speed": 8.0
+  },
+  {
+   "key": "v13",
+   "file": "after1.mp4",
+   "src_in": 324.26,
+   "src_out": 411.3,
+   "speed": 8.0
+  },
+  {
+   "key": "v14",
+   "file": "after1.mp4",
+   "src_in": 411.3,
+   "src_out": 412.4,
+   "speed": 1.0
+  },
+  {
+   "key": "v26",
+   "file": "after1.mp4",
+   "src_in": 396.0,
+   "src_out": 400.26,
+   "speed": 1.0
+  },
+  {
+   "key": "v35",
+   "file": "after2.mp4",
+   "src_in": 423.06,
+   "src_out": 428.85,
+   "speed": 1.0
+  }
+ ]
+}

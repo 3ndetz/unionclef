@@ -1,0 +1,8 @@
+Unionclef 0.95.61: the old frame gets finished.
+
+The portal task forgot its site after any interruption. At the original full59 site the fresh search chose a spot one block below the frame already cast, and that old obsidian blocked the line from the lava stand to the cast cell: step off, step back, for as long as 39 minutes in the first long playthrough. It now finds a frame already partly cast (around the bot and around the chosen site) and finishes that one.
+
+Same checkpoint at the full59 site: before, 0/3 runs got past the cast (one older build, two with a first version of the fix that never fired); after, 2/2 finished the old frame, lit it and entered the nether. portal_lava_lake still PASS.
+
+In the nether one run was shot by a piglin (no gold armour yet): next item. No speed or FPS gain claimed.
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.61

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Bebas"; src: url("assets/BebasNeue-Regular.ttf"); }
+@font-face { font-family: "Serif"; src: url("assets/DMSerifDisplay-Regular.ttf"); }
+@font-face { font-family: "SerifI"; src: url("assets/DMSerifDisplay-Italic.ttf"); }
+@font-face { font-family: "Mono"; src: url("assets/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "MonoB"; src: url("assets/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "Inter"; src: url("assets/Inter.ttf"); }
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1920px; height:1080px; overflow:hidden; background:#1d2a2f; }
+body { font-family:"Inter", sans-serif; color:#1d2a2f; }
+#root { position:relative; width:100%; height:100%; overflow:hidden; background:#1d2a2f; }
+.clip { position:absolute; inset:0; }
+.card { pointer-events:none; }
+.vid { width:1920px; height:1080px; object-fit:cover; transform-origin:50% 50%; }
+.bgimg { position:absolute; inset:0; width:1920px; height:1080px; object-fit:cover; }
+.vign { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 45%, rgba(20,16,10,0.55) 100%); }
+.edgevig { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 62%, rgba(25,18,8,0.35) 100%); }
+.grain { position:absolute; inset:-200px; background:url("assets/grain.png"); opacity:0.07; mix-blend-mode:overlay; }
+.paper { position:absolute; inset:0; background:radial-gradient(circle at 30% 25%, #fbf3df 0%, #efe2c4 60%, #e2d0a8 100%); }
+.paper.dark { background:radial-gradient(circle at 50% 40%, #27383e 0%, #1d2a2f 55%, #141d20 100%); }
+.reel { position:absolute; top:34px; right:40px; font-family:"MonoB"; font-size:22px; letter-spacing:3px; color:#f3e9d2;
+         background:rgba(29,42,47,0.8); padding:8px 16px; border-left:6px solid #d8453a; }
+.speed { position:absolute; top:36px; right:44px; font-family:"MonoB"; font-size:30px; color:#f3e9d2; background:#1d2a2f;
+          padding:4px 16px; border:3px solid #f3e9d2; }
+.hspeed { position:absolute; top:205px; left:1790px; font-family:"MonoB"; font-size:26px; color:#f3e9d2; background:#1d2a2f;
+          padding:2px 12px; border:3px solid #f3e9d2; }
+.stampbox { position:absolute; width:0; height:0; display:flex; align-items:center; justify-content:center; }
+.stamp { font-family:"Bebas"; white-space:nowrap; letter-spacing:6px; padding:6px 28px 0; border:9px solid; border-radius:14px;
+          background:rgba(243,233,210,0.92); box-shadow:0 0 0 6px rgba(243,233,210,0.92), 10px 12px 0 6px rgba(29,42,47,0.55); }
+.kin { position:absolute; padding:10px 30px 4px 26px; background:#f3e9d2; border-left:14px solid #d8453a; box-shadow:10px 10px 0 rgba(29,42,47,0.85); max-width:1500px; }
+.kin.teal { border-left-color:#1f6f78; }
+.kin.bl { left:60px; bottom:150px; } .kin.tl { left:60px; top:70px; }
+.kin-s { font-family:"MonoB"; font-size:30px; letter-spacing:2px; color:#1f6f78; text-transform:uppercase; }
+.kin-b { font-family:"Bebas"; font-size:110px; line-height:1; color:#1d2a2f; }
+/* halves */
+.half { position:absolute; top:170px; width:930px; height:523px; object-fit:cover; border:6px solid #f3e9d2; }
+.half.left { left:20px; } .half.right { left:970px; }
+.halflab { position:absolute; top:60px; width:930px; text-align:center; font-family:"Bebas"; font-size:84px; letter-spacing:6px; }
+.halflab.left { left:20px; } .halflab.right { left:970px; }
+.halfcap { position:absolute; top:712px; left:0; right:0; text-align:center; font-family:"Mono"; font-size:28px; color:#c9d4d3; }
+.bad { color:#ff7a6a; } .good { color:#7fe0a6; }
+.ring { position:absolute; border:8px solid #e3a73a; border-radius:50%; box-shadow:0 0 0 4px rgba(29,42,47,0.6); }
+.ring span { position:absolute; left:50%; top:100%; transform:translate(-50%, 10px); white-space:nowrap; font-family:"Bebas";
+              font-size:52px; letter-spacing:3px; color:#1d2a2f; background:#e3a73a; padding:2px 16px 0; }
+.nearstat { position:absolute; left:220px; top:740px; width:1480px; background:#f3e9d2; border:5px solid #1d2a2f; padding:14px 30px;
+             box-shadow:12px 12px 0 rgba(0,0,0,0.5); font-family:"Mono"; font-size:34px; color:#1d2a2f; line-height:1.45; }
+.nearstat b { font-family:"Bebas"; font-size:54px; color:#2f7d5b; font-weight:normal; display:inline-block; min-width:170px; }
+/* stat */
+.stat { position:absolute; left:110px; top:120px; width:1700px; }
+.sth { font-family:"Bebas"; font-size:120px; color:#1d2a2f; }
+.srow { display:flex; align-items:center; gap:34px; height:210px; }
+.sl { font-family:"SerifI"; font-size:66px; width:440px; text-align:right; }
+.sbar { height:130px; width:900px; } .sbar.good { background:#2f7d5b; }
+.sv { font-family:"Bebas"; font-size:140px; white-space:nowrap; } .sv.good { color:#2f7d5b; }
+.snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:20px; }
+/* grid */
+.gridhead { position:absolute; left:80px; top:70px; font-family:"MonoB"; font-size:36px; letter-spacing:4px; color:#1f6f78; }
+.grid { position:absolute; left:80px; top:140px; width:1150px; display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; }
+.tile { height:118px; background:#fbf3df; border:4px solid #1d2a2f; display:flex; align-items:center; justify-content:space-between;
+         padding:0 26px; font-family:"MonoB"; font-size:40px; }
+.tile .tk { font-family:"Bebas"; font-size:70px; }
+.tile.ghost { border-style:dashed; border-color:#d8453a; color:#d8453a; background:transparent; }
+.score { position:absolute; right:70px; top:250px; font-family:"Bebas"; font-size:330px; line-height:1; color:#2f7d5b; }
+.score .of { color:#1d2a2f; font-size:160px; }
+.foot { position:absolute; left:80px; top:880px; font-family:"Mono"; font-size:28px; color:#4a5a5f; }
+/* diagram */
+.diag { position:absolute; left:110px; top:160px; width:756px; height:588px; }
+.dgrid { position:absolute; inset:0; display:grid; grid-template-columns:repeat(9, 84px); grid-auto-rows:84px; }
+.cell { border:2px solid rgba(29,42,47,0.25); background:#fbf3df; }
+.cell.wl { background:#6d7478; } .cell.lv { background:#e8692d; }
+.dcirc { position:absolute; border:7px dashed #1f6f78; border-radius:50%; }
+.dx { position:absolute; width:84px; height:84px; display:flex; align-items:center; justify-content:center; font-family:"Inter";
+       font-weight:800; font-size:70px; color:#d8453a; text-shadow:0 0 6px #fff; }
+.dlegend { position:absolute; left:960px; top:200px; width:880px; }
+.dh { font-family:"Bebas"; font-size:100px; color:#1d2a2f; line-height:1; margin-bottom:30px; }
+.dl1, .dl2 { font-family:"SerifI"; font-size:50px; display:flex; align-items:center; gap:22px; margin-bottom:26px; }
+.dl1 { color:#a2382f; } .dl2 { color:#2f7d5b; }
+.sw { width:60px; height:60px; flex:none; border:3px solid #1d2a2f; } .sw.wl { background:#6d7478; } .sw.ok { background:#7fbf8f; }
+.dnote { font-family:"Mono"; font-size:26px; color:#4a5a5f; margin-top:30px; }
+/* stat (0.95.59: three rows, longer labels) */
+.stat { position:absolute; left:90px; top:110px; width:1740px; }
+.sth { font-family:"Bebas"; font-size:96px; color:#1d2a2f; margin-bottom:10px; }
+.srow { display:flex; align-items:center; gap:30px; height:180px; }
+.sl { font-family:"SerifI"; font-size:56px; width:720px; text-align:right; }
+.sbar { height:110px; width:560px; } .sbar.good { background:#2f7d5b; }
+.sv { font-family:"Bebas"; font-size:120px; white-space:nowrap; } .sv.good { color:#2f7d5b; }
+.snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:24px; }
+/* keys */
+.keys { position:absolute; left:140px; top:120px; width:1640px; }
+.kh { font-family:"Bebas"; font-size:110px; color:#1d2a2f; margin-bottom:20px; }
+.krow { display:flex; align-items:center; height:200px; border-bottom:3px solid rgba(29,42,47,0.2); }
+.krow.khead { height:80px; font-family:"MonoB"; font-size:40px; letter-spacing:4px; color:#1f6f78; }
+.kc0 { width:700px; display:flex; align-items:center; gap:34px; } .kc1, .kc2 { width:470px; text-align:center; }
+.krow:not(.khead) .kc1, .krow:not(.khead) .kc2 { font-family:"Bebas"; font-size:100px; }
+.cap { display:inline-block; min-width:150px; padding:18px 26px 8px; text-align:center; font-family:"MonoB"; font-size:54px;
+        background:#fbf3df; border:5px solid #1d2a2f; border-radius:14px; box-shadow:0 10px 0 #1d2a2f; }
+.kn { font-family:"SerifI"; font-size:62px; }
+.krow .good { color:#2f7d5b; } .badk { color:#c23b2f; }
+.keys .snote { margin-top:34px; }
+.chatbox { position:absolute; left:0px; top:838px; width:880px; height:80px; border:8px solid #e3a73a; border-radius:12px;
+            box-shadow:0 0 0 4px rgba(29,42,47,0.6); }
+.chatbox span { position:absolute; left:100%; top:50%; transform:translate(18px,-50%); white-space:nowrap; font-family:"Bebas";
+                 font-size:56px; letter-spacing:3px; color:#1d2a2f; background:#e3a73a; padding:2px 16px 0; }
+.chatbox.rs { left:6px; top:898px; width:1540px; height:104px; }
+.chatbox.rs span { left:auto; right:0; top:0; transform:translate(0,-110%); }
+.chatbox.sh { left:0px; top:842px; width:1080px; height:76px; }
+/* stat2 (0.95.60: before / after bars) */
+.stat2 { position:absolute; left:80px; top:90px; width:1760px; }
+.stat2 .sth { font-family:"Bebas"; font-size:92px; color:#1d2a2f; margin-bottom:6px; }
+.shead { display:flex; height:70px; align-items:center; font-family:"MonoB"; font-size:38px; letter-spacing:4px; }
+.stat2 .srow { display:flex; align-items:center; height:190px; border-bottom:3px solid rgba(29,42,47,0.15); }
+.stat2 .sl { font-family:"SerifI"; font-size:50px; width:700px; white-space:nowrap; text-align:right; padding-right:40px; color:#1d2a2f; }
+.sc { width:530px; display:flex; align-items:center; gap:22px; } .sc.wide { width:1060px; }
+.shead .sc { display:block; }
+.bar { height:100px; width:0; } .bar.bad { background:#c23b2f; } .bar.good { background:#2f7d5b; }
+.sc b { font-family:"Bebas"; font-size:104px; font-weight:normal; white-space:nowrap; }
+.stat2 .bad { color:#c23b2f; } .stat2 .good { color:#2f7d5b; }
+.stat2 .bar.bad { background:#c23b2f; } .stat2 .bar.good { background:#2f7d5b; }
+.stat2 .snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:26px; }
+/* close */
+.labname { font-family:"Serif"; font-size:64px; color:#f3e9d2; letter-spacing:10px; text-shadow:0 4px 0 #1d2a2f, 0 0 30px rgba(0,0,0,0.6); }
+.labname.big { font-size:96px; }
+.closebox { position:absolute; left:0; right:0; top:80px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.closet { font-family:"Bebas"; font-size:210px; line-height:1; color:#d8453a; letter-spacing:10px; }
+.closeu { font-family:"MonoB"; font-size:56px; color:#f3e9d2; }
+.closef { font-family:"Mono"; font-size:32px; color:#c9d4d3; }
+.credit { position:absolute; left:0; right:0; bottom:40px; text-align:center; font-family:"Mono"; font-size:26px; color:#8fa3a6; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="53.570" data-width="1920" data-height="1080">
+<video id="v1" class="clip vid" style="z-index:1;" src="videos/v1.mp4" muted playsinline data-start="0.000" data-duration="5.761"></video>
+<video id="v2" class="clip vid" style="z-index:2;" src="videos/v2.mp4" muted playsinline data-start="5.761" data-duration="0.800"></video>
+<video id="v3" class="clip vid" style="z-index:3;" src="videos/v3.mp4" muted playsinline data-start="6.561" data-duration="1.579"></video>
+<div id="c4" class="clip card " style="z-index:45" data-start="0.000" data-duration="8.140"><div class="reel">3NDETZ LABS &middot; FIELD REPORT &middot; RELEASE 0.95.61</div></div>
+<div id="c6" class="clip card " style="z-index:40" data-start="0.400" data-duration="4.801"><div id="k5" class="kin tl teal"><div class="kin-s">a frame cast before the interruption · x1.5</div><div class="kin-b">FINISHING THE OLD FRAME</div></div></div>
+<div id="c8" class="clip card " style="z-index:40" data-start="5.201" data-duration="0.560"><div id="k7" class="kin tl teal"><div class="kin-s">0.95.61 · 8-min run from the same checkpoint</div><div class="kin-b">PORTAL LIT</div></div></div>
+<div id="c10" class="clip card " style="z-index:40" data-start="5.761" data-duration="2.379"><div id="k9" class="kin tl red"><div class="kin-s">the site that once held a playthrough for 39 min</div><div class="kin-b">INTO THE NETHER</div></div></div>
+<div id="c11" class="clip card " style="z-index:0" data-start="8.140" data-duration="11.980"><div class="paper dark"></div></div>
+<video id="v12" class="clip half left" style="z-index:3;" src="videos/v12.mp4" muted playsinline data-start="8.140" data-duration="11.980"></video>
+<video id="v13" class="clip half right" style="z-index:3;" src="videos/v13.mp4" muted playsinline data-start="8.140" data-duration="10.880"></video>
+<video id="v14" class="clip half right" style="z-index:4;" src="videos/v14.mp4" muted playsinline data-start="19.020" data-duration="1.100"></video>
+<div id="c15" class="clip card " style="z-index:10" data-start="8.140" data-duration="11.980"><div class="halflab left bad">BEFORE</div><div class="halflab right good">AFTER &middot; 0.95.61</div><div class="hspeed" style="left:40px">x8</div><div class="halfcap">same checkpoint, at the portal site &middot; separate runs, not a race</div></div>
+<div id="c16" class="clip card " style="z-index:11" data-start="8.140" data-duration="10.880"><div class="hspeed">x8</div></div>
+<div id="c17" class="clip card " style="z-index:11" data-start="19.020" data-duration="1.100"><div class="hspeed">x1</div></div>
+<div id="c19" class="clip card " style="z-index:40" data-start="8.640" data-duration="3.789"><div id="k18" class="kin bl red"><div class="kin-s">any interruption = a fresh search</div><div class="kin-b">FORGETS ITS SITE</div></div></div>
+<div id="c21" class="clip card " style="z-index:40" data-start="12.429" data-duration="4.673"><div id="k20" class="kin bl red"><div class="kin-s">its own old obsidian blocks the cast</div><div class="kin-b">NEW SPOT, ONE BLOCK LOWER</div></div></div>
+<div id="c23" class="clip card " style="z-index:40" data-start="17.102" data-duration="3.018"><div id="k22" class="kin bl red"><div class="kin-s">first long playthrough: 39 min at this site</div><div class="kin-b">STEP OFF, STEP BACK</div></div></div>
+<div id="c25" class="clip card " style="z-index:55" data-start="19.470" data-duration="0.650"><div id="r24" class="ring" style="left:1285px;top:280px;width:300px;height:300px"><span>LIT</span></div></div>
+<video id="v26" class="clip vid" style="z-index:1;" src="videos/v26.mp4" muted playsinline data-start="20.120" data-duration="4.257"></video>
+<div id="c28" class="clip card " style="z-index:40" data-start="20.420" data-duration="3.957"><div id="k27" class="kin tl teal"><div class="kin-s">the origin with the most cells already cast wins</div><div class="kin-b">FINISHES THE OLD FRAME</div></div></div>
+<div class="clip" style="z-index:4" data-start="24.377" data-duration="3.103"><img id="i29" class="bgimg" src="videos/s1.png" style="transform-origin:0% 90%;"></div>
+<div id="c30" class="clip card " style="z-index:55" data-start="24.377" data-duration="3.103"><div id="chatbox" class="chatbox rs"><span>SAYS SO IN CHAT</span></div></div>
+<div id="c32" class="clip card " style="z-index:60" data-start="26.680" data-duration="0.800"><div class="stampbox" style="left:1440px;top:330px"><div id="s31" class="stamp" style="font-size:110px;color:#d8453a;border-color:#d8453a">RECYCLED</div></div></div>
+<div id="c33" class="clip card " style="z-index:0" data-start="27.480" data-duration="9.970"><div class="paper"></div></div>
+<div id="c34" class="clip card " style="z-index:5" data-start="27.480" data-duration="9.970"><div class="stat2"><div class="sth">SAME CHECKPOINT · THE FULL59 PORTAL SITE</div><div class="shead"><span class="sl"></span><span class="sc bad">BEFORE</span><span class="sc good">0.95.61</span></div><div class="srow"><span class="sl">got past the cast</span><span class="sc"><div id="b1" class="bar bad"></div><b id="bv1" class="bad">0 / 3</b></span><span class="sc"><div id="a1" class="bar good"></div><b id="av1" class="good">2 / 2</b></span></div><div class="srow"><span class="sl">lit it, entered the nether</span><span class="sc"><div id="b2" class="bar bad"></div><b id="bv2" class="bad">0 / 3</b></span><span class="sc"><div id="a2" class="bar good"></div><b id="av2" class="good">2 / 2</b></span></div><div class="srow"><span class="sl">portal_lava_lake course</span><span class="sc wide"><b id="cv" class="good">PASS · lit at 97.6 s</b></span></div><div class="snote">8-min runs from checkpoint cp1015-1535-t605 · separate runs, not a race · no speed or FPS gain claimed</div></div></div>
+<video id="v35" class="clip vid" style="z-index:1;" src="videos/v35.mp4" muted playsinline data-start="37.450" data-duration="5.787"></video>
+<div id="c37" class="clip card " style="z-index:40" data-start="37.650" data-duration="5.587"><div id="k36" class="kin tl red"><div class="kin-s">0.95.61 · second run, in the nether · no gold armour yet</div><div class="kin-b">THE LOCALS</div></div></div>
+<div class="clip" style="z-index:4" data-start="43.237" data-duration="1.733"><img id="i38" class="bgimg" src="videos/s2.png" style="transform-origin:0% 80%;"></div>
+<div id="c39" class="clip card " style="z-index:55" data-start="43.237" data-duration="1.733"><div id="chatbox2" class="chatbox sh"><span>SHOT BY A PIGLIN</span></div></div>
+<div id="c41" class="clip card " style="z-index:60" data-start="44.170" data-duration="0.800"><div class="stampbox" style="left:1300px;top:430px"><div id="s40" class="stamp" style="font-size:100px;color:#d8453a;border-color:#d8453a">DRESS CODE: GOLD</div></div></div>
+<div id="c42" class="clip card " style="z-index:0" data-start="44.970" data-duration="8.600"><div class="paper dark"></div></div>
+<div id="c43" class="clip card " style="z-index:5" data-start="44.970" data-duration="8.600"><div class="closebox"><div id="cl-badge"><svg width="150" height="150" viewBox="0 0 200 200"><defs><radialGradient id="lgg" cx="40%" cy="35%"><stop offset="0" stop-color="#fff6df"/><stop offset="1" stop-color="#e9d9b4"/></radialGradient></defs><circle cx="100" cy="100" r="94" fill="url(#lgg)" stroke="#1d2a2f" stroke-width="6"/><circle cx="100" cy="100" r="80" fill="none" stroke="#d8453a" stroke-width="3" stroke-dasharray="4 7"/><g fill="none" stroke="#1f6f78" stroke-width="6"><ellipse cx="100" cy="100" rx="70" ry="24"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(60 100 100)"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(-60 100 100)"/></g><g transform="translate(100 100)"><polygon points="0,-26 23,-13 0,0 -23,-13" fill="#6fbf4a"/><polygon points="-23,-13 0,0 0,26 -23,13" fill="#8a5a33"/><polygon points="23,-13 0,0 0,26 23,13" fill="#6b4426"/><polygon points="0,-26 23,-13 0,0 -23,-13 0,-26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/><path d="M-23,-13 L-23,13 L0,26 L23,13 L23,-13 M0,0 L0,26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/></g><circle cx="170" cy="100" r="7" fill="#d8453a"/><circle cx="65" cy="40" r="7" fill="#d8453a"/></svg></div><div id="cl-lab" class="labname big">3NDETZ LABS</div><div id="cl-t" class="closet">unionclef 0.95.61</div><div id="cl-u" class="closeu">github.com/3ndetz/unionclef</div><div id="cl-f" class="closef">open source · GPL-3.0 · Minecraft 1.21 · Fabric</div></div><div id="cl-credit" class="credit">Music: “Hep Cats” by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0</div></div>
+<div id="c45" class="clip card " style="z-index:60" data-start="50.720" data-duration="2.850"><div class="stampbox" style="left:1440px;top:830px"><div id="s44" class="stamp" style="font-size:90px;color:#d8453a;border-color:#d8453a">NEXT: GOLD TROUSERS</div></div></div>
+<div id="c46" class="clip card " style="z-index:90" data-start="0.000" data-duration="53.570"><div id="grain" class="grain"></div><div class="edgevig"></div></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo('#v1',{scale:1.0},{scale:1.08,duration:5.761,ease:'none'},0.000);
+tl.fromTo('#v2',{scale:1.04},{scale:1.1,duration:0.800,ease:'none'},5.761);
+tl.fromTo('#v3',{scale:1.02},{scale:1.1,duration:1.579,ease:'none'},6.561);
+tl.fromTo('.reel',{opacity:0},{opacity:1,duration:0.4},0.1);
+tl.fromTo('#k5',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},0.400);
+tl.fromTo('#k7',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},5.201);
+tl.fromTo('#k9',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},5.761);
+tl.fromTo('.halflab',{opacity:0,y:-20},{opacity:1,y:0,duration:0.3},8.240);
+tl.fromTo('#k18',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},8.640);
+tl.fromTo('#k20',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},12.429);
+tl.fromTo('#k22',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},17.102);
+tl.to('.half.left',{opacity:0.5,duration:0.4},18.301);
+tl.fromTo('#r24',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},19.470);
+tl.fromTo('#v26',{scale:1.0},{scale:1.08,duration:4.257,ease:'none'},20.120);
+tl.fromTo('#k27',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},20.420);
+tl.fromTo('#i29',{scale:1.0},{scale:1.04,duration:3.103,ease:'sine.inOut'},24.377);
+tl.fromTo('#chatbox',{opacity:0,scale:1.15},{opacity:1,scale:1,duration:0.3,ease:'back.out(2)'},24.477);
+tl.fromTo('#s31',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},26.680);
+tl.fromTo('#s31',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},26.960);
+tl.fromTo('.stat2 .srow',{opacity:0,x:-40},{opacity:1,x:0,duration:0.3,stagger:0.1},27.530);
+tl.fromTo('#b1',{width:0},{width:6,duration:0.4,ease:'power3.out'},29.443);
+tl.fromTo('#bv1',{opacity:0},{opacity:1,duration:0.2},29.643);
+tl.fromTo('#a1',{width:0},{width:330,duration:0.5,ease:'power3.out'},31.923);
+tl.fromTo('#av1',{opacity:0},{opacity:1,duration:0.2},32.273);
+tl.fromTo('#b2',{width:0},{width:6,duration:0.4,ease:'power3.out'},29.593);
+tl.fromTo('#bv2',{opacity:0},{opacity:1,duration:0.2},29.793);
+tl.fromTo('#a2',{width:0},{width:330,duration:0.5,ease:'power3.out'},34.724);
+tl.fromTo('#av2',{opacity:0},{opacity:1,duration:0.2},35.074);
+tl.fromTo('#cv',{opacity:0,scale:1.4},{opacity:1,scale:1,duration:0.35,ease:'back.out(2)'},35.764);
+tl.fromTo('#v35',{scale:1.0},{scale:1.1,duration:5.787,ease:'none'},37.450);
+tl.fromTo('#k36',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},37.650);
+tl.fromTo('#i38',{scale:1.0},{scale:1.05,duration:1.733,ease:'sine.inOut'},43.237);
+tl.fromTo('#chatbox2',{opacity:0,scale:1.3},{opacity:1,scale:1,duration:0.3,ease:'back.out(2)'},43.337);
+tl.fromTo('#s40',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},44.170);
+tl.fromTo('#s40',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},44.450);
+tl.fromTo('#cl-badge',{scale:0,rotation:180},{scale:1,rotation:0,duration:0.8,ease:'back.out(1.5)'},45.070);
+tl.fromTo('#cl-lab',{opacity:0,y:30},{opacity:1,y:0,duration:0.5},45.270);
+tl.fromTo('#cl-t',{opacity:0,scale:1.6},{opacity:1,scale:1,duration:0.5,ease:'expo.out'},46.000);
+tl.fromTo(['#cl-u','#cl-f'],{opacity:0,y:20},{opacity:1,y:0,duration:0.4,stagger:0.2},48.319);
+tl.fromTo('#s44',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},50.720);
+tl.fromTo('#s44',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},51.000);
+tl.fromTo('#cl-credit',{opacity:0},{opacity:1,duration:0.6},50.870);
+tl.to('#grain',{backgroundPosition:'173px 97px',duration:0.08,repeat:334,yoyo:true,ease:'steps(1)'},0);
+window.__timelines["main"] = tl;
+</script>
+</body>
+</html>
