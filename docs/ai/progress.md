@@ -168,6 +168,13 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 
 - Released [v0.95.60](https://github.com/3ndetz/unionclef/releases/tag/v0.95.60), tag 8ae769c4: built from a fresh archive of HEAD (`artifacts/release-0.95.60-20261015`), 2213 classes byte-identical to tested e1f03818, only fabric.mod.json differs; asset SHA 87d69d25 re-downloaded and matched. Video for it in progress (sub-agent, `reports/hf/cave-johnson-0.95.60/`).
 
+- Nether-arrival repro: cp1015-1721-t599 was evicted by the checkpoint budget (folder hit 15.3 GB); pruned 22 obsolete repro checkpoints (13.9 GB). Replay from cp1015-1535-t605 (full59 site) did NOT reach the nether: ~4.5 min in PlaceObsidianBucketTask, 6499 trace ticks in its GetToBlockTask (lava stand) while the body sits on the stand (-290,52,963) 1311 ticks -> InteractWithBlockTask CANT_REACH -> GetAdjacentToBlockTask walks it off -> back to the stand.
+- Block dump from cp1015-1859-t287: obsidian at (-289,52..54,963) = left side of a frame with origin y52; the task casts (-289,51,963) = left side of origin y51. Two frames one block apart: a new task instance (portalOrigin is a field, lost on any interruption) re-searched and landed one block off; the old obsidian blocks the ray from the stand to the face below. This is the full59 portal-site mechanism (39 min there originally).
+- Fix (uncommitted): before the lake search, findPartialFrame scans r16/h8 for obsidian, tries each in every PORTAL_FRAME slot, takes the origin with the most frame cells cast (>=2, interior clear, nearest on tie) and resumes it. Build `frame-resume-build-20261016`.
+
+- Frame-resume v1 (player-centred scan) never fired: t605 world already holds the y52 frame (block dump over 4 min: obsidian (-289,52..54,963),(-289,52,966) unchanged), but the search runs while the bot is away mining; findPartialFrame called live via reflection returns (-289,52,964) near the site and null away from it. v2 also scans around the site the lake search picked. Jar 31f35bc6.
+- v2 from cp1015-1535-t605: 2/2 'Resuming the portal frame already cast at -289,52,964 instead of a new one at -289,51,964', frame finished, portal lit, NETHER ENTERED (pos ~(-37,75,130)) in both; before 0/3 (old-jar replay + two v1 runs circling at the cast). portal_lava_lake PASS 97.6 s. Run 2 later 'shot by Piglin' in the nether (no gold armour) -> nether survival item.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

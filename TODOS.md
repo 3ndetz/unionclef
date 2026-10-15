@@ -11,6 +11,9 @@
   tried to swim in lava" and an overworld respawn. Film: artifacts/portal-approach-ab-20261015/
   run-1.mp4 ~760-800 s. New territory, not a regression of the portal fixes. Needs a nether-arrival
   checkpoint (the run saved every 3 min) and the lava-escape trace.
+  2026-10-16: with 0.95.61 (frame resume) two replays from cp1015-1535-t605 both entered the
+  nether; one later "shot by Piglin" (no gold armour), the other survived its ~1.5 min there. Nether
+  survival (lava arrival, piglins) is the next ground.
 
 - [x] **MEASURED, default kept: the night shelter sits out a daytime thunderstorm as if it were night (2026-10-09).**
   `WorldHelper.canSleep()` (WorldHelper.java:670-680) is true in any thunderstorm, which is

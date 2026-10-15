@@ -243,6 +243,23 @@ public class ConstructNetherPortalBucketTask extends Task {
             if (firstSearch || lavaSearchTimer.elapsed()) {
                 firstSearch = false;
                 lavaSearchTimer.reset();
+                // ⛔ RESUME A FRAME ALREADY CAST BEFORE PICKING A NEW SITE (2026-10-16). portalOrigin is
+                // a field: after any interruption (night shelter, food, a death) a NEW instance of this
+                // task searched from scratch, and the region search landed one block off the frame the
+                // last one had cast. Its obsidian then sat in the new frame's way. Measured from
+                // cp1015-1859-t287 (the original full59 site): obsidian at (-289,52..54,963) from origin
+                // y52, the task casting (-289,51,963) for origin y51 -- the ray from the lava stand to
+                // the face below runs through that obsidian, CANT_REACH walks the body off the stand,
+                // the stand check walks it back, for minutes (full59 sat here for 39).
+                BlockPos resumed = findPartialFrame(mod, mod.getPlayer().getBlockPos());
+                if (resumed != null) {
+                    framesResumed++;
+                    Debug.logMessage("Resuming the portal frame already cast at " + resumed.toShortString());
+                    portalOrigin = resumed;
+                    portalLake = null;
+                    getToLakeTask = new GetWithinRangeOfBlockTask(portalOrigin, 7);
+                    return getToLakeTask;
+                }
                 Debug.logMessage("(Searching for lava lake with portalable spot nearby...)");
                 BlockPos lavaPos = findLavaLake(mod, mod.getPlayer().getBlockPos());
                 if (lavaPos != null) {
@@ -252,6 +269,18 @@ public class ConstructNetherPortalBucketTask extends Task {
                         Debug.logWarning("Failed to find portalable region nearby. Consider increasing the search timeout range");
                     } else {
                         portalOrigin = foundPortalRegion.add(PORTAL_ORIGIN_RELATIVE_TO_REGION);
+                        // The search above only sees frames within reach of the PLAYER. A new site can be
+                        // chosen from farther away -- measured: the resume from cp1015-1535-t605 searched
+                        // while away mining, picked origin y51 one block under the y52 frame already
+                        // cast there (findPartialFrame called live: player-centred null, site-centred
+                        // (-289,52,964)). So look again around the site itself.
+                        BlockPos atSite = findPartialFrame(mod, portalOrigin);
+                        if (atSite != null) {
+                            framesResumed++;
+                            Debug.logMessage("Resuming the portal frame already cast at " + atSite.toShortString()
+                                    + " instead of a new one at " + portalOrigin.toShortString());
+                            portalOrigin = atSite;
+                        }
                         portalLake = lavaPos;
                         foundSpot = true;
 
@@ -354,6 +383,58 @@ public class ConstructNetherPortalBucketTask extends Task {
     @Override
     protected String toDebugString() {
         return "Construct Nether Portal";
+    }
+
+    private static final int FRAME_SCAN_RADIUS = 16, FRAME_SCAN_HEIGHT = 8, FRAME_MIN_CAST = 2;
+    public static volatile int framesResumed;
+
+    /**
+     * The origin of a partly cast frame near {@code center}, or null. Every obsidian block nearby is
+     * tried in every frame slot; the origin with the most frame cells already obsidian wins (nearest
+     * on a tie), provided at least {@link #FRAME_MIN_CAST} are cast -- one block could be anything --
+     * and none of its six portal-interior cells is obsidian (that would be another frame's wall).
+     */
+    private static BlockPos findPartialFrame(AltoClef mod, BlockPos center) {
+        var world = mod.getWorld();
+        List<BlockPos> obsidian = new ArrayList<>();
+        BlockPos.Mutable m = new BlockPos.Mutable();
+        for (int dx = -FRAME_SCAN_RADIUS; dx <= FRAME_SCAN_RADIUS; dx++) {
+            for (int dz = -FRAME_SCAN_RADIUS; dz <= FRAME_SCAN_RADIUS; dz++) {
+                for (int dy = -FRAME_SCAN_HEIGHT; dy <= FRAME_SCAN_HEIGHT; dy++) {
+                    m.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
+                    if (world.getBlockState(m).isOf(Blocks.OBSIDIAN)) obsidian.add(m.toImmutable());
+                }
+            }
+        }
+        BlockPos best = null;
+        int bestScore = FRAME_MIN_CAST - 1;
+        double bestSq = Double.POSITIVE_INFINITY;
+        Set<BlockPos> tried = new HashSet<>();
+        for (BlockPos o : obsidian) {
+            for (Vec3i slot : PORTAL_FRAME) {
+                BlockPos origin = o.subtract(slot);
+                if (!tried.add(origin)) continue;
+                boolean interiorClear = true;
+                for (int i = 0; i < 6; i++) {   // the first six PORTAL_INTERIOR cells are the opening
+                    if (world.getBlockState(origin.add(PORTAL_INTERIOR[i])).isOf(Blocks.OBSIDIAN)) {
+                        interiorClear = false;
+                        break;
+                    }
+                }
+                if (!interiorClear) continue;
+                int score = 0;
+                for (Vec3i f : PORTAL_FRAME) {
+                    if (world.getBlockState(origin.add(f)).isOf(Blocks.OBSIDIAN)) score++;
+                }
+                double sq = origin.getSquaredDistance(center);
+                if (score > bestScore || (score == bestScore && best != null && sq < bestSq)) {
+                    best = origin;
+                    bestScore = score;
+                    bestSq = sq;
+                }
+            }
+        }
+        return best;
     }
 
     private BlockPos findLavaLake(AltoClef mod, BlockPos playerPos) {
