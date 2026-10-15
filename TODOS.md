@@ -4,6 +4,14 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **First nether entry from full59-before-portal dies in lava on arrival (2026-10-15).**
+  With the 0.95.60 portal fixes, a 15-min native run from full59-before-portal cast and lit the
+  portal at the original full59 site (-289,53,964) and entered the nether; the arrival is beside a
+  lava sea, chat "Escaping lava: Tungsten building route (pillar/bridge/break)", then "tester1
+  tried to swim in lava" and an overworld respawn. Film: artifacts/portal-approach-ab-20261015/
+  run-1.mp4 ~760-800 s. New territory, not a regression of the portal fixes. Needs a nether-arrival
+  checkpoint (the run saved every 3 min) and the lava-escape trace.
+
 - [x] **MEASURED, default kept: the night shelter sits out a daytime thunderstorm as if it were night (2026-10-09).**
   `WorldHelper.canSleep()` (WorldHelper.java:670-680) is true in any thunderstorm, which is
   right for a bed (vanilla lets you sleep through one). But BeatMinecraftTask opens

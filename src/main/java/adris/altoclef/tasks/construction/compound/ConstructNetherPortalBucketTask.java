@@ -92,6 +92,15 @@ public class ConstructNetherPortalBucketTask extends Task {
     private BlockPos portalOrigin = null;
     private Task getToLakeTask = null;
     private BlockPos currentDestroyTarget = null;
+    /** The lava block the current portalOrigin was found from; see {@link #rejectedLakes}. */
+    private BlockPos portalLake = null;
+    /**
+     * Lakes whose approach failed before any obsidian was cast. Their sources are pre-marked as
+     * explored, so the next search picks a different lake -- baritone's blacklistClosestOnFailure
+     * (GetToBlockProcess.java:95-98,130-152) for this task's one target.
+     */
+    private final List<BlockPos> rejectedLakes = new ArrayList<>();
+    public static volatile int approachRejected;
 
     private boolean firstSearch = false;
 
@@ -147,6 +156,25 @@ public class ConstructNetherPortalBucketTask extends Task {
 
         if (!progressChecker.check(mod)) {
             Nav.cancel();
+            // ⛔ HANDLE A FAILURE ONCE (2026-10-15). failed() stays true until reset(), and this
+            // branch used to reset nothing when there was no destroy target -- i.e. during the
+            // approach. So it cancelled the route EVERY tick, the same approach restarted, and was
+            // cancelled again: traced from cp1015-1611-t199, ~2950 ticks with forward held,
+            // queueIndex 0/1 of 11, driveAge 1-2 ms, the camera spinning, the body in one cell of a
+            // shaft for twelve minutes ("Getting within 7 blocks of -110,44,1062").
+            progressChecker.reset();
+            if (portalOrigin != null && currentDestroyTarget == null && !siteInvested(mod)
+                    && getToLakeTask != null && BeatMinecraftTask.isTaskRunning(mod, getToLakeTask)) {
+                approachRejected++;
+                Debug.logMessage("Portal site at " + portalOrigin.toShortString()
+                        + " not reachable from here; picking another lake");
+                if (portalLake != null) rejectedLakes.add(portalLake);
+                portalOrigin = null;
+                portalLake = null;
+                getToLakeTask = null;
+                firstSearch = true;
+                return wanderTask;
+            }
             if (portalOrigin != null && currentDestroyTarget != null) {
                 mod.getBlockScanner().requestBlockUnreachable(portalOrigin);
                 mod.getBlockScanner().requestBlockUnreachable(currentDestroyTarget);
@@ -224,6 +252,7 @@ public class ConstructNetherPortalBucketTask extends Task {
                         Debug.logWarning("Failed to find portalable region nearby. Consider increasing the search timeout range");
                     } else {
                         portalOrigin = foundPortalRegion.add(PORTAL_ORIGIN_RELATIVE_TO_REGION);
+                        portalLake = lavaPos;
                         foundSpot = true;
 
                         getToLakeTask = new GetWithinRangeOfBlockTask(portalOrigin,7);
@@ -329,6 +358,9 @@ public class ConstructNetherPortalBucketTask extends Task {
 
     private BlockPos findLavaLake(AltoClef mod, BlockPos playerPos) {
         HashSet<BlockPos> alreadyExplored = new HashSet<>();
+        // A rejected lake's whole source body counts as explored, so neither the scanner pass nor
+        // the world scan below can pick it again.
+        for (BlockPos lake : rejectedLakes) getNumberOfBlocksAdjacent(alreadyExplored, lake);
         double nearestSqDistance = Double.POSITIVE_INFINITY;
         BlockPos nearestLake = null;
         List<BlockPos> lavas = mod.getBlockScanner().getKnownLocations(Blocks.LAVA);

@@ -163,6 +163,9 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Submerged-source fix measured (`artifacts/lava-submerged-ab-20261015`, jar f196f21e): portal_lava_lake PASS, portal lit 99.7 s, 0 deaths, 29.6 FPS. Native15 x3 with the before-arm settings: lava bucket in the end inventory 2/3 (before 0/3), no 'lethal' replans, 0 deaths. Sequential arms, not interleaved.
 - After-run 3 stalls 12 min at the SAME shaft cell (-184.5,49,1029) as storm A/B run 3, under Construct Nether Portal -> 'Getting within 7 blocks of -110,44,1062': the portal-approach defect, now with checkpoints (every 3 min) in that run.
 
+- Portal-approach latch: ConstructNetherPortalBucketTask cancelled the route every tick once its progress checker failed during the approach (failed() stays true until reset(); the branch reset nothing without a destroy target). Trace from cp1015-1611-t199: ~2950 ticks, forward held, queueIndex 0/1 of 11, driveAge 1-2 ms. Fix: reset after handling; an un-invested approach failure rejects that lake (seeded as explored in findLavaLake) and wanders (baritone GetToBlockProcess.java:95-98 blacklistClosestOnFailure). Jar e1f03818 (`portal-approach-build-20261015`).
+- Same checkpoint before/after, 5-min resume: before frozen in one cell all 5 min; after 2/2 leave the shaft and descend (FAIL only on the 5-min no-new-rung window). portal_lava_lake PASS, lit 88.9 s. Native15 x2 from full59-before-portal: run 2 PASS 0 deaths; run 1 cast and lit the portal at the original full59 site and ENTERED THE NETHER, then died in lava on arrival ('tried to swim in lava') -> new TODOS item, not a regression.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
