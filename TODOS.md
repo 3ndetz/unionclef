@@ -4,6 +4,13 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Night in a lake: no shelter site, the bot floats till morning; at the bank it freezes (2026-10-16).**
+  NightShelterTask returns null when every site within 16 blocks is under water (f59-1: 6.5 min of
+  night afloat; another run killed by a drowned). A dry-land fallback (artifacts/shelter-land-ab-
+  20261016/nightshelter-dry-land.patch) swims the body ~40 blocks to the shore, but there it holds
+  jump+sneak with no driver for ~1300 ticks and never climbs the 1-block bank. Find who holds J+C
+  at a bank (water-handling side; overlaps the uncommitted water WIP) before landing the patch.
+
 - [ ] **Nether food: the bot arrives with ~24 units and hunts hoglins (2026-10-16).**
   From nether-fresh 3/3 replays went hoglin hunting with a stone sword: one slain by a hoglin, one
   at 1.6 HP, one shot by a piglin. Cause: "Going to Nether" clears the gather list, food included.
