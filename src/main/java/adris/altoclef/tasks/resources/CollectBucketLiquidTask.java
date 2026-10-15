@@ -137,6 +137,18 @@ public class CollectBucketLiquidTask extends ResourceTask {
             if (above == Blocks.BEDROCK || above == Blocks.WATER) {
                 return false;
             }
+            // ⛔ A SUBMERGED SOURCE CANNOT BE SCOOPED (2026-10-15). With the same liquid above it,
+            // the SOURCE_ONLY ray always meets the upper source first, so getReach(blockPos) is
+            // never true; the fallback then asks to get within 1 of blockPos.up() -- a lava cell --
+            // which every route refuses as lethal. Measured: three of three 15-minute runs from
+            // full59-before-portal stuck in "Collecting lava"; one stood 1.5 blocks from its pool
+            // for 3.5 minutes on "Getting within 1 blocks of (-110,45,1072)" -> "next movements are
+            // lethal" -> replan, the target being the source UNDER that cell. A lake always has a
+            // surface source; take those. Flowing liquid above is transparent to SOURCE_ONLY, so
+            // only a SOURCE above disqualifies.
+            if (above == toCollect && WorldHelper.isSourceBlock(blockPos.up(), false)) {
+                return false;
+            }
 
             // check if surrounding blocks are not water, so it doesn't spill everywhere
             for (Direction direction : Direction.values()) {
