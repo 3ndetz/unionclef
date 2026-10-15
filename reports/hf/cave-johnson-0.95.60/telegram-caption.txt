@@ -1,0 +1,10 @@
+Unionclef 0.95.60: the portal gets built.
+
+Two stalls on the way to the nether, fixed:
+- A submerged lava source is no longer a bucket target. The bot kept picking the lava under the lake surface, never got it in reach, and replanned beside its pool for minutes. Lava buckets by the end of a 15-min run from full59-before-portal: 0/3 before, 2/3 after.
+- An unreachable portal site is dropped instead of retried every tick (baritone's blacklistClosestOnFailure). From a checkpoint inside a 12-minute shaft freeze (taken in a run from that same save): before frozen all 5 min, after 2/2 out of the shaft.
+
+portal_lava_lake PASS. One 15-min run lit the portal at the original full59 site and entered the nether, then died in a lava sea on arrival; that is the next item.
+
+No speed or FPS gain claimed. Release classes byte-identical to the tested build.
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.60

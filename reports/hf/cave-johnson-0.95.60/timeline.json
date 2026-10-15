@@ -1,0 +1,80 @@
+{
+ "total": 57.64999999999999,
+ "voice": [
+  [
+   "l01",
+   0.3
+  ],
+  [
+   "l02",
+   8.200000000000001
+  ],
+  [
+   "l03",
+   18.84
+  ],
+  [
+   "l04",
+   31.509999999999998
+  ],
+  [
+   "l05",
+   40.78999999999999
+  ],
+  [
+   "l06",
+   49.44999999999999
+  ]
+ ],
+ "clips": [
+  {
+   "key": "v1",
+   "file": "nether.mp4",
+   "src_in": 774.31,
+   "src_out": 780.17,
+   "speed": 1.5
+  },
+  {
+   "key": "v2",
+   "file": "nether.mp4",
+   "src_in": 785.6,
+   "src_out": 788.6,
+   "speed": 0.75
+  },
+  {
+   "key": "v11",
+   "file": "pool-before.mp4",
+   "src_in": 686.0,
+   "src_out": 728.56,
+   "speed": 4.0
+  },
+  {
+   "key": "v12",
+   "file": "nether.mp4",
+   "src_in": 487.08,
+   "src_out": 497.72,
+   "speed": 1.0
+  },
+  {
+   "key": "v23",
+   "file": "shaft-before.mp4",
+   "src_in": 19.43,
+   "src_out": 44.87,
+   "speed": 2.0
+  },
+  {
+   "key": "v24",
+   "file": "shaft-after.mp4",
+   "src_in": 19.43,
+   "src_out": 44.87,
+   "speed": 2.0
+  },
+  {
+   "key": "v36",
+   "file": "nether.mp4",
+   "src_in": 786.48,
+   "src_out": 791.45,
+   "speed": 1.0
+  }
+ ]
+}
