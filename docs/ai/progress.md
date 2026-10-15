@@ -178,6 +178,9 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Released [v0.95.61](https://github.com/3ndetz/unionclef/releases/tag/v0.95.61), tag 072922ac: fresh archive build, 2223 classes identical to tested v2 31f35bc6 except fabric.mod.json; asset SHA 76bbb677 re-downloaded and matched. Video in progress (sub-agent).
 - Next: nether survival from a nether-arrival checkpoint (lava sea arrival, piglins without gold armour).
 
+- Nether survival from nether-fresh x3 (`artifacts/nether-survival-20261016`): all three hit 'Getting food: the Nether stock ran out' -> CollectFoodTask hunting hoglins: one slain by Hoglin, one at 1.6 HP, one shot by Piglin. The bot arrives with ~24 food units because BeatMinecraftTask's 'Going to Nether' branch does gatherResources.clear(). The ~2-min stand at (9.4,70,93.6) is the deliberate 'Waiting for endermen to spawn'.
+- REJECTED, not committed: gate the trip on >=40 food units ('Packing food for the Nether', CollectFoodTask(80) before goToNetherTask starts). Three runs (`artifacts/nether-food-ab-20261016`, jar 15842c9f): 0/3 reached the nether, food unchanged at 5 mutton, CollectFoodTask 'Exploring outward' stood still for 3.5-6.5 min at a time, one drowned death. Around this site there are no animals; the gate trades hoglins for an overworld stall. Client restored to release 0.95.61 (76bbb677). The 'Exploring outward' stand is its own defect.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

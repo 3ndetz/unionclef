@@ -4,6 +4,15 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
+- [ ] **Nether food: the bot arrives with ~24 units and hunts hoglins (2026-10-16).**
+  From nether-fresh 3/3 replays went hoglin hunting with a stone sword: one slain by a hoglin, one
+  at 1.6 HP, one shot by a piglin. Cause: "Going to Nether" clears the gather list, food included.
+  A pre-trip food gate (>=40 units, CollectFoodTask(80)) was measured and REJECTED: 0/3 reached
+  the nether, CollectFoodTask "Exploring outward" stood still 3.5-6.5 min with no animals around
+  the site. Next options: fix that exploration stand first, or make the nether food safer (gold
+  armour vs piglins, avoid hoglins without better gear). Evidence: artifacts/nether-survival-
+  20261016, artifacts/nether-food-ab-20261016.
+
 - [ ] **First nether entry from full59-before-portal dies in lava on arrival (2026-10-15).**
   With the 0.95.60 portal fixes, a 15-min native run from full59-before-portal cast and lit the
   portal at the original full59 site (-289,53,964) and entered the nether; the arrival is beside a
