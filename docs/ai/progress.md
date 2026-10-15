@@ -175,6 +175,9 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Frame-resume v1 (player-centred scan) never fired: t605 world already holds the y52 frame (block dump over 4 min: obsidian (-289,52..54,963),(-289,52,966) unchanged), but the search runs while the bot is away mining; findPartialFrame called live via reflection returns (-289,52,964) near the site and null away from it. v2 also scans around the site the lake search picked. Jar 31f35bc6.
 - v2 from cp1015-1535-t605: 2/2 'Resuming the portal frame already cast at -289,52,964 instead of a new one at -289,51,964', frame finished, portal lit, NETHER ENTERED (pos ~(-37,75,130)) in both; before 0/3 (old-jar replay + two v1 runs circling at the cast). portal_lava_lake PASS 97.6 s. Run 2 later 'shot by Piglin' in the nether (no gold armour) -> nether survival item.
 
+- Released [v0.95.61](https://github.com/3ndetz/unionclef/releases/tag/v0.95.61), tag 072922ac: fresh archive build, 2223 classes identical to tested v2 31f35bc6 except fabric.mod.json; asset SHA 76bbb677 re-downloaded and matched. Video in progress (sub-agent).
+- Next: nether survival from a nether-arrival checkpoint (lava sea arrival, piglins without gold armour).
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
