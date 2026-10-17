@@ -10,6 +10,15 @@ import java.util.List;
 
 public class LivingEntityVer {
 
+    /** Elytra gliding: isGliding() since 1.21.2, isFallFlying() before it. */
+    public static boolean isGliding(LivingEntity e) {
+        //#if MC >= 12102
+        //$$ return e.isGliding();
+        //#else
+        return e.isFallFlying();
+        //#endif
+    }
+
     @SuppressWarnings("unchecked")
     private static Iterable<ItemStack> reflectMethod(LivingEntity entity, String name) {
         try {
