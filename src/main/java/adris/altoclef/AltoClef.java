@@ -184,11 +184,10 @@ public class AltoClef implements ModInitializer {
             );
             try {
                 _gatewayServer.start();
-                // Port changed — save to settings so next launch uses the same port
+                // Port taken (another game client on this machine): this run only. Saved, it moved
+                // every client sharing the settings off the port their Python side looks for.
                 if (port != originalPort) {
-                    getModSettings().setPythonGatewayPort(port);
-                    ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
-                    Debug.logMessage("Py4j port conflict — bound to " + port + " (saved to settings)");
+                    Debug.logMessage("Py4j port conflict — bound to " + port + " for this run");
                 }
                 _py4jEntryPoint.InitPythonCallback();
                 Debug.logMessage("Py4j gateway started on port " + port);
