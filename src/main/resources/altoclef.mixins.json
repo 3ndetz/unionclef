@@ -35,6 +35,7 @@
     "ChatInputSuggestorMixin",
     "ChatReadMixin",
     "ClientBlockBreakMixin",
+    "NoBreakGuardMixin",
     "ClientOpenScreenMixin",
     "ClientPlayNetworkHandlerMixin",
     "ClientPlayerInteractionManagerMixin",
