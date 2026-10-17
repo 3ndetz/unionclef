@@ -41,6 +41,9 @@ public class ElytraPilotSim {
             new Scene("low hills 500", 500, 0, 70, (x, z) -> x < 40 || x > 460 ? 70 : 70 + 10 * Math.sin((x - 40) / 35) + 6 * Math.sin((x - 40) / 13 + z / 20), true),
             new Scene("low town 300", 300, 40, 70, (x, z) -> x < 40 || x > 270 ? 70 : 70 + ((((int) Math.floor(x / 9)) * 31 + ((int) Math.floor(z / 9)) * 17) & 7) * 1.5, true),
             new Scene("low cliff 400", 400, 0, 70, (x, z) -> x > 150 && x < 260 ? 95 : 70, true),
+            // Home on a small platform 45 blocks over the ground, flown to low and high.
+            new Scene("low to a platform", 400, 0, 115, (x, z) -> Math.hypot(x - 400, z) < 6 ? 115 : 70, true),
+            new Scene("to a platform", 400, 0, 115, (x, z) -> Math.hypot(x - 400, z) < 6 ? 115 : 70),
             // Aerobatics on a long flight over rolling ground; a route round a square and back.
             new Scene("figures 1600", 1600, 0, 70, (x, z) -> 70 + 12 * Math.sin(x / 90), false, 4, new double[0][]),
             new Scene("route square", 0, 0, 70, (x, z) -> 70 + 8 * Math.sin(x / 70) + 6 * Math.cos(z / 55), false, 0,
