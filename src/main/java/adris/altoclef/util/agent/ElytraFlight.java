@@ -57,6 +57,11 @@ public final class ElytraFlight {
     private static double lastLx, lastLy, lastLz, lvx, lvy, lvz;
     private static boolean leaderSeen;
     private static int leaderDownTicks;
+    // A creative leader hanging in one place (building, AFK): where they stopped and for how long.
+    // Orbiting them would go on for ever, so after a while the bot lands beside them instead.
+    private static double stillX, stillY, stillZ;
+    private static int leaderStillTicks;
+    private static final int LEADER_STILL_LAND = 300; // 15 s
     private static net.minecraft.util.math.BlockPos openSky; // where to walk for a take-off
     // Progress watchdog: the best distance to the target and when it last improved.
     private static double bestDist;
@@ -108,6 +113,10 @@ public final class ElytraFlight {
         leader = lead.getName().getString();
         leaderSeen = false;
         leaderDownTicks = 0;
+        leaderStillTicks = 0;
+        stillX = lead.getX();
+        stillY = lead.getY();
+        stillZ = lead.getZ();
         return m;
     }
 
@@ -563,8 +572,18 @@ public final class ElytraFlight {
         boolean up = adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(lead)
                 || CreativeWingman.hovering(client, lead);
         leaderDownTicks = up ? 0 : leaderDownTicks + 1;
-        if (leaderDownTicks > 20) {
-            // The leader landed: put down a few blocks to their right, on the ground there.
+        boolean gliding = adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(lead);
+        if (gliding || Math.hypot(Math.hypot(lx - stillX, lz - stillZ), ly - stillY) > 3) {
+            stillX = lx;
+            stillY = ly;
+            stillZ = lz;
+            leaderStillTicks = 0;
+        } else {
+            leaderStillTicks++;
+        }
+        if (leaderDownTicks > 20 || leaderStillTicks > LEADER_STILL_LAND) {
+            // The leader landed, or hangs in one place: put down a few blocks to their right, on
+            // the ground there.
             double h = Math.max(Math.hypot(lvx, lvz), 1e-6);
             tx = lx - lvz / h * 4;
             tz = lz + lvx / h * 4;
