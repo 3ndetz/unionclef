@@ -5929,6 +5929,13 @@ public class Py4jEntryPoint {
                 Map.of("phase", "failed", "reason", "client thread timeout"));
     }
 
+    /** Creative only: fly to block x, z with no elytra and land on the top surface there. */
+    public Map<String, Object> hoverTo(int x, int z) {
+        adris.altoclef.util.agent.ElytraFlight.register();
+        return onClientThread(() -> adris.altoclef.util.agent.CreativeWingman.startTo(x, z),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
     public Map<String, Object> hoverStatus() {
         return adris.altoclef.util.agent.CreativeWingman.status();
     }

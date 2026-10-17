@@ -260,7 +260,13 @@ public class McpServer {
                 "Creative only: fly (creative flight, no elytra) beside a player who is creative-flying; "
                 + "when they stand on the ground, come down next to them. WASD by hand lets go. Poll hoverStatus.",
                 schema("nick:string"), a -> api.hoverFollow(argStr(a, "nick")));
-        tool("hoverStatus", "Creative wingman: phase (flying/landing/done/failed), reason, gap to the slot.", schema(),
+        tool("hoverTo",
+                "Creative only: fly to block x,z with creative flight (no elytra, no take-off run): straight "
+                + "up out of a pit, across over the ground, down onto the top surface there. Fails 'blocked' "
+                + "under a roof or against a wall. WASD by hand lets go. Poll hoverStatus.",
+                schema("x:int", "z:int"), a -> api.hoverTo(argInt(a, "x"), argInt(a, "z")));
+        tool("hoverStatus", "Creative flight (wingman or hoverTo): phase (flying/landing/done/failed), reason, "
+                + "gap to the slot or the point, target.", schema(),
                 a -> api.hoverStatus());
         tool("flyStatus", "Current elytra flight: phase, reason, distance, rockets used.", schema(),
                 a -> api.flyStatus());
