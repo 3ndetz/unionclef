@@ -6,7 +6,7 @@ package adris.altoclef.util.agent;
  * throttle, climbs ahead of terrain and lands on a glide slope with a flare.
  *
  * <p>Pure math, no Minecraft classes, so the same code runs against a copy of the vanilla glide
- * physics offline (see ElytraPilotSim in the agent repo's tools) and in the client every tick.
+ * physics offline (tools/elytra/ElytraPilotSim) and in the client every tick.
  * Angles in degrees, Minecraft convention: pitch &lt; 0 is nose up; flight-path angle &gt; 0 is
  * climbing.
  */
