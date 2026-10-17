@@ -109,6 +109,13 @@ public final class CreativeWingman {
         return null;
     }
 
+    /** Room for the player at x, y, z: feet and head blocks without collision. */
+    private static boolean clearAt(MinecraftClient c, double x, double y, double z) {
+        var pos = net.minecraft.util.math.BlockPos.ofFloored(x, y, z);
+        return c.world.getBlockState(pos).getCollisionShape(c.world, pos).isEmpty()
+                && c.world.getBlockState(pos.up()).getCollisionShape(c.world, pos.up()).isEmpty();
+    }
+
     private static double ground(MinecraftClient c, double x, double z) {
         return c.world.getTopY(Heightmap.Type.MOTION_BLOCKING, (int) Math.floor(x), (int) Math.floor(z));
     }
@@ -199,14 +206,24 @@ public final class CreativeWingman {
             return;
         }
         double ux = dx / hd, uz = dz / hd;
+        // Something over the head (a platform, a roof, letters hung under one): straight up only
+        // bumps into it -- out sideways at this height first, towards the point, till the sky opens.
+        boolean roofed = ground(c, px, pz) > py + 2;
         double cruise = ground(c, px, pz);
         for (int i = 1; i <= LOOK_AHEAD; i++) {
             double s = Math.min(i, hd);
-            cruise = Math.max(cruise, ground(c, px + ux * s, pz + uz * s));
+            double ax = px + ux * s, az = pz + uz * s;
+            double g = ground(c, ax, az);
+            // A roof ahead with room under it is flown under; a wall or a hill is climbed over.
+            if (g <= py + 2 || !clearAt(c, ax, py, az)) cruise = Math.max(cruise, g);
         }
         cruise += CLEARANCE;
+        if (roofed) cruise = py;
         Vec3d v;
-        if (py < cruise - 1.5) {
+        if (roofed) {
+            double speed = Math.min(MAX_SPEED * 0.6, 0.15 + hd * 0.1);
+            v = new Vec3d(ux * speed, 0, uz * speed);
+        } else if (py < cruise - 1.5) {
             v = new Vec3d(0, Math.min(0.6, 0.2 + (cruise - py) * 0.2), 0); // straight up
         } else {
             double speed = Math.min(MAX_SPEED * 0.8, 0.15 + hd * 0.1); // slows down over the point
