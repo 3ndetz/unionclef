@@ -190,6 +190,9 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - InputControls gains waterKeyHolders (caller frame of every JUMP/SNEAK hold while touching water), the forwardStealers pattern. UNIONCLEF-HARD's WIP already names the same symptom ('food-bank stall held JUMP+SNEAK while grounded in water') with pillarUsesSwimInputInWater (committed, default false).
 - Dry-land shelter fallback + instrument, jar 1df89835, four interleaved lake replays from cp1015-2247-t609 with pillarUsesSwimInputInWater ON/OFF/OFF/ON (`artifacts/bank-exit-ab-20261022`): all four end on dry land; runs 1-2 invalid (sank during the harness setup window before @gamer, reset to spawn); runs 3-4 reached the shore and dug in (3191/1988 dry shelter ticks, HP20). No J/S hold in water recorded; the flag made no visible difference. Across all after-arm runs: 2 reached land and sheltered, 2 (2026-10-16) froze at the bank; before: 0/4 left the water. Committed.
 
+- Gold-helmet A/B from nether-fresh (gamer_smoke --grcon, `artifacts/nether-gold-ab-20261022`): 4/4 died within 6 min -- gold: slain by Hoglin, fell from a high place; none: fell from a high place, slain by Piglin. The falls are hoglin throws. The helmet only removes piglins.
+- CollectFoodTask declines hoglins unless the bot has an iron+ sword/axe AND wears an iron+ chestplate (then the existing 'go to the Overworld for food' fallback). Jar 03cb8dea. Interleaved after/before/before/after from nether-fresh (`artifacts/hoglin-gear-ab-20261022`): before 2/2 died ('fell from a high place', 'doomed to fall by Hoglin'); after 1/2 -- the death followed a MobDefense piglin fight, no food task; the other went back to the Overworld for food, PASS, 0 deaths. Committed. Next: gold against piglins.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

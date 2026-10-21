@@ -88,6 +88,17 @@ public class CollectFoodTask extends Task {
      *  without closing in before it is dropped for the outward search. */
     private long surfaceSearchSinceMs;
     private double surfaceSearchBest;
+    public static volatile int hoglinsDeclined;
+
+    /** An iron-or-better sword or axe in the pack and an iron-or-better chestplate worn. */
+    private static boolean readyForHoglins(AltoClef mod) {
+        boolean weapon = mod.getItemStorage().hasItem(Items.IRON_SWORD, Items.DIAMOND_SWORD, Items.NETHERITE_SWORD,
+                Items.IRON_AXE, Items.DIAMOND_AXE, Items.NETHERITE_AXE);
+        boolean chest = StorageHelper.isArmorEquipped(Items.IRON_CHESTPLATE, Items.DIAMOND_CHESTPLATE,
+                Items.NETHERITE_CHESTPLATE);
+        return weapon && chest;
+    }
+
     private static final long SURFACE_PATIENCE_MS = 60_000;
     public static volatile int surfaceSearchGivenUp;
     private static final int SURFACE_SEARCH_RADIUS = 16;
@@ -308,6 +319,15 @@ public class CollectFoodTask extends Task {
 
             for (CookableFoodTarget cookable : COOKABLE_FOODS) {
                 if (!mod.getEntityTracker().entityFound(cookable.mobToKill)) continue;
+                // ⛔ A HOGLIN IS NOT FOOD FOR A BOT IN STONE GEAR (2026-10-22). It has 40 health and
+                // throws the player up on every hit. From nether-fresh (stone sword, no armour) the
+                // hunts ended "slain by Hoglin" twice and "fell from a high place" twice -- the throw,
+                // then the landing -- in seven replays. Without an iron weapon AND an iron chestplate
+                // the Overworld is the food source (the fallback below goes back for it).
+                if (cookable.mobToKill == HoglinEntity.class && !readyForHoglins(mod)) {
+                    hoglinsDeclined++;
+                    continue;
+                }
                 Optional<Entity> nearest = mod.getEntityTracker().getClosestEntity(mod.getPlayer().getPos(),notBaby ,cookable.mobToKill);
                 if (nearest.isEmpty()) continue; // ?? This crashed once?
                 int hungerPerformance = cookable.getCookedUnits();

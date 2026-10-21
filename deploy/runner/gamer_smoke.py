@@ -59,6 +59,9 @@ DAYLOCK = "--daylock" in sys.argv
 TSET = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--tset"]
 assert all("=" in kv for kv in TSET), TSET
 WEATHER = sys.argv[sys.argv.index("--weather") + 1] if "--weather" in sys.argv else None
+# --grcon "COMMAND" (repeatable): an rcon command on the playthrough server right after the restore,
+# e.g. "item replace entity {bot} armor.head with golden_helmet" for a gear A/B ({bot} = bot name).
+GRCON = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--grcon"]
 if FROM_CP:
     # the reset and the fresh-start spiral below still run (their world is discarded with the
     # swap); pin the spawn so the spiral's forest search does not spend minutes on ground the
@@ -907,6 +910,8 @@ def _run():
             grcon(f"data merge entity {BOT} {{Health:20.0f,foodLevel:20,foodSaturationLevel:20.0f}}")
             time.sleep(2)
             print("  post-restore safety: forced day, cleared hostiles (r<=64), healed + fed")
+    for _cmd in GRCON:
+        print(f"  --grcon: {grcon(_cmd.replace('{bot}', BOT))}")
     if WEATHER:
         _kind, _, _ticks = WEATHER.partition(":")
         print(f"  weather forced: {grcon(f'weather {_kind} {_ticks or 6000}')}")

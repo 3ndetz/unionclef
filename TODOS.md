@@ -22,6 +22,8 @@
   the site. Next options: fix that exploration stand first, or make the nether food safer (gold
   armour vs piglins, avoid hoglins without better gear). Evidence: artifacts/nether-survival-
   20261016, artifacts/nether-food-ab-20261016.
+  2026-10-22: hoglins are declined without an iron+ weapon and iron+ chestplate (deaths 2/2 -> 1/2,
+  the remaining one a piglin fight). Gold armour against piglins is the open half.
 
 - [ ] **First nether entry from full59-before-portal dies in lava on arrival (2026-10-15).**
   With the 0.95.60 portal fixes, a 15-min native run from full59-before-portal cast and lit the
