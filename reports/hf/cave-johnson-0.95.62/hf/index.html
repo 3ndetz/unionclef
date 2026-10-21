@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Bebas"; src: url("assets/BebasNeue-Regular.ttf"); }
+@font-face { font-family: "Serif"; src: url("assets/DMSerifDisplay-Regular.ttf"); }
+@font-face { font-family: "SerifI"; src: url("assets/DMSerifDisplay-Italic.ttf"); }
+@font-face { font-family: "Mono"; src: url("assets/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "MonoB"; src: url("assets/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "Inter"; src: url("assets/Inter.ttf"); }
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1920px; height:1080px; overflow:hidden; background:#1d2a2f; }
+body { font-family:"Inter", sans-serif; color:#1d2a2f; }
+#root { position:relative; width:100%; height:100%; overflow:hidden; background:#1d2a2f; }
+.clip { position:absolute; inset:0; }
+.card { pointer-events:none; }
+.vid { width:1920px; height:1080px; object-fit:cover; transform-origin:50% 50%; }
+.bgimg { position:absolute; inset:0; width:1920px; height:1080px; object-fit:cover; }
+.vign { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 45%, rgba(20,16,10,0.55) 100%); }
+.edgevig { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 62%, rgba(25,18,8,0.35) 100%); }
+.grain { position:absolute; inset:-200px; background:url("assets/grain.png"); opacity:0.07; mix-blend-mode:overlay; }
+.paper { position:absolute; inset:0; background:radial-gradient(circle at 30% 25%, #fbf3df 0%, #efe2c4 60%, #e2d0a8 100%); }
+.paper.dark { background:radial-gradient(circle at 50% 40%, #27383e 0%, #1d2a2f 55%, #141d20 100%); }
+.reel { position:absolute; top:34px; right:40px; font-family:"MonoB"; font-size:22px; letter-spacing:3px; color:#f3e9d2;
+         background:rgba(29,42,47,0.8); padding:8px 16px; border-left:6px solid #d8453a; }
+.speed { position:absolute; top:36px; right:44px; font-family:"MonoB"; font-size:30px; color:#f3e9d2; background:#1d2a2f;
+          padding:4px 16px; border:3px solid #f3e9d2; }
+.hspeed { position:absolute; top:205px; left:1790px; font-family:"MonoB"; font-size:26px; color:#f3e9d2; background:#1d2a2f;
+          padding:2px 12px; border:3px solid #f3e9d2; }
+.stampbox { position:absolute; width:0; height:0; display:flex; align-items:center; justify-content:center; }
+.stamp { font-family:"Bebas"; white-space:nowrap; letter-spacing:6px; padding:6px 28px 0; border:9px solid; border-radius:14px;
+          background:rgba(243,233,210,0.92); box-shadow:0 0 0 6px rgba(243,233,210,0.92), 10px 12px 0 6px rgba(29,42,47,0.55); }
+.kin { position:absolute; padding:10px 30px 4px 26px; background:#f3e9d2; border-left:14px solid #d8453a; box-shadow:10px 10px 0 rgba(29,42,47,0.85); max-width:1500px; }
+.kin.teal { border-left-color:#1f6f78; }
+.kin.bl { left:60px; bottom:150px; } .kin.tl { left:60px; top:70px; }
+.kin-s { font-family:"MonoB"; font-size:30px; letter-spacing:2px; color:#1f6f78; text-transform:uppercase; }
+.kin-b { font-family:"Bebas"; font-size:110px; line-height:1; color:#1d2a2f; }
+/* halves */
+.half { position:absolute; top:170px; width:930px; height:523px; object-fit:cover; border:6px solid #f3e9d2; }
+.half.left { left:20px; } .half.right { left:970px; }
+.halflab { position:absolute; top:60px; width:930px; text-align:center; font-family:"Bebas"; font-size:84px; letter-spacing:6px; }
+.halflab.left { left:20px; } .halflab.right { left:970px; }
+.halfcap { position:absolute; top:712px; left:0; right:0; text-align:center; font-family:"Mono"; font-size:28px; color:#c9d4d3; }
+.bad { color:#ff7a6a; } .good { color:#7fe0a6; }
+.ring { position:absolute; border:8px solid #e3a73a; border-radius:50%; box-shadow:0 0 0 4px rgba(29,42,47,0.6); }
+.ring span { position:absolute; left:50%; top:100%; transform:translate(-50%, 10px); white-space:nowrap; font-family:"Bebas";
+              font-size:52px; letter-spacing:3px; color:#1d2a2f; background:#e3a73a; padding:2px 16px 0; }
+.nearstat { position:absolute; left:220px; top:740px; width:1480px; background:#f3e9d2; border:5px solid #1d2a2f; padding:14px 30px;
+             box-shadow:12px 12px 0 rgba(0,0,0,0.5); font-family:"Mono"; font-size:34px; color:#1d2a2f; line-height:1.45; }
+.nearstat b { font-family:"Bebas"; font-size:54px; color:#2f7d5b; font-weight:normal; display:inline-block; min-width:170px; }
+/* stat */
+.stat { position:absolute; left:110px; top:120px; width:1700px; }
+.sth { font-family:"Bebas"; font-size:120px; color:#1d2a2f; }
+.srow { display:flex; align-items:center; gap:34px; height:210px; }
+.sl { font-family:"SerifI"; font-size:66px; width:440px; text-align:right; }
+.sbar { height:130px; width:900px; } .sbar.good { background:#2f7d5b; }
+.sv { font-family:"Bebas"; font-size:140px; white-space:nowrap; } .sv.good { color:#2f7d5b; }
+.snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:20px; }
+/* grid */
+.gridhead { position:absolute; left:80px; top:70px; font-family:"MonoB"; font-size:36px; letter-spacing:4px; color:#1f6f78; }
+.grid { position:absolute; left:80px; top:140px; width:1150px; display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; }
+.tile { height:118px; background:#fbf3df; border:4px solid #1d2a2f; display:flex; align-items:center; justify-content:space-between;
+         padding:0 26px; font-family:"MonoB"; font-size:40px; }
+.tile .tk { font-family:"Bebas"; font-size:70px; }
+.tile.ghost { border-style:dashed; border-color:#d8453a; color:#d8453a; background:transparent; }
+.score { position:absolute; right:70px; top:250px; font-family:"Bebas"; font-size:330px; line-height:1; color:#2f7d5b; }
+.score .of { color:#1d2a2f; font-size:160px; }
+.foot { position:absolute; left:80px; top:880px; font-family:"Mono"; font-size:28px; color:#4a5a5f; }
+/* diagram */
+.diag { position:absolute; left:110px; top:160px; width:756px; height:588px; }
+.dgrid { position:absolute; inset:0; display:grid; grid-template-columns:repeat(9, 84px); grid-auto-rows:84px; }
+.cell { border:2px solid rgba(29,42,47,0.25); background:#fbf3df; }
+.cell.wl { background:#6d7478; } .cell.lv { background:#e8692d; }
+.dcirc { position:absolute; border:7px dashed #1f6f78; border-radius:50%; }
+.dx { position:absolute; width:84px; height:84px; display:flex; align-items:center; justify-content:center; font-family:"Inter";
+       font-weight:800; font-size:70px; color:#d8453a; text-shadow:0 0 6px #fff; }
+.dlegend { position:absolute; left:960px; top:200px; width:880px; }
+.dh { font-family:"Bebas"; font-size:100px; color:#1d2a2f; line-height:1; margin-bottom:30px; }
+.dl1, .dl2 { font-family:"SerifI"; font-size:50px; display:flex; align-items:center; gap:22px; margin-bottom:26px; }
+.dl1 { color:#a2382f; } .dl2 { color:#2f7d5b; }
+.sw { width:60px; height:60px; flex:none; border:3px solid #1d2a2f; } .sw.wl { background:#6d7478; } .sw.ok { background:#7fbf8f; }
+.dnote { font-family:"Mono"; font-size:26px; color:#4a5a5f; margin-top:30px; }
+/* stat (0.95.59: three rows, longer labels) */
+.stat { position:absolute; left:90px; top:110px; width:1740px; }
+.sth { font-family:"Bebas"; font-size:96px; color:#1d2a2f; margin-bottom:10px; }
+.srow { display:flex; align-items:center; gap:30px; height:180px; }
+.sl { font-family:"SerifI"; font-size:56px; width:720px; text-align:right; }
+.sbar { height:110px; width:560px; } .sbar.good { background:#2f7d5b; }
+.sv { font-family:"Bebas"; font-size:120px; white-space:nowrap; } .sv.good { color:#2f7d5b; }
+.snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:24px; }
+/* keys */
+.keys { position:absolute; left:140px; top:120px; width:1640px; }
+.kh { font-family:"Bebas"; font-size:110px; color:#1d2a2f; margin-bottom:20px; }
+.krow { display:flex; align-items:center; height:200px; border-bottom:3px solid rgba(29,42,47,0.2); }
+.krow.khead { height:80px; font-family:"MonoB"; font-size:40px; letter-spacing:4px; color:#1f6f78; }
+.kc0 { width:700px; display:flex; align-items:center; gap:34px; } .kc1, .kc2 { width:470px; text-align:center; }
+.krow:not(.khead) .kc1, .krow:not(.khead) .kc2 { font-family:"Bebas"; font-size:100px; }
+.cap { display:inline-block; min-width:150px; padding:18px 26px 8px; text-align:center; font-family:"MonoB"; font-size:54px;
+        background:#fbf3df; border:5px solid #1d2a2f; border-radius:14px; box-shadow:0 10px 0 #1d2a2f; }
+.kn { font-family:"SerifI"; font-size:62px; }
+.krow .good { color:#2f7d5b; } .badk { color:#c23b2f; }
+.keys .snote { margin-top:34px; }
+.chatbox { position:absolute; left:0px; top:838px; width:880px; height:80px; border:8px solid #e3a73a; border-radius:12px;
+            box-shadow:0 0 0 4px rgba(29,42,47,0.6); }
+.chatbox span { position:absolute; left:100%; top:50%; transform:translate(18px,-50%); white-space:nowrap; font-family:"Bebas";
+                 font-size:56px; letter-spacing:3px; color:#1d2a2f; background:#e3a73a; padding:2px 16px 0; }
+.chatbox.rs { left:6px; top:898px; width:1540px; height:104px; }
+.chatbox.rs span { left:auto; right:0; top:0; transform:translate(0,-110%); }
+.chatbox.sh { left:0px; top:842px; width:1080px; height:76px; }
+/* stat2 (0.95.60: before / after bars) */
+.stat2 { position:absolute; left:80px; top:90px; width:1760px; }
+.stat2 .sth { font-family:"Bebas"; font-size:92px; color:#1d2a2f; margin-bottom:6px; }
+.shead { display:flex; height:70px; align-items:center; font-family:"MonoB"; font-size:38px; letter-spacing:4px; }
+.stat2 .srow { display:flex; align-items:center; height:165px; border-bottom:3px solid rgba(29,42,47,0.15); }
+.stat2 .sl { font-family:"SerifI"; font-size:50px; width:700px; white-space:nowrap; text-align:right; padding-right:40px; color:#1d2a2f; }
+.sc { width:530px; display:flex; align-items:center; gap:22px; } .sc.wide { width:1060px; }
+.shead .sc { display:block; }
+.bar { height:100px; width:0; } .bar.bad { background:#c23b2f; } .bar.good { background:#2f7d5b; }
+.sc b { font-family:"Bebas"; font-size:104px; font-weight:normal; white-space:nowrap; }
+.stat2 .bad { color:#c23b2f; } .stat2 .good { color:#2f7d5b; }
+.stat2 .bar.bad { background:#c23b2f; } .stat2 .bar.good { background:#2f7d5b; }
+.stat2 .snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:26px; }
+.framed { position:absolute; left:160px; top:40px; width:1600px; height:900px; object-fit:cover; border:6px solid #f3e9d2; box-shadow:12px 12px 0 rgba(0,0,0,0.5); }
+.strip { position:absolute; left:110px; top:180px; width:1700px; height:auto; background:#141d20; padding:14px 20px; border-left:12px solid #e3a73a; box-shadow:10px 10px 0 rgba(0,0,0,0.5); }
+.strip.low { top:770px; }
+.ring.up span { top:auto; bottom:100%; transform:translate(-50%, -10px); }
+.snote2 { font-family:"SerifI"; font-size:40px; color:#4a5a5f; white-space:nowrap; font-style:normal; }
+/* close */
+.labname { font-family:"Serif"; font-size:64px; color:#f3e9d2; letter-spacing:10px; text-shadow:0 4px 0 #1d2a2f, 0 0 30px rgba(0,0,0,0.6); }
+.labname.big { font-size:96px; }
+.closebox { position:absolute; left:0; right:0; top:80px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.closet { font-family:"Bebas"; font-size:210px; line-height:1; color:#d8453a; letter-spacing:10px; }
+.closeu { font-family:"MonoB"; font-size:56px; color:#f3e9d2; }
+.closef { font-family:"Mono"; font-size:32px; color:#c9d4d3; }
+.credit { position:absolute; left:0; right:0; bottom:40px; text-align:center; font-family:"Mono"; font-size:26px; color:#8fa3a6; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="64.950" data-width="1920" data-height="1080">
+<div id="c1" class="clip card " style="z-index:0" data-start="0.000" data-duration="12.640"><div class="paper dark"></div></div>
+<video id="v2" class="clip framed" style="z-index:1;" src="videos/v2.mp4" muted playsinline data-start="0.000" data-duration="6.763"></video>
+<div id="c4" class="clip card " style="z-index:55" data-start="4.193" data-duration="2.570"><div id="r3" class="ring up" style="left:762px;top:762px;width:200px;height:200px"><span>GOLD HELMET · FULL HEALTH</span></div></div>
+<div id="c6" class="clip card " style="z-index:40" data-start="0.500" data-duration="6.263"><div id="k5" class="kin tl teal"><div class="kin-s">0.95.62 · 15-min run · alive at full health</div><div class="kin-b">THE NETHER, IN A GOLD HAT</div></div></div>
+<video id="v7" class="clip vid" style="z-index:2;" src="videos/v7.mp4" muted playsinline data-start="6.763" data-duration="1.250"></video>
+<div class="clip" style="z-index:30" data-start="6.763" data-duration="1.250"><img id="i8" class="strip" src="videos/s_helm.png" style="transform-origin:50% 50%;width:1477px"></div>
+<div id="c10" class="clip card " style="z-index:40" data-start="6.863" data-duration="1.150"><div id="k9" class="kin bl teal"><div class="kin-s">x2 · the errand has a 6-minute budget</div><div class="kin-b">MINES THE GOLD</div></div></div>
+<video id="v11" class="clip vid" style="z-index:3;" src="videos/v11.mp4" muted playsinline data-start="8.013" data-duration="0.640"></video>
+<div id="c13" class="clip card " style="z-index:40" data-start="8.063" data-duration="0.590"><div id="k12" class="kin bl teal"><div class="kin-s">furnace · x4</div><div class="kin-b">SMELTS IT</div></div></div>
+<video id="v14" class="clip vid" style="z-index:4;" src="videos/v14.mp4" muted playsinline data-start="8.653" data-duration="1.100"></video>
+<div class="clip" style="z-index:4" data-start="9.753" data-duration="0.660"><img id="i15" class="bgimg" src="videos/s_helmout.png" style="transform-origin:50% 50%;"></div>
+<div id="c17" class="clip card " style="z-index:40" data-start="8.703" data-duration="1.710"><div id="k16" class="kin bl teal"><div class="kin-s">five ingots · x1</div><div class="kin-b">CRAFTS THE HELMET</div></div></div>
+<div id="c19" class="clip card " style="z-index:55" data-start="9.753" data-duration="0.660"><div id="r18" class="ring" style="left:1104px;top:216px;width:240px;height:240px"><span>GOLD HELMET</span></div></div>
+<video id="v20" class="clip framed" style="z-index:5;" src="videos/v20.mp4" muted playsinline data-start="10.413" data-duration="2.227"></video>
+<div id="c22" class="clip card " style="z-index:40" data-start="10.463" data-duration="2.177"><div id="k21" class="kin tl teal"><div class="kin-s">the same run · 7+ min there, full health</div><div class="kin-b">INTO THE NETHER</div></div></div>
+<div id="c23" class="clip card " style="z-index:45" data-start="0.000" data-duration="12.640"><div class="reel">3NDETZ LABS &middot; FIELD REPORT &middot; RELEASE 0.95.62</div></div>
+<div id="c25" class="clip card " style="z-index:60" data-start="11.440" data-duration="1.200"><div class="stampbox" style="left:1450px;top:560px"><div id="s24" class="stamp" style="font-size:100px;color:#d8453a;border-color:#d8453a">CLOSE ENOUGH</div></div></div>
+<div id="c26" class="clip card " style="z-index:0" data-start="12.640" data-duration="12.920"><div class="paper dark"></div></div>
+<video id="v27" class="clip half left" style="z-index:3;" src="videos/v27.mp4" muted playsinline data-start="12.640" data-duration="12.920"></video>
+<video id="v28" class="clip half right" style="z-index:3;" src="videos/v28.mp4" muted playsinline data-start="12.640" data-duration="9.245"></video>
+<video id="v29" class="clip half right" style="z-index:4;" src="videos/v29.mp4" muted playsinline data-start="21.885" data-duration="3.675"></video>
+<div id="c30" class="clip card " style="z-index:10" data-start="12.640" data-duration="12.920"><div class="halflab left bad">BEFORE &middot; OLDER BUILD</div><div class="halflab right good">AFTER &middot; 0.95.62</div><div class="hspeed" style="left:40px">x24</div><div class="halfcap">night, every dig-in site under water &middot; separate runs, not a race</div></div>
+<div id="c31" class="clip card " style="z-index:11" data-start="12.640" data-duration="9.245"><div class="hspeed">x2</div></div>
+<div id="c32" class="clip card " style="z-index:11" data-start="21.885" data-duration="3.675"><div class="hspeed">x1.6</div></div>
+<div class="clip" style="z-index:30" data-start="13.040" data-duration="8.845"><img id="i33" class="strip low" src="videos/s_lakeB.png" style="transform-origin:50% 50%;width:1700px"></div>
+<div class="clip" style="z-index:30" data-start="21.885" data-duration="3.675"><img id="i34" class="strip low" src="videos/s_lakeA.png" style="transform-origin:50% 50%;width:1000px"></div>
+<div id="c36" class="clip card " style="z-index:55" data-start="24.210" data-duration="1.350"><div id="r35" class="ring" style="left:1295px;top:290px;width:280px;height:280px"><span>DIGS IN</span></div></div>
+<video id="v37" class="clip vid" style="z-index:1;" src="videos/v37.mp4" muted playsinline data-start="25.560" data-duration="7.737"></video>
+<div class="clip" style="z-index:2" data-start="33.297" data-duration="0.943"><img id="i38" class="bgimg" src="videos/s_dead.png" style="transform-origin:50% 50%;"></div>
+<div id="c40" class="clip card " style="z-index:40" data-start="25.860" data-duration="4.337"><div id="k39" class="kin bl red"><div class="kin-s">older build · nether-fresh checkpoint · x1</div><div class="kin-b">HOGLIN HUNT, STONE SWORD</div></div></div>
+<div id="c42" class="clip card " style="z-index:40" data-start="30.197" data-duration="1.200"><div id="k41" class="kin bl red"><div class="kin-s">40 health · throws on every hit</div><div class="kin-b">THE HOGLIN, UP CLOSE</div></div></div>
+<div id="c44" class="clip card " style="z-index:40" data-start="31.397" data-duration="2.843"><div id="k43" class="kin bl red"><div class="kin-s">run log: was doomed to fall by Hoglin</div><div class="kin-b">THROWN OFF THE LEDGE</div></div></div>
+<div id="c46" class="clip card " style="z-index:60" data-start="33.290" data-duration="0.950"><div class="stampbox" style="left:1250px;top:330px"><div id="s45" class="stamp" style="font-size:84px;color:#d8453a;border-color:#d8453a">EXIT, PURSUED BY A HOGLIN</div></div></div>
+<video id="v47" class="clip vid" style="z-index:1;" src="videos/v47.mp4" muted playsinline data-start="34.240" data-duration="4.845"></video>
+<div id="c48" class="clip card " style="z-index:31" data-start="34.240" data-duration="4.845"><div class="speed">x2</div></div>
+<div class="clip" style="z-index:30" data-start="34.540" data-duration="4.545"><img id="i49" class="strip" src="videos/s_hogA.png" style="transform-origin:50% 50%;width:1700px"></div>
+<div id="c51" class="clip card " style="z-index:40" data-start="34.640" data-duration="4.445"><div id="k50" class="kin bl teal"><div class="kin-s">0.95.62 · same checkpoint · stone sword in hand</div><div class="kin-b">NO IRON, NO HOGLINS</div></div></div>
+<video id="v52" class="clip vid" style="z-index:2;" src="videos/v52.mp4" muted playsinline data-start="39.085" data-duration="2.090"></video>
+<div id="c53" class="clip card " style="z-index:32" data-start="39.085" data-duration="2.090"><div class="speed">x4</div></div>
+<div id="c55" class="clip card " style="z-index:40" data-start="39.135" data-duration="2.040"><div id="k54" class="kin bl teal"><div class="kin-s">for food</div><div class="kin-b">BACK TO THE OVERWORLD</div></div></div>
+<video id="v56" class="clip vid" style="z-index:3;" src="videos/v56.mp4" muted playsinline data-start="41.175" data-duration="2.225"></video>
+<div id="c58" class="clip card " style="z-index:40" data-start="41.225" data-duration="2.175"><div id="k57" class="kin bl teal"><div class="kin-s">farm animals · x1</div><div class="kin-b">OVERWORLD FOOD</div></div></div>
+<div id="c59" class="clip card " style="z-index:0" data-start="43.400" data-duration="13.910"><div class="paper"></div></div>
+<div id="c60" class="clip card " style="z-index:5" data-start="43.400" data-duration="13.910"><div class="stat2"><div class="sth">MEASURED ON THE BENCH</div><div class="shead"><span class="sl"></span><span class="sc bad">BEFORE</span><span class="sc good">0.95.62</span></div><div class="srow"><span class="sl">night in a lake: left the water</span><span class="sc"><div id="b1" class="bar bad"></div><b id="bv1" class="bad">0 / 4</b></span><span class="sc"><div id="a1" class="bar good"></div><b id="av1" class="good">all valid</b></span></div><div class="srow"><span class="sl">hoglin checkpoint: deaths</span><span class="sc"><div id="b2" class="bar bad"></div><b id="bv2" class="bad">2 / 2</b></span><span class="sc"><div id="a2" class="bar good"></div><b id="av2" class="good">1 / 2</b><i id="an2" class="snote2">a piglin</i></span></div><div class="srow"><span class="sl">gold helmet, 15-min runs</span><span class="sc"><b id="bv3" class="bad">&mdash;</b></span><span class="sc"><div id="a3" class="bar good"></div><b id="av3" class="good">2 / 2</b><i id="an3" class="snote2">0 deaths</i></span></div><div class="snote">nether, earlier replays: 7 of 7 dead or nearly dead in 3-6 min &middot; with the helmet: 7+ min at full health<br>separate runs, not a race &middot; no speed or FPS gain claimed &middot; the game is not beaten</div></div></div>
+<div id="c61" class="clip card " style="z-index:0" data-start="57.310" data-duration="7.640"><div class="paper dark"></div></div>
+<div id="c62" class="clip card " style="z-index:5" data-start="57.310" data-duration="7.640"><div class="closebox"><div id="cl-badge"><svg width="150" height="150" viewBox="0 0 200 200"><defs><radialGradient id="lgg" cx="40%" cy="35%"><stop offset="0" stop-color="#fff6df"/><stop offset="1" stop-color="#e9d9b4"/></radialGradient></defs><circle cx="100" cy="100" r="94" fill="url(#lgg)" stroke="#1d2a2f" stroke-width="6"/><circle cx="100" cy="100" r="80" fill="none" stroke="#d8453a" stroke-width="3" stroke-dasharray="4 7"/><g fill="none" stroke="#1f6f78" stroke-width="6"><ellipse cx="100" cy="100" rx="70" ry="24"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(60 100 100)"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(-60 100 100)"/></g><g transform="translate(100 100)"><polygon points="0,-26 23,-13 0,0 -23,-13" fill="#6fbf4a"/><polygon points="-23,-13 0,0 0,26 -23,13" fill="#8a5a33"/><polygon points="23,-13 0,0 0,26 23,13" fill="#6b4426"/><polygon points="0,-26 23,-13 0,0 -23,-13 0,-26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/><path d="M-23,-13 L-23,13 L0,26 L23,13 L23,-13 M0,0 L0,26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/></g><circle cx="170" cy="100" r="7" fill="#d8453a"/><circle cx="65" cy="40" r="7" fill="#d8453a"/></svg></div><div id="cl-lab" class="labname big">3NDETZ LABS</div><div id="cl-t" class="closet">unionclef 0.95.62</div><div id="cl-u" class="closeu">github.com/3ndetz/unionclef</div><div id="cl-f" class="closef">open source · GPL-3.0 · Minecraft 1.21 · Fabric</div></div><div id="cl-credit" class="credit">Music: “Hep Cats” by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0</div></div>
+<div id="c64" class="clip card " style="z-index:60" data-start="62.100" data-duration="2.850"><div class="stampbox" style="left:1440px;top:830px"><div id="s63" class="stamp" style="font-size:90px;color:#d8453a;border-color:#d8453a">TROUSERS: PENDING</div></div></div>
+<div id="c65" class="clip card " style="z-index:90" data-start="0.000" data-duration="64.950"><div id="grain" class="grain"></div><div class="edgevig"></div></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo('#r3',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},4.193);
+tl.fromTo('#k5',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},0.500);
+tl.fromTo('#v7',{scale:1.0},{scale:1.06,duration:1.250,ease:'none'},6.763);
+tl.fromTo('#i8',{opacity:0,y:-12},{opacity:1,y:0,duration:0.3},6.763);
+tl.fromTo('#k9',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},6.863);
+tl.fromTo('#v11',{scale:1.0},{scale:1.04,duration:0.640,ease:'none'},8.013);
+tl.fromTo('#k12',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},8.063);
+tl.fromTo('#v14',{scale:1.0},{scale:1.04,duration:1.100,ease:'none'},8.653);
+tl.fromTo('#i15',{scale:1.04},{scale:1.06,duration:0.660,ease:'sine.inOut'},9.753);
+tl.fromTo('#k16',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},8.703);
+tl.fromTo('#r18',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},9.753);
+tl.fromTo('#k21',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},10.463);
+tl.fromTo('.reel',{opacity:0},{opacity:1,duration:0.4},0.1);
+tl.fromTo('#s24',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},11.440);
+tl.fromTo('#s24',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},11.720);
+tl.fromTo('.halflab',{opacity:0,y:-20},{opacity:1,y:0,duration:0.3},12.740);
+tl.fromTo('#i33',{opacity:0,y:-12},{opacity:1,y:0,duration:0.3},13.040);
+tl.fromTo('#i34',{opacity:0,y:-12},{opacity:1,y:0,duration:0.3},21.885);
+tl.to('.half.left',{opacity:0.55,duration:0.4},21.885);
+tl.fromTo('#r35',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},24.210);
+tl.fromTo('#v37',{scale:1.0},{scale:1.08,duration:7.737,ease:'none'},25.560);
+tl.fromTo('#i38',{scale:1.08},{scale:1.1,duration:0.943,ease:'sine.inOut'},33.297);
+tl.fromTo('#k39',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},25.860);
+tl.fromTo('#k41',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},30.197);
+tl.fromTo('#k43',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},31.397);
+tl.fromTo('#s45',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},33.290);
+tl.fromTo('#s45',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},33.570);
+tl.fromTo('#v47',{scale:1.0},{scale:1.06,duration:4.845,ease:'none'},34.240);
+tl.fromTo('#i49',{opacity:0,y:-12},{opacity:1,y:0,duration:0.3},34.540);
+tl.fromTo('#k50',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},34.640);
+tl.fromTo('#v52',{scale:1.0},{scale:1.1,duration:2.090,ease:'none'},39.085);
+tl.fromTo('#k54',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},39.135);
+tl.fromTo('#v56',{scale:1.0},{scale:1.06,duration:2.225,ease:'none'},41.175);
+tl.fromTo('#k57',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},41.225);
+tl.fromTo('.stat2 .srow',{opacity:0,x:-40},{opacity:1,x:0,duration:0.3,stagger:0.1},43.450);
+tl.fromTo('#b1',{width:0},{width:6,duration:0.45,ease:'power3.out'},45.299);
+tl.fromTo('#bv1',{opacity:0},{opacity:1,duration:0.2},45.599);
+tl.fromTo('#a1',{width:0},{width:300,duration:0.45,ease:'power3.out'},47.059);
+tl.fromTo('#av1',{opacity:0},{opacity:1,duration:0.2},47.359);
+tl.fromTo('#b2',{width:0},{width:300,duration:0.45,ease:'power3.out'},49.939);
+tl.fromTo('#bv2',{opacity:0},{opacity:1,duration:0.2},50.239);
+tl.fromTo('#a2',{width:0},{width:150,duration:0.45,ease:'power3.out'},51.299);
+tl.fromTo('#av2',{opacity:0},{opacity:1,duration:0.2},51.599);
+tl.fromTo('#a3',{width:0},{width:300,duration:0.45,ease:'power3.out'},55.875);
+tl.fromTo('#av3',{opacity:0},{opacity:1,duration:0.2},56.175);
+tl.fromTo('#bv3',{opacity:0},{opacity:1,duration:0.2},53.139);
+tl.fromTo('#an2',{opacity:0},{opacity:1,duration:0.3},52.580);
+tl.fromTo('#an3',{opacity:0},{opacity:1,duration:0.3},56.515);
+tl.fromTo('.stat2 .snote',{opacity:0},{opacity:1,duration:0.4},53.239);
+tl.fromTo('#cl-badge',{scale:0,rotation:180},{scale:1,rotation:0,duration:0.8,ease:'back.out(1.5)'},57.410);
+tl.fromTo('#cl-lab',{opacity:0,y:30},{opacity:1,y:0,duration:0.5},57.610);
+tl.fromTo('#cl-t',{opacity:0,scale:1.6},{opacity:1,scale:1,duration:0.5,ease:'expo.out'},58.355);
+tl.fromTo(['#cl-u','#cl-f'],{opacity:0,y:20},{opacity:1,y:0,duration:0.4,stagger:0.2},61.235);
+tl.fromTo('#s63',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},62.100);
+tl.fromTo('#s63',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},62.380);
+tl.fromTo('#cl-credit',{opacity:0},{opacity:1,duration:0.6},62.250);
+tl.to('#grain',{backgroundPosition:'173px 97px',duration:0.08,repeat:405,yoyo:true,ease:'steps(1)'},0);
+window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

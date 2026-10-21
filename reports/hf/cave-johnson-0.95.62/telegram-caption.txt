@@ -1,0 +1,8 @@
+Unionclef 0.95.62: dressed for the nether.
+
+- Night in a lake: with every dig-in site under water the bot used to float till morning (6.5 min in one run, killed by a drowned in another). It now swims for dry land and digs in. Lake replays: before 0/4 left the water; after, 2 runs reached the shore and dug in, 2 earlier ones froze at the bank (the card's "all valid" counts only the latest pair).
+- No hoglin hunting in stone gear: only with an iron+ weapon and chestplate, otherwise food from the Overworld. Same checkpoint: deaths 2/2 -> 1/2 (that one a piglin).
+- A gold helmet before the nether, on a 6-minute budget: 2/2 runs got one, no deaths; one stayed alive 7+ min in the nether at full health (7 of 7 earlier nether replays died or nearly died in 3-6 min).
+
+No speed or FPS gain claimed. Release classes byte-identical to the tested build.
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.62

@@ -1,0 +1,115 @@
+{
+ "total": 64.95,
+ "voice": [
+  [
+   "l01",
+   0.3
+  ],
+  [
+   "l02",
+   12.940000000000001
+  ],
+  [
+   "l03",
+   25.860000000000003
+  ],
+  [
+   "l04",
+   34.54
+  ],
+  [
+   "l05",
+   43.65
+  ],
+  [
+   "l06",
+   57.71
+  ]
+ ],
+ "clips": [
+  {
+   "key": "v2",
+   "file": "helmet2.mp4",
+   "src_in": 670.5,
+   "src_out": 677.26,
+   "speed": 1.0
+  },
+  {
+   "key": "v7",
+   "file": "helmet2.mp4",
+   "src_in": 66.3,
+   "src_out": 68.8,
+   "speed": 2.0
+  },
+  {
+   "key": "v11",
+   "file": "helmet2.mp4",
+   "src_in": 186.0,
+   "src_out": 188.56,
+   "speed": 4.0
+  },
+  {
+   "key": "v14",
+   "file": "helmet2.mp4",
+   "src_in": 199.43,
+   "src_out": 200.53,
+   "speed": 1.0
+  },
+  {
+   "key": "v20",
+   "file": "helmet2.mp4",
+   "src_in": 705.0,
+   "src_out": 707.23,
+   "speed": 1.0
+  },
+  {
+   "key": "v27",
+   "file": "lake-before.mp4",
+   "src_in": 530.0,
+   "src_out": 840.08,
+   "speed": 24.0
+  },
+  {
+   "key": "v28",
+   "file": "lake-after3.mp4",
+   "src_in": 106.31,
+   "src_out": 124.8,
+   "speed": 2.0
+  },
+  {
+   "key": "v29",
+   "file": "lake-after3.mp4",
+   "src_in": 124.8,
+   "src_out": 130.68,
+   "speed": 1.6
+  },
+  {
+   "key": "v37",
+   "file": "hog-before3.mp4",
+   "src_in": 57.86,
+   "src_out": 65.6,
+   "speed": 1.0
+  },
+  {
+   "key": "v47",
+   "file": "hog-after4.mp4",
+   "src_in": 70.0,
+   "src_out": 79.69,
+   "speed": 2.0
+  },
+  {
+   "key": "v52",
+   "file": "hog-after4.mp4",
+   "src_in": 86.0,
+   "src_out": 94.36,
+   "speed": 4.0
+  },
+  {
+   "key": "v56",
+   "file": "hog-after4.mp4",
+   "src_in": 130.38,
+   "src_out": 132.6,
+   "speed": 1.0
+  }
+ ]
+}

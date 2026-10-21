@@ -60,6 +60,24 @@ python reports/build_report.py reports/stories/<version>.json --send   # when th
 Look at the contact sheet before sending: text overlapping the game HUD, a clip that shows nothing
 happening, a cut that starts after the event -- fix the storyboard and render again.
 
+## Cave Johnson films: audio and timing lessons (0.95.62)
+
+Pipeline: `reports/hf/cave-johnson-<ver>/` (copy the latest folder). Measured on 0.95.62:
+
+- **STT word times run late**, 0.1-0.6 s, worst on the first word of a take. Visual cues keyed to words
+  are fine at that error, but a line's first subtitle must start on the measured voice onset
+  (`add_subs.py: onset()`), not on the STT time.
+- **No single-pass `loudnorm` on the final mix.** It is dynamic: it lifted the music and the stamp
+  thuds in the pauses to speech level (gap peaks -3 dBFS, same as the voice). Static gain plus a
+  limiter (`volume=5dB,alimiter=limit=0.708`) keeps voice peaks at ~-3 dBFS and the pauses ~10 dB under.
+- **Check the mix with stems**, not by ear: `work/stems.py` writes pre-limiter voice / ducked music / SFX
+  and prints music under each line vs in the gaps (0.95.62: -40 vs -32 dB RMS, voice -23) and where
+  each SFX peak lands. SFX are dropped automatically if they fall inside a line.
+- **The mp4 audio stream starts at ~0.28 s.** Decoding it raw makes everything look early; measure with
+  `-af aresample=async=1:first_pts=0`.
+- **Short events can last two frames** (the crafted item sits in the output slot for 0.13 s at 15 fps).
+  Step the source frame by frame and hold the frame as a still under the ring.
+
 ## Housekeeping
 
 `reports/footage/`, `reports/out/` and `reports/hf/videos/` are git-ignored. Delete footage once
