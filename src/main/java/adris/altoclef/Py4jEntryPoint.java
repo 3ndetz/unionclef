@@ -46,7 +46,10 @@ public class Py4jEntryPoint {
     // 300 lines is less than ONE scenario of verbose tungsten logging, so an error early in a
     // run was evicted long before any test read the ring.
     private static final int CHAT_LOG_MAX = 2000;
-    private final java.util.concurrent.ConcurrentLinkedDeque<String> _chatLog = new java.util.concurrent.ConcurrentLinkedDeque<>();
+    // STATIC, one ring for every instance: AltoClef builds this class twice at start-up (once on
+    // init, again when the settings load), the MCP server keeps the first, chat is recorded into
+    // the second -- an agent over MCP saw an empty chat and answered nobody.
+    private static final java.util.concurrent.ConcurrentLinkedDeque<String> _chatLog = new java.util.concurrent.ConcurrentLinkedDeque<>();
     Executor _executor;
     public static String last_talking_player = "";
 
@@ -741,10 +744,8 @@ public class Py4jEntryPoint {
     }
 
     public void onChatMessage(String msg) {
-        if (msg != null) {                       // buffer EVERY incoming line (works even with no callback, e.g. the local client)
-            _chatLog.addLast(msg);
-            while (_chatLog.size() > CHAT_LOG_MAX) _chatLog.pollFirst();
-        }
+        // The ring already has the line: recordChat runs first for every incoming message, and
+        // adding it here as well put each line in twice.
         executeInNetworkThread(() -> {
             if (IsCallbackServerStarted()) {
                 _cb.onChatMessage(msg);
@@ -1557,6 +1558,23 @@ public class Py4jEntryPoint {
         out.put("zone", (x - r) + "," + (y - r) + "," + (z - r) + " .. " + (x + r) + "," + (y + r) + "," + (z + r));
         out.put("protectedZones", cfg.placeDenyZones.size());
         return out;
+    }
+
+    /** Building policy for shared servers: mine only natural terrain, and optionally never
+     *  place blocks (no pillars or bridges left behind). */
+    public Map<String, Object> setBuildPolicy(boolean breakOnlyNatural, boolean allowPlace) {
+        return setBuildPolicy(breakOnlyNatural, allowPlace, kaptainwutax.tungsten.TungstenConfig.get().allowBreak);
+    }
+
+    /** As above, plus allowBreak: false = the pathfinder never mines its way through anything
+     *  (on a shared server even "natural" grass, sand and leaves are someone's build). */
+    public Map<String, Object> setBuildPolicy(boolean breakOnlyNatural, boolean allowPlace, boolean allowBreak) {
+        kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        cfg.breakOnlyNatural = breakOnlyNatural;
+        cfg.allowPlace = allowPlace;
+        cfg.allowBreak = allowBreak;
+        return Map.of("ok", true, "breakOnlyNatural", cfg.breakOnlyNatural, "allowPlace", cfg.allowPlace,
+                "allowBreak", cfg.allowBreak);
     }
 
     /** Clear all runtime protected areas (place + break deny zones). */
@@ -4962,6 +4980,7 @@ public class Py4jEntryPoint {
             if (me == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
             out.put("ok", true);
             out.put("busy", hasActiveTask());
+            out.put("manualMs", adris.altoclef.util.agent.ElytraFlight.msSinceManual()); // the player steering by hand
             out.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
             if (_gotoGoal != null) {
                 double dx = _gotoGoal[0] + 0.5 - me.getX(), dy = _gotoGoal[1] - me.getY(), dz = _gotoGoal[2] + 0.5 - me.getZ();
@@ -5832,6 +5851,269 @@ public class Py4jEntryPoint {
      *  (hp/pos/held/onGround/blocks), and nearby players (name/pos/distance/
      *  health-visible/hostile-facing). The agent uses this to pick tactics
      *  (attack/retreat/bridge/buy) and drives the mod primitives. Read-only. */
+    /** Fly to (x,y,z) on an elytra: equips it, takes off, climbs on fireworks above the terrain,
+     *  glides down near the target. Fire-and-poll with flyStatus. Needs an elytra and
+     *  fireworks in the inventory (creativeGive them in creative). */
+    public Map<String, Object> flyTo(int x, int y, int z) {
+        return flyTo(x, y, z, false);
+    }
+
+    /** Elytra flight; low = low-level (бреющий), a few blocks over the ground all the way. */
+    public Map<String, Object> flyTo(int x, int y, int z, boolean low) {
+        return flyTo(x, y, z, low, 0);
+    }
+
+    /** Elytra flight with figures on the way (tricks: how many, 0..8): rolls, candles, spirals,
+     *  figure eights, flown only high over everything and clear ahead. */
+    public Map<String, Object> flyTo(int x, int y, int z, boolean low, int tricks) {
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.start(x + 0.5, y, z + 0.5, low, tricks),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    /** Elytra route: "x,z;x,z;..." flown through without landing, landing at the last point. */
+    public Map<String, Object> flyRoute(String points, boolean low, int tricks) {
+        java.util.List<double[]> pts = new java.util.ArrayList<>();
+        for (String part : points.split(";")) {
+            String[] xz = part.trim().split(",");
+            if (xz.length < 2) continue;
+            try {
+                pts.add(new double[] {Integer.parseInt(xz[0].trim()) + 0.5, 70, Integer.parseInt(xz[1].trim()) + 0.5});
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        double[][] arr = pts.toArray(new double[0][]);
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.startRoute(arr, low, tricks),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    public Map<String, Object> flyStatus() {
+        return adris.altoclef.util.agent.ElytraFlight.status();
+    }
+
+    /** Fly as a wingman beside a player who is flying an elytra; lands next to them. */
+    public Map<String, Object> flyFollow(String nick) {
+        return onClientThread(() -> adris.altoclef.util.agent.ElytraFlight.startFollow(nick),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    /** Swim to the nearest dry shore within radius (the pathfinder is poor in water). */
+    public Map<String, Object> swimToShore(int radius) {
+        return onClientThread(() -> adris.altoclef.util.agent.SwimToShore.start(radius),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    /** A fireworks show from the ground: count colored rockets in a fan ahead (creative). */
+    public Map<String, Object> salute(int count) {
+        return onClientThread(() -> adris.altoclef.util.agent.Salute.start(count),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    public Map<String, Object> saluteStatus() {
+        return adris.altoclef.util.agent.Salute.status();
+    }
+
+    public Map<String, Object> swimStatus() {
+        return adris.altoclef.util.agent.SwimToShore.status();
+    }
+
+    public Map<String, Object> flyStop() {
+        adris.altoclef.util.agent.ElytraFlight.stop();
+        adris.altoclef.util.agent.CreativeWingman.stop("stopped");
+        return adris.altoclef.util.agent.ElytraFlight.status();
+    }
+
+    /** Creative only: fly beside a player who creative-flies (hovers), land when they stand. */
+    public Map<String, Object> hoverFollow(String nick) {
+        adris.altoclef.util.agent.ElytraFlight.register();
+        return onClientThread(() -> adris.altoclef.util.agent.CreativeWingman.start(nick),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    /** Creative only: fly to block x, z with no elytra and land on the top surface there. */
+    public Map<String, Object> hoverTo(int x, int z) {
+        adris.altoclef.util.agent.ElytraFlight.register();
+        return onClientThread(() -> adris.altoclef.util.agent.CreativeWingman.startTo(x, z),
+                Map.of("phase", "failed", "reason", "client thread timeout"));
+    }
+
+    public Map<String, Object> hoverStatus() {
+        return adris.altoclef.util.agent.CreativeWingman.status();
+    }
+
+    /** Creative mode only: take an item from the creative inventory into a free slot, the same
+     *  packet the creative screen sends. No /give and no operator rights needed. Survival gets
+     *  ok=false with a reason; there the agent mines and crafts instead. */
+    public Map<String, Object> creativeGive(String itemId, int count) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            var me = client.player;
+            if (me == null || client.interactionManager == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            if (!me.getAbilities().creativeMode) { out.put("ok", false); out.put("reason", "not creative"); return out; }
+            net.minecraft.util.Identifier id = net.minecraft.util.Identifier.tryParse(
+                    itemId.contains(":") ? itemId : "minecraft:" + itemId);
+            // getOrEmpty: Registries.get(Identifier) changed shape in 1.21.2 and the preprocessor
+            // maps it onto getEntry, which returns a reference, not the item.
+            net.minecraft.item.Item item = id == null ? null
+                    : net.minecraft.registry.Registries.ITEM.getOrEmpty(id).orElse(null);
+            if (item == null || item == net.minecraft.item.Items.AIR) {
+                out.put("ok", false); out.put("reason", "unknown item " + itemId); return out;
+            }
+            int left = Math.max(1, Math.min(count, 64 * 9));
+            int given = 0;
+            var inv = me.getInventory();
+            // Already carried (or worn): nothing more. Every take-off asked for 64 rockets and
+            // filled a new slot each time until the whole inventory was rockets.
+            int had = me.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST).isOf(item) ? 1 : 0;
+            for (int i = 0; i < 36; i++) if (inv.getStack(i).isOf(item)) had += inv.getStack(i).getCount();
+            if (had >= Math.min(left, item.getMaxCount())) {
+                out.put("ok", true); out.put("given", 0); out.put("had", had);
+                return out;
+            }
+            for (int i = 0; i < 36 && left > 0; i++) {
+                if (!inv.getStack(i).isEmpty()) continue;
+                int n = Math.min(left, item.getMaxCount());
+                net.minecraft.item.ItemStack stack = new net.minecraft.item.ItemStack(item, n);
+                inv.setStack(i, stack.copy());
+                // Player screen handler: hotbar 0..8 is slot 36..44, main 9..35 keeps its index.
+                client.interactionManager.clickCreativeStack(stack, i < 9 ? 36 + i : i);
+                left -= n;
+                given += n;
+            }
+            out.put("ok", given > 0);
+            out.put("given", given);
+            if (given == 0) out.put("reason", "inventory full");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Items an agent keeps whatever the mode: the flight kit and what rockets are made of. */
+    private static final java.util.Set<String> TIDY_KEEP = java.util.Set.of(
+            "elytra", "firework_rocket", "paper", "gunpowder", "sugar_cane", "netherite_sword");
+    /** Creative: how many stacks of each kit item are worth keeping; more are spare copies. */
+    private static final Map<String, Integer> TIDY_KEEP_STACKS = Map.of(
+            "elytra", 1, "firework_rocket", 2, "paper", 1, "gunpowder", 1, "sugar_cane", 1, "netherite_sword", 1);
+    /** Survival junk the pathfinder digs up; safe to throw away. */
+    private static final java.util.Set<String> TIDY_JUNK = java.util.Set.of(
+            "dirt", "coarse_dirt", "rooted_dirt", "cobblestone", "cobbled_deepslate", "gravel", "sand",
+            "red_sand", "netherrack", "andesite", "diorite", "granite", "tuff", "calcite", "dripstone_block",
+            "rotten_flesh", "wheat_seeds", "flint", "stick", "dead_bush", "short_grass", "tall_grass");
+
+    /** Keep at least keepFree empty slots in the main inventory. A full inventory breaks
+     *  creativeGive and, worse, the mod cannot move fireworks out of the hand before a right
+     *  click, so the bot fires them off on the spot. Creative: empty non-kit slots (the items
+     *  are free from the tab anyway). Survival: throw only obvious junk, never tools or loot. */
+    public Map<String, Object> tidyInventory(int keepFree) {
+        int want = Math.max(0, Math.min(keepFree, 27));
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            var me = client.player;
+            if (me == null || client.interactionManager == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            boolean creative = me.getAbilities().creativeMode;
+            var inv = me.getInventory();
+            int free = 0;
+            for (int i = 0; i < 36; i++) if (inv.getStack(i).isEmpty()) free++;
+            int freed = 0;
+            // In creative, kit stacks beyond these are spare copies the creative tab gave out:
+            // they go first. Counted hotbar first, so the stacks at hand are the ones kept.
+            java.util.Set<Integer> spare = new java.util.HashSet<>();
+            if (creative) {
+                Map<String, Integer> seen = new HashMap<>();
+                for (int k = 0; k < 36; k++) {
+                    int i = k; // hotbar 0..8 first, then main 9..35
+                    net.minecraft.item.ItemStack st = inv.getStack(i);
+                    if (st.isEmpty()) continue;
+                    String id = net.minecraft.registry.Registries.ITEM.getId(st.getItem()).getPath();
+                    Integer cap = TIDY_KEEP_STACKS.get(id);
+                    if (cap == null) continue;
+                    int n = seen.merge(id, 1, Integer::sum);
+                    if (n > cap) spare.add(i);
+                }
+            }
+            for (int i : spare) {
+                if (free >= want) break;
+                inv.setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                client.interactionManager.clickCreativeStack(net.minecraft.item.ItemStack.EMPTY, i < 9 ? 36 + i : i);
+                free++;
+                freed++;
+            }
+            // Main inventory first, the hotbar last: what the player put in hand stays longest.
+            for (int k = 0; k < 36 && free < want; k++) {
+                int i = k < 27 ? k + 9 : k - 27;
+                net.minecraft.item.ItemStack st = inv.getStack(i);
+                if (st.isEmpty()) continue;
+                String id = net.minecraft.registry.Registries.ITEM.getId(st.getItem()).getPath();
+                if (TIDY_KEEP.contains(id)) continue;
+                int slot = i < 9 ? 36 + i : i;
+                if (creative) {
+                    inv.setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                    client.interactionManager.clickCreativeStack(net.minecraft.item.ItemStack.EMPTY, slot);
+                } else if (TIDY_JUNK.contains(id)) {
+                    client.interactionManager.clickSlot(me.playerScreenHandler.syncId, slot, 1,
+                            net.minecraft.screen.slot.SlotActionType.THROW, me);
+                } else {
+                    continue;
+                }
+                free++;
+                freed++;
+            }
+            out.put("ok", free >= want);
+            out.put("free", free);
+            out.put("freed", freed);
+            out.put("mode", creative ? "creative" : "survival");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Text of every sign within radius blocks (front and back), nearest first. Lets an agent
+     *  learn place names ("Pink house", "Farm") instead of guessing from block colours. Reads
+     *  block entities of the loaded chunks, so it costs nothing in world block lookups. */
+    public List<Map<String, Object>> readSigns(int radius) {
+        int r = Math.max(1, Math.min(radius, 64));
+        return onClientThread(() -> {
+            List<Map<String, Object>> out = new ArrayList<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            var me = client.player;
+            if (me == null || client.world == null) return out;
+            int cx = me.getBlockX() >> 4, cz = me.getBlockZ() >> 4, cr = (r >> 4) + 1;
+            for (int x = cx - cr; x <= cx + cr; x++) {
+                for (int z = cz - cr; z <= cz + cr; z++) {
+                    if (!client.world.getChunkManager().isChunkLoaded(x, z)) continue;
+                    var chunk = client.world.getChunk(x, z);
+                    for (var be : chunk.getBlockEntities().values()) {
+                        if (!(be instanceof net.minecraft.block.entity.SignBlockEntity sign)) continue;
+                        var pos = be.getPos();
+                        double d = Math.sqrt(me.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
+                        if (d > r) continue;
+                        String front = signLines(sign.getFrontText());
+                        String back = signLines(sign.getBackText());
+                        if (front.isEmpty() && back.isEmpty()) continue;
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("pos", pos.getX() + "," + pos.getY() + "," + pos.getZ());
+                        m.put("distance", Math.round(d * 10) / 10.0);
+                        m.put("front", front);
+                        m.put("back", back);
+                        out.add(m);
+                    }
+                }
+            }
+            out.sort((a, b) -> Double.compare((Double) a.get("distance"), (Double) b.get("distance")));
+            return out;
+        }, List.of());
+    }
+
+    private static String signLines(net.minecraft.block.entity.SignText text) {
+        StringBuilder sb = new StringBuilder();
+        for (net.minecraft.text.Text line : text.getMessages(false)) {
+            String l = line.getString().strip();
+            if (l.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(l);
+        }
+        return sb.toString();
+    }
+
     public Map<String, Object> getGameState() {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
@@ -5859,8 +6141,9 @@ public class Py4jEntryPoint {
             if (lb > 0) self.put("msSinceBreakProgress", System.currentTimeMillis() - lb);
             self.put("food", me.getHungerManager().getFoodLevel());
             self.put("saturation", me.getHungerManager().getSaturationLevel());
-            self.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
+            self.put("pos", String.format(java.util.Locale.ROOT, "%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
             self.put("onGround", me.isOnGround());
+            self.put("manualMs", adris.altoclef.util.agent.ElytraFlight.msSinceManual()); // the player steering by hand
             // WHICH WORLD AM I IN? There was no way to ask over py4j at all, which a playthrough
             // needs constantly -- overworld, nether, end are three different sets of rules, and an
             // agent that cannot tell them apart cannot plan across a portal. Found while writing the
@@ -5881,7 +6164,7 @@ public class Py4jEntryPoint {
             self.put("yaw", Math.round(me.getYaw() * 10.0f) / 10.0);
             self.put("pitch", Math.round(me.getPitch() * 10.0f) / 10.0);
             net.minecraft.util.math.Vec3d vel = me.getVelocity();
-            self.put("vel", String.format("%.2f,%.2f,%.2f", vel.x, vel.y, vel.z));
+            self.put("vel", String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f", vel.x, vel.y, vel.z));
             var ct = client.crosshairTarget;
             if (ct instanceof net.minecraft.util.hit.BlockHitResult bhr
                     && ct.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
@@ -5892,6 +6175,14 @@ public class Py4jEntryPoint {
             } else {
                 self.put("lookingAt", ct == null ? "none" : ct.getType().toString());
             }
+            // Creative or survival changes what the agent can do (no drops from mined blocks in
+            // creative, items come from the creative inventory instead).
+            if (client.interactionManager != null && client.interactionManager.getCurrentGameMode() != null) {
+                self.put("gameMode", client.interactionManager.getCurrentGameMode().name().toLowerCase(java.util.Locale.ROOT));
+            }
+            self.put("flying", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(me));
+            self.put("inWater", adris.altoclef.util.agent.SwimToShore.inWater(me));
+            self.put("name", me.getName().getString()); // which client this is, with two running
             out.put("self", self);
 
             List<Map<String, Object>> players = new ArrayList<>();
@@ -5901,10 +6192,12 @@ public class Py4jEntryPoint {
                 double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 Map<String, Object> pm = new HashMap<>();
                 pm.put("name", p.getName().getString());
-                pm.put("pos", String.format("%.1f,%.1f,%.1f", p.getX(), p.getY(), p.getZ()));
-                pm.put("distance", String.format("%.1f", dist));
+                pm.put("pos", String.format(java.util.Locale.ROOT, "%.1f,%.1f,%.1f", p.getX(), p.getY(), p.getZ()));
+                pm.put("distance", String.format(java.util.Locale.ROOT, "%.1f", dist));
                 pm.put("hp", p.getHealth());          // visible for tracked players
                 pm.put("sprinting", p.isSprinting());
+                pm.put("gliding", adris.altoclef.multiversion.entity.LivingEntityVer.isGliding(p));
+                pm.put("hovering", adris.altoclef.util.agent.CreativeWingman.hovering(client, p));
                 players.add(pm);
             }
             players.sort((a, b) -> Double.compare(
@@ -5935,7 +6228,7 @@ public class Py4jEntryPoint {
                             } catch (Exception ignored) {}
                             Map<String, Object> bm = new HashMap<>();
                             bm.put("pos", bp.getX() + "," + bp.getY() + "," + bp.getZ());
-                            bm.put("distance", String.format("%.1f", Math.sqrt(dx * dx + dy * dy + dz * dz)));
+                            bm.put("distance", String.format(java.util.Locale.ROOT, "%.1f", Math.sqrt(dx * dx + dy * dy + dz * dz)));
                             beds.add(bm);
                             break;
                         }

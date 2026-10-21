@@ -63,6 +63,13 @@ public class Settings implements IFailableConfigFile {
     private boolean showTaskChains = true;
 
     /**
+     * If true, the mods' own log lines ([AutoClef], [Tungsten], WARNING:) are kept out of the chat
+     * window. They are still recorded for agents (getRecentChat): only the screen is spared.
+     * For playing next to people, streaming and recording.
+     */
+    private boolean hideModChat = false;
+
+    /**
      * If true, all warning logs will be disabled.
      * <p>
      * NOT RECOMMENDED, as it will make debugging more difficult.
@@ -518,6 +525,10 @@ public class Settings implements IFailableConfigFile {
 
     public boolean shouldShowTaskChain() {
         return showTaskChains;
+    }
+
+    public boolean shouldHideModChat() {
+        return hideModChat;
     }
 
     public boolean shouldShowDebugTickMs() {

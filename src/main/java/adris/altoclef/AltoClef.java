@@ -184,11 +184,10 @@ public class AltoClef implements ModInitializer {
             );
             try {
                 _gatewayServer.start();
-                // Port changed — save to settings so next launch uses the same port
+                // Port taken (another game client on this machine): this run only. Saved, it moved
+                // every client sharing the settings off the port their Python side looks for.
                 if (port != originalPort) {
-                    getModSettings().setPythonGatewayPort(port);
-                    ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
-                    Debug.logMessage("Py4j port conflict — bound to " + port + " (saved to settings)");
+                    Debug.logMessage("Py4j port conflict — bound to " + port + " for this run");
                 }
                 _py4jEntryPoint.InitPythonCallback();
                 Debug.logMessage("Py4j gateway started on port " + port);
@@ -222,8 +221,19 @@ public class AltoClef implements ModInitializer {
                 ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
             }
             _mcpServer = new adris.altoclef.mcp.McpServer(_py4jEntryPoint, token);
+            // Two game clients from one folder share the settings: the second finds the port
+            // taken. Take the next free one (not saved: the first client keeps its own); an agent
+            // finds its client by the player's name in getGameState.
             int mport = getModSettings().getMcpPort();
-            _mcpServer.start(mport);
+            for (int i = 0; ; i++) {
+                try {
+                    _mcpServer.start(mport + i);
+                    mport += i;
+                    break;
+                } catch (java.net.BindException taken) {
+                    if (i >= 9) throw taken;
+                }
+            }
             Debug.logMessage("MCP server started on 0.0.0.0:" + mport + " (http://<lan-ip>:" + mport
                     + "/mcp) — auth token in " + adris.altoclef.Settings.SETTINGS_PATH
                     + " (mcpAuthToken), required as 'Authorization: Bearer <token>'");
@@ -343,6 +353,8 @@ public class AltoClef implements ModInitializer {
             throw new IllegalStateException("AltoClef already loaded!");
         }
         instance = this;
+        // Always-on elytra watch: open the wings in a long fall and glide down (agent tools).
+        adris.altoclef.util.agent.ElytraFlight.register();
     }
 
     public void onInitializeLoad() {
@@ -468,8 +480,12 @@ public class AltoClef implements ModInitializer {
                 // bot's own log lines as server chat; it must not also blind the chat ring, which
                 // is the only channel a test has for seeing the mod's own errors.
                 if (getInfoSender() != null) getInfoSender().recordChat(msg);
+                boolean modLine = msg.contains(_modChatPrefixNoCodes) || msg.contains("[Tungsten]")
+                        || msg.startsWith("WARNING:") || msg.startsWith("ERROR:");
                 if (!msg.contains(_modChatPrefixNoCodes) && getButler() != null)
                     getButler().onReceiveChat(msg);
+                // Recorded above; off the screen when asked (hideModChat).
+                if (modLine && getModSettings() != null && getModSettings().shouldHideModChat()) return false;
             }
             return true;
         });
