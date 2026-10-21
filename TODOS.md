@@ -24,6 +24,8 @@
   20261016, artifacts/nether-food-ab-20261016.
   2026-10-22: hoglins are declined without an iron+ weapon and iron+ chestplate (deaths 2/2 -> 1/2,
   the remaining one a piglin fight). Gold armour against piglins is the open half.
+  2026-10-22: gold helmet fetched before the trip on a 360 s budget; 2/2 got one, 0 deaths, one
+  run alive 7+ min in the nether at full health. Open: the nether "Going to biome" small-area hold.
 
 - [ ] **First nether entry from full59-before-portal dies in lava on arrival (2026-10-15).**
   With the 0.95.60 portal fixes, a 15-min native run from full59-before-portal cast and lit the

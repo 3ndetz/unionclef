@@ -193,6 +193,8 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Gold-helmet A/B from nether-fresh (gamer_smoke --grcon, `artifacts/nether-gold-ab-20261022`): 4/4 died within 6 min -- gold: slain by Hoglin, fell from a high place; none: fell from a high place, slain by Piglin. The falls are hoglin throws. The helmet only removes piglins.
 - CollectFoodTask declines hoglins unless the bot has an iron+ sword/axe AND wears an iron+ chestplate (then the existing 'go to the Overworld for food' fallback). Jar 03cb8dea. Interleaved after/before/before/after from nether-fresh (`artifacts/hoglin-gear-ab-20261022`): before 2/2 died ('fell from a high place', 'doomed to fall by Hoglin'); after 1/2 -- the death followed a MobDefense piglin fight, no food task; the other went back to the Overworld for food, PASS, 0 deaths. Committed. Next: gold against piglins.
 
+- Gold helmet before the nether trip, on a 360 s budget (TaskCatalogue golden_helmet: mine, smelt, craft; skipped once the trip has started). Jar of `gold-helmet-build-20261022`. Two 15-min runs from full59-before-portal (`artifacts/gold-helmet-ab-20261022`): helmet made in both (~423 s and ~95 s), 0 deaths. Run 2 entered the nether at ~420 s and was alive at HP ~20 for the remaining 7+ min; every earlier nether replay (7) died or nearly died within 3-6 min. Run 1 was still heading for the portal at the end. In the nether run 2 stays in a small area around (-10..-23,32,120..135) on 'Going to biome' -- check as the next stall.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
