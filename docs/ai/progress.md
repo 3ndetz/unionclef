@@ -197,6 +197,10 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 
 - Released [v0.95.62](https://github.com/3ndetz/unionclef/releases/tag/v0.95.62), tag 79333cac: fresh archive build, 2223 classes identical to the tested gold-helmet jar except fabric.mod.json; asset SHA 07488d99 re-downloaded and matched. Video in progress (sub-agent).
 
+- 0.95.62 video delivered (Telegram 12786); its card says 'all valid' for the lake row, the caption gives the full 2-reached/2-froze count.
+- Nether 6-min 'Going to biome' hold (gold-helmet run 2): entered without a crafting table, iron pickaxe wore out, stone pickaxe needs a table, nether wood is stems by the lava ('Blacklisting dangerous log', wandering). Tried: pack a crafting table before the trip (120 s budget). Two 15-min runs from full59-before-portal (`artifacts/trip-table-ab-20261022`): the branch never triggered (neither logged it), neither reached the nether (run 1 spent the 360 s gold budget, then DROWNED in GetToAirTask 'Digging up to air at -198,32,1062'; run 2 night shelter). Unverified -> NOT committed, saved as trip-table.patch. Client back on release 0.95.62.
+- The drowning sits in GetToAirTask, which UNIONCLEF-HARD's uncommitted water WIP changes (79 lines; TODOS 'Air escape alternates digging and swimming').
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
