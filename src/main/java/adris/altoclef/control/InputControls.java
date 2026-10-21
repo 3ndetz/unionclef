@@ -53,7 +53,38 @@ public class InputControls {
         _waitForRelease.add(input);
     }
 
+    /**
+     * WHO HOLDS JUMP OR SNEAK WHILE THE BODY IS IN WATER? A body that swam to a lake shore froze
+     * at a one-block bank with exactly those two held and no route driving (2026-10-16 trace,
+     * ~1300 ticks). Same instrument as {@link #forwardStealers}: the caller's frame, counted.
+     */
+    public static final java.util.Map<String, Integer> waterKeyHolders =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    public static String waterKeyHolders() {
+        synchronized (waterKeyHolders) {
+            return waterKeyHolders.entrySet().stream()
+                    .sorted((a, b) -> b.getValue() - a.getValue())
+                    .limit(6)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((a, b) -> a + " " + b).orElse("(none)");
+        }
+    }
+
     public void hold(Input input) {
+        if (input == Input.JUMP || input == Input.SNEAK) {
+            try {
+                var p = net.minecraft.client.MinecraftClient.getInstance().player;
+                if (p != null && p.isTouchingWater()) {
+                    StackTraceElement f = Thread.currentThread().getStackTrace()[2];
+                    String key = input + "@" + f.getClassName().substring(f.getClassName().lastIndexOf('.') + 1)
+                            + "." + f.getMethodName() + ":" + f.getLineNumber();
+                    waterKeyHolders.merge(key, 1, Integer::sum);
+                }
+            } catch (Throwable ignored) {
+                // an instrument must not throw
+            }
+        }
         if (!inputToKeyBinding(input).isPressed()) {
             KeyBinding.onKeyPressed(inputToKeyBinding(input).getDefaultKey());
         }

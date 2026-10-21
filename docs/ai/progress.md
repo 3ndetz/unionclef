@@ -184,6 +184,12 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - 'Exploring outward' 6.5-min stand (f59-1) is really NightShelterTask at night in the middle of a lake: 'No place to dig in for the night in nearby loaded terrain' -> returns null -> floats till morning (another run 'impaled by Drowned'). Shipped in 0.95.61.
 - Tried: when no site, heightmap-scan dry land (r48) and GetToAnyBlockTask there. Interleaved before/after/after/before from cp1015-2247-t609 (`artifacts/shelter-land-ab-20261016`): the branch fires (~2000 ticks heading for land, swims ~40 blocks to the shore) but the body then freezes at the bank with jump+sneak held for ~1300 ticks (navigator on, walker/queue/executor off); water time 97%/86% vs 98%/98%. No outcome win yet -> NOT committed; saved as nightshelter-dry-land.patch. FastNavigator.steerTo's sneak is tick-capped, so the held J+C comes from the water-handling side (GetToAirTask/WorldSurvival/MovementSwim), which is UNIONCLEF-HARD's uncommitted water WIP area.
 
+### Owner: finish the night-in-a-lake fix, then continue autonomously (2026-10-21)
+
+- Bench restarted after a host reboot; the owner's own TLauncher Minecraft holds host port 25350, so tester1 was recreated with UCTEST_MCP_PORT=25351 (compose --no-deps; MCP port only, tests unaffected). The owner's game was not touched.
+- InputControls gains waterKeyHolders (caller frame of every JUMP/SNEAK hold while touching water), the forwardStealers pattern. UNIONCLEF-HARD's WIP already names the same symptom ('food-bank stall held JUMP+SNEAK while grounded in water') with pillarUsesSwimInputInWater (committed, default false).
+- Dry-land shelter fallback + instrument, jar 1df89835, four interleaved lake replays from cp1015-2247-t609 with pillarUsesSwimInputInWater ON/OFF/OFF/ON (`artifacts/bank-exit-ab-20261022`): all four end on dry land; runs 1-2 invalid (sank during the harness setup window before @gamer, reset to spawn); runs 3-4 reached the shore and dug in (3191/1988 dry shelter ticks, HP20). No J/S hold in water recorded; the flag made no visible difference. Across all after-arm runs: 2 reached land and sheltered, 2 (2026-10-16) froze at the bank; before: 0/4 left the water. Committed.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

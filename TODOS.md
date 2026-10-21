@@ -4,12 +4,15 @@
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)
 
-- [ ] **Night in a lake: no shelter site, the bot floats till morning; at the bank it freezes (2026-10-16).**
+- [x] **PARTLY FIXED (dry-land fallback committed 2026-10-22): night in a lake, the bot floated till morning; at the bank it froze (2026-10-16).**
   NightShelterTask returns null when every site within 16 blocks is under water (f59-1: 6.5 min of
   night afloat; another run killed by a drowned). A dry-land fallback (artifacts/shelter-land-ab-
   20261016/nightshelter-dry-land.patch) swims the body ~40 blocks to the shore, but there it holds
   jump+sneak with no driver for ~1300 ticks and never climbs the 1-block bank. Find who holds J+C
   at a bank (water-handling side; overlaps the uncommitted water WIP) before landing the patch.
+  2026-10-22: committed with InputControls.waterKeyHolders. Lake replays: 2/2 valid runs reached
+  the shore and dug in, no J/S hold in water; the 2026-10-16 bank freezes (2 runs) did not recur.
+  Open: the replay start sinks during the harness setup window (no task yet) in some resumes.
 
 - [ ] **Nether food: the bot arrives with ~24 units and hunts hoglins (2026-10-16).**
   From nether-fresh 3/3 replays went hoglin hunting with a stone sword: one slain by a hoglin, one

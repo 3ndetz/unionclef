@@ -121,6 +121,19 @@ public class NightShelterTask extends Task {
                     }
                 }
                 if (approach == null) {
+                    // ⛔ NO SITE HERE IS NOT A REASON TO FLOAT ALL NIGHT (2026-10-16). Returning null
+                    // left the body treading water in the middle of a lake for 6.5 minutes of night
+                    // (nether-food-ab f59-1, film: "No place to dig in for the night in nearby loaded
+                    // terrain", shore and trees ~20+ blocks off); another run was "impaled by
+                    // Drowned" the same way. Every site within SITE_SEARCH_RADIUS was under water.
+                    // Head for dry land instead; the site scan runs again on arrival.
+                    List<BlockPos> land = pickDryLand(world, feet);
+                    if (!land.isEmpty()) {
+                        approach = new GetToAnyBlockTask(land);
+                        towardDryLand++;
+                        setDebugState("No place to dig in here; heading for dry land");
+                        return approach;
+                    }
                     setDebugState("No place to dig in for the night in nearby loaded terrain");
                     return null;
                 }
@@ -156,6 +169,34 @@ public class NightShelterTask extends Task {
         }
         setDebugState("Waiting for the morning in a shelter");
         return null;
+    }
+
+    /** Columns searched for dry ground when no dig-in site is near: radius and stride. */
+    private static final int LAND_SEARCH_RADIUS = 48, LAND_SEARCH_STEP = 3, LAND_MAX_TARGETS = 48;
+    public static volatile int towardDryLand;
+
+    /**
+     * Standable dry surface cells in loaded columns around {@code from}, nearest first: the cell
+     * above each column's motion-blocking top, standing on something that is not a fluid. A
+     * heightmap read per column, so the wide radius stays cheap.
+     */
+    private static List<BlockPos> pickDryLand(World world, BlockPos from) {
+        List<BlockPos> out = new ArrayList<>();
+        for (int dx = -LAND_SEARCH_RADIUS; dx <= LAND_SEARCH_RADIUS; dx += LAND_SEARCH_STEP) {
+            for (int dz = -LAND_SEARCH_RADIUS; dz <= LAND_SEARCH_RADIUS; dz += LAND_SEARCH_STEP) {
+                int x = from.getX() + dx, z = from.getZ() + dz;
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
+                int top = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockPos stand = new BlockPos(x, top, z);
+                BlockPos below = stand.down();
+                if (!world.getFluidState(below).isEmpty() || !world.getFluidState(stand).isEmpty()) continue;
+                if (!solid(world, below)) continue;
+                if (!kaptainwutax.tungsten.helpers.PlayerFit.standable(world, stand)) continue;
+                out.add(stand);
+            }
+        }
+        out.sort(Comparator.comparingDouble(p -> p.getSquaredDistance(from)));
+        return out.size() > LAND_MAX_TARGETS ? new ArrayList<>(out.subList(0, LAND_MAX_TARGETS)) : out;
     }
 
     private static boolean floods(World world, BlockPos top) {
