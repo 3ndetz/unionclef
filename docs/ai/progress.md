@@ -195,6 +195,8 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 
 - Gold helmet before the nether trip, on a 360 s budget (TaskCatalogue golden_helmet: mine, smelt, craft; skipped once the trip has started). Jar of `gold-helmet-build-20261022`. Two 15-min runs from full59-before-portal (`artifacts/gold-helmet-ab-20261022`): helmet made in both (~423 s and ~95 s), 0 deaths. Run 2 entered the nether at ~420 s and was alive at HP ~20 for the remaining 7+ min; every earlier nether replay (7) died or nearly died within 3-6 min. Run 1 was still heading for the portal at the end. In the nether run 2 stays in a small area around (-10..-23,32,120..135) on 'Going to biome' -- check as the next stall.
 
+- Released [v0.95.62](https://github.com/3ndetz/unionclef/releases/tag/v0.95.62), tag 79333cac: fresh archive build, 2223 classes identical to the tested gold-helmet jar except fabric.mod.json; asset SHA 07488d99 re-downloaded and matched. Video in progress (sub-agent).
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
