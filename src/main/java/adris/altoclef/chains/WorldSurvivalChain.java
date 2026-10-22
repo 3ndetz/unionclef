@@ -39,6 +39,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
     private final TimerGame wasInLavaTimer = new TimerGame(1);
     private final TimerGame portalStuckTimer = new TimerGame(5);
     private boolean wasAvoidingDrowning;
+    private final GetToAirTask airTask = new GetToAirTask();
 
     private BlockPos _extinguishWaterPosition;
 
@@ -311,13 +312,12 @@ public class WorldSurvivalChain extends SingleTaskChain {
             return 100;
         }
 
-        // A ceiling can make "hold jump" fatal. Reserve the remaining half of
-        // the oxygen supply for reaching air, and keep the escape until refilled.
+        // Keep at least half the supply, or the calculated cost of reaching air
+        // when mining the cap takes longer; retain the escape until refilled.
         if (mod.getModSettings().shouldAvoidDrowning()
-                && ((mod.getPlayer().isSubmergedInWater()
-                        && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir() / 2)
-                    || (mainTask instanceof GetToAirTask && !mainTask.isFinished()))) {
-            setTask(new GetToAirTask());
+                && ((mainTask instanceof GetToAirTask && !mainTask.isFinished())
+                    || airTask.shouldStart(mod))) {
+            setTask(airTask);
             return 100;
         }
         if (mainTask instanceof GetToAirTask) setTask(null);

@@ -10,6 +10,7 @@ import adris.altoclef.util.Dimension;
 import adris.altoclef.util.helpers.BaritoneHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
+import kaptainwutax.tungsten.helpers.ChunkBlockSnapshot;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
@@ -18,6 +19,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
 
 import java.util.*;
@@ -473,9 +475,17 @@ public class BlockScanner {
             mod.log("Updating BlockScanner.. size: " + trackedBlocks.size() + " : " + cachedScannedBlocks.size());
         }
 
-        ScanRequest request = new ScanRequest(world, mod.getPlayer().getChunkPos(),
-                mod.getPlayer().getPos(), world.getTime(), copyBlocks(scannedBlocks),
-                new HashMap<>(scannedChunks), blacklist.snapshotUnreachable());
+        ChunkPos playerChunk = mod.getPlayer().getChunkPos();
+        long worldTime = world.getTime();
+        HashMap<ChunkPos, Long> previousChunks = new HashMap<>(scannedChunks);
+        long captureStart = System.nanoTime();
+        ScanInput input = captureChunks(world, playerChunk, worldTime, previousChunks);
+        scanCaptureNanos = System.nanoTime() - captureStart;
+        scanCapturedChunks = input.blocks.size();
+        ScanRequest request = new ScanRequest(world, playerChunk,
+                mod.getPlayer().getPos(), worldTime, copyBlocks(scannedBlocks),
+                previousChunks, blacklist.snapshotUnreachable(), input,
+                world.getBottomY(), world.getTopY());
         activeScan = request;
         scanStarted++;
         new Thread(() -> {
@@ -495,6 +505,36 @@ public class BlockScanner {
         HashMap<Block, HashSet<BlockPos>> copy = new HashMap<>(source.size());
         source.forEach((block, positions) -> copy.put(block, new HashSet<>(positions)));
         return copy;
+    }
+
+    /** Freeze lookup membership and only the contents this pass will rescan. */
+    private ScanInput captureChunks(World world, ChunkPos origin, long worldTime,
+                                    Map<ChunkPos, Long> previousChunks) {
+        if (!MinecraftClient.getInstance().isOnThread())
+            throw new IllegalStateException("Scanner capture requires the client thread");
+        Set<ChunkPos> loaded = new HashSet<>();
+        Map<ChunkPos, ChunkBlockSnapshot> blocks = new HashMap<>();
+        Queue<ChunkPos> queue = new ArrayDeque<>();
+        queue.add(origin);
+        while (!queue.isEmpty()) {
+            ChunkPos pos = queue.poll();
+            if (loaded.contains(pos) || !world.getChunkManager().isChunkLoaded(pos.x, pos.z)) continue;
+            // Like Baritone BlockStateInterface.java:115, never force a chunk
+            // load. Both lookup and block-container copies occur on this tick.
+            var chunk = world.getChunkManager().getChunk(pos.x, pos.z, ChunkStatus.FULL, false);
+            if (!(chunk instanceof WorldChunk full)) continue;
+            loaded.add(pos);
+            boolean priority = getChunkDist(pos, origin) <= 2;
+            boolean tooFresh = !priority && previousChunks.containsKey(pos)
+                    && worldTime - previousChunks.get(pos) < RESCAN_TICK_DELAY;
+            if (!tooFresh) blocks.put(pos, ChunkBlockSnapshot.capture(full));
+            // Recency skips copying, never traversal; preserve both parities.
+            queue.add(new ChunkPos(pos.x + 1, pos.z));
+            queue.add(new ChunkPos(pos.x - 1, pos.z));
+            queue.add(new ChunkPos(pos.x, pos.z + 1));
+            queue.add(new ChunkPos(pos.x, pos.z - 1));
+        }
+        return new ScanInput(Set.copyOf(loaded), Map.copyOf(blocks));
     }
 
     private void scanCloseBlocks() {
@@ -545,11 +585,13 @@ public class BlockScanner {
 
     /** Instrumentation for the distant-block investigation: does a full rescan pass ever COMPLETE? */
     public static volatile int scanStarted, scanDone, scanChunks, scanScanned, scanMs;
+    /** Actual client capture cost and copied chunks, separate from worker scan cost. */
+    public static volatile long scanCaptureNanos;
+    public static volatile int scanCapturedChunks;
 
     private void rescan(ScanRequest request, int maxCount, int cutOffRadius) {
         long ms = System.currentTimeMillis();
 
-        World world = request.world;
         ChunkPos playerChunkPos = request.playerChunk;
         Vec3d playerPos = request.playerPos;
 
@@ -561,7 +603,7 @@ public class BlockScanner {
         while (!queue.isEmpty() && visited.size() < maxCount && !request.cancelled) {
             Node node = queue.poll();
 
-            if (node.distance > cutOffRadius || visited.contains(node.pos) || !world.getChunkManager().isChunkLoaded(node.pos.x, node.pos.z))
+            if (node.distance > cutOffRadius || visited.contains(node.pos) || !request.input.loaded.contains(node.pos))
                 continue;
 
             visited.add(node.pos);
@@ -654,20 +696,20 @@ public class BlockScanner {
      * @param chunkPos position of the scanned chunk
      */
     private void scanChunk(ScanRequest request, ChunkPos chunkPos, ChunkPos playerChunkPos) {
-        World world = request.world;
-        WorldChunk chunk = world.getChunk(chunkPos.x, chunkPos.z);
+        ChunkBlockSnapshot chunk = request.input.blocks.get(chunkPos);
+        if (chunk == null) throw new IllegalStateException("Rescan has no captured block data");
         request.chunks.put(chunkPos, request.worldTime);
 
         boolean isPriorityChunk = getChunkDist(chunkPos, playerChunkPos) <= 2;
 
         for (int x = chunkPos.getStartX(); x <= chunkPos.getEndX(); x++) {
-            for (int y = world.getBottomY(); y < world.getTopY(); y++) {
+            for (int y = request.bottomY; y < request.topY; y++) {
                 if (request.cancelled) return;
                 for (int z = chunkPos.getStartZ(); z <= chunkPos.getEndZ(); z++) {
                     BlockPos p = new BlockPos(x, y, z);
-                    if (request.excluded.contains(p) || world.isOutOfHeightLimit(p)) continue;
+                    if (request.excluded.contains(p)) continue;
 
-                    BlockState state = chunk.getBlockState(p);
+                    BlockState state = chunk.getBlockState(x, y, z);
                     if (state.isAir()) continue;
 
                     Block block = state.getBlock();
@@ -690,10 +732,12 @@ public class BlockScanner {
     private record Node(ChunkPos pos, int distance) {
     }
 
+    private record ScanInput(Set<ChunkPos> loaded, Map<ChunkPos, ChunkBlockSnapshot> blocks) {}
+
     private static final class ScanRequest {
-        // World identity and player/search inputs are fixed for this request.
-        // Chunk contents still come from the live captured world off-thread;
-        // C4.1's immutable chunk-state cache remains separate, open work.
+        // World is an identity guard for client publication only. The worker
+        // reads private block-container copies and immutable loaded membership,
+        // never the captured world/chunk manager. Other C4.1 searches remain open.
         final World world;
         final ChunkPos playerChunk;
         final Vec3d playerPos;
@@ -701,6 +745,8 @@ public class BlockScanner {
         final HashMap<Block, HashSet<BlockPos>> blocks;
         final HashMap<ChunkPos, Long> chunks;
         final Set<BlockPos> excluded;
+        final ScanInput input;
+        final int bottomY, topY;
         volatile boolean cancelled;
         volatile boolean completed;
         boolean succeeded;
@@ -708,7 +754,7 @@ public class BlockScanner {
 
         ScanRequest(World world, ChunkPos playerChunk, Vec3d playerPos, long worldTime,
                     HashMap<Block, HashSet<BlockPos>> blocks, HashMap<ChunkPos, Long> chunks,
-                    Set<BlockPos> excluded) {
+                    Set<BlockPos> excluded, ScanInput input, int bottomY, int topY) {
             this.world = world;
             this.playerChunk = playerChunk;
             this.playerPos = playerPos;
@@ -716,6 +762,9 @@ public class BlockScanner {
             this.blocks = blocks;
             this.chunks = chunks;
             this.excluded = excluded;
+            this.input = input;
+            this.bottomY = bottomY;
+            this.topY = topY;
         }
     }
 

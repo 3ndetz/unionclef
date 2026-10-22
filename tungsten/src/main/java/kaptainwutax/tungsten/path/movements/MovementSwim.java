@@ -33,6 +33,9 @@ import net.minecraft.world.WorldView;
  */
 public class MovementSwim extends Movement {
 
+    /** Executor's existing per-stroke tick estimate, shared with oxygen exit pricing. */
+    public static final double STEP_COST_TICKS = 20.0;
+
     /**
      * Ticks of no approach before giving up. Shorter than a land movement's budget on purpose: a
      * one-block stroke is about ten ticks, and the queue's fallback timeout is
@@ -62,7 +65,7 @@ public class MovementSwim extends Movement {
     /** A stroke, priced in ticks, so the queue's timeout is a backstop rather than the limit. */
     @Override
     public double calculateCost(WorldView world, ClientPlayerEntity player) {
-        return 20.0;
+        return STEP_COST_TICKS;
     }
 
     /**

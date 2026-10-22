@@ -110,7 +110,10 @@ def enforce_budget(keep=()):
     for d in victims:
         if total <= BUDGET_GB << 30:
             break
-        if d.name in PROTECTED or d.name in keep:
+        # repro-* are reproductions an investigation depends on (2026-10-22: the budget trim deleted
+        # two of them mid-investigation, cp1015-1721-t599 and cp1022-0007-t821). Rename a checkpoint
+        # to repro-<what> to keep it; delete it by hand when the defect is closed.
+        if d.name in PROTECTED or d.name in keep or d.name.startswith("repro-"):
             continue
         b = _dir_bytes(d)
         shutil.rmtree(d, ignore_errors=True)

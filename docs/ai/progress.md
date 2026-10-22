@@ -201,6 +201,12 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Nether 6-min 'Going to biome' hold (gold-helmet run 2): entered without a crafting table, iron pickaxe wore out, stone pickaxe needs a table, nether wood is stems by the lava ('Blacklisting dangerous log', wandering). Tried: pack a crafting table before the trip (120 s budget). Two 15-min runs from full59-before-portal (`artifacts/trip-table-ab-20261022`): the branch never triggered (neither logged it), neither reached the nether (run 1 spent the 360 s gold budget, then DROWNED in GetToAirTask 'Digging up to air at -198,32,1062'; run 2 night shelter). Unverified -> NOT committed, saved as trip-table.patch. Client back on release 0.95.62.
 - The drowning sits in GetToAirTask, which UNIONCLEF-HARD's uncommitted water WIP changes (79 lines; TODOS 'Air escape alternates digging and swimming').
 
+### Owner: take over UNIONCLEF-HARD's water work (2026-10-22)
+
+- Peer notified; handoff read (.local/handoffs/UNIONCLEF-HARD.md). Reviewed: GetToAirTask/WorldSurvivalChain air budget (exit priced, live air route kept; baritone PathingBehavior:196-224), GetRidOfExtraWaterBucketTask (keep one, empty extras against a reachable face), BlockScanner + ChunkBlockSnapshot (client-tick copies, worker off the live world), MovementSwim STEP_COST_TICKS, pillarUsesSwimInputInWater default true, NavWaterPillar in SCENARIOS.
+- Build HEAD 3d64e311 + that work, jar 5c8d0f2b (`water-takeover-build-20261022`). nav 9/9 PASS incl. water courses (29-30 FPS); portal_lava_lake and craft_at_distant_table PASS. Drowning A/B from repro-drown-pre (cp1022-0007-t821 was lost to the trim): before 2 deaths in 1 of 2 (creeper, zombie; min HP 1.8), after 0/2 (min HP 11.2, 20); drowning did not recur in either arm; FPS equal per pair. repro-lake-night: 0 deaths. Native15 from full59-before-portal: PASS, 0 deaths, min HP 17.3, median FPS 20 (host loaded; pair FPS equal).
+- checkpoint.py: repro-* names are never trimmed; five reproductions renamed (repro-lake-night, repro-full59-portal-site, repro-portal-shaft, repro-lava-pool, repro-drown-pre); 16 old full59-before-portal-resume-* copies deleted. Docs/notes that cite cp1015-1535-t605 now mean repro-full59-portal-site.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

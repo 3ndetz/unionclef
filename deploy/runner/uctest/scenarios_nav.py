@@ -354,8 +354,7 @@ class NavBreak(NavCourse):
 class NavWaterPillar(Scenario):
     """Build and rest on one rung from source water above solid footing.
 
-    Experimental: dedicated probes explicitly opt in to the water input flag.
-    Keep outside SCENARIOS while pillarUsesSwimInputInWater defaults to false.
+    Uses the shipped medium-specific water input; false remains an A/B control.
     The retained food-bank stall held JUMP+SNEAK while grounded in water.
     Height alone would pass a swim that later falls back into the basin, so
     require a new server-side block, spent material and grounded final height.
@@ -813,5 +812,5 @@ class NavTunnel(NavCourse):
 
 
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend, NavCliff,
-             NavWater, NavGridWaterRoof, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
+             NavWater, NavWaterPillar, NavGridWaterRoof, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
              NavNotch, NavLava, NavPowder, NavPowderPit, NavTunnel]

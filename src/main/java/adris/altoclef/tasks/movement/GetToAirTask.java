@@ -5,6 +5,7 @@ import adris.altoclef.control.Nav;
 import adris.altoclef.tasks.construction.DestroyBlockTask;
 import adris.altoclef.tasksystem.Task;
 import kaptainwutax.tungsten.helpers.PlayerFit;
+import kaptainwutax.tungsten.path.movements.MovementSwim;
 import kaptainwutax.tungsten.task.FastNavigator;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.registry.tag.FluidTags;
@@ -19,6 +20,59 @@ public final class GetToAirTask extends Task {
     private static final int DIG_UP_SCAN = 12;
     private DestroyBlockTask digUp;
     private BlockPos digTarget;
+    /** Reuse an escape-cost quote for at most one second of game ticks. */
+    private static final int AIR_BUDGET_RECHECK_TICKS = 20;
+    private java.lang.ref.WeakReference<WorldView> budgetWorld = new java.lang.ref.WeakReference<>(null);
+    private BlockPos budgetFeet;
+    private boolean budgetGrounded;
+    private long budgetTick;
+    private double budgetAir;
+
+    /**
+     * Whether remaining oxygen must now be spent on reaching air. The ordinary
+     * half-supply reserve still applies to cheap exits; a slower cap must begin
+     * earlier. On the original saved tools, the isolated stone cap consumes188
+     * mining ticks after this task starts with only148 air, losing4HP at25FPS.
+     * Baritone Movement.java:124-127 floats in liquid and ToolSet.java:58-73
+     * scopes tool costs to a calculation; its float rule alone cannot supply
+     * this oxygen budget. Retain the movement inputs and price our actual exit.
+     *
+     * <p>Called on the client thread. The short cache bounds search work, not
+     * rescue duration; its full20-tick refresh interval is reserved as oxygen.
+     * It holds no strong world reference and invalidates on world/cell/support
+     * changes or a backwards game clock. Unreachable exits start rescue early
+     * rather than claiming a route is safe.
+     */
+    public boolean shouldStart(AltoClef mod) {
+        var player = mod.getPlayer();
+        var world = mod.getWorld();
+        if (player == null || world == null || !player.isSubmergedInWater()) {
+            budgetWorld.clear();
+            budgetFeet = null;
+            return false;
+        }
+        double ordinaryReserve = player.getMaxAir() / 2.0;
+        if (player.getAir() < ordinaryReserve) return true;
+        BlockPos feet = player.getBlockPos();
+        long now = world.getTime();
+        if (budgetWorld.get() != world || !feet.equals(budgetFeet)
+                || budgetGrounded != player.isOnGround() || now < budgetTick
+                || now - budgetTick >= AIR_BUDGET_RECHECK_TICKS) {
+            BlockPos cap = cappedColumnDig(mod, world);
+            double dig = cap == null ? Double.POSITIVE_INFINITY : digTicksHere(mod, world, cap);
+            int steps = stepsToBreathable(mod, world);
+            double swim = steps < 0 ? Double.POSITIVE_INFINITY : steps * MovementSwim.STEP_COST_TICKS;
+            // Use the same dig-versus-swim costs as onTick, including vanilla
+            // submerged/off-ground mining penalties. Never lower the old reserve.
+            budgetAir = Math.min(player.getMaxAir(), Math.max(ordinaryReserve,
+                    Math.ceil(Math.min(dig, swim)) + AIR_BUDGET_RECHECK_TICKS));
+            budgetWorld = new java.lang.ref.WeakReference<>(world);
+            budgetFeet = feet;
+            budgetGrounded = player.isOnGround();
+            budgetTick = now;
+        }
+        return player.getAir() < budgetAir;
+    }
 
     @Override
     protected void onStart() {
@@ -48,6 +102,17 @@ public final class GetToAirTask extends Task {
             return null;
         }
         var world = mod.getWorld();
+        // Port baritone/behavior/PathingBehavior.java:196-224: keep a live
+        // route to its goal until execution ends, rather than reprice it each
+        // tick. In both retained dry-entry tunnel traces, ground bobbing makes
+        // the cap quote alternate with the swim quote; stopping that swim to
+        // dig repeatedly spends149 air before surfacing and loses2HP.
+        // Only this task's condition route may continue. Its navigator still
+        // owns dynamic path validation/failure; an ended route is priced again.
+        if (FastNavigator.isNearestSearch(this)) {
+            setDebugState("Following a reachable air pocket");
+            return null;
+        }
         // ⛔ WHEN THERE IS NO AIR TO SWIM TO, MAKE SOME (G100, 2026-09-18). The second 60-minute
         // run drowned at y=0 mining diamonds: submerged in a flooded pocket capped by stone, this
         // task searched for the nearest EXISTING breathable cell every 20 ticks, found none it
@@ -66,7 +131,7 @@ public final class GetToAirTask extends Task {
         if (cap != null) {
             double digTicks = digTicksHere(mod, world, cap);
             int swimSteps = stepsToBreathable(mod, world);
-            if (swimSteps >= 0 && swimSteps * SWIM_TICKS_PER_BLOCK < digTicks) {
+            if (swimSteps >= 0 && swimSteps * MovementSwim.STEP_COST_TICKS < digTicks) {
                 if (digUp != null) adris.altoclef.Debug.logMessage(String.format(
                         "GetToAir: swimming %d blocks rather than digging %.0f ticks", swimSteps, digTicks));
                 cap = null;
@@ -89,7 +154,7 @@ public final class GetToAirTask extends Task {
         long now = mod.getWorld().getTime();
         if (!FastNavigator.isActive() && now >= nextSearchTick) {
             double eyes = mod.getPlayer().getEyeHeight(EntityPose.STANDING);
-            FastNavigator.startNearest(pos -> canBreatheAt(world, pos, eyes));
+            FastNavigator.startNearest(pos -> canBreatheAt(world, pos, eyes), null, this);
             // Rate-limit unsuccessful searches in a sealed or changing cavity.
             nextSearchTick = now + 20;
         }
@@ -107,7 +172,11 @@ public final class GetToAirTask extends Task {
      * unbreakable (bedrock) the column is a dead end and this returns null so the lateral search
      * runs instead.
      */
-    private static final double SWIM_TICKS_PER_BLOCK = 8;
+    // Use MovementSwim's existing executor estimate for both reserve and selection.
+    // The old8-tick quote chooses a16-step outlet over a237-tick stone cap;
+    // the saved-pack fixture starts rescue at148 air and loses6HP at20.333FPS.
+    // Baritone ActionCosts.java:26 prices water walking, not our swim executor.
+    // Share our actual executor quote instead of inventing another speed constant.
     private static final int SWIM_SEARCH_STEPS = 16;
     public static volatile int swimChosen;
 
@@ -115,6 +184,10 @@ public final class GetToAirTask extends Task {
      *  standing on the ground (PlayerEntity.getBlockBreakingSpeed). */
     private static double digTicksHere(AltoClef mod, WorldView world, BlockPos cap) {
         var p = mod.getPlayer();
+        // Unlike a FastPlanner search, this direct client-thread quote has no
+        // caller clearing the per-search tool memo. Price the current pack;
+        // Baritone ToolSet.java:58-73 similarly owns a new cache per calculation.
+        kaptainwutax.tungsten.path.movements.MovementHelperB.clearBestToolCache();
         double t = kaptainwutax.tungsten.path.movements.MovementHelperB.getRequiredMiningDurationTicks(
                 world, p, cap.getX(), cap.getY(), cap.getZ(), world.getBlockState(cap), false);
         if (t >= 1_000_000) return t;
