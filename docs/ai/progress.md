@@ -207,6 +207,8 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Build HEAD 3d64e311 + that work, jar 5c8d0f2b (`water-takeover-build-20261022`). nav 9/9 PASS incl. water courses (29-30 FPS); portal_lava_lake and craft_at_distant_table PASS. Drowning A/B from repro-drown-pre (cp1022-0007-t821 was lost to the trim): before 2 deaths in 1 of 2 (creeper, zombie; min HP 1.8), after 0/2 (min HP 11.2, 20); drowning did not recur in either arm; FPS equal per pair. repro-lake-night: 0 deaths. Native15 from full59-before-portal: PASS, 0 deaths, min HP 17.3, median FPS 20 (host loaded; pair FPS equal).
 - checkpoint.py: repro-* names are never trimmed; five reproductions renamed (repro-lake-night, repro-full59-portal-site, repro-portal-shaft, repro-lava-pool, repro-drown-pre); 16 old full59-before-portal-resume-* copies deleted. Docs/notes that cite cp1015-1535-t605 now mean repro-full59-portal-site.
 
+- Released [v0.95.63](https://github.com/3ndetz/unionclef/releases/tag/v0.95.63), tag 818e6f80: fresh archive build, 2225 classes identical to tested 5c8d0f2b except fabric.mod.json; asset SHA 4b48f14b re-downloaded and matched. Cave Johnson video delivered to Telegram. UNIONCLEF-HARD's 0.95.57 draft moved to artifacts/water-takeover-ab-20261022/.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)

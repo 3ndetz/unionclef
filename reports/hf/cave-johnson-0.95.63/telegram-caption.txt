@@ -1,0 +1,10 @@
+Unionclef 0.95.63: water, air and buckets.
+
+This lands the water work another agent session (UNIONCLEF-HARD) built and bench-tested in early October and never committed; reviewed, rebuilt over 0.95.62 and re-tested here.
+- Pillaring in water uses swimming input (the old input held crouch+jump and sank at a bank); nav_water_pillar is now in the suite.
+- The air escape starts when the way out needs it (dig vs swim priced), and a live route to air is followed to its end.
+- One water bucket is kept, only extras are emptied.
+- The block scanner reads chunk copies, not the live world from its worker thread.
+
+Re-tested: nav 9/9 incl. three water courses, portal_lava_lake and craft_at_distant_table PASS; same checkpoint before a drowning: 2 deaths in 1 of 2 runs before, 0 in 2 after (the drowning itself did not recur, not claimed as fixed); 15-min run 0 deaths. No speed or FPS gain claimed.
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.63

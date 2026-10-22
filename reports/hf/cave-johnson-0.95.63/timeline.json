@@ -1,0 +1,66 @@
+{
+ "total": 54.809999999999995,
+ "voice": [
+  [
+   "l01",
+   0.3
+  ],
+  [
+   "l02",
+   10.120000000000001
+  ],
+  [
+   "l03",
+   19.5
+  ],
+  [
+   "l04",
+   27.26
+  ],
+  [
+   "l05",
+   35.55
+  ],
+  [
+   "l06",
+   44.849999999999994
+  ]
+ ],
+ "clips": [
+  {
+   "key": "v2",
+   "file": "nav_water_pillar.mp4",
+   "src_in": 0.33,
+   "src_out": 5.24,
+   "speed": 0.5
+  },
+  {
+   "key": "v23",
+   "file": "nav_grid_water_roof.mp4",
+   "src_in": 2.0,
+   "src_out": 10.89,
+   "speed": 2.0
+  },
+  {
+   "key": "v31",
+   "file": "drown2-2-before.mp4",
+   "src_in": 223.71,
+   "src_out": 229.25,
+   "speed": 1.5
+  },
+  {
+   "key": "v37",
+   "file": "drown2-2-before.mp4",
+   "src_in": 306.21,
+   "src_out": 306.85,
+   "speed": 0.5
+  },
+  {
+   "key": "v44",
+   "file": "drown2-1-after.mp4",
+   "src_in": 504.0,
+   "src_out": 510.73,
+   "speed": 2.0
+  }
+ ]
+}

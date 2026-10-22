@@ -78,6 +78,15 @@ Pipeline: `reports/hf/cave-johnson-<ver>/` (copy the latest folder). Measured on
 - **Short events can last two frames** (the crafted item sits in the output slot for 0.13 s at 15 fps).
   Step the source frame by frame and hold the frame as a still under the ring.
 
+Added on 0.95.63:
+
+- **HUD shots go in the framed inset** (`cls="framed"`, 1600x900 at 160,40), not full frame. Full frame puts the
+  hearts row at y~1000, under the burned-in subtitles; framed, it is at y~873. Ring position = 160 + x*1.873, 40 + y*1.875.
+- **Write glyphs literally in the CSS.** `content:"\\2014"` passed through a Python string came out as an octal
+  escape plus a stray "4" on screen. Check list markers in a full-size frame.
+- **Subtitles can orphan a label word** ("...a zombie. After:"). Add the pair to `protected` in `add_subs.py`.
+- **The speed badge and the reel share the top-right corner.** Move one of them when both are on screen.
+
 ## Housekeeping
 
 `reports/footage/`, `reports/out/` and `reports/hf/videos/` are git-ignored. Delete footage once

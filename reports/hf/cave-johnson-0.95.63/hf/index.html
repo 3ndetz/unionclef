@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Bebas"; src: url("assets/BebasNeue-Regular.ttf"); }
+@font-face { font-family: "Serif"; src: url("assets/DMSerifDisplay-Regular.ttf"); }
+@font-face { font-family: "SerifI"; src: url("assets/DMSerifDisplay-Italic.ttf"); }
+@font-face { font-family: "Mono"; src: url("assets/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "MonoB"; src: url("assets/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "Inter"; src: url("assets/Inter.ttf"); }
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1920px; height:1080px; overflow:hidden; background:#1d2a2f; }
+body { font-family:"Inter", sans-serif; color:#1d2a2f; }
+#root { position:relative; width:100%; height:100%; overflow:hidden; background:#1d2a2f; }
+.clip { position:absolute; inset:0; }
+.card { pointer-events:none; }
+.vid { width:1920px; height:1080px; object-fit:cover; transform-origin:50% 50%; }
+.bgimg { position:absolute; inset:0; width:1920px; height:1080px; object-fit:cover; }
+.vign { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 45%, rgba(20,16,10,0.55) 100%); }
+.edgevig { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 62%, rgba(25,18,8,0.35) 100%); }
+.grain { position:absolute; inset:-200px; background:url("assets/grain.png"); opacity:0.07; mix-blend-mode:overlay; }
+.paper { position:absolute; inset:0; background:radial-gradient(circle at 30% 25%, #fbf3df 0%, #efe2c4 60%, #e2d0a8 100%); }
+.paper.dark { background:radial-gradient(circle at 50% 40%, #27383e 0%, #1d2a2f 55%, #141d20 100%); }
+.reel { position:absolute; top:34px; right:40px; font-family:"MonoB"; font-size:22px; letter-spacing:3px; color:#f3e9d2;
+         background:rgba(29,42,47,0.8); padding:8px 16px; border-left:6px solid #d8453a; }
+.speed { position:absolute; top:36px; right:44px; font-family:"MonoB"; font-size:30px; color:#f3e9d2; background:#1d2a2f;
+          padding:4px 16px; border:3px solid #f3e9d2; }
+.hspeed { position:absolute; top:205px; left:1790px; font-family:"MonoB"; font-size:26px; color:#f3e9d2; background:#1d2a2f;
+          padding:2px 12px; border:3px solid #f3e9d2; }
+.stampbox { position:absolute; width:0; height:0; display:flex; align-items:center; justify-content:center; }
+.stamp { font-family:"Bebas"; white-space:nowrap; letter-spacing:6px; padding:6px 28px 0; border:9px solid; border-radius:14px;
+          background:rgba(243,233,210,0.92); box-shadow:0 0 0 6px rgba(243,233,210,0.92), 10px 12px 0 6px rgba(29,42,47,0.55); }
+.kin { position:absolute; padding:10px 30px 4px 26px; background:#f3e9d2; border-left:14px solid #d8453a; box-shadow:10px 10px 0 rgba(29,42,47,0.85); max-width:1500px; }
+.kin.teal { border-left-color:#1f6f78; }
+.kin.bl { left:60px; bottom:150px; } .kin.tl { left:60px; top:70px; }
+.kin-s { font-family:"MonoB"; font-size:30px; letter-spacing:2px; color:#1f6f78; text-transform:uppercase; }
+.kin-b { font-family:"Bebas"; font-size:110px; line-height:1; color:#1d2a2f; }
+/* halves */
+.half { position:absolute; top:170px; width:930px; height:523px; object-fit:cover; border:6px solid #f3e9d2; }
+.half.left { left:20px; } .half.right { left:970px; }
+.halflab { position:absolute; top:60px; width:930px; text-align:center; font-family:"Bebas"; font-size:84px; letter-spacing:6px; }
+.halflab.left { left:20px; } .halflab.right { left:970px; }
+.halfcap { position:absolute; top:712px; left:0; right:0; text-align:center; font-family:"Mono"; font-size:28px; color:#c9d4d3; }
+.bad { color:#ff7a6a; } .good { color:#7fe0a6; }
+.ring { position:absolute; border:8px solid #e3a73a; border-radius:50%; box-shadow:0 0 0 4px rgba(29,42,47,0.6); }
+.ring span { position:absolute; left:50%; top:100%; transform:translate(-50%, 10px); white-space:nowrap; font-family:"Bebas";
+              font-size:52px; letter-spacing:3px; color:#1d2a2f; background:#e3a73a; padding:2px 16px 0; }
+.nearstat { position:absolute; left:220px; top:740px; width:1480px; background:#f3e9d2; border:5px solid #1d2a2f; padding:14px 30px;
+             box-shadow:12px 12px 0 rgba(0,0,0,0.5); font-family:"Mono"; font-size:34px; color:#1d2a2f; line-height:1.45; }
+.nearstat b { font-family:"Bebas"; font-size:54px; color:#2f7d5b; font-weight:normal; display:inline-block; min-width:170px; }
+/* stat */
+.stat { position:absolute; left:110px; top:120px; width:1700px; }
+.sth { font-family:"Bebas"; font-size:120px; color:#1d2a2f; }
+.srow { display:flex; align-items:center; gap:34px; height:210px; }
+.sl { font-family:"SerifI"; font-size:66px; width:440px; text-align:right; }
+.sbar { height:130px; width:900px; } .sbar.good { background:#2f7d5b; }
+.sv { font-family:"Bebas"; font-size:140px; white-space:nowrap; } .sv.good { color:#2f7d5b; }
+.snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:20px; }
+/* grid */
+.gridhead { position:absolute; left:80px; top:70px; font-family:"MonoB"; font-size:36px; letter-spacing:4px; color:#1f6f78; }
+.grid { position:absolute; left:80px; top:140px; width:1150px; display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; }
+.tile { height:118px; background:#fbf3df; border:4px solid #1d2a2f; display:flex; align-items:center; justify-content:space-between;
+         padding:0 26px; font-family:"MonoB"; font-size:40px; }
+.tile .tk { font-family:"Bebas"; font-size:70px; }
+.tile.ghost { border-style:dashed; border-color:#d8453a; color:#d8453a; background:transparent; }
+.score { position:absolute; right:70px; top:250px; font-family:"Bebas"; font-size:330px; line-height:1; color:#2f7d5b; }
+.score .of { color:#1d2a2f; font-size:160px; }
+.foot { position:absolute; left:80px; top:880px; font-family:"Mono"; font-size:28px; color:#4a5a5f; }
+/* diagram */
+.diag { position:absolute; left:110px; top:160px; width:756px; height:588px; }
+.dgrid { position:absolute; inset:0; display:grid; grid-template-columns:repeat(9, 84px); grid-auto-rows:84px; }
+.cell { border:2px solid rgba(29,42,47,0.25); background:#fbf3df; }
+.cell.wl { background:#6d7478; } .cell.lv { background:#e8692d; }
+.dcirc { position:absolute; border:7px dashed #1f6f78; border-radius:50%; }
+.dx { position:absolute; width:84px; height:84px; display:flex; align-items:center; justify-content:center; font-family:"Inter";
+       font-weight:800; font-size:70px; color:#d8453a; text-shadow:0 0 6px #fff; }
+.dlegend { position:absolute; left:960px; top:200px; width:880px; }
+.dh { font-family:"Bebas"; font-size:100px; color:#1d2a2f; line-height:1; margin-bottom:30px; }
+.dl1, .dl2 { font-family:"SerifI"; font-size:50px; display:flex; align-items:center; gap:22px; margin-bottom:26px; }
+.dl1 { color:#a2382f; } .dl2 { color:#2f7d5b; }
+.sw { width:60px; height:60px; flex:none; border:3px solid #1d2a2f; } .sw.wl { background:#6d7478; } .sw.ok { background:#7fbf8f; }
+.dnote { font-family:"Mono"; font-size:26px; color:#4a5a5f; margin-top:30px; }
+/* stat (0.95.59: three rows, longer labels) */
+.stat { position:absolute; left:90px; top:110px; width:1740px; }
+.sth { font-family:"Bebas"; font-size:96px; color:#1d2a2f; margin-bottom:10px; }
+.srow { display:flex; align-items:center; gap:30px; height:180px; }
+.sl { font-family:"SerifI"; font-size:56px; width:720px; text-align:right; }
+.sbar { height:110px; width:560px; } .sbar.good { background:#2f7d5b; }
+.sv { font-family:"Bebas"; font-size:120px; white-space:nowrap; } .sv.good { color:#2f7d5b; }
+.snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:24px; }
+/* keys */
+.keys { position:absolute; left:140px; top:120px; width:1640px; }
+.kh { font-family:"Bebas"; font-size:110px; color:#1d2a2f; margin-bottom:20px; }
+.krow { display:flex; align-items:center; height:200px; border-bottom:3px solid rgba(29,42,47,0.2); }
+.krow.khead { height:80px; font-family:"MonoB"; font-size:40px; letter-spacing:4px; color:#1f6f78; }
+.kc0 { width:700px; display:flex; align-items:center; gap:34px; } .kc1, .kc2 { width:470px; text-align:center; }
+.krow:not(.khead) .kc1, .krow:not(.khead) .kc2 { font-family:"Bebas"; font-size:100px; }
+.cap { display:inline-block; min-width:150px; padding:18px 26px 8px; text-align:center; font-family:"MonoB"; font-size:54px;
+        background:#fbf3df; border:5px solid #1d2a2f; border-radius:14px; box-shadow:0 10px 0 #1d2a2f; }
+.kn { font-family:"SerifI"; font-size:62px; }
+.krow .good { color:#2f7d5b; } .badk { color:#c23b2f; }
+.keys .snote { margin-top:34px; }
+.chatbox { position:absolute; left:0px; top:838px; width:880px; height:80px; border:8px solid #e3a73a; border-radius:12px;
+            box-shadow:0 0 0 4px rgba(29,42,47,0.6); }
+.chatbox span { position:absolute; left:100%; top:50%; transform:translate(18px,-50%); white-space:nowrap; font-family:"Bebas";
+                 font-size:56px; letter-spacing:3px; color:#1d2a2f; background:#e3a73a; padding:2px 16px 0; }
+.chatbox.rs { left:6px; top:898px; width:1540px; height:104px; }
+.chatbox.rs span { left:auto; right:0; top:0; transform:translate(0,-110%); }
+.chatbox.sh { left:0px; top:842px; width:1080px; height:76px; }
+/* stat2 (0.95.60: before / after bars) */
+.stat2 { position:absolute; left:80px; top:90px; width:1760px; }
+.stat2 .sth { font-family:"Bebas"; font-size:92px; color:#1d2a2f; margin-bottom:6px; }
+.shead { display:flex; height:70px; align-items:center; font-family:"MonoB"; font-size:38px; letter-spacing:4px; }
+.stat2 .srow { display:flex; align-items:center; height:165px; border-bottom:3px solid rgba(29,42,47,0.15); }
+.stat2 .sl { font-family:"SerifI"; font-size:50px; width:700px; white-space:nowrap; text-align:right; padding-right:40px; color:#1d2a2f; }
+.sc { width:530px; display:flex; align-items:center; gap:22px; } .sc.wide { width:1060px; }
+.shead .sc { display:block; }
+.bar { height:100px; width:0; } .bar.bad { background:#c23b2f; } .bar.good { background:#2f7d5b; }
+.sc b { font-family:"Bebas"; font-size:104px; font-weight:normal; white-space:nowrap; }
+.stat2 .bad { color:#c23b2f; } .stat2 .good { color:#2f7d5b; }
+.stat2 .bar.bad { background:#c23b2f; } .stat2 .bar.good { background:#2f7d5b; }
+.stat2 .snote { font-family:"Mono"; font-size:28px; color:#4a5a5f; margin-top:26px; }
+.framed { position:absolute; left:160px; top:40px; width:1600px; height:900px; object-fit:cover; border:6px solid #f3e9d2; box-shadow:12px 12px 0 rgba(0,0,0,0.5); }
+.strip { position:absolute; left:110px; top:180px; width:1700px; height:auto; background:#141d20; padding:14px 20px; border-left:12px solid #e3a73a; box-shadow:10px 10px 0 rgba(0,0,0,0.5); }
+.strip.low { top:770px; }
+.ring.up span { top:auto; bottom:100%; transform:translate(-50%, -10px); }
+.snote2 { font-family:"SerifI"; font-size:40px; color:#4a5a5f; white-space:nowrap; font-style:normal; }
+/* 0.95.63: crate, buckets, bottom caption */
+.crate { position:absolute; left:120px; top:110px; width:1180px; padding:40px 50px 36px; background:#d9b77e;
+          border:10px solid #8a5a33; box-shadow:16px 16px 0 rgba(29,42,47,0.6);
+          background-image:repeating-linear-gradient(0deg, rgba(138,90,51,0.18) 0 3px, rgba(0,0,0,0) 3px 46px); }
+.crh { font-family:"Bebas"; font-size:110px; line-height:1; color:#1d2a2f; }
+.crs { font-family:"Mono"; font-size:27px; color:#3b2a1a; margin:10px 0 24px; }
+.crl { list-style:none; }
+.crl li { font-family:"SerifI"; font-size:54px; color:#1d2a2f; line-height:1.45; }
+.crl li:before { content:"—  "; color:#8a5a33; }
+.bk { position:absolute; left:140px; top:150px; width:1640px; }
+.bkh { font-family:"Bebas"; font-size:130px; color:#1d2a2f; margin-bottom:20px; }
+.bkrow { display:flex; align-items:center; gap:40px; height:190px; }
+.bki { width:150px; height:150px; display:flex; align-items:center; justify-content:center; font-family:"Bebas";
+        font-size:130px; color:#f3e9d2; border:6px solid #1d2a2f; }
+.bki.keep { background:#2f6fb0; } .bki.dump { background:#8fa3a6; }
+.bkt { font-family:"SerifI"; font-size:76px; color:#1d2a2f; }
+.bkn { font-family:"Mono"; font-size:30px; color:#4a5a5f; margin-top:30px; }
+.botcap { position:absolute; left:60px; top:262px; padding:6px 18px; background:rgba(20,29,32,0.82); }
+.botcap { font-family:"Mono"; font-size:30px; color:#f3e9d2; }
+.stat2 .snote b { color:#c23b2f; font-weight:normal; font-family:"MonoB"; }
+/* close */
+.labname { font-family:"Serif"; font-size:64px; color:#f3e9d2; letter-spacing:10px; text-shadow:0 4px 0 #1d2a2f, 0 0 30px rgba(0,0,0,0.6); }
+.labname.big { font-size:96px; }
+.closebox { position:absolute; left:0; right:0; top:80px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.closet { font-family:"Bebas"; font-size:210px; line-height:1; color:#d8453a; letter-spacing:10px; }
+.closeu { font-family:"MonoB"; font-size:56px; color:#f3e9d2; }
+.closef { font-family:"Mono"; font-size:32px; color:#c9d4d3; }
+.credit { position:absolute; left:0; right:0; bottom:40px; text-align:center; font-family:"Mono"; font-size:26px; color:#8fa3a6; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="54.810" data-width="1920" data-height="1080">
+<div id="c1" class="clip card " style="z-index:0" data-start="0.000" data-duration="9.820"><div class="paper dark"></div></div>
+<video id="v2" class="clip vid" style="z-index:1;" src="videos/v2.mp4" muted playsinline data-start="0.000" data-duration="9.820"></video>
+<div id="c3" class="clip card " style="z-index:46" data-start="0.000" data-duration="9.820"><div class="speed" style="top:110px">x0.5</div></div>
+<div id="c5" class="clip card " style="z-index:40" data-start="0.400" data-duration="6.061"><div id="k4" class="kin tl teal"><div class="kin-s">course nav_water_pillar · 0.95.63 · pass · now in the suite</div><div class="kin-b">OUT OF A FLOODED SHAFT</div></div></div>
+<div id="c7" class="clip card " style="z-index:55" data-start="4.341" data-duration="5.479"><div id="r6" class="ring up" style="left:667px;top:400px;width:580px;height:580px"><span>THE BLOCK UNDER ITSELF</span></div></div>
+<div id="c9" class="clip card " style="z-index:40" data-start="6.461" data-duration="3.359"><div id="k8" class="kin bl red"><div class="kin-s">earlier builds · crouching sinks you · it sat at a bank</div><div class="kin-b">OLD INPUT: CROUCH + JUMP</div></div></div>
+<div id="c10" class="clip card " style="z-index:45" data-start="0.000" data-duration="9.820"><div class="reel">3NDETZ LABS &middot; FIELD REPORT &middot; RELEASE 0.95.63</div></div>
+<div id="c12" class="clip card " style="z-index:60" data-start="8.720" data-duration="1.100"><div class="stampbox" style="left:1450px;top:330px"><div id="s11" class="stamp" style="font-size:100px;color:#d8453a;border-color:#d8453a">UP, NOT DOWN</div></div></div>
+<div id="c13" class="clip card " style="z-index:0" data-start="9.820" data-duration="9.380"><div class="paper"></div></div>
+<div id="c14" class="clip card " style="z-index:5" data-start="9.820" data-duration="9.380"><div class="crate"><div class="crh">FOUND IN THE BACK ROOM</div><div class="crs">work from another session (UNIONCLEF-HARD) &middot; 2026-10-02 to 10-04 &middot; never committed</div><ul class="crl"><li id="cr1">pillar in water: swim up, not crouch</li><li id="cr2">air escape: price dig vs swim, start in time</li><li id="cr3">keep one water bucket, empty the extras</li><li id="cr4">block scanner reads chunk copies</li></ul></div></div>
+<div id="c16" class="clip card " style="z-index:60" data-start="16.283" data-duration="2.917"><div class="stampbox" style="left:1500px;top:300px"><div id="s15" class="stamp" style="font-size:72px;color:#1f6f78;border-color:#1f6f78">REBUILT</div></div></div>
+<div id="c18" class="clip card " style="z-index:60" data-start="17.003" data-duration="2.197"><div class="stampbox" style="left:1540px;top:470px"><div id="s17" class="stamp" style="font-size:72px;color:#1f6f78;border-color:#1f6f78">RE-TESTED</div></div></div>
+<div id="c20" class="clip card " style="z-index:60" data-start="17.643" data-duration="1.557"><div class="stampbox" style="left:1500px;top:640px"><div id="s19" class="stamp" style="font-size:72px;color:#2f7d5b;border-color:#2f7d5b">SHIPPED</div></div></div>
+<div id="c22" class="clip card " style="z-index:60" data-start="17.950" data-duration="1.250"><div class="stampbox" style="left:1180px;top:900px"><div id="s21" class="stamp" style="font-size:96px;color:#d8453a;border-color:#d8453a">FINDERS KEEPERS</div></div></div>
+<video id="v23" class="clip vid" style="z-index:1;" src="videos/v23.mp4" muted playsinline data-start="19.200" data-duration="4.445"></video>
+<div id="c24" class="clip card " style="z-index:31" data-start="19.200" data-duration="4.445"><div class="speed">x2</div></div>
+<div id="c26" class="clip card " style="z-index:40" data-start="19.500" data-duration="4.145"><div id="k25" class="kin bl teal"><div class="kin-s">course nav_grid_water_roof · 0.95.63 · swims, roof left intact · pass</div><div class="kin-b">UNDER A SEALED ROOF</div></div></div>
+<div id="c27" class="clip card " style="z-index:3" data-start="23.645" data-duration="3.315"><div class="paper"></div></div>
+<div id="c28" class="clip card " style="z-index:5" data-start="23.645" data-duration="3.315"><div class="bk"><div class="bkh">WATER BUCKETS</div><div class="bkrow"><span class="bki keep">1</span><span class="bkt">kept, filled</span></div><div class="bkrow"><span class="bki dump">+</span><span class="bkt">extras emptied on a solid face</span></div><div class="bkn">used to empty every one at its own feet &middot; no clip of this one: release notes</div></div></div>
+<div id="c30" class="clip card " style="z-index:60" data-start="25.780" data-duration="1.180"><div class="stampbox" style="left:1400px;top:830px"><div id="s29" class="stamp" style="font-size:90px;color:#d8453a;border-color:#d8453a">HOARDING: CURED</div></div></div>
+<video id="v31" class="clip vid" style="z-index:1;" src="videos/v31.mp4" muted playsinline data-start="26.960" data-duration="3.693"></video>
+<div id="c32" class="clip card " style="z-index:31" data-start="26.960" data-duration="3.693"><div class="speed">x1.5</div></div>
+<div id="c34" class="clip card " style="z-index:40" data-start="27.160" data-duration="3.493"><div id="k33" class="kin tl red"><div class="kin-s">same checkpoint, 7 min before an old drowning</div><div class="kin-b">BEFORE · 0.95.62</div></div></div>
+<div class="clip" style="z-index:30" data-start="29.653" data-duration="1.000"><img id="i35" class="strip low" src="videos/s_creeper.png" style="transform-origin:50% 50%;width:696px"></div>
+<div id="c36" class="clip card " style="z-index:2" data-start="30.653" data-duration="1.280"><div class="paper dark"></div></div>
+<video id="v37" class="clip framed" style="z-index:3;" src="videos/v37.mp4" muted playsinline data-start="30.653" data-duration="1.280"></video>
+<div id="c38" class="clip card " style="z-index:33" data-start="30.653" data-duration="1.280"><div class="speed">x0.5</div></div>
+<div id="c40" class="clip card " style="z-index:55" data-start="30.753" data-duration="1.180"><div id="r39" class="ring up" style="left:739px;top:813px;width:120px;height:120px"><span>ONE HEART</span></div></div>
+<div id="c42" class="clip card " style="z-index:40" data-start="30.703" data-duration="1.230"><div id="k41" class="kin tl red"><div class="kin-s">same run, after the creeper · one heart · empty pockets</div><div class="kin-b">SECOND LIFE</div></div></div>
+<div class="clip" style="z-index:30" data-start="31.183" data-duration="0.750"><img id="i43" class="strip" src="videos/s_zombie.png" style="transform-origin:50% 50%;width:568px"></div>
+<video id="v44" class="clip vid" style="z-index:4;" src="videos/v44.mp4" muted playsinline data-start="31.933" data-duration="3.367"></video>
+<div id="c45" class="clip card " style="z-index:34" data-start="31.933" data-duration="3.367"><div class="speed">x2</div></div>
+<div id="c47" class="clip card " style="z-index:40" data-start="31.983" data-duration="3.317"><div id="k46" class="kin tl teal"><div class="kin-s">same checkpoint · skeleton, two spiders · no deaths</div><div class="kin-b">AFTER · 0.95.63</div></div></div>
+<div id="c48" class="clip card " style="z-index:35" data-start="26.960" data-duration="8.340"><div class="botcap">same checkpoint &middot; separate runs, not a race</div></div>
+<div id="c50" class="clip card " style="z-index:60" data-start="34.050" data-duration="1.250"><div class="stampbox" style="left:1420px;top:720px"><div id="s49" class="stamp" style="font-size:96px;color:#d8453a;border-color:#d8453a">STILL VERTICAL</div></div></div>
+<div id="c51" class="clip card " style="z-index:0" data-start="35.300" data-duration="9.150"><div class="paper"></div></div>
+<div id="c52" class="clip card " style="z-index:5" data-start="35.300" data-duration="9.150"><div class="stat2"><div class="sth">MEASURED ON THE BENCH</div><div class="shead"><span class="sl"></span><span class="sc bad">0.95.62</span><span class="sc good">0.95.63</span></div><div class="srow"><span class="sl">nav courses, three in water</span><span class="sc"><b id="bv1" class="bad">&mdash;</b></span><span class="sc"><div id="a1" class="bar good"></div><b id="av1" class="good">9 / 9</b><i id="an1" class="snote2">pass</i></span></div><div class="srow"><span class="sl">same checkpoint: deaths</span><span class="sc"><div id="b2" class="bar bad"></div><b id="bv2" class="bad">2</b><i id="bn2" class="snote2">1 of 2 runs</i></span><span class="sc"><b id="av2" class="good">0</b><i id="an2" class="snote2">in 2 runs</i></span></div><div class="srow"><span class="sl">15-min run on its own: deaths</span><span class="sc"><b id="bv3" class="bad">&mdash;</b></span><span class="sc"><b id="av3" class="good">0</b><i id="an3" class="snote2">lowest health 17.3</i></span></div><div class="snote" id="sn1">also pass: portal_lava_lake, craft_at_distant_table &middot; before-side lowest health 1.8</div><div class="snote" id="sn2"><b>the drowning did not recur in either build: not claimed as a fix</b><br>no speed or FPS gain claimed &middot; the game is not beaten</div></div></div>
+<div id="c53" class="clip card " style="z-index:0" data-start="44.450" data-duration="10.360"><div class="paper dark"></div></div>
+<div id="c54" class="clip card " style="z-index:5" data-start="44.450" data-duration="10.360"><div class="closebox"><div id="cl-badge"><svg width="150" height="150" viewBox="0 0 200 200"><defs><radialGradient id="lgg" cx="40%" cy="35%"><stop offset="0" stop-color="#fff6df"/><stop offset="1" stop-color="#e9d9b4"/></radialGradient></defs><circle cx="100" cy="100" r="94" fill="url(#lgg)" stroke="#1d2a2f" stroke-width="6"/><circle cx="100" cy="100" r="80" fill="none" stroke="#d8453a" stroke-width="3" stroke-dasharray="4 7"/><g fill="none" stroke="#1f6f78" stroke-width="6"><ellipse cx="100" cy="100" rx="70" ry="24"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(60 100 100)"/><ellipse cx="100" cy="100" rx="70" ry="24" transform="rotate(-60 100 100)"/></g><g transform="translate(100 100)"><polygon points="0,-26 23,-13 0,0 -23,-13" fill="#6fbf4a"/><polygon points="-23,-13 0,0 0,26 -23,13" fill="#8a5a33"/><polygon points="23,-13 0,0 0,26 23,13" fill="#6b4426"/><polygon points="0,-26 23,-13 0,0 -23,-13 0,-26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/><path d="M-23,-13 L-23,13 L0,26 L23,13 L23,-13 M0,0 L0,26" fill="none" stroke="#1d2a2f" stroke-width="2.5"/></g><circle cx="170" cy="100" r="7" fill="#d8453a"/><circle cx="65" cy="40" r="7" fill="#d8453a"/></svg></div><div id="cl-lab" class="labname big">3NDETZ LABS</div><div id="cl-t" class="closet">unionclef 0.95.63</div><div id="cl-u" class="closeu">github.com/3ndetz/unionclef</div><div id="cl-f" class="closef">open source · GPL-3.0 · Minecraft 1.21 · Fabric</div></div><div id="cl-credit" class="credit">Music: “Hep Cats” by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0</div></div>
+<div id="c56" class="clip card " style="z-index:60" data-start="51.960" data-duration="2.850"><div class="stampbox" style="left:1380px;top:830px"><div id="s55" class="stamp" style="font-size:80px;color:#d8453a;border-color:#d8453a">RETURN ADDRESS: UNKNOWN</div></div></div>
+<div id="c57" class="clip card " style="z-index:90" data-start="0.000" data-duration="54.810"><div id="grain" class="grain"></div><div class="edgevig"></div></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo('#k4',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},0.400);
+tl.fromTo('#r6',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},4.341);
+tl.fromTo('#k8',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},6.461);
+tl.fromTo('.reel',{opacity:0},{opacity:1,duration:0.4},0.1);
+tl.fromTo('#s11',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},8.720);
+tl.fromTo('#s11',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},9.000);
+tl.fromTo('.crate',{opacity:0,y:60,rotation:-2},{opacity:1,y:0,rotation:-1,duration:0.5,ease:'power3.out'},9.920);
+tl.fromTo('.crl li',{opacity:0,x:-30},{opacity:1,x:0,duration:0.25,stagger:0.25},15.033);
+tl.fromTo('#s15',{scale:2.6,opacity:0,rotation:-24},{scale:1,opacity:0.95,rotation:-10,duration:0.28,ease:'power4.in'},16.283);
+tl.fromTo('#s15',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},16.563);
+tl.fromTo('#s17',{scale:2.6,opacity:0,rotation:-8},{scale:1,opacity:0.95,rotation:6,duration:0.28,ease:'power4.in'},17.003);
+tl.fromTo('#s17',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},17.283);
+tl.fromTo('#s19',{scale:2.6,opacity:0,rotation:-20},{scale:1,opacity:0.95,rotation:-6,duration:0.28,ease:'power4.in'},17.643);
+tl.fromTo('#s19',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},17.923);
+tl.fromTo('#s21',{scale:2.6,opacity:0,rotation:-19},{scale:1,opacity:0.95,rotation:-5,duration:0.28,ease:'power4.in'},17.950);
+tl.fromTo('#s21',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},18.230);
+tl.fromTo('#v23',{scale:1.0},{scale:1.05,duration:4.445,ease:'none'},19.200);
+tl.fromTo('#k25',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},19.500);
+tl.fromTo('.bk .bkrow',{opacity:0,x:-40},{opacity:1,x:0,duration:0.3,stagger:0.35},23.745);
+tl.fromTo('#s29',{scale:2.6,opacity:0,rotation:-21},{scale:1,opacity:0.95,rotation:-7,duration:0.28,ease:'power4.in'},25.780);
+tl.fromTo('#s29',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},26.060);
+tl.fromTo('#v31',{scale:1.0},{scale:1.06,duration:3.693,ease:'none'},26.960);
+tl.fromTo('#k33',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},27.160);
+tl.fromTo('#i35',{opacity:0,y:-12},{opacity:1,y:0,duration:0.3},29.653);
+tl.fromTo('#r39',{scale:1.8,opacity:0},{scale:1,opacity:1,duration:0.35,ease:'back.out(2)'},30.753);
+tl.fromTo('#k41',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},30.703);
+tl.fromTo('#i43',{opacity:0,y:-12},{opacity:1,y:0,duration:0.3},31.183);
+tl.fromTo('#v44',{scale:1.0},{scale:1.06,duration:3.367,ease:'none'},31.933);
+tl.fromTo('#k46',{opacity:0,x:-70},{opacity:1,x:0,duration:0.35,ease:'power3.out'},31.983);
+tl.fromTo('#s49',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},34.050);
+tl.fromTo('#s49',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},34.330);
+tl.fromTo('.stat2 .srow',{opacity:0,x:-40},{opacity:1,x:0,duration:0.3,stagger:0.1},35.350);
+tl.fromTo('#a1',{width:0},{width:300,duration:0.45,ease:'power3.out'},36.016);
+tl.fromTo(['#av1','#an1','#bv1'],{opacity:0},{opacity:1,duration:0.2},36.895);
+tl.fromTo('#b2',{width:0},{width:200,duration:0.45,ease:'power3.out'},37.436);
+tl.fromTo(['#bv2','#bn2','#av2','#an2'],{opacity:0},{opacity:1,duration:0.2,stagger:0.12},37.736);
+tl.fromTo(['#bv3','#av3','#an3'],{opacity:0},{opacity:1,duration:0.2},39.135);
+tl.fromTo('#sn1',{opacity:0},{opacity:1,duration:0.4},39.435);
+tl.fromTo('#sn2',{opacity:0},{opacity:1,duration:0.4},39.856);
+tl.fromTo('#cl-badge',{scale:0,rotation:180},{scale:1,rotation:0,duration:0.8,ease:'back.out(1.5)'},44.550);
+tl.fromTo('#cl-lab',{opacity:0,y:30},{opacity:1,y:0,duration:0.5},44.750);
+tl.fromTo('#cl-t',{opacity:0,scale:1.6},{opacity:1,scale:1,duration:0.5,ease:'expo.out'},45.544);
+tl.fromTo(['#cl-u','#cl-f'],{opacity:0,y:20},{opacity:1,y:0,duration:0.4,stagger:0.2},48.984);
+tl.fromTo('#s55',{scale:2.6,opacity:0,rotation:-22},{scale:1,opacity:0.95,rotation:-8,duration:0.28,ease:'power4.in'},51.960);
+tl.fromTo('#s55',{x:0},{x:6,duration:0.05,repeat:3,yoyo:true},52.240);
+tl.fromTo('#cl-credit',{opacity:0},{opacity:1,duration:0.6},52.110);
+tl.to('#grain',{backgroundPosition:'173px 97px',duration:0.08,repeat:342,yoyo:true,ease:'steps(1)'},0);
+window.__timelines["main"] = tl;
+</script>
+</body>
+</html>
