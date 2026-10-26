@@ -56,7 +56,7 @@ public class InventorySubTracker extends Tracker {
         return false;
     }
 
-    public int getItemCount(boolean playerInventory, boolean containerInventory, Item... items) {
+    public synchronized int getItemCount(boolean playerInventory, boolean containerInventory, Item... items) {
         ensureUpdated();
         int result = 0;
         ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
@@ -71,7 +71,7 @@ public class InventorySubTracker extends Tracker {
         return result;
     }
 
-    public boolean hasItem(boolean playerInventoryOnly, Item... items) {
+    public synchronized boolean hasItem(boolean playerInventoryOnly, Item... items) {
         ensureUpdated();
         ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
         for (Item item : items) {
@@ -85,7 +85,7 @@ public class InventorySubTracker extends Tracker {
         return false;
     }
 
-    public List<Slot> getSlotsWithItems(boolean playerInventory, boolean containerInventory, Item... items) {
+    public synchronized List<Slot> getSlotsWithItems(boolean playerInventory, boolean containerInventory, Item... items) {
         ensureUpdated();
         List<Slot> result = new ArrayList<>();
         ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
@@ -100,7 +100,7 @@ public class InventorySubTracker extends Tracker {
         return result;
     }
 
-    public List<ItemStack> getInventoryStacks(boolean includeCursor) {
+    public synchronized List<ItemStack> getInventoryStacks(boolean includeCursor) {
         ClientPlayerEntity player = MinecraftClient.getInstance().player;
         if (player == null || player.getInventory() == null)
             return Collections.emptyList();
@@ -155,7 +155,7 @@ public class InventorySubTracker extends Tracker {
         return result;
     }
 
-    public List<Slot> getSlotsThatCanFit(boolean includePlayer, boolean includeContainer, ItemStack item, boolean acceptPartial) {
+    public synchronized List<Slot> getSlotsThatCanFit(boolean includePlayer, boolean includeContainer, ItemStack item, boolean acceptPartial) {
         ensureUpdated();
         final List<Slot> result = new ArrayList<>();
         if (includePlayer)
@@ -193,7 +193,7 @@ public class InventorySubTracker extends Tracker {
     }
 
     @Override
-    protected void updateState() {
+    protected synchronized void updateState() {
         _prevScreenHandler = MinecraftClient.getInstance().player != null ? MinecraftClient.getInstance().player.currentScreenHandler : null;
 
         itemToSlotPlayer.clear();
@@ -219,7 +219,7 @@ public class InventorySubTracker extends Tracker {
     }
 
     @Override
-    protected void reset() {
+    protected synchronized void reset() {
         itemToSlotPlayer.clear();
         itemToSlotContainer.clear();
         itemCountsPlayer.clear();

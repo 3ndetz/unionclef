@@ -1262,6 +1262,10 @@ def _run():
     # Mark the TIME instead; docker logs --since is not affected by how much the server says.
     phase("watch"); print(f"[4] watching {MINUTES} min for progress...")
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
+    # A CLIENT THAT LEFT THE GAME IS NOT A RUN (2026-10-26): the client crashed at t=448 s of a
+    # 30-minute run (NPE in InventorySubTracker), sat offline for 25 minutes, and the verdict still
+    # read PASS on the rung it had reached before the crash. Count consecutive offline polls.
+    offline_run=0; offline_max=0
     fps_samples = []
     _cp_last = time.time(); _cp_prefix = time.strftime("cp%m%d-%H%M"); _cp_series = []
     _lava_last = [None]
@@ -1534,6 +1538,10 @@ def _run():
             # a bot that had run out of food and kept fighting; the log could not show it.
             _me = gs.get('self') or {}
             _fd = ",".join(f"{k}:{v}" for k, v in (inv.get('food') or {}).items()) or "-"
+            if gs.get('inGame') is False:
+                offline_run += 1; offline_max = max(offline_max, offline_run)
+            else:
+                offline_run = 0
             print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} food={_me.get('food')}/{_me.get('saturation')} eat={_fd} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
@@ -1638,7 +1646,10 @@ def _run():
     # Keep both server-log causes and the existing independent death watch;
     # progress after a survival failure cannot satisfy this run's verdict.
     died = bool(deaths) or _lava_died[0]
-    ok = not died and responsive>=3 and busy_cnt>=2 and (satisfied if want else bool(reached))
+    left_game = offline_max >= 3
+    ok = not died and not left_game and responsive>=3 and busy_cnt>=2 and (satisfied if want else bool(reached))
+    if left_game:
+        print(f"  client left the game: {offline_max} consecutive offline polls; the run cannot PASS")
     if died:
         print("  survival failed: the run died; ladder progress cannot count as PASS")
     if want:

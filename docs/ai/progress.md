@@ -214,6 +214,10 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - nether-fresh copied to protected repro-nether-arrival-gold. Crafting-table value A/B there (pickaxes cleared by --grcon, table given vs cleared, `artifacts/nether-table-value-20261026`): inconclusive -- with a table the bot hunted endermen for pearls and never made a pickaxe; without one it tried to craft a stone pickaxe; it also carries planks/sticks. A missing table is not what holds the nether back -> trip-table.patch dropped.
 - The trip-table run-1 drowning (old jar) film shows the dig/swim flip-flop ('swimming 14 blocks rather than digging 237 ticks' <-> 'digging up to air') that 0.95.63's priced air escape and kept air route target. drown_tunnel on 0.95.63: 4/4 PASS, min HP 20, air back to 300, 29.5 FPS (`artifacts/drown-repro-20261026`).
 
+- Native30 on 0.95.63 (`artifacts/native30-0.95.63-20261026`): the CLIENT CRASHED at t~448 s -- crash-2026-10-26_10.32.08: NPE 'List.add because HashMap.get(...) is null' in InventorySubTracker.registerItem:191 via MobDefenseChain.hasShield (render thread); the maps were cleared between put and get by a concurrent updateState (JVM uptime 4 days, 7.1M ticks). The bench still read PASS after 25 offline minutes.
+- Fix: Tracker.ensureUpdated and InventorySubTracker's readers/updateState/reset synchronized on the tracker. gamer_smoke: 3+ consecutive offline polls -> 'client left the game', no PASS. Jar b1dfb553 (`tracker-sync-build-20261026`): nav 5/5 + craft 2/2 PASS, native30 PASS, 0 deaths, no crash, 29 FPS (`artifacts/tracker-sync-test-20261026`). A rare race; the fix rests on its mechanism, not on the absence of a crash.
+- Same native30: from t~1285 s the body holds (-213.4,24,1103.6) busy for 7+ min; never reached the nether in 30 min. Next item.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
