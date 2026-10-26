@@ -209,6 +209,11 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 
 - Released [v0.95.63](https://github.com/3ndetz/unionclef/releases/tag/v0.95.63), tag 818e6f80: fresh archive build, 2225 classes identical to tested 5c8d0f2b except fabric.mod.json; asset SHA 4b48f14b re-downloaded and matched. Cave Johnson video delivered to Telegram. UNIONCLEF-HARD's 0.95.57 draft moved to artifacts/water-takeover-ab-20261022/.
 
+### Continued autonomously (2026-10-26)
+
+- nether-fresh copied to protected repro-nether-arrival-gold. Crafting-table value A/B there (pickaxes cleared by --grcon, table given vs cleared, `artifacts/nether-table-value-20261026`): inconclusive -- with a table the bot hunted endermen for pearls and never made a pickaxe; without one it tried to craft a stone pickaxe; it also carries planks/sticks. A missing table is not what holds the nether back -> trip-table.patch dropped.
+- The trip-table run-1 drowning (old jar) film shows the dig/swim flip-flop ('swimming 14 blocks rather than digging 237 ticks' <-> 'digging up to air') that 0.95.63's priced air escape and kept air route target. drown_tunnel on 0.95.63: 4/4 PASS, min HP 20, air back to 300, 29.5 FPS (`artifacts/drown-repro-20261026`).
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
