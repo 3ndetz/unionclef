@@ -100,6 +100,19 @@ Added on 0.95.64:
 - **Shell vs Python paths on this host:** the Write tool's `/tmp` is not Git Bash's `/tmp`, and Windows Python does not
   see either. Keep scratch files inside the report folder (`work/` is git-ignored).
 
+Added on 0.95.66:
+
+- **CLIPS.md times are a guide, not a cut list.** "~0:30-1:10 crafts a stone pickaxe" was the pickaxe breaking at 0:36;
+  the crafting GUI was at 1:55, the item in the slot for 0.4 s. Contact-sheet the whole clip, then frame-step the event.
+- **A small GUI needs its own crop.** The crafting table fills a sixth of an 854x480 frame; a second FOOT entry with
+  `crop=320:180:...` (x5 in the framed inset) makes the grid and the output slot readable. The still uses the same crop.
+- **STT drops a repeated word** ("point six six" came back as "point six" on every take). Check the take's energy
+  envelope instead of re-rolling it, and let `display()` write the version as digits.
+- **A verdict sits on the event, not near it.** "OUT · 43.7 S" over a sped-up clip whose last frames were still in the
+  lava was false for most of its 1.5 s; end the clip on the exit and hold a still under the verdict.
+- **Telegram goes through le_bot's proxy:** `TG_PROXY` in `C:/repos/pet/health/.env` (mineswarm's `TG_BOT_PROXY` is
+  empty; direct api.telegram.org times out). `cave-johnson-0.95.66/send_tg.py` does it and writes the receipt.
+
 ## Housekeeping
 
 `reports/footage/`, `reports/out/` and `reports/hf/videos/` are git-ignored. Delete footage once

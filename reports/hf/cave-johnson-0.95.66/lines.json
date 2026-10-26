@@ -1,0 +1,9 @@
+[
+ {"id": "l01", "text": "Cave Johnson here. This week the robot learned two things. When to give up, and when to jump."},
+ {"id": "l02", "text": "Exhibit one. A lava pool, sealed in bedrock. Last week's robot waited by it for two and a half minutes. This one gives up after twenty seconds, and goes to the open pool next door."},
+ {"id": "l03", "text": "Exhibit two. Underground, the iron pickaxe wears out. The old robot went looking for a tree. This one makes a stone pickaxe from the cobblestone in its pocket."},
+ {"id": "l04", "text": "Then, in the interest of science, it walked into a lava pool. The way out was one block up. It never jumped. That one is on the released build."},
+ {"id": "l05", "text": "So we taught it to jump. Baritone had the rule already: in a liquid, below the next step, hold jump. Same pit. Forty-four seconds before. Six after."},
+ {"id": "l06", "text": "Three runs each, and the median went from twenty-eight seconds to nine. Two runs from the checkpoint that killed it: no deaths, and both reached the Nether."},
+ {"id": "l07", "text": "Version zero point nine five, point six six. Out now."}
+]

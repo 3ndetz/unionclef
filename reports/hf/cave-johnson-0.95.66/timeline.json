@@ -1,0 +1,113 @@
+{
+ "total": 68.11999999999999,
+ "voice": [
+  [
+   "l01",
+   0.3
+  ],
+  [
+   "l02",
+   7.4799999999999995
+  ],
+  [
+   "l03",
+   19.259999999999998
+  ],
+  [
+   "l04",
+   30.599999999999998
+  ],
+  [
+   "l05",
+   40.11999999999999
+  ],
+  [
+   "l06",
+   50.99999999999999
+  ],
+  [
+   "l07",
+   61.43999999999999
+  ]
+ ],
+ "clips": [
+  {
+   "key": "v2",
+   "file": "pit-jump-on.mp4",
+   "src_in": 6.22,
+   "src_out": 13.4,
+   "speed": 1.0
+  },
+  {
+   "key": "v9",
+   "file": "boxed-old-0.95.64.mp4",
+   "src_in": 0.0,
+   "src_out": 151.96,
+   "speed": 12.9
+  },
+  {
+   "key": "v10",
+   "file": "boxed-new.mp4",
+   "src_in": 0.0,
+   "src_out": 33.46,
+   "speed": 2.84
+  },
+  {
+   "key": "v15",
+   "file": "repro10-release.mp4",
+   "src_in": 33.6,
+   "src_out": 37.0,
+   "speed": 1.0
+  },
+  {
+   "key": "v18",
+   "file": "repro10-release.mp4",
+   "src_in": 37.05,
+   "src_out": 115.55,
+   "speed": 25
+  },
+  {
+   "key": "v22",
+   "file": "repro10-release.mp4",
+   "src_in": 115.2,
+   "src_out": 116.9,
+   "speed": 0.5
+  },
+  {
+   "key": "st_pick",
+   "file": "repro10-release.mp4",
+   "still": 116.8
+  },
+  {
+   "key": "v30",
+   "file": "repro10-release.mp4",
+   "src_in": 169.5,
+   "src_out": 176.35,
+   "speed": 0.72
+  },
+  {
+   "key": "v37",
+   "file": "pit-jump-off.mp4",
+   "src_in": 6.13,
+   "src_out": 51.15,
+   "speed": 4.8
+  },
+  {
+   "key": "st_off",
+   "file": "pit-jump-off.mp4",
+   "still": 51.4
+  },
+  {
+   "key": "v39",
+   "file": "pit-jump-on.mp4",
+   "src_in": 5.5,
+   "src_out": 13.4,
+   "speed": 1.0
+  },
+  {
+   "key": "st_on",
+   "file": "pit-jump-on.mp4",
+   "still": 13.4
+  }
+ ]
+}

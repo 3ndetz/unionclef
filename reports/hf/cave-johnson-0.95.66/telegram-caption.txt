@@ -1,0 +1,8 @@
+Unionclef 0.95.65 + 0.95.66: gives up on lava it cannot reach, and jumps out of lava it is in.
+
+0.95.65: a lava source sealed in bedrock is given up after 20 s of no progress and the next one is taken (course lava_boxed_source: 0/2 on 0.95.64, 2/2 now). A worn-out iron pickaxe is replaced with a stone one from carried cobblestone. A second field run on 0.95.65 then died in the portal-site lava: the way out was one block up and the walker never jumped while floating.
+
+0.95.66: the walker holds jump in a liquid when the next waypoint is above it, ported from baritone (Movement.java:125-127). Two-deep lava pit, 3 runs each: median 27.9 s -> 8.7 s to get out. From the checkpoint of that death: two 10-minute runs, 0 deaths, both reached the nether.
+
+Open: with no blocks in the pack the same pit is still not escaped.
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.66
