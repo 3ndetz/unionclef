@@ -900,7 +900,15 @@ public class BeatMinecraftTask extends Task {
                         }
                     }
 
-                    return StorageHelper.miningRequirementMet(MiningRequirement.WOOD) && !mod.getItemStorage().hasItem(Items.STONE_PICKAXE) && !hasSafeIronPick && !mod.getItemStorage().hasItem(Items.DIAMOND_PICKAXE);
+                    // ⛔ COBBLESTONE IN HAND NEEDS NO PICKAXE TO BECOME ONE (2026-10-27). The wood gate is
+                    // there to MINE the cobblestone; with three already carried it only blocks the
+                    // craft. Measured from repro-lava-stuck-cell: the iron pickaxe wore out 30 s in,
+                    // underground, with 64 cobblestone in the inventory, and the bot spent the next
+                    // five minutes on "Collecting resource: wooden_pickaxe" (priority 400) because
+                    // this, at 410, read -inf until a wooden one existed.
+                    boolean canGetStone = StorageHelper.miningRequirementMet(MiningRequirement.WOOD)
+                            || mod.getItemStorage().getItemCount(Items.COBBLESTONE) >= 3;
+                    return canGetStone && !mod.getItemStorage().hasItem(Items.STONE_PICKAXE) && !hasSafeIronPick && !mod.getItemStorage().hasItem(Items.DIAMOND_PICKAXE);
                 }));
 
         gatherResources.add(new CraftItemPriorityTask(420, getRecipeTarget(Items.IRON_PICKAXE),

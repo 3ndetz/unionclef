@@ -197,6 +197,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
                 if (LookHelper.getReach(blockPos).isPresent() &&
                         Nav.isSafeToCancel()) {
                     tries++;
+                    approachTarget = null; // in reach: the approach clock starts again next time
                     return new InteractWithBlockTask(new ItemTarget(Items.BUCKET, 1), blockPos, toCollect != Blocks.LAVA, new Vec3i(0, 1, 0));
                 }
                 // Get close enough.
@@ -204,6 +205,39 @@ public class CollectBucketLiquidTask extends ResourceTask {
                 if (this.thisOrChildAreTimedOut() && !wasWandering) {
                     mod.getBlockScanner().requestBlockUnreachable(blockPos.up());
                     wasWandering = true;
+                }
+                // ⛔ AN APPROACH THAT STOPS CLOSING IN GIVES THE SOURCE UP (2026-10-26). GetCloseToBlockTask
+                // only ever SHRINKS its radius, and beside a lava pool there may be no safe cell nearer
+                // than the one it stands on. Measured (native30 on 0.95.64): 14 minutes at
+                // (-256.4,29,1100.9) on "Getting within 3 blocks of -256,26,1103", 4.6 blocks from the
+                // source -- a tenth past the bucket's reach -- then a route into the lava and a death.
+                // Same answer as baritone's GetToBlockProcess blacklistClosestOnFailure: give this one
+                // up and take the next source. AbstractDoToClosestObjectTask's own 180 s ceiling did
+                // fire, but with nothing else pursued its ban is lifted at once and the chooser hands
+                // the same source back; the blacklist here goes through isSafeSourceLiquid and holds.
+                // The clock survives a restart and pauses while this is not ticked: measured on the
+                // first build, Unstuck Chain interrupted the stall every ~25 s, and a clock reset on
+                // onResourceStart never reached 20 s (approachGivenUp=0 after minutes in place).
+                long nowMs = System.currentTimeMillis();
+                if (approachLastTickMs > 0 && nowMs - approachLastTickMs > 1_000) {
+                    approachSinceMs += nowMs - approachLastTickMs;
+                }
+                approachLastTickMs = nowMs;
+                double dist = mod.getPlayer().getPos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(blockPos));
+                if (!blockPos.equals(approachTarget)) {
+                    approachTarget = blockPos;
+                    approachBest = dist;
+                    approachSinceMs = System.currentTimeMillis();
+                } else if (dist < approachBest - 0.5) {
+                    approachBest = dist;
+                    approachSinceMs = System.currentTimeMillis();
+                } else if (System.currentTimeMillis() - approachSinceMs > APPROACH_PATIENCE_MS) {
+                    approachGivenUp++;
+                    Debug.logMessage("No closer to the liquid at " + blockPos.toShortString() + " for "
+                            + APPROACH_PATIENCE_MS / 1000 + " s; trying another source");
+                    blacklist.add(blockPos);
+                    approachTarget = null;
+                    return null;
                 }
                 return new GetCloseToBlockTask(blockPos.up());
             }, isSafeSourceLiquid, toCollect);
@@ -221,6 +255,13 @@ public class CollectBucketLiquidTask extends ResourceTask {
     }
     int tries = 0;
     TimerGame timeoutTimer = new TimerGame(2);
+    /** Approach progress toward the current source; see collectFrom. */
+    private static final long APPROACH_PATIENCE_MS = 20_000;
+    private BlockPos approachTarget;
+    private double approachBest;
+    private long approachSinceMs;
+    private long approachLastTickMs;
+    public static volatile int approachGivenUp;
 
     @Override
     protected void onResourceStop(AltoClef mod, Task interruptTask) {

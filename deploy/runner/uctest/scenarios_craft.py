@@ -1844,8 +1844,30 @@ class LavaFarLake(Scenario):
         yield ctx.survival_criterion()
 
 
+class LavaBoxedSource(LavaFarLake):
+    """THE NEAREST LAVA CANNOT BE REACHED (2026-10-27).
+
+    The closest source sits in a sealed bedrock box, the air above it inside the box, so it passes
+    isSafeSourceLiquid (above is air, not bedrock) while no cell within bucket reach exists. An
+    open source waits 18 blocks further. A native30 run on 0.95.64 stood 14 minutes on "Getting
+    within 3 blocks" of such a source; AbstractDoToClosestObjectTask gave it up every 180 s and
+    lifted its own ban at once. Gate: a lava bucket in the pack, alive.
+    """
+    id = "lava_boxed_source"
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=34, grass=False)
+        arena._fill(-34, FLOOR_Y - 3, -34, 34, FLOOR_Y - 1, 34, "stone")
+        arena._fill(3, FLOOR_Y - 1, -1, 5, STAND_Y + 2, 1, "bedrock")
+        arena._fill(4, FLOOR_Y, 0, 4, FLOOR_Y, 0, "lava")
+        arena._fill(4, STAND_Y, 0, 4, STAND_Y + 1, 0, "air")
+        arena._fill(22, FLOOR_Y, 0, 22, FLOOR_Y, 0, "lava")
+        ctx.geo["capped"] = 1
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
-             PickupMinableDrop, PickupAfterGoto, PortalLavaLake, LavaFarLake]
+             PickupMinableDrop, PickupAfterGoto, PortalLavaLake, LavaFarLake, LavaBoxedSource]
