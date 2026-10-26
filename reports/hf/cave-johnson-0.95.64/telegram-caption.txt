@@ -1,0 +1,8 @@
+Unionclef 0.95.64: the client stays up.
+
+A 30-minute run on 0.95.63 lost its client at minute seven: NullPointerException in the inventory tracker. Two threads rebuilt the same item map at once, one clearing it between the other's put and get. The tracker's update and reads are now synchronized. It is a rare race (seen after 4 days of client uptime, 7 million ticks); the fix rests on that mechanism, not on a run that happened not to crash.
+
+The test bench had called that run PASS with the client gone for 25 minutes; "client left the game" now fails a run.
+
+Re-tested: 7 courses PASS at 29-30 FPS; a 30-minute run PASS, no deaths, no crash. Open: later in that run the bot stood 7 minutes underground looking for lava with a lake 30 blocks away; cause not found yet.
+https://github.com/3ndetz/unionclef/releases/tag/v0.95.64

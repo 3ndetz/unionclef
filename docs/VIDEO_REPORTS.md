@@ -87,6 +87,19 @@ Added on 0.95.63:
 - **Subtitles can orphan a label word** ("...a zombie. After:"). Add the pair to `protected` in `add_subs.py`.
 - **The speed badge and the reel share the top-right corner.** Move one of them when both are on screen.
 
+Added on 0.95.64:
+
+- **A run clock on a timelapse** makes a long run readable (x293 for 30 min in 6 s). `cut()` burns it in with
+  `drawtext=textfile=...` before `setpts`; the text file holds `%{eif:trunc((t+START)/60):d:2}:%{eif:mod(trunc(t+START),60):d:2}`.
+  A textfile avoids the filter-escaping of `:`; `+START` is needed because input `-ss` resets pts to 0. Run ffmpeg
+  with `cwd` = the report folder and relative font/text paths (Windows drive colons break the filter string).
+- **A card line shown for under a second is not shown.** "now: client left the game = FAIL" appeared 0.6 s before
+  the next card; it moved onto the stat card. Check each reveal against the next cut time, not just the word time.
+- **The crash run's recording simply ends** when the client dies (457 s of a 30-min run). Step the last seconds frame by
+  frame: last gameplay frame, "Saving world", black. Put a black box behind a framed clip that runs out early.
+- **Shell vs Python paths on this host:** the Write tool's `/tmp` is not Git Bash's `/tmp`, and Windows Python does not
+  see either. Keep scratch files inside the report folder (`work/` is git-ignored).
+
 ## Housekeeping
 
 `reports/footage/`, `reports/out/` and `reports/hf/videos/` are git-ignored. Delete footage once
