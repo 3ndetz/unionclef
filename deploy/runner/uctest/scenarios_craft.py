@@ -1524,6 +1524,23 @@ class EscapeLavaDeepKit(EscapeLavaDeep):
                         f"escaped_at={t}", load_sensitive=True)
 
 
+class EscapeLavaDeepFed(EscapeLavaDeepKit):
+    """escape_lava_deep_kit with food in the pack and a few hunger points gone, as in the 0.95.65
+    death (Cooked Mutton in hand 0.9 blocks from the shore). EscapeFromLavaTask ate whenever hunger
+    was below 20, and eating holds use, which cuts movement to a fifth. The A/B for
+    lavaEscapeEatsOnlyOutOfLava.
+
+    MEASURED 2026-10-27, 8 runs per arm: eat-anywhere 4.0/5.6/5.9/14.0/15.5/15.6/17.6/27.3 s,
+    eat-out-of-lava 3.4/5.6/5.7/6.1/15.5/15.7/15.7 s + one stuck at the centre. Both arms split
+    ~5 s / ~15 s, so something else sets the time; no win shown, the change is not in the build
+    (artifacts/lava-eat-20261027/escape-eat-out-of-lava.patch). The stuck run is the
+    escape_lava_deep mode, and it can reach escape_lava_deep_kit too (1 in 8 here)."""
+    id = "escape_lava_deep_fed"
+    tier = "info"
+    ESCAPE_KIT = ["give {name} cobblestone 32", "give {name} cooked_mutton 8",
+                  "effect give {name} minecraft:hunger 1 100 true"]
+
+
 class PickupDrop(CraftTable):
     """Walk to ONE dropped item and touch it. Nothing else -- no ore, no crafting, no tools.
 
@@ -1941,6 +1958,6 @@ class LavaBoxedSource(LavaFarLake):
 
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool, EscapeLavaStep, EscapeLavaDeep, EscapeLavaDeepKit,
+             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool, EscapeLavaStep, EscapeLavaDeep, EscapeLavaDeepKit, EscapeLavaDeepFed,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
              PickupMinableDrop, PickupAfterGoto, PortalLavaLake, LavaFarLake, LavaBoxedSource]
