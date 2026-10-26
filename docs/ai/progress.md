@@ -223,6 +223,14 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 
 - Released v0.95.64 (tag 98f30daf): fresh archive build, 2225 classes identical to tested b1dfb553 except fabric.mod.json; asset re-downloaded and hash-matched. Video in progress.
 
+### Cleanup, then the lava approach (2026-10-27)
+
+- Owner asked for disk cleanup: 202 old checkpoints, 47 heavy untracked report dirs and every pre-10-26 artifact dir moved to M:\unionclef-backup (checkpoints/, reports/, artifacts/); C: free 162 -> 205 GB. Kept: full59-before-portal, nether-fresh, last, rung-*, repro-*, today's cp/artifacts.
+- Native30 on 0.95.64 + first approach fix: stood t=976..1800 s at (-253.2,28,1099.4) on "Getting within 2 blocks of -252,26,1101" (blockPos.up() of the source). Probe (`artifacts/lava-approach-20261027/reach_probe.py`): approachGivenUp=0 -- Unstuck Chain interrupted every ~25 s and the clock reset on onResourceStart. Clock now survives restarts and pauses while not ticked. Checkpoint kept as repro-lava-stuck-cell.
+- Resumed there, the iron pickaxe wore out 30 s in (vanilla inventory confirmed; tracker matched) and the bot spent 5 min on wooden_pickaxe with 64 cobblestone: the 410 stone-pickaxe step required miningRequirementMet(WOOD). Now also allowed with 3+ cobblestone. Repro10: stone pickaxe in the first minute, lava, portal, nether at ~4.8 min, 0 deaths (give-up not needed there).
+- New course lava_boxed_source (nearest source sealed in bedrock, open source 18 blocks on): 0.95.64 0/2, new 2/2 ~34 s with the give-up line. craft 26/26, nav 5/5, native30 PASS 0 deaths 27 FPS (food-bound route, no portal reached). Commit e84b6d88.
+- Isolated build recipe from this shell (Git Bash on Windows): `export MSYS_NO_PATHCONV=1` first, or docker gets `-w W:/`; mount `C:/Repos/pet/unionclef/.gradle/jdk21:/jdk21` and `C:/Users/jayra/.gradle:/gh`.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
