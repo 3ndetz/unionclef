@@ -1451,6 +1451,79 @@ class EscapeLavaPool(EscapeLava):
         return self.HALF + 0.3 < d < 9.0
 
 
+class EscapeLavaStep(EscapeLavaPool):
+    """A lava pit sunk one block into the floor: every way out is a step UP from inside the lava.
+
+    WHY (2026-10-27, repro-lava-stuck-cell on 0.95.65). The bot burned to death 0.9 blocks from the
+    shore of the portal-site pool: the escape route was two waypoints, the second a block higher,
+    and BlockPathWalker jumps only from the ground -- floating in lava it never is, so it walked
+    into the shore face at zero speed ("wlk i1/2 d0.9 wp(-250,26,1105) g0 j0"). escape_lava and
+    escape_lava_pool keep the lava level with the ground and never ask for that step.
+    """
+    id = "escape_lava_step"
+    HALF = 1
+    DEPTH = 1   # lava layers below the shore's standing level
+    ESCAPE_KIT = []   # rcon lines after the clear, {name} = bot
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        ctx.rcon.cmd(f"spawnpoint {ctx.bot.name} 10 {STAND_Y} 10", allow_reject=True)
+        for line in self.ESCAPE_KIT:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        h, d = self.HALF, self.DEPTH
+        # Solid under the pit (the stand carves air below the arena), lava from the floor layer down.
+        ctx.rcon.cmd(f"fill {-h} {FLOOR_Y - d} {-h} {h} {FLOOR_Y - d} {h} minecraft:stone", allow_reject=True)
+        ctx.rcon.cmd(f"fill {-h} {FLOOR_Y - d + 1} {-h} {h} {FLOOR_Y} {h} minecraft:lava", allow_reject=True)
+        ctx.geo["fps"] = []
+        ctx.geo["min_hp"] = 20.0
+        ctx.geo["entered"] = False
+        time.sleep(1)
+        ctx.bot.py.try_call("resetRunCounters")
+        ctx.bot.cmd("@get oak_log 1")
+        time.sleep(2)
+        self._start_escape_observation(ctx)
+        ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {FLOOR_Y} 0.5", allow_reject=True)
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:resistance 120 4 true",
+                     allow_reject=True)
+
+
+class EscapeLavaDeep(EscapeLavaStep):
+    """escape_lava_step two deep: the shore is level with the lava's surface and the bot floats --
+    never on the ground -- which is the state the 0.95.65 death was in (g0 on every walker line).
+
+    INFO, NOT GATE: 0/3 on 0.95.65 and 0/2 with the walker liquid jump -- the walker never gets a
+    route here; the block route "dead-ends" and the physics search cannot leave lava. Three layers
+    found and patched in artifacts/lava-approach-20261027/physics-lava-escape.patch (Node prunes
+    every lava node and its children; floating in lava gets the airborne generator, which never
+    offers jump; 2e6 per lava tick swamps the heuristic): the failure moved from "Ran out of nodes"
+    to "no route within 2000 ms", still 0/2, so the patch is not in the build. Open.
+    """
+    id = "escape_lava_deep"
+    tier = "info"
+    DEPTH = 2
+
+
+class EscapeLavaDeepKit(EscapeLavaDeep):
+    """escape_lava_deep with blocks in the pack, as the 0.95.65 death had: the escape then builds
+    a route (pillar/bridge/break) and the walker gets a short route whose next waypoint is a block
+    up from the floating body. The A/B for walkerJumpsInLiquid."""
+    id = "escape_lava_deep_kit"
+    tier = "gate"
+    ESCAPE_KIT = ["give {name} cobblestone 32"]
+    ESCAPE_WITHIN_S = 20
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        # Resistance keeps both arms alive, so survival alone cannot tell them apart; time in the
+        # lava can. Measured 2026-10-27: walkerJumpsInLiquid off 43.7/27.9/24.0 s, on 8.7/15.7/6.0 s.
+        t = ctx.geo.get("escaped_at")
+        yield Criterion(f"out of the lava within {self.ESCAPE_WITHIN_S} s",
+                        t is not None and float(t) <= self.ESCAPE_WITHIN_S,
+                        f"escaped_at={t}", load_sensitive=True)
+
+
 class PickupDrop(CraftTable):
     """Walk to ONE dropped item and touch it. Nothing else -- no ore, no crafting, no tools.
 
@@ -1868,6 +1941,6 @@ class LavaBoxedSource(LavaFarLake):
 
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool,
+             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool, EscapeLavaStep, EscapeLavaDeep, EscapeLavaDeepKit,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
              PickupMinableDrop, PickupAfterGoto, PortalLavaLake, LavaFarLake, LavaBoxedSource]

@@ -920,6 +920,17 @@ public class BlockPathWalker {
                 && onGround && !droppingTo && !intoHole
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
+        // ⛔ IN A LIQUID THERE IS NO GROUND TO JUMP FROM (2026-10-27). canJump needs onGround, which
+        // is false while floating, so a waypoint one block up from a lava pool was walked into face
+        // first with no jump: measured on 0.95.65 from repro-lava-stuck-cell, "wlk i1/2 d0.9
+        // wp(-250,26,1105) g0 j0 v(0.00,-0.04,0.00)" tick after tick until the bot burned to death
+        // 0.9 blocks from the shore. Ported from baritone Movement.java:125-127: feet in liquid and
+        // below the destination + 0.6 -> hold jump (swim up), whatever the ground says.
+        if (!canJump && TungstenConfig.get().walkerJumpsInLiquid
+                && !player.getEntityWorld().getFluidState(player.getBlockPos()).isEmpty()
+                && playerPos.y < wp.getY() + 0.6) {
+            canJump = true;
+        }
         mc.options.jumpKey.setPressed(canJump);
 
         if (DEBUG && (dbgN++ % 3 == 0)) {

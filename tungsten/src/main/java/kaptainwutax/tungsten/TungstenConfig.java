@@ -5202,6 +5202,11 @@ public class TungstenConfig {
      * not a claim that food140 or survival is solved. */
     public boolean pillarUsesSwimInputInWater = true;
 
+    /** BlockPathWalker holds jump while its feet are in a liquid and the next waypoint is above
+     * them (baritone Movement.java:125-127). Without it a bot floating in lava, never on the
+     * ground, walked into a one-block shore with no jump and burned. False = old input, for A/B. */
+    public boolean walkerJumpsInLiquid = true;
+
     /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
      *  that holds heading and sprint across the whole bounce chain, instead of the walker
      *  re-deciding at every waypoint.
