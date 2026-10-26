@@ -1785,8 +1785,67 @@ class PortalLavaLake(Scenario):
                       ("walkWalkerAtStop", "walkWalkerStopped")}
             yield Criterion("builder walk ownership (recorded)", True, str(counts), gate=False)
 
+
+class LavaFarLake(Scenario):
+    """A FAR LAKE BEHIND A CROWD OF CAPPED LAVA (2026-10-26).
+
+    BlockScanner keeps only the 40 nearest positions of a block. Here 45 lava sources sit within
+    eight blocks of the bot, each under a bedrock cap that isSafeSourceLiquid rejects, and the only
+    takeable lava is an open 5x5 lake ~28 blocks off. A native30 run on 0.95.63 wandered 7+ minutes
+    "searching for liquid" beside such a lake. Gate: a lava bucket in the pack, alive.
+    """
+    id = "lava_far_lake"
+    tier = "gate"
+    needs_victim = False
+    duration = 150
+    # Mainhand first: "give" fills the first empty slot, which IS the mainhand, and the replace
+    # would then delete the bucket (the first version of this course did exactly that).
+    bot_kit = ["item replace entity {name} weapon.mainhand with iron_pickaxe", "give {name} bucket 1"]
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=34, grass=False)
+        arena._fill(-34, FLOOR_Y - 3, -34, 34, FLOOR_Y - 1, 34, "stone")
+        n = 0
+        for x in range(-8, 9, 2):
+            for z in range(-8, 9, 2):
+                if abs(x) <= 1 and abs(z) <= 1:
+                    continue
+                if n >= 45:
+                    break
+                arena._fill(x, FLOOR_Y, z, x, FLOOR_Y, z, "lava")
+                arena._fill(x, STAND_Y, z, x, STAND_Y, z, "bedrock")
+                n += 1
+        arena._fill(26, FLOOR_Y, -2, 30, FLOOR_Y, 2, "lava")
+        ctx.geo["capped"] = n
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.geo["t0"] = time.time()
+        ctx.bot.cmd("@get lava_bucket 1")
+
+    def _buckets(self, ctx):
+        m = re.search(r"(\d+) matching", ctx.rcon.cmd(f"clear {ctx.bot.name} lava_bucket 0", allow_reject=True))
+        return int(m.group(1)) if m else 0
+
+    def drive_tick(self, ctx, elapsed):
+        if ctx.geo.get("got_at") is None and self._buckets(ctx) > 0:
+            ctx.geo["got_at"] = time.time() - ctx.geo["t0"]
+
+    def early_stop(self, ctx):
+        return ctx.geo.get("got_at") is not None
+
+    def judge(self, ctx):
+        t = ctx.geo.get("got_at")
+        yield Criterion(f"lava bucket within {self.duration} s", t is not None,
+                        f"t={None if t is None else round(t, 1)} capped_sources={ctx.geo.get('capped')}",
+                        load_sensitive=True)
+        yield ctx.survival_criterion()
+
+
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava, EscapeLavaPool,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
-             PickupMinableDrop, PickupAfterGoto, PortalLavaLake]
+             PickupMinableDrop, PickupAfterGoto, PortalLavaLake, LavaFarLake]

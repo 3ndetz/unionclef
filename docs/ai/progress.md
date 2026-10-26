@@ -218,6 +218,9 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - Fix: Tracker.ensureUpdated and InventorySubTracker's readers/updateState/reset synchronized on the tracker. gamer_smoke: 3+ consecutive offline polls -> 'client left the game', no PASS. Jar b1dfb553 (`tracker-sync-build-20261026`): nav 5/5 + craft 2/2 PASS, native30 PASS, 0 deaths, no crash, 29 FPS (`artifacts/tracker-sync-test-20261026`). A rare race; the fix rests on its mechanism, not on the absence of a crash.
 - Same native30: from t~1285 s the body holds (-213.4,24,1103.6) busy for 7+ min; never reached the nether in 30 min. Next item.
 
+- Lava-search stand (native30 t>=1285 s, 'Searching for liquid by wandering' + 'Failed exploring' underground, a lake ~30 blocks off found by the portal's own world scan). repro-lava-search (copy of cp1026-1436-t1398) does not recreate it: resumed, BeatMinecraft re-plans food/tools; the in-trip state is not in a checkpoint.
+- New course lava_far_lake (45 bedrock-capped lava sources within 8 blocks + open 5x5 lake 28 blocks off, @get lava_bucket). First A/B invalid: the kit's give put the bucket in the mainhand and the replace deleted it (fixed: mainhand first). Corrected: 0.95.63+tracker 3/3 PASS ~11 s, world-scan candidate 3/3 PASS ~11 s -> the scanner-40 hypothesis is wrong for this case; world-scan fallback NOT committed (lava-worldscan.patch). Field stall open; next hypotheses: water from the bot's own casts beside the lake failing the no-water-around check, or the task's per-instance blacklist after failures. Needs a live probe inside the trip state.
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
