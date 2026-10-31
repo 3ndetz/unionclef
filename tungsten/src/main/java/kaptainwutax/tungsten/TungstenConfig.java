@@ -5085,6 +5085,10 @@ public class TungstenConfig {
 
     /** Allow the block-space pathfinder to plan breaking through breakable walls. */
     public boolean allowBreak = true;
+    /** Mine only terrain (dirt, grass, sand, gravel, leaves, snow, plants), never anything a
+     *  player could have built with. For shared servers, where digging through a wall is
+     *  griefing. Off by default, so existing behaviour is unchanged. */
+    public boolean breakOnlyNatural = false;
 
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
