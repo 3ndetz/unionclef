@@ -47,8 +47,10 @@ public class LoadChunkMixin {
     //#else
     //$$ private void onLoadChunk(int x, int z, BiomeArray biomes, PacketByteBuf buf, NbtCompound tag, int verticalStripBitmask, boolean complete, CallbackInfoReturnable<WorldChunk> cir) {
     //#endif
-        // Publish a ChunkLoadEvent with the return value of the method as the argument
-        EventBus.publish(new ChunkLoadEvent(cir.getReturnValue()));
+        // The client can discard a packet outside its chunk view and return null.
+        // No chunk was loaded in that case, so do not notify subscribers.
+        WorldChunk chunk = cir.getReturnValue();
+        if (chunk != null) EventBus.publish(new ChunkLoadEvent(chunk));
     }
 
     /**
