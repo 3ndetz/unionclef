@@ -398,8 +398,10 @@ public class AltoClef implements ModInitializer {
                 getCommandExecutor().executeWithPrefix(getModSettings().getIdleCommand());
             }
             // Don't break blocks or place blocks where we are explicitly protected.
-            getExtraBaritoneSettings().avoidBlockBreak(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
-            getExtraBaritoneSettings().avoidBlockPlace(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
+            // Register through the behaviour stack so applying or resetting a
+            // temporary avoidance cannot discard these permanent predicates.
+            getBehaviour().avoidBlockBreaking(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
+            getBehaviour().avoidBlockPlacing(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
             getExtraBaritoneSettings().getForceSaveToolPredicates().add((state, item) -> StorageHelper.shouldSaveStack(this, state.getBlock(), item));
 
             // Auto-restore nickname if current name looks like PlayerNNN

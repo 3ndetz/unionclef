@@ -10,7 +10,12 @@
 - Plan and implement: expire only the chain's own elapsed temporary place and
   break predicates from the ordinary client tick while the task runner is
   disabled. Preserve unexpired avoidance and all explicit protected areas.
-- Verify: build and live regression pending. Mainline already removed this
+- Verify: first live regression exposed a separate protection regression:
+  applying a temporary avoidance rebuilt the behaviour stack and dropped the
+  directly registered explicit-protection predicate. The client was rolled
+  back and the predicate verified restored. Register the permanent predicates
+  through the behaviour stack before retesting both active and expired states.
+  Mainline already removed this
   legacy automatic placement-avoidance mechanism, so this is a 0.66 backport.
 
 ## 2026-11-13 — Stop both navigators in the deployed 0.66.0 line
