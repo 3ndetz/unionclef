@@ -392,16 +392,16 @@ public class AltoClef implements ModInitializer {
                     .filter(item -> item != Items.SOUL_SAND && item != Items.MAGMA_BLOCK && item != Items.SAND && item
                             != Items.GRAVEL).toList();
             getClientBaritoneSettings().acceptableThrowawayItems.value.addAll(baritoneCanPlace);
-            // If we should run an idle command...
-            if ((!getUserTaskChain().isActive() || getUserTaskChain().isRunningIdleTask()) && getModSettings().shouldRunIdleCommandWhenNotActive()) {
-                getUserTaskChain().signalNextTaskToBeIdleTask();
-                getCommandExecutor().executeWithPrefix(getModSettings().getIdleCommand());
-            }
             // Don't break blocks or place blocks where we are explicitly protected.
             // Register through the behaviour stack so applying or resetting a
             // temporary avoidance cannot discard these permanent predicates.
             getBehaviour().avoidBlockBreaking(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
             getBehaviour().avoidBlockPlacing(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
+            // Register protections before an idle command can push a task state.
+            if ((!getUserTaskChain().isActive() || getUserTaskChain().isRunningIdleTask()) && getModSettings().shouldRunIdleCommandWhenNotActive()) {
+                getUserTaskChain().signalNextTaskToBeIdleTask();
+                getCommandExecutor().executeWithPrefix(getModSettings().getIdleCommand());
+            }
             getExtraBaritoneSettings().getForceSaveToolPredicates().add((state, item) -> StorageHelper.shouldSaveStack(this, state.getBlock(), item));
 
             // Auto-restore nickname if current name looks like PlayerNNN
