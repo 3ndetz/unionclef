@@ -14,9 +14,14 @@
   applying a temporary avoidance rebuilt the behaviour stack and dropped the
   directly registered explicit-protection predicate. The client was rolled
   back and the predicate verified restored. Register the permanent predicates
-  through the behaviour stack before retesting both active and expired states.
-  Mainline already removed this
-  legacy automatic placement-avoidance mechanism, so this is a 0.66 backport.
+  through the behaviour stack. The rebuilt candidate was installed only on
+  NetTyan's live client: with the task runner disabled, separate synthetic
+  place and break predicates both denied before their three-second test timer
+  elapsed, cleared afterward, and a separately injected explicit protection
+  continued to deny before and after each test. The test restored its own
+  temporary state; no world blocks were changed. Secondary-client deployment,
+  natural placement and repeated live tests remain. Mainline already removed
+  this legacy automatic placement-avoidance mechanism, so this is a 0.66 backport.
 
 ## 2026-11-13 — Stop both navigators in the deployed 0.66.0 line
 
