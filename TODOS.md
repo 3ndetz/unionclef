@@ -1,5 +1,7 @@
 # TODOs
 
+- [ ] Backport: expire temporary place/break avoidance while the task runner is disabled. Live 0.66 evidence: the place timer had elapsed, yet the 50-block WorldSurvivalChain predicate continued denying placement because its cleanup was only called from the inactive task runner. Preserve unexpired and explicitly protected areas; compile and verify the deployed bytecode and live behavior before closing.
+
 ## TARGET PLATFORM AND ACCEPTANCE CRITERIA (user 2026-07-30) — what every pass is judged against
 
 > Written down because it was only ever in one agent's head. This section defines WHAT we are

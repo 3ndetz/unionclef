@@ -615,6 +615,11 @@ public class AltoClef implements ModInitializer {
         trackerManager.tick();
         blockScanner.tick();
         damageTracker.tick();
+        // The survival chain normally expires its temporary avoidance during
+        // runner ticks. Direct API calls also work while that runner is off.
+        if (!taskRunner.isActive() && inGame()) {
+            worldSurvivalChain.expireTemporaryAvoidances(this);
+        }
         taskRunner.tick();
 
         if (taskRunner.gameMenuTaskChain != null) {

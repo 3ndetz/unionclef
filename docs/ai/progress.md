@@ -1,5 +1,18 @@
 # Progress
 
+## 2026-11-13 — Expire temporary avoidance when tasks are stopped
+
+- Investigate: in the live 0.66 client, `allowPlace=true`, explicit Tungsten
+  deny zones were empty and configured protected areas did not match. A
+  `WorldSurvivalChain` predicate rejected both observed targets; its 60-second
+  timer was elapsed while the task runner was disabled. Client logs record a
+  temporary 50-block avoidance added after a failed placement.
+- Plan and implement: expire only the chain's own elapsed temporary place and
+  break predicates from the ordinary client tick while the task runner is
+  disabled. Preserve unexpired avoidance and all explicit protected areas.
+- Verify: build and live regression pending. Mainline already removed this
+  legacy automatic placement-avoidance mechanism, so this is a 0.66 backport.
+
 ## 2026-11-13 — Stop both navigators in the deployed 0.66.0 line
 
 - Investigate: `stopPathing` could report success while BlockPathWalker still

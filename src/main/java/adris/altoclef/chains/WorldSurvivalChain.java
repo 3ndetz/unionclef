@@ -244,11 +244,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
             _lastPlacedBlock = false;
             _lastPlacedBlockPos = null;
         }
-        if (_isAvoidingBlockPlace && _placeAvoidTimer.elapsed()) {
-            _isAvoidingBlockPlace = false;
-            Debug.logMessage("Removed temporary block avoidance for block placement.");
-            mod.getBehaviour().resetAvoidBlockPlacingExtra();
-        }
+        expireTemporaryAvoidances(mod);
     }
 
     private void checkLastBrokenBlock(AltoClef mod) {
@@ -262,6 +258,16 @@ public class WorldSurvivalChain extends SingleTaskChain {
             }
             _lastBrokenBlock = false;
             _lastBrokenBlockPos = null;
+        }
+        expireTemporaryAvoidances(mod);
+    }
+
+    /** Expire only the survival chain's temporary predicates, even while tasks are disabled. */
+    public void expireTemporaryAvoidances(AltoClef mod) {
+        if (_isAvoidingBlockPlace && _placeAvoidTimer.elapsed()) {
+            _isAvoidingBlockPlace = false;
+            mod.getBehaviour().resetAvoidBlockPlacingExtra();
+            Debug.logMessage("Removed temporary block avoidance for block placement.");
         }
         if (_isAvoidingBlockBreak && _breakAvoidTimer.elapsed()) {
             _isAvoidingBlockBreak = false;
