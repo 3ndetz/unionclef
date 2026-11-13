@@ -12,6 +12,14 @@
   StopCommand classes differ from that baseline. In a real client, a started
   Walker stopped, both navigators reported inactive, and manual movement worked.
   A hidden-chat test, active FastNavigator test, and sustained gameplay remain.
+- Follow-up: the live client also returned `pathStatus.busy=true` when the user
+  task chain was empty and all navigation was idle. Backport the current main
+  branch's null-task fix so an empty task chain is correctly reported idle.
+  Count an active FastNavigator or BlockPathWalker as busy even if the user task
+  chain is empty, so that correcting the idle case does not hide movement.
+  The 1.21.11 build succeeded. On the real secondary client, no task reported
+  busy=false, a started Walker reported busy=true, and `stopPathing` left both
+  navigators stopped and busy=false. The FastNavigator-active case is pending.
 
 ## SESSION 2026-07-24 (work machine) — PvP audit + unified suite v1 (RW-5/RW-1/RW-9 infra)
 

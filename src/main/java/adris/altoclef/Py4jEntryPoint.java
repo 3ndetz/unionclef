@@ -151,10 +151,12 @@ public class Py4jEntryPoint {
             return false;
         Task task = _mod.getUserTaskChain().getCurrentTask();
 
-        if (task instanceof AbstractKillEntityTask || hasBaritoneGoal() || isTungstenActive())
+        if (task instanceof AbstractKillEntityTask || hasBaritoneGoal() || isTungstenActive()
+                || kaptainwutax.tungsten.task.FastNavigator.isActive()
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning())
             return true;
 
-        return !(task instanceof IdleTask || task instanceof GestureTask
+        return task != null && !(task instanceof IdleTask || task instanceof GestureTask
                 || task instanceof WaitForDragonAndPearlTask
                 || (task != null && (task.toString() != null && !task.toString().isBlank() &&
                         task.toString().toLowerCase().contains("wait"))));
