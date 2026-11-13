@@ -22,6 +22,15 @@
   temporary state; no world blocks were changed. Secondary-client deployment,
   natural placement and repeated live tests remain. Mainline already removed
   this legacy automatic placement-avoidance mechanism, so this is a 0.66 backport.
+- Further review found the idle command could push a behaviour state before
+  permanent protection was registered. The registrations now precede that
+  command. A rebuilt candidate (`aa6628af...`) was installed on the idle
+  primary client: both place and break expiry tests passed with a separate
+  synthetic protected area still denied after a behaviour push/pop. The first
+  placement check was attempted before the client joined the world and was
+  inconclusive because game time had not advanced; it passed after joining.
+  Neither test changed world blocks. Secondary rollout and a real placement
+  remain open; these checks do not establish server-side permission.
 
 ## 2026-11-13 — Stop both navigators in the deployed 0.66.0 line
 
