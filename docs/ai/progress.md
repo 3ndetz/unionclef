@@ -1,5 +1,32 @@
 # Progress
 
+## Agicraft navigation stop, 2026-11-13
+
+### Investigate
+
+On the owner's live Agicraft client running UnionClef 0.66.0, `stopPathing`
+returned success while `BlockPathWalker.isRunning()` remained true. A manual
+backward hold then left the position unchanged. Stopping the walker through the
+existing JVM API made the same hold move the player roughly six blocks. The
+0.66.0 stop command did not stop that walker. Current source cancels all
+navigation via `TungstenMod.stopNavigation`, but `stopPathing` still invoked
+it indirectly through chat, which can be disabled.
+
+### Plan
+
+Run core navigation cancellation and the existing AltoClef stop on the client
+thread; report timeout rather than immediate success. Keep the agent's choice
+of actions outside the mod.
+
+### Implement
+
+`stopPathing` now invokes the core cancellation directly through
+`onClientThread`. `:1.21.11:compileJava` passed with an isolated Gradle cache;
+the compiled class was inspected and contains the core call, client-thread
+dispatch and timeout result. This current-source fix is not deployed or
+live-tested: the active clients still use 0.66.0. A compatible deployment and
+real-client regression test remain outstanding.
+
 Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archive/04-10-2026-near-region-and-fixed-fall-cost.md), including earlier bucket/scanner and original invalid campaigns. Their original results remain unchanged.
 
 ## Full59 lava-column stall — paused by owner

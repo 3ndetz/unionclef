@@ -4979,16 +4979,17 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
-    /** Cancel current navigation / tasks — stops BOTH the tungsten pather
-     *  (;stop) and any altoclef task (@stop), so the agent's "stop" is total. */
+    /** Cancel current navigation and tasks on the client thread, including
+     *  tungsten's walker and any altoclef task, regardless of chat visibility. */
     public Map<String, Object> stopPathing() {
-        String p = kaptainwutax.tungsten.TungstenMod.getCommandPrefix();
-        ChatMessage(p + "stop");                                                            // tungsten
-        MinecraftClient.getInstance().execute(() -> {
+        return onClientThread(() -> {
+            // Local navigation cancellation must not travel through chat: when
+            // chat is hidden, ChatMessage is dropped and the walker keeps keys.
+            kaptainwutax.tungsten.TungstenMod.stopNavigation();
             _mod.getCommandExecutor().executeWithPrefix("stop");
             _gotoGoal = null;
-        });
-        return Map.of("ok", true);
+            return Map.<String, Object>of("ok", true);
+        }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
     // Combat targeting levers (tungsten PunkPlayerTask). The agent (brain) decides
