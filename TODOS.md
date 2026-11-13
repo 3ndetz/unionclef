@@ -1,5 +1,7 @@
 # TODOs
 
+- [ ] Preserve explicit place/break protections through behaviour-stack updates. A deployed 0.66 live regression showed direct registration outside the stack can be discarded when temporary predicates are applied. Mainline still registers these predicates directly. Compile and verify with an explicit protected area and behaviour updates before closing.
+
 <!-- VOIDGUARD-LAVA-CLAMP-MISSING-FROM-APPLY-2026-09-20 -->
 
 ## Open from the 2026-09-24 playthroughs (visualisation, checkpoints and powder snow are closed)

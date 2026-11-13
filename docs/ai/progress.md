@@ -1,5 +1,18 @@
 # Progress
 
+## 2026-11-13 — Preserve explicit protection through behaviour updates
+
+- Investigate: the deployed 0.66 client dropped its directly registered
+  explicit-protection placement predicate when a temporary avoidance applied
+  the behaviour stack. The live client was rolled back; mainline retains the
+  same direct registration even though it removed that placement avoidance.
+- Plan: register both explicit place and break predicates through the owned
+  behaviour state, so push/pop and other state applications retain them.
+- Verify: isolated `:1.21.11:compileJava` succeeded and compiled AltoClef
+  contains both behaviour-stack registrations. A mainline live regression is
+  pending. The 0.66 backport passed separate live place and break expiry tests
+  using a temporary explicit protected area, with no server block changes.
+
 ## Navigation activity reporting, 2026-11-13
 
 - Investigate: the deployed 0.66 client reported busy with no task due to a

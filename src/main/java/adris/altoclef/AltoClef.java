@@ -422,14 +422,16 @@ public class AltoClef implements ModInitializer {
             // the one moment both halves are present, rather than reconstructed by each reader.
             // The write above stays: the pathfinder still needs the list to plan placements. What
             // goes away is six READS of a foreign object model for data we produced.
-            // If we should run an idle command...
+            // Don't break blocks or place blocks where we are explicitly protected.
+            // Keep permanent protection in the behaviour state so subsequent
+            // state applications cannot discard it.
+            getBehaviour().avoidBlockBreaking(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
+            getBehaviour().avoidBlockPlacing(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
+            // Register protections before an idle command can push a task state.
             if ((!getUserTaskChain().isActive() || getUserTaskChain().isRunningIdleTask()) && getModSettings().shouldRunIdleCommandWhenNotActive()) {
                 getUserTaskChain().signalNextTaskToBeIdleTask();
                 getCommandExecutor().executeWithPrefix(getModSettings().getIdleCommand());
             }
-            // Don't break blocks or place blocks where we are explicitly protected.
-            getExtraBaritoneSettings().avoidBlockBreak(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
-            getExtraBaritoneSettings().avoidBlockPlace(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
             getExtraBaritoneSettings().getForceSaveToolPredicates().add((state, item) -> StorageHelper.shouldSaveStack(this, state.getBlock(), item));
 
             // Auto-restore nickname if current name looks like PlayerNNN
