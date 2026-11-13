@@ -149,7 +149,9 @@ public class Py4jEntryPoint {
             return false;
         Task task = _mod.getUserTaskChain().getCurrentTask();
 
-        if (task instanceof AbstractKillEntityTask || hasBaritoneGoal() || isTungstenActive())
+        if (task instanceof AbstractKillEntityTask || hasBaritoneGoal() || isTungstenActive()
+                || kaptainwutax.tungsten.task.FastNavigator.isActive()
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning())
             return true;
 
         // ⛔ LIVE-REPRODUCED 2026-09-04 on uctest-gamer-server: "no task at all" (an empty user
