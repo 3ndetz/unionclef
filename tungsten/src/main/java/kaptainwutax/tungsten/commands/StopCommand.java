@@ -28,6 +28,11 @@ public class StopCommand extends Command {
 						|| TungstenModDataContainer.PATHFINDER.active.get()
 						|| TungstenModDataContainer.EXECUTOR.isRunning();
 
+				// Stop the planner before its queue, and stop the walker that can
+				// otherwise keep owning movement after the command returns.
+				kaptainwutax.tungsten.task.FastNavigator.stop();
+				kaptainwutax.tungsten.task.BlockPathWalker.stop();
+
 				// THE QUEUE IS A DRIVER TOO, AND IT SUPPRESSES EVERY OTHER ONE WHILE IT RUNS.
 				// MovementQueue.stop() had a single caller in the whole repo (FastNavigator), so
 				// a stop left it owning the tick: walker, bridge, pillar, slime task and the

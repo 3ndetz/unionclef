@@ -1,5 +1,18 @@
 # Progress
 
+## 2026-11-13 — Stop both navigators in the deployed 0.66.0 line
+
+- Investigate: `stopPathing` could report success while BlockPathWalker still
+  held movement. This source baseline reproduces all 1,831 installed mod classes
+  and all 191 nested Tungsten classes byte for byte.
+- Plan and implement: dispatch the Tungsten stop locally on the client thread,
+  stop FastNavigator and BlockPathWalker in the stop command, and report whether
+  either remains active. No server chat message is needed.
+- Verify: the 1.21.11 remapped build succeeded; only Py4jEntryPoint and nested
+  StopCommand classes differ from that baseline. In a real client, a started
+  Walker stopped, both navigators reported inactive, and manual movement worked.
+  A hidden-chat test, active FastNavigator test, and sustained gameplay remain.
+
 ## SESSION 2026-07-24 (work machine) — PvP audit + unified suite v1 (RW-5/RW-1/RW-9 infra)
 
 INVESTIGATE: 8-reader parallel code audit of melee/ranged/chase/bridge/pathcore/test-infra/levers +

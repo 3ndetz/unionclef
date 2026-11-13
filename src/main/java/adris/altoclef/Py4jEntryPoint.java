@@ -2746,11 +2746,21 @@ public class Py4jEntryPoint {
     /** Cancel current navigation / tasks — stops BOTH the tungsten pather
      *  (;stop) and any altoclef task (@stop), so the agent's "stop" is total. */
     public Map<String, Object> stopPathing() {
-        String p = kaptainwutax.tungsten.TungstenMod.getCommandPrefix();
-        ChatMessage(p + "stop");                                                            // tungsten
-        executeInNetworkThread(() -> _mod.getCommandExecutor().executeWithPrefix("stop"));  // altoclef
-        _gotoGoal = null;
-        return Map.of("ok", true);
+        return onClientThread(() -> {
+            try {
+                // Dispatch locally: hidden chat must not discard navigation stop.
+                kaptainwutax.tungsten.commandsystem.CommandExecutor.dispatch("stop");
+                _mod.getCommandExecutor().executeWithPrefix("stop");
+                _gotoGoal = null;
+                if (kaptainwutax.tungsten.task.FastNavigator.isActive()
+                        || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+                    return Map.<String, Object>of("ok", false, "reason", "navigation still active");
+                }
+                return Map.<String, Object>of("ok", true);
+            } catch (Exception e) {
+                return Map.<String, Object>of("ok", false, "reason", "navigation stop failed");
+            }
+        }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
     // Combat targeting levers (tungsten PunkPlayerTask). The agent (brain) decides
