@@ -63,6 +63,13 @@ public class Settings implements IFailableConfigFile {
     private boolean showTaskChains = true;
 
     /**
+     * If true, the mods' own log lines ([AutoClef], [Tungsten], WARNING:) are kept out of the chat
+     * window. They are still recorded for agents (getRecentChat): only the screen is spared.
+     * For playing next to people, streaming and recording.
+     */
+    private boolean hideModChat = false;
+
+    /**
      * If true, all warning logs will be disabled.
      * <p>
      * NOT RECOMMENDED, as it will make debugging more difficult.
@@ -520,6 +527,10 @@ public class Settings implements IFailableConfigFile {
         return showTaskChains;
     }
 
+    public boolean shouldHideModChat() {
+        return hideModChat;
+    }
+
     public boolean shouldShowDebugTickMs() {
         return showDebugTickMs;
     }
@@ -613,6 +624,50 @@ public class Settings implements IFailableConfigFile {
     public void setPythonGatewayPort(int port) {
         this.pythonGatewayPort = port;
     }
+
+    /**
+     * Voice for a local agent as UDP datagrams to 127.0.0.1:voiceUdpPort, beside the py4j
+     * callback (util/agent/VoiceUdp). 0 turns it off.
+     */
+    private int voiceUdpPort = 25360;
+
+    public int getVoiceUdpPort() {
+        return voiceUdpPort;
+    }
+
+
+    /**
+     * Elytra en route and in pursuit steered by tungsten's trajectory solver (ElytraSolver: candidate
+     * looks flown ahead through the physics model) instead of the PI pilot. Take-off and landing
+     * stay with the pilot. Off: the pilot flies everything, as before.
+     */
+    private boolean elytraSolver = false;
+
+    /**
+     * What one rocket costs the solver, in blocks of progress. Below 0: 12 in creative, 40 in
+     * survival, where every rocket is paper and gunpowder.
+     */
+    private double elytraRocketCost = -1;
+
+    public boolean isElytraSolver() {
+        return elytraSolver;
+    }
+
+    /**
+     * With the solver: before flying to a point, search the way through the air on a coarse grid
+     * (tungsten AirRoute, on a worker while the glider circles) and fly its corners like rings.
+     * For halls, canyons, a way through a gap instead of over. Off: straight at cruise height.
+     */
+    private boolean elytraRouteSearch = false;
+
+    public boolean isElytraRouteSearch() {
+        return elytraRouteSearch;
+    }
+
+    public double getElytraRocketCost() {
+        return elytraRocketCost;
+    }
+
 
     /**
      * MCP server (Model Context Protocol over Streamable HTTP) hosted directly

@@ -294,6 +294,9 @@ public class TaskCatalogue {
             }
             shapedRecipe3x3("brush", Items.BRUSH, 1, o, "feather", o, o, "copper_ingot", o, o, s, o);
             shapedRecipe3x3("paper", Items.PAPER, 3, "sugar_cane", "sugar_cane", "sugar_cane", o, o, o, o, o, o);
+            // Flight duration 1: one paper and one gunpowder. The recipe is shapeless, so any 2x2
+            // arrangement crafts it in the inventory grid, no table needed.
+            shapedRecipe2x2("firework_rocket", Items.FIREWORK_ROCKET, 3, "paper", "gunpowder", o, o);
             shapedRecipe2x2("book", Items.BOOK, 1, "paper", "paper", "paper", "leather");
             shapedRecipe2x2("writable_book", Items.WRITABLE_BOOK, 1, "book", "ink_sac", o, "feather");
             alias("book_and_quill", "writable_book");

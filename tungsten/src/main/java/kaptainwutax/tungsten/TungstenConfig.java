@@ -198,6 +198,10 @@ public class TungstenConfig {
     @Grouped(group = "visuals", name = "combat", desc = "aim and arrow trajectories")
     public boolean renderCombat = true;
 
+    /** Draw flights: target, route, trail by mode, predicted glide, rockets, wingman slot. */
+    @Grouped(group = "visuals", name = "flight", desc = "elytra and creative flight: trail, predicted glide, rockets")
+    public boolean renderFlight = true;
+
     /** Max time (ms) for A* input search before emitting bestSoFar.
      *  Higher = better routes on parkour, lower = faster response.
      *  Upstream default: 1800. Our default: 15000 (parkour needs more time). */
@@ -5085,6 +5089,10 @@ public class TungstenConfig {
 
     /** Allow the block-space pathfinder to plan breaking through breakable walls. */
     public boolean allowBreak = true;
+    /** Mine only terrain (dirt, grass, sand, gravel, leaves, snow, plants), never anything a
+     *  player could have built with. For shared servers, where digging through a wall is
+     *  griefing. Off by default, so existing behaviour is unchanged. */
+    public boolean breakOnlyNatural = false;
 
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;

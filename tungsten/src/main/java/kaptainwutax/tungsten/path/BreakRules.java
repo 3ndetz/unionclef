@@ -64,6 +64,7 @@ public final class BreakRules {
         for (int[] zone : cfg.breakDenyZones) {
             if (zone != null && zone.length >= 6 && inZone(pos, zone)) return false;
         }
+        if (cfg.breakOnlyNatural && !isNaturalTerrain(state)) return false;
 
         java.util.function.Predicate<BlockPos> hook = TungstenModDataContainer.canBreakHook;
         if (hook != null) {
@@ -74,6 +75,21 @@ public final class BreakRules {
             }
         }
         return true;
+    }
+
+    /** Terrain a player is unlikely to have placed. Logs, stone and planks are left out on
+     *  purpose: houses are built from them. */
+    public static boolean isNaturalTerrain(BlockState state) {
+        return state.isIn(net.minecraft.registry.tag.BlockTags.DIRT)
+            || state.isIn(net.minecraft.registry.tag.BlockTags.SAND)
+            || state.isIn(net.minecraft.registry.tag.BlockTags.LEAVES)
+            || state.isIn(net.minecraft.registry.tag.BlockTags.FLOWERS)
+            || state.isIn(net.minecraft.registry.tag.BlockTags.REPLACEABLE)
+            || state.isOf(net.minecraft.block.Blocks.GRAVEL)
+            || state.isOf(net.minecraft.block.Blocks.CLAY)
+            || state.isOf(net.minecraft.block.Blocks.SNOW)
+            || state.isOf(net.minecraft.block.Blocks.SNOW_BLOCK)
+            || state.isOf(net.minecraft.block.Blocks.DIRT_PATH); // farmland and crops are someone's garden: kept
     }
 
     private static boolean inZone(BlockPos pos, int[] z) {

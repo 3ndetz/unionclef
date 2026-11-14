@@ -20,4 +20,7 @@ public class TungstenModRenderContainer {
 	public static Collection<Renderer> SELECTION = Collections.synchronizedCollection(new ArrayList<>());
 	/** Placing plan: cells about to be placed (bridge/fill/build). */
 	public static Collection<Renderer> PLACE_PLAN = Collections.synchronizedCollection(new ArrayList<>());
+	/** Elytra / creative flight: target, route, flown trail coloured by mode, predicted glide,
+	 *  rocket marks, the slot beside a leader. Rebuilt whole by its owner every few ticks. */
+	public static Collection<Renderer> FLIGHT = Collections.synchronizedCollection(new ArrayList<>());
 }

@@ -133,6 +133,7 @@ public class AltoClef implements ModInitializer {
     // Py4j bridge
     private Py4jEntryPoint _py4jEntryPoint = null;
     private GatewayServer _gatewayServer = null;
+    private int _gatewayBasePort = -1; // the port asked for in the settings (a taken one moves up)
     // MCP server (LAN-hosted control surface over the same levers)
     private adris.altoclef.mcp.McpServer _mcpServer = null;
 
@@ -165,7 +166,9 @@ public class AltoClef implements ModInitializer {
 
     public void initializePythonSender() {
         if (_gatewayServer != null) {
-            // Already running — restart cleanly to pick up new port settings
+            // Every settings load lands here (each @set). A restart under a connected Python side
+            // left the port closed for good (31.10, voice went deaf): restart for a new port only.
+            if (getModSettings().getPythonGatewayPort() == _gatewayBasePort) return;
             reloadPythonSender();
             return;
         }
@@ -184,12 +187,12 @@ public class AltoClef implements ModInitializer {
             );
             try {
                 _gatewayServer.start();
-                // Port changed — save to settings so next launch uses the same port
+                // Port taken (another game client on this machine): this run only. Saved, it moved
+                // every client sharing the settings off the port their Python side looks for.
                 if (port != originalPort) {
-                    getModSettings().setPythonGatewayPort(port);
-                    ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
-                    Debug.logMessage("Py4j port conflict — bound to " + port + " (saved to settings)");
+                    Debug.logMessage("Py4j port conflict — bound to " + port + " for this run");
                 }
+                _gatewayBasePort = originalPort;
                 _py4jEntryPoint.InitPythonCallback();
                 Debug.logMessage("Py4j gateway started on port " + port);
                 startMcpServer();
@@ -222,8 +225,19 @@ public class AltoClef implements ModInitializer {
                 ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
             }
             _mcpServer = new adris.altoclef.mcp.McpServer(_py4jEntryPoint, token);
+            // Two game clients from one folder share the settings: the second finds the port
+            // taken. Take the next free one (not saved: the first client keeps its own); an agent
+            // finds its client by the player's name in getGameState.
             int mport = getModSettings().getMcpPort();
-            _mcpServer.start(mport);
+            for (int i = 0; ; i++) {
+                try {
+                    _mcpServer.start(mport + i);
+                    mport += i;
+                    break;
+                } catch (java.net.BindException taken) {
+                    if (i >= 9) throw taken;
+                }
+            }
             Debug.logMessage("MCP server started on 0.0.0.0:" + mport + " (http://<lan-ip>:" + mport
                     + "/mcp) — auth token in " + adris.altoclef.Settings.SETTINGS_PATH
                     + " (mcpAuthToken), required as 'Authorization: Bearer <token>'");
@@ -343,6 +357,8 @@ public class AltoClef implements ModInitializer {
             throw new IllegalStateException("AltoClef already loaded!");
         }
         instance = this;
+        // Always-on elytra watch: open the wings in a long fall and glide down (agent tools).
+        adris.altoclef.util.agent.ElytraFlight.register();
     }
 
     public void onInitializeLoad() {
@@ -470,8 +486,12 @@ public class AltoClef implements ModInitializer {
                 // bot's own log lines as server chat; it must not also blind the chat ring, which
                 // is the only channel a test has for seeing the mod's own errors.
                 if (getInfoSender() != null) getInfoSender().recordChat(msg);
+                boolean modLine = msg.contains(_modChatPrefixNoCodes) || msg.contains("[Tungsten]")
+                        || msg.startsWith("WARNING:") || msg.startsWith("ERROR:");
                 if (!msg.contains(_modChatPrefixNoCodes) && getButler() != null)
                     getButler().onReceiveChat(msg);
+                // Recorded above; off the screen when asked (hideModChat).
+                if (modLine && getModSettings() != null && getModSettings().shouldHideModChat()) return false;
             }
             return true;
         });
@@ -715,7 +735,9 @@ public class AltoClef implements ModInitializer {
 
     private void onClientRenderOverlay(DrawContextWrapper context) {
         context.setRenderLayer(RenderLayerVer.getGuiOverlay());
-        if (settings.shouldShowTaskChain()) {
+        // F1 (the HUD hidden) hides the task line too, as it does the rest of the HUD: recordings
+        // and screenshots without it
+        if (settings.shouldShowTaskChain() && !MinecraftClient.getInstance().options.hudHidden) {
             commandStatusOverlay.render(this, context);
         }
 

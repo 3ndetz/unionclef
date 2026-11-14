@@ -1,0 +1,6 @@
+# local settings, secrets and everything a run produces
+local.json
+rcon.secret
+out/
+server/
+__pycache__/

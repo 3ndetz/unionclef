@@ -33,6 +33,7 @@ public class VoiceChatIntegration {
         }
 
         Py4jEntryPoint.last_talking_player = playerName;
-        mod.getInfoSender().onVoiceFeed(playerName, bytes);
+        VoiceUdp.send(mod.getModSettings().getVoiceUdpPort(), AltoClef.getSelfName(), playerName, bytes);
+        if (mod.getInfoSender() != null) mod.getInfoSender().onVoiceFeed(playerName, bytes);
     }
 }
