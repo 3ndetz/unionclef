@@ -238,6 +238,13 @@ WHAT itself; it needs convenient **levers** and clear explanations.
      the user's file.
   3. Without a warm `GRADLE_USER_HOME` the `com.replaymod.preprocess` plugin cannot resolve
      from jitpack. With one, `--offline` works.
+  4. (2026-11-23) The shared `C:/Users/jayra/.gradle`, mounted into the container, started failing
+     to CONFIGURE any project: `ClassNotFoundException: build_<hash>$_run_closure1` from
+     `ScriptClassLoader` -- plain `main` too, so not the code; rebuilding `caches/9.4.1/groovy-dsl`
+     did not help. A home holding only copies of `wrapper/dists`, `caches/modules-2` and
+     `caches/fabric-loom` (3.1 GB, `deploy/runner/artifacts/gradle-home-*`, git-ignored) builds
+     `--offline` fine. Do not copy `gradle.properties` (it carries the release token); releases
+     still need the real home or that property passed explicitly.
 
   ⛔ And capture the exit code. Piping gradle into `tail` throws it away, and a FAILED build
   then reports success to whatever is reading. That happened on the first attempt here.

@@ -289,6 +289,12 @@ Previous evidence: [archive/04-10-2026-near-region-and-fixed-fall-cost.md](archi
 - EscapeFromLavaTask eats while escaping (holds use with food when hunger < 20). Tried "eat only out of lava" (lever lavaEscapeEatsOnlyOutOfLava) on new course escape_lava_deep_fed, 8 runs per arm: no win (both arms bimodal ~5 s / ~15 s; the new arm had one run stuck at the pit centre = the escape_lava_deep mode). Not committed; patch in `artifacts/lava-eat-20261027/`. The bimodal escape time and the stuck mode are the open lava-escape item.
 - Isolated build recipe from this shell (Git Bash on Windows): `export MSYS_NO_PATHCONV=1` first, or docker gets `-w W:/`; mount `C:/Repos/pet/unionclef/.gradle/jdk21:/jdk21` and `C:/Users/jayra/.gradle:/gh`.
 
+### Owner: review and merge open PRs (2026-11-23)
+
+- One open PR: #35 alteralto/agent-flight "Elytra autopilot and agent tools for shared servers" (77 commits, +9099/-18, 53 files, base 3ece419b, 3 commits behind main). The fork's other branches (elytra-route-search, pyhtun, 2026-11-01) carry no change the PR lacks (git cherry: only early squash/wip commits whose features are in the PR); agent-flight (head fc77040f, 2026-11-09) is the newest.
+- Review: mostly additive and default-off (elytraSolver, elytraRouteSearch, breakOnlyNatural, hideModChat). Fall watch acts only with an elytra worn. Owner: voiceUdpPort default stays. Fixed in the merge: NoBreakGuard read allowBreak, which canReach(withBreaking=false) clears for up to 3 s -- ordinary mining would be refused meanwhile; it now reads its own TungstenConfig.noBreakPolicy, set by setBuildPolicy (two-argument form keeps the current policy). run_suite gained the PR's elytra suite.
+- Build: the shared gradle home now fails to configure any project (AGENTS.md "HOW to compile", trap 4); built with a copied home `artifacts/gradle-home-20261123`. Bench on the merge build: craft 30/30 gates (escape_lava_deep info-fail as before), nav 5/5, elytra_rings 2/2, elytra_500 2/2 (elytra_follow needs tester2, not run).
+
 STOP CONDITION CHECK:
 - Is the work actually finished?        -> no
 - Is the END GOAL reached?              -> no (@gamer plays the whole game on tungsten, baritone deleted)
