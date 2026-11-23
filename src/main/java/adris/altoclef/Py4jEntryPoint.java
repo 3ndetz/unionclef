@@ -1565,7 +1565,8 @@ public class Py4jEntryPoint {
     /** Building policy for shared servers: mine only natural terrain, and optionally never
      *  place blocks (no pillars or bridges left behind). */
     public Map<String, Object> setBuildPolicy(boolean breakOnlyNatural, boolean allowPlace) {
-        return setBuildPolicy(breakOnlyNatural, allowPlace, kaptainwutax.tungsten.TungstenConfig.get().allowBreak);
+        // keep the current no-break POLICY; allowBreak itself may be cleared for a moment by canReach
+        return setBuildPolicy(breakOnlyNatural, allowPlace, !kaptainwutax.tungsten.TungstenConfig.get().noBreakPolicy);
     }
 
     /** As above, plus allowBreak: false = the pathfinder never mines its way through anything
@@ -1575,6 +1576,7 @@ public class Py4jEntryPoint {
         cfg.breakOnlyNatural = breakOnlyNatural;
         cfg.allowPlace = allowPlace;
         cfg.allowBreak = allowBreak;
+        cfg.noBreakPolicy = !allowBreak; // what NoBreakGuard reads; canReach's toggle leaves it alone
         return Map.of("ok", true, "breakOnlyNatural", cfg.breakOnlyNatural, "allowPlace", cfg.allowPlace,
                 "allowBreak", cfg.allowBreak);
     }

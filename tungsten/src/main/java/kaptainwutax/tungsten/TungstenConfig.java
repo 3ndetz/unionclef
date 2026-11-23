@@ -5093,6 +5093,12 @@ public class TungstenConfig {
      *  player could have built with. For shared servers, where digging through a wall is
      *  griefing. Off by default, so existing behaviour is unchanged. */
     public boolean breakOnlyNatural = false;
+    /** The no-break POLICY of a shared server (set by setBuildPolicy allowBreak=false): every
+     *  break the client starts is refused (NoBreakGuard), not only planned ones. Separate from
+     *  allowBreak, which other code flips for a moment -- canReach(withBreaking=false) clears it
+     *  for up to 3 s of planning, and the guard read off it refused the bot's ordinary mining
+     *  for that long. Off by default. */
+    public boolean noBreakPolicy = false;
 
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;

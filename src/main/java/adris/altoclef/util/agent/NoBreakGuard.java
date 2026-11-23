@@ -21,7 +21,7 @@ public final class NoBreakGuard {
 
     /** True when this break must not happen. */
     public static boolean refuse(BlockPos pos) {
-        if (kaptainwutax.tungsten.TungstenConfig.get().allowBreak) return false;
+        if (!kaptainwutax.tungsten.TungstenConfig.get().noBreakPolicy) return false;
         MinecraftClient c = MinecraftClient.getInstance();
         if (c.currentScreen == null && GLFW.glfwGetMouseButton(c.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS) {
             return false; // by hand
