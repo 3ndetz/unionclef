@@ -137,9 +137,11 @@ from uctest.scenarios_nav import SCENARIOS as NAV   # noqa: E402
 from uctest.scenarios_pvp import SCENARIOS as PVP   # noqa: E402
 from uctest.scenarios_mob import SCENARIOS as MOB   # noqa: E402
 from uctest.scenarios_craft import SCENARIOS as CRAFT  # noqa: E402
+from uctest.scenarios_elytra import SCENARIOS as _ELYTRA  # noqa: E402  (PR #35: a dict, by id)
 from uctest.scenarios_end import SCENARIOS as END  # noqa: E402
 
-SUITES = {"pvp": PVP, "nav": NAV, "mob": MOB, "craft": CRAFT, "end": END}
+SUITES = {"pvp": PVP, "nav": NAV, "mob": MOB, "craft": CRAFT, "end": END,
+          "elytra": list(_ELYTRA.values())}
 BOT_CONTAINER = "uctest-mc-tester1"
 VICTIM_CONTAINER = "uctest-mc-tester2"
 BOT, VICTIM = "tester1", "tester2"
