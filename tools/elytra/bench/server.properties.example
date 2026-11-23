@@ -1,0 +1,19 @@
+# The keys the bench depends on; everything else may stay at the defaults.
+level-name=bench
+level-type=minecraft\:flat
+gamemode=creative
+force-gamemode=true
+difficulty=peaceful
+generate-structures=false
+online-mode=false
+allow-flight=true
+spawn-protection=0
+max-players=6
+server-ip=127.0.0.1
+server-port=25565
+enable-rcon=true
+rcon.port=25575
+rcon.password=CHANGE-ME
+pause-when-empty-seconds=60
+simulation-distance=8
+view-distance=12

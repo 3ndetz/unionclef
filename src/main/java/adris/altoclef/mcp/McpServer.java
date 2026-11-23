@@ -185,6 +185,7 @@ public class McpServer {
     }
 
     private JsonObject toolsCallResult(JsonObject params) {
+        adris.altoclef.util.agent.ElytraFlight.agentSeen();
         String name = params.get("name").getAsString();
         JsonObject args = params.has("arguments") && params.get("arguments").isJsonObject()
                 ? params.getAsJsonObject("arguments") : new JsonObject();
@@ -240,6 +241,120 @@ public class McpServer {
                 "Battle perception (the agent's eyes): self(hp/maxHp/armor/pos/onGround/held/blocks), "
                 + "players[](name/pos/distance/hp/sprinting), beds[](nearby beds). Read before deciding tactics.",
                 schema(), a -> api.getGameState());
+        tool("flyTo",
+                "Elytra flight to a point: equip, take off, climb on fireworks above terrain, glide down "
+                + "near it. Needs elytra + fireworks in inventory. Poll flyStatus (phase: equip/takeoff/"
+                + "flying/done/failed). Optional low:true = low-level flight a few blocks over the ground; "
+                + "tricks:n = n aerobatic figures on the way (rolls, candles, spirals, eights).",
+                schema("x:int", "y:int", "z:int"),
+                a -> api.flyTo(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"),
+                        a.has("low") && a.get("low").getAsBoolean(), a.has("tricks") ? a.get("tricks").getAsInt() : 0));
+        tool("camera", "Camera for recordings: perspective (int) 0 first person, 1 from behind, 2 from the front; "
+                        + "hud (bool) false hides the HUD.",
+                schema(), a -> api.camera(a.has("perspective") ? a.get("perspective").getAsInt() : 0,
+                        !a.has("hud") || a.get("hud").getAsBoolean()));
+        tool("flySettings", "Elytra steering for this client only, not saved to the shared settings file: "
+                        + "solver (bool), routeSearch (bool), routePlan (bool: the searched way flown as a "
+                        + "physics plan, else its corners as rings), rocketCost (number, below 0: by game mode). "
+                        + "Any left out stays as it is; returns what is in force.",
+                schema(), a -> api.flySettings(
+                        a.has("solver") ? a.get("solver").getAsBoolean() : null,
+                        a.has("routeSearch") ? a.get("routeSearch").getAsBoolean() : null,
+                        a.has("routePlan") ? a.get("routePlan").getAsBoolean() : null,
+                        a.has("rocketCost") ? a.get("rocketCost").getAsDouble() : null));
+        tool("flyRings",
+                "Elytra through rings: centres \"x,y,z;x,y,z;...\" in order, each crossed square to the way in; "
+                + "lands 60 blocks past the last. flyStatus: waypoint k/n, ringMiss (blocks off centre per ring).",
+                schema("points:string"), a -> api.flyRings(a.get("points").getAsString()));
+        tool("flyRoute",
+                "Elytra route: points \"x,z;x,z;...\" flown through without landing, landing at the last one "
+                + "(a tour of places, a patrol round home). Optional low, tricks as in flyTo. Poll flyStatus "
+                + "(waypoint: k/n).",
+                schema("points:string"),
+                a -> api.flyRoute(a.get("points").getAsString(), a.has("low") && a.get("low").getAsBoolean(),
+                        a.has("tricks") ? a.get("tricks").getAsInt() : 0));
+        tool("hoverFollow",
+                "Creative only: fly (creative flight, no elytra) beside a player who is creative-flying; "
+                + "when they stand on the ground, come down next to them. WASD by hand lets go. Poll hoverStatus.",
+                schema("nick:string"), a -> api.hoverFollow(argStr(a, "nick")));
+        tool("hoverTo",
+                "Creative only: fly to block x,z with creative flight (no elytra, no take-off run): straight "
+                + "up out of a pit, across over the ground, down onto the top surface there. Fails 'blocked' "
+                + "under a roof or against a wall. WASD by hand lets go. Optional y (feet height): stop there in "
+                + "the air instead of landing and stay up, a place to build from. Poll hoverStatus.",
+                schema("x:int", "z:int"), a -> a.has("y")
+                        ? api.hoverAt(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"))
+                        : api.hoverTo(argInt(a, "x"), argInt(a, "z")));
+        tool("hoverStatus", "Creative flight (wingman or hoverTo): phase (flying/landing/done/failed), reason, "
+                + "gap to the slot or the point, target.", schema(),
+                a -> api.hoverStatus());
+        tool("flyStatus", "Current elytra flight: phase, reason, distance, rockets used.", schema(),
+                a -> api.flyStatus());
+        tool("recordStart", "Record the game window to <game dir>/recordings/<name>.mp4 (encoded by the ffmpeg "
+                        + "named in altoclef/recorder_ffmpeg.txt, outside the game). Optional fps (int) up to 20, default 20.",
+                schema("name:string"),
+                a -> api.recordStart(argStr(a, "name"), a.has("fps") ? a.get("fps").getAsInt() : 20));
+        tool("flightLog", "The last n ticks of elytra gliding: tick, x, y, z, vx, vy, vz, yaw, pitch, rocket "
+                        + "pulling (0/1), collided (0/1). Optional n (int), default 1200.",
+                schema(), a -> api.flightLog(a.has("n") ? a.get("n").getAsInt() : 1200));
+        tool("recordStop", "Stop recording and finish the video file.", schema(), a -> api.recordStop());
+        tool("flyStop", "Abort the elytra flight (the bot glides down on its own).", schema(),
+                a -> api.flyStop());
+        tool("flyFollow",
+                "Fly as a wingman beside a player who is flying an elytra (take off, hold a slot to "
+                + "their right, match speed); when they land, land next to them. Poll flyStatus.",
+                schema("nick:string"), a -> api.flyFollow(argStr(a, "nick")));
+        tool("swimToShore",
+                "Get out of water: swim on the surface to the nearest dry shore within radius and climb "
+                + "out. Poll swimStatus (phase: swimming/done/failed).",
+                schema("radius:int"), a -> api.swimToShore(argInt(a, "radius")));
+        tool("salute",
+                "Fireworks show from the ground: count (1..12) colored rockets launched in a fan a few "
+                + "blocks ahead, each with its own stars. Creative only. Poll saluteStatus (phase: firing/done/failed).",
+                schema("count:int"), a -> api.salute(argInt(a, "count")));
+        tool("saluteStatus", "Current fireworks show: phase, reason, fired, total.", schema(),
+                a -> api.saluteStatus());
+        tool("swimStatus", "Current swim to shore: phase, reason, distance, inWater.", schema(),
+                a -> api.swimStatus());
+        tool("creativeGive",
+                "Creative mode only: put count of an item (e.g. 'firework_rocket', 'elytra') into free "
+                + "inventory slots, like taking it from the creative tab. Optional hotbar=true: into the hotbar, "
+                + "where building takes blocks from (a full hotbar's last stack moves to the inventory). "
+                + "ok=false with reason otherwise.",
+                schema("item:string", "count:int"), a -> a.has("hotbar") && a.get("hotbar").getAsBoolean()
+                        ? api.creativeGiveHotbar(argStr(a, "item"), argInt(a, "count"))
+                        : api.creativeGive(argStr(a, "item"), argInt(a, "count")));
+        tool("creativeClear",
+                "Creative mode only: take every stack of an item (e.g. 'red_concrete') out of the inventory, "
+                + "back to the creative tab: what a build took and no longer needs. cleared = how many.",
+                schema("item:string"), a -> api.creativeClear(argStr(a, "item")));
+        tool("setFavoriteItem",
+                "A favourite item the bot keeps in hand on the ground (e.g. 'obsidian'): after a landing it "
+                + "replaces the rockets, an empty hand takes it, tidyInventory keeps it; '' clears. Optional "
+                + "hold=true takes it in hand now (not in flight, a salute or a fight). Returns ok, item, "
+                + "carried, held; reason when not held.",
+                schema("item:string"), a -> api.setFavoriteItem(argStr(a, "item"), a.has("hold") && argBool(a, "hold")));
+        tool("tidyInventory",
+                "Free inventory slots until keepFree are empty. Creative: empties non-kit slots (elytra, "
+                + "fireworks, paper, gunpowder and the favourite item stay). Survival: throws only junk blocks (dirt, cobble...).",
+                schema("keepFree:int"), a -> api.tidyInventory(argInt(a, "keepFree")));
+        tool("dropItem",
+                "Leave a treasure: drop up to count of an item (e.g. 'cake', 'golden_apple') on the ground "
+                + "at the bot's feet for a player to pick up. Go there first (hoverTo/gotoXYZ). Creative takes "
+                + "missing items from the creative tab. Returns ok, dropped, item, pos; reason when ok=false.",
+                schema("item:string", "count:int"), a -> api.dropItem(argStr(a, "item"), argInt(a, "count")));
+        tool("setBuildPolicy",
+                "Shared-server manners: breakOnlyNatural=true mines only dirt/grass/sand/gravel/leaves/"
+                + "snow/plants (never builds); allowPlace=false never places blocks. Optional "
+                + "allowBreak=false: never mine through anything at all.",
+                schema("breakOnlyNatural:bool", "allowPlace:bool"),
+                a -> a.has("allowBreak")
+                        ? api.setBuildPolicy(argBool(a, "breakOnlyNatural"), argBool(a, "allowPlace"), argBool(a, "allowBreak"))
+                        : api.setBuildPolicy(argBool(a, "breakOnlyNatural"), argBool(a, "allowPlace")));
+        tool("readSigns",
+                "Text of signs within radius blocks (front/back), nearest first: place names and notes "
+                + "players left. Radius capped at 64.",
+                schema("radius:int"), a -> api.readSigns(argInt(a, "radius")));
         tool("inventorySpace",
                 "Free inventory slots + block counts by type (resource planning before bridging/building).",
                 schema(), a -> api.inventorySpace());
