@@ -354,6 +354,11 @@ release. After releasing, VERIFY: `gh release view v<ver> --json assets` must li
 `unionclef-1.21.11-<ver>.jar`.
 
 This is the **only** way to release. Do NOT use `gh release create` manually.
+
+**`gh` on this PC (2026-11-25).** Its own login (`%APPDATA%\GitHub CLI\hosts.yml`) answers HTTP 401.
+The working token is the release one, `github.token` in `C:/Users/jayra/.gradle/gradle.properties`
+(account 3ndetz, scopes repo/workflow). Pass it per command and never print it:
+`GH_TOKEN=$(grep -E '^github\.token=' /c/Users/jayra/.gradle/gradle.properties | cut -d= -f2- | tr -d '\r ') "/c/Program Files/GitHub CLI/gh.exe" pr list`.
 The gradle task automatically:
 - attaches the remapped JAR
 - prepends `docs/releases/base.md` (install/commands info) to the version notes
