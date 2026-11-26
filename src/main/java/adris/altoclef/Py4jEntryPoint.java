@@ -2011,6 +2011,36 @@ public class Py4jEntryPoint {
         }, false));
     }
 
+    /** The body's exact pose, read-only: x/y/z (unrounded), yaw/pitch (degrees, vanilla: yaw 0 =
+     *  +Z south, 90 = -X west, 180/-180 = -Z north, -90 = +X east), onGround, velocity, and which
+     *  movement keys are pressed right now. For checking an aim before acting and a settled
+     *  position after. */
+    public Map<String, Object> getSelfPose() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var mc = MinecraftClient.getInstance();
+            var p = mc.player;
+            if (p == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            out.put("ok", true);
+            out.put("x", p.getX()); out.put("y", p.getY()); out.put("z", p.getZ());
+            out.put("yaw", (double) net.minecraft.util.math.MathHelper.wrapDegrees(p.getYaw()));
+            out.put("pitch", (double) p.getPitch());
+            out.put("onGround", p.isOnGround());
+            Vec3d v = p.getVelocity();
+            out.put("vx", v.x); out.put("vy", v.y); out.put("vz", v.z);
+            Map<String, Object> keys = new HashMap<>();
+            keys.put("forward", mc.options.forwardKey.isPressed());
+            keys.put("back", mc.options.backKey.isPressed());
+            keys.put("left", mc.options.leftKey.isPressed());
+            keys.put("right", mc.options.rightKey.isPressed());
+            keys.put("jump", mc.options.jumpKey.isPressed());
+            keys.put("sneak", mc.options.sneakKey.isPressed());
+            keys.put("sprint", mc.options.sprintKey.isPressed());
+            out.put("keys", keys);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Look straight at a player/entity by name. */
     public boolean lookAtPlayer(String playerName) {
         return Boolean.TRUE.equals(onClientThread(() -> {
