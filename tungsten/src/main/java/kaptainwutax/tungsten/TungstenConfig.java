@@ -5126,6 +5126,13 @@ public class TungstenConfig {
      *  instead of pressing into the ladder -- which climbs. False = press in, the old input. */
     public boolean walkerLadderDescendSlides = true;
 
+    /** FastPlanner treats the open cell over a ladder as walk-on (baritone MovementHelper.canWalkOn,
+     *  MovementHelper.java:474): it can be stepped onto from the ground or from another ladder, and
+     *  left downwards into the ladder (MovementDownward.cost, MovementDownward.java:61-67). Without it
+     *  a ladder column was only enterable sideways at its own level, so a ladder offset from the one
+     *  below it (bw-256) was crossed by mining. False = the old ladder moves only. */
+    public boolean plannerLadderTopWalkable = true;
+
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 

@@ -774,7 +774,8 @@ public final class FastPlanner {
                 // docs/NAVIGATION.md. The course passes today by walking round the rim, and
                 // that is the honest state of it.
                 if (isWater(world, current.x, current.y, current.z, scratch)
-                        || isLadder(world, current.x, current.y, current.z, scratch)) {
+                        || isLadder(world, current.x, current.y, current.z, scratch)
+                        || ladderTop(world, current.x, current.y, current.z, scratch)) {
                     // Water and ladders are unstandable ON PURPOSE and own a separate move
                     // generator. The start rescue below must never reach them: putting it
                     // ahead of this branch sent a swimming start through ground expansion
@@ -1001,8 +1002,12 @@ public final class FastPlanner {
                 for (int dy : new int[]{0, 1}) {
                     int nx = from.x + d[0], ny = from.y + dy, nz = from.z + d[1];
                     if (isLadder(world, nx, ny, nz, scratch)) continue;   // climb handles it
+                    // Over another ladder counts as a floor (MovementHelper.java:474): from the
+                    // top of one column into the open cell over the next one, which is then left
+                    // downwards below. bw-256: the upper pair sits one cell south of the lower one.
+                    boolean overLadder = dy == 0 && ladderTop(world, nx, ny, nz, scratch);
                     scratch.set(nx, ny, nz);
-                    if (!Double.isNaN(PlayerFit.supportTop(world, scratch))
+                    if ((overLadder || !Double.isNaN(PlayerFit.supportTop(world, scratch)))
                             && PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5)) {
                         relax(map, open, from, nx, ny, nz,
                                 ActionCosts.LADDER_ONE_BLOCK_COST, goal, false);
@@ -1015,7 +1020,24 @@ public final class FastPlanner {
                 if (isLadder(world, nx, from.y, nz, scratch)) {
                     relax(map, open, from, nx, from.y, nz,
                             ActionCosts.LADDER_ONE_BLOCK_COST, goal, false);
+                } else if (ladderTop(world, nx, from.y, nz, scratch)
+                        && PlayerFit.bodyFits(world, nx + 0.5, from.y, nz + 0.5)) {
+                    // Walking onto the top of a ladder, a traverse (MovementHelper.java:474).
+                    relax(map, open, from, nx, from.y, nz,
+                            ActionCosts.WALK_ONE_BLOCK_COST, goal, false);
                 }
+            }
+            // Down off the top into the ladder, baritone MovementDownward.cost
+            // (MovementDownward.java:61-67): the ladder cell needs something to walk on under
+            // it -- more ladder or a solid block -- so a lone rung over a drop is not entered.
+            int dy1 = from.y - 1;
+            if (ladderTop(world, from.x, from.y, from.z, scratch)
+                    && PlayerFit.bodyFits(world, from.x + 0.5, dy1, from.z + 0.5)
+                    && (isLadder(world, from.x, dy1 - 1, from.z, scratch)
+                        || !cachedState(world, from.x, dy1 - 1, from.z, scratch)
+                                .getCollisionShape(world, scratch.set(from.x, dy1 - 1, from.z)).isEmpty())) {
+                relax(map, open, from, from.x, dy1, from.z,
+                        ActionCosts.LADDER_DOWN_ONE_COST, goal, false);
             }
         }
 
@@ -1293,6 +1315,13 @@ public final class FastPlanner {
 
     private static boolean isLadder(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
         return cachedState(w, x, y, z, s).getBlock() instanceof net.minecraft.block.LadderBlock;
+    }
+
+    /** An open (non-ladder) cell with a ladder under it: walk-on, as baritone has it
+     *  (MovementHelper.canWalkOn, MovementHelper.java:474). Gated by plannerLadderTopWalkable. */
+    private static boolean ladderTop(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        return TungstenConfig.get().plannerLadderTopWalkable
+                && !isLadder(w, x, y, z, s) && isLadder(w, x, y - 1, z, s);
     }
 
     private static boolean isWater(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
