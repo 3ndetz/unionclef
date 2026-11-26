@@ -5322,6 +5322,62 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /**
+     * Read-only: every follow / flee / combat intent the mod is carrying now. legacyAttack and
+     * legacyAvoid = names marked by attackPlayer / avoidPlayer whose 30 s timer has not run out
+     * (MobDefenseChain acts on them); punk* = the tungsten combat engine (punk/punkAny); follow* =
+     * the tungsten follow engine (followPlayer); userTask = the running altoclef user task or null;
+     * taskChain = the chain driving the bot this tick or null. Navigation is in pathStatus.
+     */
+    public Map<String, Object> getIntentStatus() {
+        return onClientThread(this::intentStatusOnClientThread,
+                Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    private Map<String, Object> intentStatusOnClientThread() {
+        Map<String, Object> out = new HashMap<>();
+        boolean inGame = AltoClef.inGame();
+        var tt = inGame ? _mod.getDamageTracker().getThreatTable() : null;
+        out.put("ok", true);
+        out.put("legacyAttack", tt == null ? List.of() : tt.activeIntents(true));
+        out.put("legacyAvoid", tt == null ? List.of() : tt.activeIntents(false));
+        out.put("punkActive", kaptainwutax.tungsten.task.PunkPlayerTask.isActive());
+        out.put("punkTarget", kaptainwutax.tungsten.task.PunkPlayerTask.getTargetName());
+        out.put("followActive", kaptainwutax.tungsten.task.FollowPlayerTask.isActive());
+        out.put("followTarget", kaptainwutax.tungsten.task.FollowPlayerTask.getTargetName());
+        var ut = _mod.getUserTaskChain() == null ? null : _mod.getUserTaskChain().getCurrentTask();
+        out.put("userTask", ut == null ? null : ut.toString());
+        var chain = _mod.getTaskRunner() == null ? null : _mod.getTaskRunner().getCurrentTaskChain();
+        out.put("taskChain", chain == null ? null : chain.getClass().getSimpleName());
+        return out;
+    }
+
+    /**
+     * Drop every follow / flee / combat intent, and nothing else: attackPlayer / avoidPlayer marks
+     * expire now (ThreatTable.forget, the existing clear), the tungsten combat engine stops
+     * (punkStop), the follow engines stop (followStop). Does NOT touch navigation or other tasks --
+     * stopPathing stays the way to stop those, unchanged. Returns {ok, before, after}, both
+     * getIntentStatus snapshots taken on this tick; read getIntentStatus again later to confirm
+     * nothing re-armed (MobDefenseChain sees the cleared marks on its next tick).
+     */
+    public Map<String, Object> stopIntents() {
+        return onClientThread(() -> {
+            Map<String, Object> before = intentStatusOnClientThread();
+            if (AltoClef.inGame()) _mod.getDamageTracker().getThreatTable().forget();
+            kaptainwutax.tungsten.task.PunkPlayerTask.stop();
+            kaptainwutax.tungsten.task.FollowPlayerTask.stop();
+            if (_mod.getUserTaskChain() != null
+                    && _mod.getUserTaskChain().getCurrentTask() instanceof adris.altoclef.tasks.movement.FollowPlayerTask) {
+                _mod.getUserTaskChain().cancel(_mod);
+            }
+            Map<String, Object> out = new HashMap<>();
+            out.put("ok", true);
+            out.put("before", before);
+            out.put("after", intentStatusOnClientThread());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Navigate toward a FAR target with a RECEDING HORIZON — never asks the
      *  pathfinder for the whole route (huge goals freeze the search). Picks a
      *  waypoint at most `horizon` blocks toward the target and gotos it. The
