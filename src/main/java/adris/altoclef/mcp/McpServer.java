@@ -39,7 +39,7 @@ public class McpServer {
     // Plain Gson drops null map values. Tools whose contract is an EXPLICIT absent state
     // (team = null) keep them, so MCP returns the same keys as py4j; every other tool is unchanged.
     private static final Gson GSON_NULLS = new com.google.gson.GsonBuilder().serializeNulls().create();
-    private static final java.util.Set<String> KEEPS_NULLS = java.util.Set.of("getPlayerTeams");
+    private static final java.util.Set<String> KEEPS_NULLS = java.util.Set.of("getPlayerTeams", "getIntentStatus", "stopIntents");
     private static final String PROTOCOL_VERSION = "2024-11-05";
 
     private final Py4jEntryPoint api;
@@ -476,6 +476,17 @@ public class McpServer {
                 "The follow engine: active, target, radius, seen (player loaded), distance (-1 unseen).",
                 schema(), a -> api.followStatus());
         tool("followStop", "Stop following.", schema(), a -> api.followStop());
+        tool("getIntentStatus",
+                "Read-only: the follow / flee / combat intents carried now -- legacyAttack / legacyAvoid (names "
+                + "marked by attackPlayer / avoidPlayer, 30 s timers not yet run out), punkActive/punkTarget "
+                + "(tungsten combat), followActive/followTarget, userTask, taskChain (null when none). "
+                + "Navigation is in pathStatus.",
+                schema(), a -> api.getIntentStatus());
+        tool("stopIntents",
+                "Drop every follow / flee / combat intent and nothing else: attackPlayer/avoidPlayer marks expire, "
+                + "the combat engine and follow engines stop. Navigation and other tasks are untouched (that is "
+                + "stopPathing). Returns before/after snapshots; read getIntentStatus later to confirm.",
+                schema(), a -> api.stopIntents());
         tool("pathStatus",
                 "Poll the current navigation: busy/pos/distance-to-goal/arrived(<1.5). Loop after gotoXYZ until arrived.",
                 schema(), a -> api.pathStatus());

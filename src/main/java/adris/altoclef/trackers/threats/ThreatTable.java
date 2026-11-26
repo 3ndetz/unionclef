@@ -249,6 +249,17 @@ public class ThreatTable {
         return threat.name != null && Objects.equals(AltoClef.getSelfName(), threat.name);
     }
 
+    /** Names whose attackPlayer (attack=true) or avoidPlayer (false) intent has not expired. Read-only. */
+    public java.util.List<String> activeIntents(boolean attack) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (PlayerThreat t : playerThreats.values()) {
+            if (t == null || t.name == null) continue;
+            if (attack ? !t.shouldKillTimer.elapsed() : !t.shouldAvoidTimer.elapsed()) out.add(t.name);
+        }
+        java.util.Collections.sort(out);
+        return out;
+    }
+
     public boolean forget() {
         for (PlayerThreat threat : playerThreats.values()) forget(threat);
         return true;
