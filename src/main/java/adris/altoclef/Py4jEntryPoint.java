@@ -1638,6 +1638,10 @@ public class Py4jEntryPoint {
                 try {
                     goal = new net.minecraft.util.math.BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
                 } catch (NumberFormatException e) { r.put("error", "expected integers"); results.add(r); continue; }
+                final var requested = goal;
+                goal = onClientThread(() -> standCell(MinecraftClient.getInstance().world, requested), requested);
+                r.put("goal", goal.getX() + "," + goal.getY() + "," + goal.getZ());
+                r.put("normalized", !goal.equals(requested));
                 var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
                         _mod.getWorld(), startCell, goal, budget, null, true, startState);
                 boolean found = !res.isEmpty();
@@ -4907,25 +4911,44 @@ public class Py4jEntryPoint {
      *  drive tungsten directly (ChatMessage(prefix+"goto x y z"), bridgeTo) or
      *  use altoclef @goto for the baritone/shredder navigator — this lever is
      *  the clean default. Server-agnostic (pure coords). */
+    /** The FEET cell for a requested cell, by the navigator's own convention (baritone
+     *  IPlayerContext.playerFeet, RotationHelper.playerFeet): standing ON a slab puts the feet in the
+     *  cell above the slab. So a requested cell that holds something to stand on (a slab, the
+     *  floor) with free space above it means "stand on it": the cell above. An open cell is kept.
+     *  Measured: gotoCell on a bottom slab's own cell stood on the slab (y+0.5) and never arrived,
+     *  because the feet cell is the one above. */
+    private static net.minecraft.util.math.BlockPos standCell(net.minecraft.world.World w,
+                                                              net.minecraft.util.math.BlockPos c) {
+        if (w == null) return c;
+        boolean solidHere = !w.getBlockState(c).getCollisionShape(w, c).isEmpty();
+        boolean freeAbove = w.getBlockState(c.up()).getCollisionShape(w, c.up()).isEmpty();
+        return solidHere && freeAbove ? c.up() : c;
+    }
+
     /** True while _gotoGoal came from gotoCell (arrival = standing in the cell), false for gotoXYZ. */
     private volatile boolean _gotoExact = false;
 
     /** Walk until standing IN block cell (x,y,z) -- the feet cell, slab-aware, body settled --
      *  rather than gotoXYZ's "within 2 blocks". For a counter, a generator, a spot to place from.
      *  Same engine and movement as gotoXYZ (FastNavigator, exact-cell goal; baritone GoalBlock).
-     *  Returns immediately; poll pathStatus until arrived (= inCell and settled). y is the FEET
-     *  cell: the block the body stands IN, one above the floor. */
+     *  Returns immediately; poll pathStatus until arrived (= inCell and settled; a partial route
+     *  never counts). The goal is the FEET cell, the one the body stands IN: a requested cell that
+     *  holds something to stand on (a slab, the floor) with free space above is normalized to the
+     *  cell above it (standCell). The reply carries requested, goal and normalized. */
     public Map<String, Object> gotoCell(int x, int y, int z) {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
             if (MinecraftClient.getInstance().player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
-            _gotoGoal = new int[]{x, y, z};
+            var cell = standCell(MinecraftClient.getInstance().world, new net.minecraft.util.math.BlockPos(x, y, z));
+            _gotoGoal = new int[]{cell.getX(), cell.getY(), cell.getZ()};
             _gotoExact = true;
             kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.stop.set(false);
             kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.stop = false;
-            kaptainwutax.tungsten.task.FastNavigator.startExact(new net.minecraft.util.math.BlockPos(x, y, z));
+            kaptainwutax.tungsten.task.FastNavigator.startExact(cell);
             out.put("ok", true);
-            out.put("goal", x + "," + y + "," + z);
+            out.put("requested", x + "," + y + "," + z);
+            out.put("goal", cell.getX() + "," + cell.getY() + "," + cell.getZ());
+            out.put("normalized", cell.getY() != y);
             out.put("exact", true);
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));

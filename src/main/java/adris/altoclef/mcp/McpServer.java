@@ -397,14 +397,17 @@ public class McpServer {
                 schema("x:int", "y:int", "z:int"),
                 a -> api.gotoXYZ(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
         tool("gotoCell",
-                "Walk until standing IN block cell x,y,z (the FEET cell, slab-aware, body settled), "
+                "Walk until standing IN block cell x,y,z (the FEET cell, slab-aware, body settled). Giving the "
+                + "block to stand ON (a slab, the floor) is normalized to the cell above it, as the game "
+                + "counts feet; the reply has requested, goal and normalized. "
                 + "unlike gotoXYZ's 'within 2 blocks'. Same movement engine. Poll pathStatus: arrived = "
                 + "inCell and settled; lastPlanComplete=false means the planner only found a route ending "
                 + "near the cell (lastPlanEndDistance).",
                 schema("x:int", "y:int", "z:int"),
                 a -> api.gotoCell(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
         tool("canReachAny",
-                "Without moving: which of up to 8 candidate FEET cells ('x,y,z' strings) can the body stand "
+                "Without moving: which of up to 8 candidate FEET cells ('x,y,z' strings; a block to stand ON is "
+                + "normalized to the cell above, per result goal/normalized) can the body stand "
                 + "in? Per candidate found/reached/endDistance/pathSize/breaks, and best = the reached one "
                 + "with the shortest route (null if none). budgetMs per candidate (100-1500, 0 = 600).",
                 schema("candidates:strarray", "withBreaking:bool", "budgetMs:int"),

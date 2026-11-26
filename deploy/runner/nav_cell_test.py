@@ -4,7 +4,7 @@ Live reports: gotoXYZ(-104,39,631) said arrived with the feet at (-104.9,39.0,63
 getEntitiesInfo rounded a drop's position "%.0f" into the neighbouring cell. On the flat stand:
   1 gotoXYZ to a cell on a bottom slab (old contract, recorded): where do the feet end up?
   2 gotoCell to that cell: pathStatus arrived only when feetCell == goal, body at slab height
-  3 gotoCell one block up (a block to stand on)
+  3 gotoCell on a full block (asked as the block) and on a feet cell given directly
   4 canReachAny: a cell sealed in bedrock (not reached) beside two open ones (reached), best set
   5 getEntitiesInfo: a dropped item at (-12.3, y, -13.8) -> x/z exact, blockX/blockZ -13/-14,
     the old "position" field unchanged
@@ -65,8 +65,9 @@ def wait_arrived(limit_s=25):
     return None, st
 
 
-slab = (CX + 3, STAND_Y, CZ)
-step = (CX, STAND_Y + 1, CZ + 4)
+slab = (CX + 3, STAND_Y, CZ)            # the slab BLOCK itself: normalized to the cell above
+step = (CX, STAND_Y, CZ + 4)            # the full block itself: normalized to the cell above
+step_feet = (CX, STAND_Y + 1, CZ + 4)   # already a feet cell: kept as given
 
 # 1 old contract, recorded
 home()
@@ -77,35 +78,47 @@ check("gotoXYZ slab cell (old contract, recorded)", True,
       {"arrived_s": t, "feetCell": st.get("feetCell"), "goal": st.get("goal"), "inCell": st.get("inCell"),
        "y": round(pose["y"], 3)})
 
-# 2 exact cell on a slab
+# 2 exact cell on a slab, asked as the slab block: normalized to the feet cell above it
 home()
-bot.py.call("gotoCell", *slab)
+g = bot.py.call("gotoCell", *slab)
 t, st = wait_arrived()
 pose = bot.py.call("getSelfPose")
-check("gotoCell slab cell: in the cell, slab height", t is not None and st.get("inCell") is True
+check("gotoCell slab block -> stands on the slab, feet cell above it", t is not None
+      and g.get("normalized") is True and g.get("goal") == f"{slab[0]},{slab[1] + 1},{slab[2]}"
+      and st.get("inCell") is True and st.get("feetCell") == g.get("goal")
       and abs(pose["y"] - (STAND_Y + 0.5)) < 0.01,
-      {"arrived_s": t, "feetCell": st.get("feetCell"), "y": round(pose["y"], 3),
+      {"reply": g, "arrived_s": t, "feetCell": st.get("feetCell"), "y": round(pose["y"], 3),
        "lastPlanComplete": st.get("lastPlanComplete")})
 
-# 3 exact cell one block up
+# 3 one block up, asked as the full block
 home()
-bot.py.call("gotoCell", *step)
+g = bot.py.call("gotoCell", *step)
 t, st = wait_arrived()
 pose = bot.py.call("getSelfPose")
-check("gotoCell one block up", t is not None and st.get("inCell") is True
+check("gotoCell full block -> stands on it", t is not None and g.get("normalized") is True
+      and g.get("goal") == f"{step_feet[0]},{step_feet[1]},{step_feet[2]}" and st.get("inCell") is True
       and abs(pose["y"] - (STAND_Y + 1)) < 0.01,
-      {"arrived_s": t, "feetCell": st.get("feetCell"), "y": round(pose["y"], 3)})
+      {"reply": g, "arrived_s": t, "feetCell": st.get("feetCell"), "y": round(pose["y"], 3)})
+
+# 3b a feet cell given directly is kept as given
+home()
+g = bot.py.call("gotoCell", *step_feet)
+t, st = wait_arrived()
+check("gotoCell feet cell given directly is not moved", t is not None and g.get("normalized") is False
+      and g.get("goal") == f"{step_feet[0]},{step_feet[1]},{step_feet[2]}" and st.get("inCell") is True,
+      {"reply": g, "arrived_s": t, "feetCell": st.get("feetCell")})
 
 # 4 reachability of several candidates, nothing moves
 home()
 before = bot.py.call("getSelfPose")
-cands = [f"{CX - 6},{STAND_Y},{CZ}", f"{slab[0]},{slab[1]},{slab[2]}", f"{step[0]},{step[1]},{step[2]}"]
+cands = [f"{CX - 6},{STAND_Y},{CZ}", f"{slab[0]},{slab[1]},{slab[2]}", f"{step_feet[0]},{step_feet[1]},{step_feet[2]}"]
 r = bot.py.call("canReachAny", cands, False, 600)
 after = bot.py.call("getSelfPose")
 res = {x.get("cell"): x for x in (r.get("results") or [])}
 check("canReachAny sealed / open / step", r.get("ok") is True
       and res.get(cands[0], {}).get("reached") is False
-      and res.get(cands[1], {}).get("reached") is True and res.get(cands[2], {}).get("reached") is True
+      and res.get(cands[1], {}).get("reached") is True and res.get(cands[1], {}).get("normalized") is True
+      and res.get(cands[2], {}).get("reached") is True and res.get(cands[2], {}).get("normalized") is False
       and r.get("best") in (cands[1], cands[2])
       and abs(after["x"] - before["x"]) < 0.01 and abs(after["z"] - before["z"]) < 0.01, r)
 
@@ -126,5 +139,5 @@ check("getEntitiesInfo exact x/z and block cell, old position kept", ok, item)
 rcon.cmd("kill @e[type=item]", allow_reject=True)
 rcon.cmd("forceload remove -20 -20 0 0", allow_reject=True)
 rcon.cmd(f"forceload remove {CX - 12} {CZ - 12} {CX + 12} {CZ + 12}", allow_reject=True)
-print(json.dumps({"summary": f"{5 - fails}/5 pass"}), flush=True)
+print(json.dumps({"summary": f"{6 - fails}/6 pass"}), flush=True)
 sys.exit(1 if fails else 0)
