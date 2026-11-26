@@ -412,6 +412,19 @@ public class McpServer {
                 + "with the shortest route (null if none). budgetMs per candidate (100-1500, 0 = 600).",
                 schema("candidates:strarray", "withBreaking:bool", "budgetMs:int"),
                 a -> api.canReachAny(strList(a, "candidates"), argBool(a, "withBreaking"), argInt(a, "budgetMs")));
+        tool("placeTargetsDiagnostic",
+                "Read-only, from where the body stands now: can each target cell ('x,y,z', max 16) take a block, "
+                + "and why not? Per cell: verdict (placeable | occupied_by_block | entity_in_cell (self marked) | "
+                + "no_support | interactable_face_needs_sneak (only faces on beds/doors/containers) | out_of_reach | "
+                + "occluded | back_faces_only), entities in the cell, and every support face with facing, distance, "
+                + "inReach, the vanilla ray result (clear or what it hits) and interactable. Uses the same ray a "
+                + "click would; aims and clicks nothing.",
+                schema("cells:strarray"), a -> api.placeTargetsDiagnostic(strList(a, "cells")));
+        tool("getOriginStatus",
+                "Read-only: the feet cell and the ways out of it -- standable, exits north/south/east/west "
+                + "(walk | step_up | drop | blocked) and up (open | blocked), enclosed = no way out without "
+                + "breaking or building. Tells 'boxed in' from 'no route'.",
+                schema(), a -> api.getOriginStatus());
         tool("followPlayer",
                 "Follow a player by name (movement only, never attacks) with the engine built for moving "
                 + "targets, the same as the in-game @follow: re-aims at the player's live position, holds "

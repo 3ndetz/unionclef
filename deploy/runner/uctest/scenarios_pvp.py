@@ -357,6 +357,18 @@ class ChaseFlat(Scenario):
         ctx.bot.cmd(f"@follow {ctx.victim.name}")
 
     def drive_tick(self, ctx, t):
+        # WHAT DID THE FOLLOW ENGINE LOOK LIKE AT 3 s? A run with follow never started and a run
+        # where it started and lost the target look the same afterwards (2026-11-26: a first
+        # chase_flat after stop/exact tests froze with pfStop=true; its retry passed and overwrote
+        # the artifacts). Record it once, early, in the verdict itself.
+        if t >= 3 and "follow_at_3s" not in ctx.geo:
+            ok, fs = ctx.bot.py.try_call("followStatus")
+            ok2, ps = ctx.bot.py.try_call("pathStatus")
+            ctx.geo["follow_at_3s"] = {"follow": fs if ok else f"ERR {fs}",
+                                       "path": {k: ps.get(k) for k in ("stopped", "pathfinderActive", "navActive",
+                                                                        "walker", "executor", "busy")}
+                                       if ok2 and isinstance(ps, dict) else f"ERR {ps}"}
+            ctx.geo["chat_at_3s"] = ctx.bot.recent_chat(60)
         vp = ctx.samples[-1].get("victim") if ctx.samples else None
         if not vp:
             return
@@ -380,6 +392,10 @@ class ChaseFlat(Scenario):
                         avg is not None and avg < 7, f"avg={avg}")
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
+        yield Criterion("follow engine at 3 s (recorded, not gated)", True,
+                        str(ctx.geo.get("follow_at_3s")), gate=False)
+        chat = [c for c in (ctx.geo.get("chat_at_3s") or []) if "CLICK" not in c and "RTGATE" not in c]
+        yield Criterion("chat up to 3 s (recorded, not gated)", True, " || ".join(chat[-25:]), gate=False)
 
 
 class ChaseGoto(ChaseFlat):

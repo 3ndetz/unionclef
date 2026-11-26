@@ -2124,6 +2124,213 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** A right click on this block USES it (sleep, open, toggle) instead of placing against it;
+     *  placing on it needs sneak. */
+    private static boolean interactable(net.minecraft.block.BlockState st, net.minecraft.world.World w,
+                                        net.minecraft.util.math.BlockPos pos) {
+        var b = st.getBlock();
+        return b instanceof net.minecraft.block.BedBlock || b instanceof net.minecraft.block.DoorBlock
+                || b instanceof net.minecraft.block.TrapdoorBlock || b instanceof net.minecraft.block.FenceGateBlock
+                || b instanceof net.minecraft.block.ButtonBlock || b instanceof net.minecraft.block.LeverBlock
+                || b instanceof net.minecraft.block.CraftingTableBlock || b instanceof net.minecraft.block.NoteBlock
+                || b instanceof net.minecraft.block.RepeaterBlock || b instanceof net.minecraft.block.ComparatorBlock
+                || b instanceof net.minecraft.block.AnvilBlock || b instanceof net.minecraft.block.BlockWithEntity
+                || st.createScreenHandlerFactory(w, pos) != null;
+    }
+
+    /** The point at the centre of {@code side} of the block at {@code n}, on its OUTLINE shape (a bed's
+     *  top is at 9/16, a bottom slab's at 1/2), or null when the block has no outline. */
+    private static Vec3d faceCentre(net.minecraft.world.World w, net.minecraft.util.math.BlockPos n,
+                                    net.minecraft.util.math.Direction side) {
+        var shape = w.getBlockState(n).getOutlineShape(w, n);
+        if (shape.isEmpty()) return null;
+        var bb = shape.getBoundingBox().offset(n);
+        double cx = (bb.minX + bb.maxX) / 2, cy = (bb.minY + bb.maxY) / 2, cz = (bb.minZ + bb.maxZ) / 2;
+        switch (side) {
+            case UP: return new Vec3d(cx, bb.maxY, cz);
+            case DOWN: return new Vec3d(cx, bb.minY, cz);
+            case EAST: return new Vec3d(bb.maxX, cy, cz);
+            case WEST: return new Vec3d(bb.minX, cy, cz);
+            case SOUTH: return new Vec3d(cx, cy, bb.maxZ);
+            default: return new Vec3d(cx, cy, bb.minZ);
+        }
+    }
+
+    /**
+     * READ-ONLY, from where the body stands now: can each target cell take a block, and if not, why?
+     * For every cell it asks the same vanilla ray the click would use (world.raycast, OUTLINE shapes,
+     * no fluids) from the eye to the centre of each face a neighbour offers the cell, within
+     * player.getBlockInteractionRange(). Nothing is aimed, clicked or sent. Written for the live
+     * builder receipts where a batch ended with 0 placed and only deferNoFace / blockedByOwnBody,
+     * which say neither WHICH face nor WHAT was in the way.
+     *
+     * @param cells "x,y,z" strings (max 16)
+     * @return {ok, eye, reach, cells:[{cell, block, replaceable, verdict, entities:[...], faces:[{support,
+     *         block, side, facing, distance, inReach, ray:{hit, side} or "clear", interactable}]}]}.
+     *         verdict, first that applies: occupied_by_block (not replaceable) | entity_in_cell (an
+     *         entity box -- self marked -- overlaps the cell) | no_support (no neighbour has an outline
+     *         to click) | placeable (a facing, in-reach face with a clear ray to a non-interactable
+     *         support) | interactable_face_needs_sneak (only such faces are on interactable blocks:
+     *         beds, doors, containers) | out_of_reach (facing and clear, beyond the range) |
+     *         occluded (facing and in reach, the ray hits something else first) | back_faces_only
+     *         (every support face points away from the eye, e.g. a top face seen from below).
+     */
+    public Map<String, Object> placeTargetsDiagnostic(List<String> cells) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var mc = MinecraftClient.getInstance();
+            var p = mc.player;
+            var w = mc.world;
+            if (p == null || w == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            Vec3d eye = p.getEyePos();
+            double reach = p.getBlockInteractionRange();
+            out.put("ok", true);
+            out.put("eye", String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", eye.x, eye.y, eye.z));
+            out.put("reach", reach);
+            List<Map<String, Object>> res = new ArrayList<>();
+            int n = 0;
+            for (String c : cells == null ? List.<String>of() : cells) {
+                if (n++ >= 16) break;
+                Map<String, Object> r = new HashMap<>();
+                r.put("cell", c);
+                String[] q = String.valueOf(c).trim().split("\\s*,\\s*");
+                net.minecraft.util.math.BlockPos t;
+                try {
+                    t = new net.minecraft.util.math.BlockPos(Integer.parseInt(q[0]), Integer.parseInt(q[1]), Integer.parseInt(q[2]));
+                } catch (Exception e) { r.put("verdict", "bad_cell"); res.add(r); continue; }
+                var ts = w.getBlockState(t);
+                r.put("block", net.minecraft.registry.Registries.BLOCK.getId(ts.getBlock()).toString());
+                r.put("replaceable", ts.isReplaceable());
+                // entities whose box overlaps the cell (a placed block would intersect them)
+                var cellBox = new net.minecraft.util.math.Box(t);
+                List<String> ents = new ArrayList<>();
+                if (p.getBoundingBox().intersects(cellBox)) ents.add("self");
+                for (var e : w.getOtherEntities(p, cellBox)) {
+                    if (e.isSpectator() || !e.isAlive()) continue;
+                    if (e instanceof net.minecraft.entity.ItemEntity) continue;      // items do not block placement
+                    ents.add(net.minecraft.registry.Registries.ENTITY_TYPE.getId(e.getType()).getPath()
+                            + (e instanceof PlayerEntity ? ":" + e.getName().getString() : ""));
+                }
+                r.put("entities", ents);
+                List<Map<String, Object>> faces = new ArrayList<>();
+                boolean anyFace = false, anyFacing = false, anyClear = false, anyClearInReach = false,
+                        placeable = false, sneakOnly = false;
+                for (var dir : net.minecraft.util.math.Direction.values()) {
+                    var nb = t.offset(dir);                     // the support, on this side of the cell
+                    var side = dir.getOpposite();               // its face that touches the cell
+                    Vec3d fp = faceCentre(w, nb, side);
+                    var ns = w.getBlockState(nb);
+                    if (fp == null || ns.isReplaceable()) continue;
+                    anyFace = true;
+                    Map<String, Object> f = new HashMap<>();
+                    f.put("support", nb.getX() + "," + nb.getY() + "," + nb.getZ());
+                    f.put("block", net.minecraft.registry.Registries.BLOCK.getId(ns.getBlock()).toString());
+                    f.put("side", side.asString());
+                    Vec3d nrm = new Vec3d(side.getOffsetX(), side.getOffsetY(), side.getOffsetZ());
+                    boolean facing = eye.subtract(fp).dotProduct(nrm) > 1e-4;
+                    double dist = eye.distanceTo(fp);
+                    boolean inReach = dist <= reach;
+                    boolean inter = interactable(ns, w, nb);
+                    f.put("facing", facing);
+                    f.put("distance", Math.round(dist * 100) / 100.0);
+                    f.put("inReach", inReach);
+                    f.put("interactable", inter);
+                    if (facing) {
+                        anyFacing = true;
+                        var hit = w.raycast(new net.minecraft.world.RaycastContext(eye, fp,
+                                net.minecraft.world.RaycastContext.ShapeType.OUTLINE,
+                                net.minecraft.world.RaycastContext.FluidHandling.NONE, p));
+                        boolean clear = hit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                                && hit.getBlockPos().equals(nb) && hit.getSide() == side;
+                        if (clear) {
+                            f.put("ray", "clear");
+                            anyClear = true;
+                            if (inReach) {
+                                anyClearInReach = true;
+                                if (inter) sneakOnly = true; else placeable = true;
+                            }
+                        } else {
+                            Map<String, Object> h = new HashMap<>();
+                            if (hit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                                var hb = hit.getBlockPos();
+                                h.put("hit", hb.getX() + "," + hb.getY() + "," + hb.getZ());
+                                h.put("hitBlock", net.minecraft.registry.Registries.BLOCK.getId(w.getBlockState(hb).getBlock()).toString());
+                                h.put("side", hit.getSide().asString());
+                            } else {
+                                h.put("hit", "nothing");
+                            }
+                            f.put("ray", h);
+                        }
+                    }
+                    faces.add(f);
+                }
+                r.put("faces", faces);
+                String verdict;
+                if (!ts.isReplaceable()) verdict = "occupied_by_block";
+                else if (!ents.isEmpty()) verdict = "entity_in_cell";
+                else if (!anyFace) verdict = "no_support";
+                else if (placeable) verdict = "placeable";
+                else if (sneakOnly) verdict = "interactable_face_needs_sneak";
+                else if (anyClear && !anyClearInReach) verdict = "out_of_reach";
+                else if (anyFacing) verdict = "occluded";
+                else verdict = "back_faces_only";
+                r.put("verdict", verdict);
+                res.add(r);
+            }
+            out.put("cells", res);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /**
+     * READ-ONLY: the cell the body stands in, and the ways out of it. For a body boxed in by blocks
+     * placed around it (live bw-102: feet (-152.3,53,313.7) inside a defence, every route "partial"
+     * ending at the feet cell). Per horizontal direction: walk (feet and head cells free, floor under),
+     * step_up (one block at feet level with two free cells above it and head room above the body),
+     * drop (feet and head free, no floor: a fall), blocked. Plus up (two free cells above the head).
+     * @return {ok, feetCell, standable (floor under, feet and head free), exits:{north,south,east,west,up},
+     *         enclosed (no walk / step_up / drop / up exit)}.
+     */
+    public Map<String, Object> getOriginStatus() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var mc = MinecraftClient.getInstance();
+            var p = mc.player;
+            var w = mc.world;
+            if (p == null || w == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            net.minecraft.util.math.BlockPos f = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(p);
+            java.util.function.Predicate<net.minecraft.util.math.BlockPos> free =
+                    b -> w.getBlockState(b).getCollisionShape(w, b).isEmpty();
+            java.util.function.Predicate<net.minecraft.util.math.BlockPos> floor =
+                    b -> !w.getBlockState(b).getCollisionShape(w, b).isEmpty();
+            boolean standable = free.test(f) && free.test(f.up()) && floor.test(f.down());
+            out.put("ok", true);
+            out.put("feetCell", f.getX() + "," + f.getY() + "," + f.getZ());
+            out.put("pos", String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", p.getX(), p.getY(), p.getZ()));
+            out.put("standable", standable);
+            out.put("feetFree", free.test(f));
+            out.put("headFree", free.test(f.up()));
+            Map<String, Object> exits = new HashMap<>();
+            boolean any = false;
+            for (var d : new net.minecraft.util.math.Direction[]{net.minecraft.util.math.Direction.NORTH,
+                    net.minecraft.util.math.Direction.SOUTH, net.minecraft.util.math.Direction.EAST,
+                    net.minecraft.util.math.Direction.WEST}) {
+                var c = f.offset(d);
+                String e;
+                if (free.test(c) && free.test(c.up())) e = floor.test(c.down()) ? "walk" : "drop";
+                else if (!free.test(c) && free.test(c.up()) && free.test(c.up(2)) && free.test(f.up(2))) e = "step_up";
+                else e = "blocked";
+                if (!e.equals("blocked")) any = true;
+                exits.put(d.asString(), e);
+            }
+            boolean up = free.test(f.up(2)) && free.test(f.up(3));
+            exits.put("up", up ? "open" : "blocked");
+            out.put("exits", exits);
+            out.put("enclosed", !any && !up);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Look straight at a player/entity by name. */
     public boolean lookAtPlayer(String playerName) {
         return Boolean.TRUE.equals(onClientThread(() -> {
