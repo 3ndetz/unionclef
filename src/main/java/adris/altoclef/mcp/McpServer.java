@@ -243,8 +243,15 @@ public class McpServer {
         // perception
         tool("getGameState",
                 "Battle perception (the agent's eyes): self(hp/maxHp/armor/pos/onGround/held/blocks), "
-                + "players[](name/pos/distance/hp/sprinting), beds[](nearby beds). Read before deciding tactics.",
-                schema(), a -> api.getGameState());
+                + "players[](name/pos/distance/hp/sprinting), beds[](nearby beds). Read before deciding tactics. "
+                + "Optional includeBeds=false skips the bed scan (81x81x17 block reads on the client thread): "
+                + "same self/players, no 'beds' key, bedsIncluded=false -- for frequent self/player polling.",
+                schema("includeBeds:bool?"),
+                a -> a.has("includeBeds") ? api.getGameState(argBool(a, "includeBeds")) : api.getGameState());
+        tool("getGameStateCost",
+                "Read-only diagnostics: client-thread time spent building getGameState since launch, per path "
+                + "(full = with the bed scan, noBeds) -- calls, meanMs, maxMs. reset=true zeroes it after reading.",
+                schema("reset:bool"), a -> api.getGameStateCost(argBool(a, "reset")));
         tool("flyTo",
                 "Elytra flight to a point: equip, take off, climb on fireworks above terrain, glide down "
                 + "near it. Needs elytra + fireworks in inventory. Poll flyStatus (phase: equip/takeoff/"
@@ -706,12 +713,15 @@ public class McpServer {
         return out;
     }
 
-    /** Build a JSON-Schema object from "name:type" pairs (int/string/bool/strarray). */
+    /** Build a JSON-Schema object from "name:type" pairs (int/string/bool/strarray); a type
+     *  ending in '?' ("includeBeds:bool?") is optional, i.e. left out of "required". */
     private static JsonObject schema(String... pairs) {
         JsonObject props = new JsonObject();
         JsonArray required = new JsonArray();
         for (String p : pairs) {
             String[] kv = p.split(":");
+            boolean optional = kv[1].endsWith("?");
+            if (optional) kv[1] = kv[1].substring(0, kv[1].length() - 1);
             JsonObject prop = new JsonObject();
             switch (kv[1]) {
                 case "int":    prop.addProperty("type", "integer"); break;
@@ -726,7 +736,7 @@ public class McpServer {
                 default:       prop.addProperty("type", "string");
             }
             props.add(kv[0], prop);
-            required.add(kv[0]);
+            if (!optional) required.add(kv[0]);
         }
         JsonObject s = new JsonObject();
         s.addProperty("type", "object");

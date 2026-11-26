@@ -6969,7 +6969,55 @@ public class Py4jEntryPoint {
     }
 
     public Map<String, Object> getGameState() {
+        return getGameState(true);
+    }
+
+    // Client-thread time spent building getGameState, per path ([0] with the bed scan, [1] without):
+    // calls, total ns, max ns. Read by getGameStateCost().
+    private static final long[][] GAME_STATE_COST = new long[2][3];
+
+    /**
+     * getGameState with the bed scan optional. includeBeds=true is exactly getGameState(). With
+     * false the 81x81x17 bed scan (up to 111,537 block reads on the client thread) is skipped:
+     * self, players and playerCount are the same fields, "beds" is ABSENT (not an empty list --
+     * nothing was looked at) and "bedsIncluded": false says so. For frequent self/player polling.
+     */
+    public Map<String, Object> getGameState(boolean includeBeds) {
         return onClientThread(() -> {
+            long t0 = System.nanoTime();
+            Map<String, Object> r = gameStateOnClientThread(includeBeds);
+            long ns = System.nanoTime() - t0;
+            synchronized (GAME_STATE_COST) {
+                long[] c = GAME_STATE_COST[includeBeds ? 0 : 1];
+                c[0]++;
+                c[1] += ns;
+                c[2] = Math.max(c[2], ns);
+            }
+            return r;
+        }, Map.of("inGame", false, "error", "client thread timeout"));
+    }
+
+    /** Read-only diagnostics: client-thread time of getGameState since launch, per path --
+     *  {full:{calls, meanMs, maxMs}, noBeds:{calls, meanMs, maxMs}}. reset=true zeroes it after reading. */
+    public Map<String, Object> getGameStateCost(boolean reset) {
+        Map<String, Object> out = new HashMap<>();
+        synchronized (GAME_STATE_COST) {
+            String[] names = {"full", "noBeds"};
+            for (int i = 0; i < 2; i++) {
+                long[] c = GAME_STATE_COST[i];
+                Map<String, Object> m = new HashMap<>();
+                m.put("calls", c[0]);
+                m.put("meanMs", c[0] == 0 ? 0.0 : c[1] / 1e6 / c[0]);
+                m.put("maxMs", c[2] / 1e6);
+                out.put(names[i], m);
+                if (reset) java.util.Arrays.fill(c, 0L);
+            }
+        }
+        return out;
+    }
+
+    private Map<String, Object> gameStateOnClientThread(boolean includeBeds) {
+        {
             Map<String, Object> out = new HashMap<>();
             MinecraftClient client = MinecraftClient.getInstance();
             var me = client.player;
@@ -7065,6 +7113,10 @@ public class Py4jEntryPoint {
             out.put("players", players);
             out.put("playerCount", players.size());
 
+            if (!includeBeds) {
+                out.put("bedsIncluded", false);
+                return out;
+            }
             // bed scan (bedwars perception) — nearest bed blocks in a radius, so
             // the agent knows where to attack (enemy bed) / defend (own bed)
             List<Map<String, Object>> beds = new ArrayList<>();
@@ -7099,7 +7151,7 @@ public class Py4jEntryPoint {
                     Double.parseDouble((String) b.get("distance"))));
             out.put("beds", beds);
             return out;
-        }, Map.of("inGame", false, "error", "client thread timeout"));
+        }
     }
 
     /** Bed / point defense (TODO 6.4): wall up the target cell by placing
