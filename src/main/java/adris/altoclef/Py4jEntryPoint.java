@@ -4822,7 +4822,10 @@ public class Py4jEntryPoint {
                 + " deferred=" + kaptainwutax.tungsten.task.FastNavigator.navRetargetDeferred
                 + " refused=" + kaptainwutax.tungsten.task.FastNavigator.navRetargetRefused
                 + " plansApplied=" + kaptainwutax.tungsten.task.FastNavigator.navPlansApplied
-                + " plansDiscarded=" + kaptainwutax.tungsten.task.FastNavigator.navPlansDiscarded;
+                + " plansDiscarded=" + kaptainwutax.tungsten.task.FastNavigator.navPlansDiscarded
+                + " driftAborts=" + kaptainwutax.tungsten.agent.Agent.driftAborts
+                + " driftAbortsAtStart=" + kaptainwutax.tungsten.agent.Agent.driftAbortsAtStart
+                + " staleRootDropped=" + kaptainwutax.tungsten.path.PathExecutor.staleRootDropped;
     }
 
     /** Follow a player by name with the engine built for MOVING targets -- the same one as the

@@ -449,6 +449,68 @@ class ChaseFollowApi(ChaseFlat):
         yield from super().judge(ctx)
 
 
+class ChaseClimb(Scenario):
+    """The runner climbs five blocks ABOVE a follower that already stands high over the ground
+    (2026-11-26, live: the follow replay died on "Path stopped: drift 9.996 at tick 1, expected
+    y=13.00, actual y=23.00" and the follower stood still). A deck ten blocks over the floor, a
+    four-step stair, an upper deck five blocks higher; glass rails so a slip is not a fall.
+    The bot follows with followPlayer; the runner walks up with @goto."""
+    id = "chase_climb"
+    duration = 75
+    LOW = 10          # lower deck: feet at STAND_Y + LOW
+    UP = 5            # upper deck: five more
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=24)
+        f = STAND_Y - 1
+        lo, up = f + self.LOW, f + self.LOW + self.UP
+        arena._fill(-7, lo, -4, 6, lo, 4, "stone")                          # lower deck
+        arena._fill(11, up, -4, 17, up, 4, "stone")                         # upper deck
+        for i, x in enumerate(range(7, 11)):                                # the stair
+            arena._fill(x, lo + 1 + i, -2, x, lo + 1 + i, 2, "stone")
+            arena._fill(x, lo, -4, x, lo + i, 4, "stone")                   # fill under it
+        for z in (-5, 5):                                                   # rails
+            arena._fill(-8, lo + 1, z, 6, lo + 1, z, "glass")
+            arena._fill(7, lo + 1, z, 18, up + 1, z, "glass")
+        arena._fill(-8, lo + 1, -5, -8, lo + 1, 5, "glass")
+        arena._fill(18, up + 1, -5, 18, up + 1, 5, "glass")
+        ctx.geo["bot_spawn"] = f"-4.5 {STAND_Y + self.LOW} 0.5 -90 0"
+        ctx.geo["victim_spawn"] = f"0.5 {STAND_Y + self.LOW} 0.5 -90 0"
+        ctx.geo["top_y"] = STAND_Y + self.LOW + self.UP
+
+    def drive_start(self, ctx):
+        ctx.bot.py.try_call("resetRunCounters")
+        ctx.victim.cmd(f"@goto 14 {STAND_Y + self.LOW + self.UP} 0")
+        ok, r = ctx.bot.py.try_call("followPlayer", ctx.victim.name, 2.0)
+        ctx.geo["follow_call"] = r if ok else f"ERR {r}"
+
+    def drive_tick(self, ctx, t):
+        s = ctx.samples[-1] if ctx.samples else {}
+        bp, vp = s.get("bot"), s.get("victim")
+        if not bp or not vp:
+            return
+        on_top = bp[1] >= ctx.geo["top_y"] - 0.5
+        near = _dist_xz(bp, vp[0], vp[2]) <= 4
+        if on_top and near and ctx.geo.get("joined_at") is None:
+            ctx.geo["joined_at"] = round(t, 1)
+        ctx.geo["min_bot_y"] = min(ctx.geo.get("min_bot_y", 999), bp[1])
+
+    def judge(self, ctx):
+        ok, s = ctx.bot.py.try_call("navRetargetStats")
+        stats = s if ok else "-"
+        yield Criterion("on the upper deck beside the runner within 60 s",
+                        ctx.geo.get("joined_at") is not None and ctx.geo["joined_at"] <= 60,
+                        f"joined_at={ctx.geo.get('joined_at')} min_bot_y={ctx.geo.get('min_bot_y')}",
+                        load_sensitive=True)
+        at_start = None
+        for tok in str(stats).split():
+            if tok.startswith("driftAbortsAtStart="):
+                at_start = int(tok.split("=")[1])
+        yield Criterion("no replay started away from the body (driftAbortsAtStart == 0)",
+                        at_start == 0, stats)
+        yield ctx.survival_criterion()
+
+
 class ChaseGotoRestart(ChaseGoto):
     """chase_goto with stopPathing before every gotoXYZ."""
     id = "chase_goto_restart"
@@ -1615,6 +1677,6 @@ class SlabHole(Scenario):
                         f"freezes={ctx.freeze_windows}")
 
 
-SCENARIOS = [MeleeBasic, EdgeDuel, NarrowBridgeDuel, ChaseFlat, ChaseFollowApi, ChaseGoto, ChaseGotoRestart, ChaseTerrain,
+SCENARIOS = [MeleeBasic, EdgeDuel, NarrowBridgeDuel, ChaseFlat, ChaseFollowApi, ChaseGoto, ChaseGotoRestart, ChaseClimb, ChaseTerrain,
              BowFlee, BowFleeHard, RangedMoving, BridgeAssault,
              BridgeAssaultDefended, AllRound, SlabHole]

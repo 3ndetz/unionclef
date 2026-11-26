@@ -5105,6 +5105,11 @@ public class TungstenConfig {
      *  ("Already running!") or restarting it from a standstill. False = the old behaviour. */
     public boolean navigatorRetargetsLive = true;
 
+    /** PathExecutor drops a path whose root is farther from the body than driftThreshold when no
+     *  walker is bringing the body there, instead of replaying it into a drift stop at tick 1.
+     *  The drift check is unchanged. False = the old behaviour (replay, stop at tick 1). */
+    public boolean dropUnreplayableRoot = true;
+
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 

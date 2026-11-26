@@ -203,6 +203,22 @@ public class PathExecutor {
 	}
 	private boolean armed = false;
 
+	/** Paths dropped before replay because their root was out of the drift check's reach. */
+	public static volatile int staleRootDropped;
+
+	/**
+	 * ⛔ A PATH THAT STARTS AWAY FROM THE BODY CANNOT BE REPLAYED FROM THE BODY (2026-11-26). The
+	 * replay compares the body to the simulated node every tick and stops beyond driftThreshold;
+	 * a root farther than that is a guaranteed stop at tick 1. Live follow on 8db2558f's base:
+	 * "Path stopped: drift 9.996 blocks (threshold 0.9) at tick 1; expected (-1398.53, 13.00,
+	 * 627.51), actual (-1398.51, 23.00, 627.51)", and the follower stood still. Such a path came
+	 * either unarmed (no walker to bring the body there) or armed with the walker gone. The drift
+	 * check itself is unchanged: this only declines to start what it would end at once.
+	 */
+	private static boolean unreplayableFrom(double toRoot) {
+		return TungstenConfig.get().dropUnreplayableRoot && toRoot > TungstenConfig.get().driftThreshold;
+	}
+
 	/** Body to the current node, then node to node, for the next ten ticks of the replay. */
 	private boolean replayAheadLethal(ClientPlayerEntity player) {
 		List<Node> p = this.path;
@@ -268,6 +284,12 @@ public class PathExecutor {
     			this.armed = true;   // wait for the bot to reach the root
     			kaptainwutax.tungsten.Debug.logMessage(String.format(
     					"Path armed %.1f blocks ahead — walker drives until we reach it", toRoot));
+    		} else if (unreplayableFrom(toRoot)) {
+    			// See unreplayableFrom: replaying this would only end on the drift check at tick 1.
+    			kaptainwutax.tungsten.Debug.logMessage(String.format(
+    					"Path rooted %.1f blocks from the body and nobody walks it there — dropped, re-plan", toRoot));
+    			this.path = null;
+    			staleRootDropped++;
     		}
     	}
     	RenderHelper.renderPathCurrentlyExecuted();
@@ -478,9 +500,18 @@ public class PathExecutor {
     			// six-second freezes in one chase and the gap grew to 130 blocks.
     			//
     			// The wait is over the moment its premise is: disarm and replay from here.
+    			this.armed = false;
+    			if (unreplayableFrom(toRoot)) {
+    				// ...unless "here" is farther from the root than the drift check allows: that
+    				// replay is dead on tick 1. Drop it; the owner re-plans from the body.
+    				kaptainwutax.tungsten.Debug.logMessage(String.format(
+    						"Armed path: walker gone %.1f blocks from the root — dropped, re-plan", toRoot));
+    				this.path = null;
+    				staleRootDropped++;
+    				return;
+    			}
     			kaptainwutax.tungsten.Debug.logMessage(
     					"Armed path: walker gone — replaying from here instead of waiting");
-    			this.armed = false;
     			this.startTime = System.currentTimeMillis();
     		} else {
     			if (System.currentTimeMillis() - this.startTime > 15000) {

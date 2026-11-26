@@ -86,6 +86,9 @@ import net.minecraft.world.WorldView;
 public class Agent {
 
     public static Agent INSTANCE;
+    /** Replays abandoned on drift; of those, at replay tick 0-1 -- a path that did not start where
+     *  the body was (the 2026-11-26 live follow: "drift 9.996 at tick 1", root 10 blocks below). */
+    public static volatile int driftAborts, driftAbortsAtStart;
 
     /** Optional client-thread observer of the exact replay state compared after vanilla
      *  movement. Read-only: the observer must not mutate this agent or player control.
@@ -1673,6 +1676,8 @@ public class Agent {
                     double allowed = kaptainwutax.tungsten.TungstenConfig.get().driftThreshold
                             + kaptainwutax.tungsten.TungstenConfig.get().driftPerTick * replayTick;
                     if (drift > allowed) {
+                        driftAborts++;
+                        if (replayTick <= 1) driftAbortsAtStart++;
                         Debug.logMessage(String.format(
                             "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
                             "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f)",
