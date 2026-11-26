@@ -53,7 +53,8 @@ public class FollowPlayerTask extends Task {
         // at a different target.
         if (!kaptainwutax.tungsten.task.FollowPlayerTask.isActive()
                 || !_playerName.equalsIgnoreCase(
-                        String.valueOf(kaptainwutax.tungsten.task.FollowPlayerTask.getTargetName()))) {
+                        String.valueOf(kaptainwutax.tungsten.task.FollowPlayerTask.getTargetName()))
+                || kaptainwutax.tungsten.task.FollowPlayerTask.getFollowRadius() != _radius) {
             kaptainwutax.tungsten.task.FollowPlayerTask.start(_playerName, _radius);
         }
         // Keep baritone off — tungsten owns movement here; a residual baritone goal
@@ -71,7 +72,9 @@ public class FollowPlayerTask extends Task {
     @Override
     protected boolean isEqual(Task other) {
         if (other instanceof FollowPlayerTask task) {
-            return task._playerName.equals(_playerName);
+            // The radius too: a re-issued follow of the same player with a new radius is a new
+            // task, or SingleTaskChain.setTask keeps the old one and the new radius never lands.
+            return task._playerName.equals(_playerName) && task._radius == _radius;
         }
         return false;
     }

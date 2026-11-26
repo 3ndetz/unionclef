@@ -428,9 +428,24 @@ class ChaseFollowApi(ChaseFlat):
         ok, r = ctx.bot.py.try_call("followPlayer", ctx.victim.name, 2.0)
         ctx.geo["follow_call"] = r if ok else f"ERR {r}"
 
+    def drive_tick(self, ctx, t):
+        super().drive_tick(ctx, t)
+        # Re-issue for the SAME player with a new radius: it must take effect (integration review
+        # of 7221e0bd: FollowPlayerTask.isEqual compared the name only, so the old task was kept).
+        if t >= 80 and "reissue" not in ctx.geo:
+            ctx.geo["reissue"] = True
+            ctx.bot.py.try_call("followPlayer", ctx.victim.name, 4.0)
+        if t >= 83 and "status_after" not in ctx.geo:
+            ok, st = ctx.bot.py.try_call("followStatus")
+            ctx.geo["status_after"] = st if ok else f"ERR {st}"
+
     def judge(self, ctx):
         yield Criterion("followPlayer accepted", isinstance(ctx.geo.get("follow_call"), dict)
                         and ctx.geo["follow_call"].get("ok") is True, str(ctx.geo.get("follow_call")))
+        st = ctx.geo.get("status_after")
+        yield Criterion("re-issued radius 4 takes effect",
+                        isinstance(st, dict) and st.get("active") is True
+                        and abs(float(st.get("radius", 0)) - 4.0) < 1e-6, str(st))
         yield from super().judge(ctx)
 
 
