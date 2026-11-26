@@ -13,7 +13,7 @@ same ~70-block fall to the superflat floor. Each run:
 Stairs and ladders take their default block states: the receipts record ids only. Leaves are
 persistent so they do not decay mid-run.
 
-    python deploy/runner/bw150_step_test.py [runs] [secs]
+    python deploy/runner/bw150_step_test.py [runs] [secs] [stage yaw]
 """
 import json
 import math
@@ -31,6 +31,10 @@ ART = os.path.join(HERE, "artifacts", "bw150-20261127")
 DX, DZ = 2361, 426                      # real -1361,574 -> bench 1000,1000
 RUNS = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 SECS = float(sys.argv[2]) if len(sys.argv) > 2 else 8.0
+# Facing at the stage. The live yaw is not in the receipts; the bot had just walked NORTH onto the wool.
+# 0 = south (solid side), 180 = north (void), 90 = west (void). The c3843ab2 trace takes off along the
+# staged facing before turning to the target, so the facing decides which side the take-off drifts to.
+YAW = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
 STAGE = (-1360.38384, 12.0, 574.4628)
 TARGET = (-1360, 13, 574)
 WOOL = (-1361, 11, 574)
@@ -84,7 +88,7 @@ def stage():
     bot.py.call("stopPathing")
     p = {}
     for _ in range(3):
-        rcon.cmd(f"tp tester1 {sx} {sy} {sz} 0 0", allow_reject=True)
+        rcon.cmd(f"tp tester1 {sx} {sy} {sz} {YAW} 0", allow_reject=True)
         for _ in range(20):
             time.sleep(0.5)
             p = bot.py.call("getSelfPose")
@@ -106,7 +110,7 @@ for run in range(1, RUNS + 1):
                         str(tx), str(ty), str(tz), str(SECS)], capture_output=True, text=True,
                        timeout=SECS + 60, env=env)
     trace = [json.loads(l) for l in r.stdout.splitlines() if l.startswith("{")]
-    with open(os.path.join(ART, f"trace_run{run}.jsonl"), "w", encoding="utf-8") as f:
+    with open(os.path.join(ART, f"trace_yaw{int(YAW)}_run{run}.jsonl"), "w", encoding="utf-8") as f:
         f.write(r.stdout)
     fell = any(t["pos"][1] < 9 for t in trace)
     p = bot.py.call("getSelfPose")
@@ -114,7 +118,7 @@ for run in range(1, RUNS + 1):
     cell = [math.floor(p["x"]), math.floor(p["y"] + 0.1251), math.floor(p["z"])]
     verdict = "fell" if fell or p["y"] < 9 else (
         "arrived" if cell == [tx, ty, tz] and p.get("onGround") else "stuck")
-    row = {"run": run, "verdict": verdict, "stage": [round(p0["x"], 5), p0["y"], round(p0["z"], 4)],
+    row = {"run": run, "yaw": YAW, "verdict": verdict, "stage": [round(p0["x"], 5), p0["y"], round(p0["z"], 4)],
            "final": [round(p["x"], 3), round(p["y"], 3), round(p["z"], 3)], "cell": cell,
            "arrived": st.get("arrived"), "inCell": st.get("inCell"), "lastPlanEnd": st.get("lastPlanEnd"),
            "lastPlanComplete": st.get("lastPlanComplete"), "traceRows": len(trace)}
