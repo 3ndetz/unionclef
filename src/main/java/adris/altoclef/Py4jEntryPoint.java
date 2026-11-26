@@ -1624,41 +1624,38 @@ public class Py4jEntryPoint {
         List<Map<String, Object>> results = new ArrayList<>();
         Map<String, Object> best = null;
         // withBreaking applies to these planning calls only (TungstenConfig.withBreakAllowed).
-        try {
-            int n = 0;
-            for (String c : candidates == null ? List.<String>of() : candidates) {
-                if (n++ >= 8) break;
-                Map<String, Object> r = new HashMap<>();
-                r.put("cell", c);
-                String[] p = String.valueOf(c).trim().split("\\s*,\\s*");
-                if (p.length != 3) { r.put("error", "expected x,y,z"); results.add(r); continue; }
-                net.minecraft.util.math.BlockPos goal;
-                try {
-                    goal = new net.minecraft.util.math.BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
-                } catch (NumberFormatException e) { r.put("error", "expected integers"); results.add(r); continue; }
-                final var requested = goal;
-                goal = onClientThread(() -> standCell(MinecraftClient.getInstance().world, requested), requested);
-                r.put("goal", goal.getX() + "," + goal.getY() + "," + goal.getZ());
-                r.put("normalized", !goal.equals(requested));
-                final var fGoal = goal;
-                var res = kaptainwutax.tungsten.TungstenConfig.withBreakAllowed(withBreaking,
-                        () -> kaptainwutax.tungsten.path.fast.FastPlanner.plan(
-                                _mod.getWorld(), startCell, fGoal, budget, null, true, startState));
-                boolean found = !res.isEmpty();
-                r.put("found", found);
-                r.put("reached", found && res.complete);
-                if (found) {
-                    var end = res.path.get(res.path.size() - 1).pos;
-                    int breaks = 0;
-                    for (var w : res.path) if (w.toBreak != null) breaks += w.toBreak.size();
-                    r.put("pathSize", res.path.size());
-                    r.put("breaks", breaks);
-                    r.put("endDistance", Math.round(Math.sqrt(end.getSquaredDistance(goal)) * 10) / 10.0);
-                    if (res.complete && (best == null || res.path.size() < (int) best.get("pathSize"))) best = r;
-                }
-                results.add(r);
+        int n = 0;
+        for (String c : candidates == null ? List.<String>of() : candidates) {
+            if (n++ >= 8) break;
+            Map<String, Object> r = new HashMap<>();
+            r.put("cell", c);
+            String[] p = String.valueOf(c).trim().split("\\s*,\\s*");
+            if (p.length != 3) { r.put("error", "expected x,y,z"); results.add(r); continue; }
+            net.minecraft.util.math.BlockPos goal;
+            try {
+                goal = new net.minecraft.util.math.BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+            } catch (NumberFormatException e) { r.put("error", "expected integers"); results.add(r); continue; }
+            final var requested = goal;
+            goal = onClientThread(() -> standCell(MinecraftClient.getInstance().world, requested), requested);
+            r.put("goal", goal.getX() + "," + goal.getY() + "," + goal.getZ());
+            r.put("normalized", !goal.equals(requested));
+            final var fGoal = goal;
+            var res = kaptainwutax.tungsten.TungstenConfig.withBreakAllowed(withBreaking,
+                    () -> kaptainwutax.tungsten.path.fast.FastPlanner.plan(
+                            _mod.getWorld(), startCell, fGoal, budget, null, true, startState));
+            boolean found = !res.isEmpty();
+            r.put("found", found);
+            r.put("reached", found && res.complete);
+            if (found) {
+                var end = res.path.get(res.path.size() - 1).pos;
+                int breaks = 0;
+                for (var w : res.path) if (w.toBreak != null) breaks += w.toBreak.size();
+                r.put("pathSize", res.path.size());
+                r.put("breaks", breaks);
+                r.put("endDistance", Math.round(Math.sqrt(end.getSquaredDistance(goal)) * 10) / 10.0);
+                if (res.complete && (best == null || res.path.size() < (int) best.get("pathSize"))) best = r;
             }
-        } finally {
+            results.add(r);
         }
         out.put("ok", true);
         out.put("results", results);
@@ -1684,45 +1681,42 @@ public class Py4jEntryPoint {
             }
             // withBreaking applies to THIS planning call only (TungstenConfig.withBreakAllowed); the
             // global allowBreak, which a live route reads, is not touched.
-            try {
-                // ⛔ FIXED 2026-09-05 (TODOS.md MCP-MISSING-WORLD-READ-TOOLS-2026-09-04's own
-                // "SEPARATE, MORE IMPORTANT FINDING"): this used to call
-                // BlockSpacePathFinder.search(...), the WORSE of tungsten's two block-space
-                // engines per docs/NAVIGATION.md's own engine table ("FastPlanner and
-                // BlockSpacePathFinder do the same job; the first is correct, the second is not,
-                // and the second was never removed when the first arrived"). Every canReach
-                // answer this project has ever produced was therefore asking a different, more
-                // pessimistic engine than the one that actually drives live navigation
-                // (PathFinder.findBlockPath calls FastPlanner.plan(...) directly, confirmed by
-                // reading that call site). Swapped to the same call, with the same
-                // player.getBlockPos() start FastPlanner's own primary caller uses (no extra
-                // "support snap" pre-processing needed -- that was specifically working around
-                // BlockSpacePathFinder's own weaker start handling, not a general FastPlanner
-                // requirement).
-                net.minecraft.util.math.BlockPos start = _mod.getPlayer().getBlockPos();
-                net.minecraft.util.math.BlockPos goal = new net.minecraft.util.math.BlockPos(x, y, z);
-                final var fStart = start;
-                final var fGoal = goal;
-                var res = kaptainwutax.tungsten.TungstenConfig.withBreakAllowed(withBreaking,
-                        () -> kaptainwutax.tungsten.path.fast.FastPlanner.plan(_mod.getWorld(), fStart, fGoal, 3000L));
-                boolean found = !res.isEmpty();
-                m.put("found", String.valueOf(found));
-                if (found) {
-                    m.put("pathSize", String.valueOf(res.path.size()));
-                    int breaks = 0;
-                    for (var w : res.path) {
-                        if (w.toBreak != null) breaks += w.toBreak.size();
-                    }
-                    m.put("breaks", String.valueOf(breaks));
-                    net.minecraft.util.math.BlockPos lastPos = res.path.get(res.path.size() - 1).pos;
-                    double endDistance = Math.sqrt(lastPos.getSquaredDistance(goal));
-                    m.put("endDistance", String.format("%.1f", endDistance));
-                    // res.complete is FastPlanner's own "the plan actually reaches the goal
-                    // cell" signal -- authoritative, unlike the old endDistance-threshold guess
-                    // BlockSpacePathFinder's partial-stub behavior forced canReach to make up.
-                    m.put("reached", String.valueOf(res.complete));
+            // ⛔ FIXED 2026-09-05 (TODOS.md MCP-MISSING-WORLD-READ-TOOLS-2026-09-04's own
+            // "SEPARATE, MORE IMPORTANT FINDING"): this used to call
+            // BlockSpacePathFinder.search(...), the WORSE of tungsten's two block-space
+            // engines per docs/NAVIGATION.md's own engine table ("FastPlanner and
+            // BlockSpacePathFinder do the same job; the first is correct, the second is not,
+            // and the second was never removed when the first arrived"). Every canReach
+            // answer this project has ever produced was therefore asking a different, more
+            // pessimistic engine than the one that actually drives live navigation
+            // (PathFinder.findBlockPath calls FastPlanner.plan(...) directly, confirmed by
+            // reading that call site). Swapped to the same call, with the same
+            // player.getBlockPos() start FastPlanner's own primary caller uses (no extra
+            // "support snap" pre-processing needed -- that was specifically working around
+            // BlockSpacePathFinder's own weaker start handling, not a general FastPlanner
+            // requirement).
+            net.minecraft.util.math.BlockPos start = _mod.getPlayer().getBlockPos();
+            net.minecraft.util.math.BlockPos goal = new net.minecraft.util.math.BlockPos(x, y, z);
+            final var fStart = start;
+            final var fGoal = goal;
+            var res = kaptainwutax.tungsten.TungstenConfig.withBreakAllowed(withBreaking,
+                    () -> kaptainwutax.tungsten.path.fast.FastPlanner.plan(_mod.getWorld(), fStart, fGoal, 3000L));
+            boolean found = !res.isEmpty();
+            m.put("found", String.valueOf(found));
+            if (found) {
+                m.put("pathSize", String.valueOf(res.path.size()));
+                int breaks = 0;
+                for (var w : res.path) {
+                    if (w.toBreak != null) breaks += w.toBreak.size();
                 }
-            } finally {
+                m.put("breaks", String.valueOf(breaks));
+                net.minecraft.util.math.BlockPos lastPos = res.path.get(res.path.size() - 1).pos;
+                double endDistance = Math.sqrt(lastPos.getSquaredDistance(goal));
+                m.put("endDistance", String.format("%.1f", endDistance));
+                // res.complete is FastPlanner's own "the plan actually reaches the goal
+                // cell" signal -- authoritative, unlike the old endDistance-threshold guess
+                // BlockSpacePathFinder's partial-stub behavior forced canReach to make up.
+                m.put("reached", String.valueOf(res.complete));
             }
         } catch (Exception e) {
             m.put("error", String.valueOf(e));
