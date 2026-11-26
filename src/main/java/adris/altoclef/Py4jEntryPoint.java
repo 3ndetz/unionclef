@@ -5132,9 +5132,17 @@ public class Py4jEntryPoint {
     private static net.minecraft.util.math.BlockPos standCell(net.minecraft.world.World w,
                                                               net.minecraft.util.math.BlockPos c) {
         if (w == null) return c;
-        boolean solidHere = !w.getBlockState(c).getCollisionShape(w, c).isEmpty();
-        boolean freeAbove = w.getBlockState(c.up()).getCollisionShape(w, c.up()).isEmpty();
-        return solidHere && freeAbove ? c.up() : c;
+        var shape = w.getBlockState(c).getCollisionShape(w, c);
+        if (shape.isEmpty()) return c;                                   // open cell: already a feet cell
+        if (!w.getBlockState(c.up()).getCollisionShape(w, c.up()).isEmpty()) return c;   // nothing to stand in above
+        // Where the feet would be standing on it, counted exactly as playerFeet counts: floor(y + 0.1251),
+        // one up if that cell holds a slab. A carpet (1/16 high) keeps its own cell -- the first
+        // version moved every cell with any collision up one, so a carpet goal read y+1 and the
+        // route never matched (live, Ships: carpet at y35 normalized to 36, zero movement).
+        double feetY = c.getY() + shape.getMax(net.minecraft.util.math.Direction.Axis.Y);
+        var feet = net.minecraft.util.math.BlockPos.ofFloored(c.getX() + 0.5, feetY + 0.1251, c.getZ() + 0.5);
+        if (w.getBlockState(feet).getBlock() instanceof net.minecraft.block.SlabBlock) feet = feet.up();
+        return feet;
     }
 
     /** True while _gotoGoal came from gotoCell (arrival = standing in the cell), false for gotoXYZ. */

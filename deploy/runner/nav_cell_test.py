@@ -55,6 +55,7 @@ def home():
     # Rebuild the fixture: an earlier check may have dug it (gotoXYZ aims INTO the slab cell).
     rcon.cmd(f"setblock {CX + 3} {STAND_Y} {CZ} minecraft:stone_slab[type=bottom]", allow_reject=True)
     rcon.cmd(f"setblock {CX} {STAND_Y} {CZ + 4} minecraft:stone", allow_reject=True)
+    rcon.cmd(f"setblock {CX + 3} {STAND_Y} {CZ - 3} minecraft:white_carpet", allow_reject=True)
     for attempt in range(3):
         rcon.cmd(f"tp tester1 {CX + 0.5} {STAND_Y} {CZ + 0.5} 0 0", allow_reject=True)
         for _ in range(20):
@@ -127,6 +128,17 @@ check("gotoCell feet cell given directly is not moved", t is not None and g.get(
       and g.get("goal") == f"{step_feet[0]},{step_feet[1]},{step_feet[2]}" and st.get("inCell") is True,
       {"reply": g, "arrived_s": t, "feetCell": st.get("feetCell")})
 
+# 3c a carpet keeps its own cell: standing on it the feet are IN it (y + 1/16), not one above
+carpet = (CX + 3, STAND_Y, CZ - 3)
+home()
+g = bot.py.call("gotoCell", *carpet)
+t, st = wait_arrived()
+pose = bot.py.call("getSelfPose")
+check("gotoCell carpet cell is not moved, stands on the carpet", t is not None and g.get("normalized") is False
+      and g.get("goal") == f"{carpet[0]},{carpet[1]},{carpet[2]}" and st.get("inCell") is True
+      and abs(pose["y"] - (STAND_Y + 0.0625)) < 0.01,
+      {"reply": g, "arrived_s": t, "feetCell": st.get("feetCell"), "y": round(pose["y"], 4)})
+
 # 4 reachability of several candidates, nothing moves
 home()
 before = bot.py.call("getSelfPose")
@@ -160,5 +172,5 @@ check("getEntitiesInfo exact x/z and block cell, old position kept", ok, item)
 rcon.cmd("kill @e[type=item]", allow_reject=True)
 rcon.cmd("forceload remove -20 -20 0 0", allow_reject=True)
 rcon.cmd(f"forceload remove {CX - 12} {CZ - 12} {CX + 12} {CZ + 12}", allow_reject=True)
-print(json.dumps({"summary": f"{6 - fails}/6 pass"}), flush=True)
+print(json.dumps({"summary": f"{7 - fails}/7 pass"}), flush=True)
 sys.exit(1 if fails else 0)
