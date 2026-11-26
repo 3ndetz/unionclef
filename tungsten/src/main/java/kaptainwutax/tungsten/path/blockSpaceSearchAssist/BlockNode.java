@@ -743,7 +743,7 @@ public class BlockNode {
 	 * cheap detours still win over slow mining.
 	 */
 	private boolean tryPlanBreakThrough(WorldView world, BlockNode child) {
-		if (!TungstenConfig.get().allowBreak) return false;
+		if (!TungstenConfig.breakAllowed()) return false;
 		int dx = child.x - this.x, dy = child.y - this.y, dz = child.z - this.z;
 		if (dy != 0 || Math.abs(dx) + Math.abs(dz) != 1) return false;
 		// needs solid footing on the other side of the wall

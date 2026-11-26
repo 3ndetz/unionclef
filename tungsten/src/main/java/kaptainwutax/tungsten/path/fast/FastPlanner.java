@@ -1419,7 +1419,7 @@ public final class FastPlanner {
                                      BlockPos goal, NodeMap map, Heap open,
                                      BlockPos.Mutable scratch) {
         if (dx != 0 && dz != 0) return;                       // cardinal only
-        if (!TungstenConfig.get().allowBreak) return;
+        if (!TungstenConfig.breakAllowed()) return;
         net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
         if (player == null) return;
 
@@ -1488,7 +1488,7 @@ public final class FastPlanner {
      */
     private static void breakDown(WorldView world, Node from, BlockPos goal,
                                   NodeMap map, Heap open, BlockPos.Mutable scratch) {
-        if (!TungstenConfig.get().allowBreak) return;
+        if (!TungstenConfig.breakAllowed()) return;
         net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
         if (player == null) return;
         int fx = from.x, fz = from.z, fy = from.y;
@@ -1526,7 +1526,7 @@ public final class FastPlanner {
     private static void breakStair(WorldView world, Node from, int dx, int dz, int dyStep,
                                    BlockPos goal, NodeMap map, Heap open, BlockPos.Mutable scratch) {
         if (dx != 0 && dz != 0) return;                       // cardinal only
-        if (!TungstenConfig.get().allowBreak) return;
+        if (!TungstenConfig.breakAllowed()) return;
         net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
         if (player == null) return;
         int nx = from.x + dx, nz = from.z + dz, ny = from.y + dyStep;
@@ -1711,7 +1711,7 @@ public final class FastPlanner {
             if (feetSt.getCollisionShape(world, feet)
                     .getMax(net.minecraft.util.math.Direction.Axis.Y) > 0.5) return;
             if (!feetSt.isReplaceable()) {
-                if (!TungstenConfig.get().allowBreak) return;
+                if (!TungstenConfig.breakAllowed()) return;
                 net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
                 if (player == null) return;
                 if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, feet, feetSt)) return;
@@ -1747,7 +1747,7 @@ public final class FastPlanner {
             if (!kaptainwutax.tungsten.helpers.RealPlacement.obstructsPillarRay(world, cell)) continue;
             var player = TungstenMod.mc.player;
             var state = world.getBlockState(cell);
-            if (!TungstenConfig.get().allowBreak || player == null
+            if (!TungstenConfig.breakAllowed() || player == null
                     || !kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, state)) return;
             double ticks = kaptainwutax.tungsten.path.movements.MovementHelperB
                     .getRequiredMiningDurationTicks(world, player, cell.getX(), cell.getY(),

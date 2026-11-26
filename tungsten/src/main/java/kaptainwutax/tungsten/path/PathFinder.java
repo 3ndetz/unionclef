@@ -1895,7 +1895,32 @@ public class PathFinder {
         return path;
     }
 
+    /** Paths a search finished AFTER it was told to stop, and which were therefore not handed to
+     *  the executor (see deliverable()). */
+    public static volatile int lateResultDropped;
+
+    /**
+     * ⛔ A SEARCH THAT WAS STOPPED DELIVERS NOTHING (2026-11-26). stopPathing sets this search's
+     * stop flag and the executor's; the search thread notices on its next loop, and if it had a
+     * path in hand by then it still handed it over -- and PathExecutor.setPath clears the
+     * executor's stop flag, so the body ran again. Measured (stop_test, gotoCell to a cell that
+     * can only be reached in part, stopped while the navigator waited on physics): stopPathing
+     * acknowledged in 5-31 ms with the body at rest, then the body walked 10.4-11.5 blocks over
+     * the next ~2 s. Every setter of this flag means "abandon this search"; none relies on its
+     * result arriving afterwards.
+     */
+    private static boolean deliverable() {
+        var pf = TungstenModDataContainer.PATHFINDER;
+        if (pf != null && pf.stop.get() && TungstenConfig.get().stoppedSearchDeliversNothing) {
+            lateResultDropped++;
+            Debug.logMessage("Search stopped before its path was handed over — dropped");
+            return false;
+        }
+        return true;
+    }
+
     private void executePath(List<Node> path) {
+        if (!deliverable()) return;
         TungstenModDataContainer.EXECUTOR.cb = () -> {
             Debug.logMessage("Finished!");
             RenderHelper.clearRenderers();
@@ -1979,7 +2004,7 @@ public class PathFinder {
             // Re-rooting the guide is right and stays; handing over an empty walk is not.
             if (TungstenConfig.get().resetPrefixNeedsMovement && path.size() < 2) {
                 resetEmitRefused++;
-            } else {
+            } else if (deliverable()) {
             resetEmit++;
             resetEmitNodes += path.size();
             TungstenModDataContainer.EXECUTOR.setPath(path);
@@ -2095,6 +2120,7 @@ public class PathFinder {
         // reads salvageEmit against another counter (emit=X/Y/Z/W style), so the doubled half
         // silently threw off every such comparison. One counter, one increment.
         salvageEmit++;
+        if (!deliverable()) return false;
         salvageEmitNodes += result.get().size();
         // ⛔ orElseGet(null) THROWS ON AN EMPTY OPTIONAL (G87, 2026-09-14). Optional.orElseGet
         // takes a Supplier and CALLS it, and null is not one: "Cannot invoke Supplier.get()

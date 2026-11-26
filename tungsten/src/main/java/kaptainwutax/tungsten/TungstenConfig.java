@@ -5110,6 +5110,11 @@ public class TungstenConfig {
      *  The drift check is unchanged. False = the old behaviour (replay, stop at tick 1). */
     public boolean dropUnreplayableRoot = true;
 
+    /** A physics search that was told to stop (PATHFINDER.stop) hands no path to the executor when
+     *  it finishes afterwards. Without it a search finishing after stopPathing re-armed the executor
+     *  (setPath clears its stop flag) and the body walked on ~11 blocks. False = the old behaviour. */
+    public boolean stoppedSearchDeliversNothing = true;
+
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 
@@ -5371,6 +5376,29 @@ public class TungstenConfig {
     public long combatBunnyHopRandMs = 320;
 
     // ----------------------------------------
+
+    /** A per-thread answer to "may the planner break blocks", for a read-only reachability
+     *  question asked on its own thread (canReach / canReachAny). Those used to flip the GLOBAL
+     *  allowBreak for seconds, so a live route planned meanwhile could plan a dig the user had
+     *  switched off. Planners read {@link #breakAllowed()}; only the asking thread sees this. */
+    private static final ThreadLocal<Boolean> ALLOW_BREAK_OVERRIDE = new ThreadLocal<>();
+
+    /** allowBreak, or this thread's override from {@link #withBreakAllowed}. */
+    public static boolean breakAllowed() {
+        Boolean o = ALLOW_BREAK_OVERRIDE.get();
+        return o != null ? o : get().allowBreak;
+    }
+
+    /** Run {@code body} on this thread with breaking allowed or not, the global flag untouched. */
+    public static <T> T withBreakAllowed(boolean allowed, java.util.function.Supplier<T> body) {
+        Boolean prev = ALLOW_BREAK_OVERRIDE.get();
+        ALLOW_BREAK_OVERRIDE.set(allowed);
+        try {
+            return body.get();
+        } finally {
+            if (prev == null) ALLOW_BREAK_OVERRIDE.remove(); else ALLOW_BREAK_OVERRIDE.set(prev);
+        }
+    }
 
     public static TungstenConfig get() {
         return INSTANCE;

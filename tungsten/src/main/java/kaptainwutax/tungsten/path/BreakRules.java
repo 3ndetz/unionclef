@@ -37,7 +37,7 @@ public final class BreakRules {
 
     public static boolean canBreak(WorldView world, BlockPos pos, BlockState state) {
         TungstenConfig cfg = TungstenConfig.get();
-        if (!cfg.allowBreak) return false;
+        if (!TungstenConfig.breakAllowed()) return false;
         if (state.isAir()) return true;
         if (state.getHardness(world, pos) < 0) return false;
         if (!world.getFluidState(pos).isEmpty()) return false;

@@ -1623,9 +1623,7 @@ public class Py4jEntryPoint {
         }
         List<Map<String, Object>> results = new ArrayList<>();
         Map<String, Object> best = null;
-        kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
-        boolean saved = cfg.allowBreak;
-        cfg.allowBreak = withBreaking;   // planning only; NoBreakGuard reads noBreakPolicy, not this
+        // withBreaking applies to these planning calls only (TungstenConfig.withBreakAllowed).
         try {
             int n = 0;
             for (String c : candidates == null ? List.<String>of() : candidates) {
@@ -1642,8 +1640,10 @@ public class Py4jEntryPoint {
                 goal = onClientThread(() -> standCell(MinecraftClient.getInstance().world, requested), requested);
                 r.put("goal", goal.getX() + "," + goal.getY() + "," + goal.getZ());
                 r.put("normalized", !goal.equals(requested));
-                var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
-                        _mod.getWorld(), startCell, goal, budget, null, true, startState);
+                final var fGoal = goal;
+                var res = kaptainwutax.tungsten.TungstenConfig.withBreakAllowed(withBreaking,
+                        () -> kaptainwutax.tungsten.path.fast.FastPlanner.plan(
+                                _mod.getWorld(), startCell, fGoal, budget, null, true, startState));
                 boolean found = !res.isEmpty();
                 r.put("found", found);
                 r.put("reached", found && res.complete);
@@ -1659,7 +1659,6 @@ public class Py4jEntryPoint {
                 results.add(r);
             }
         } finally {
-            cfg.allowBreak = saved;
         }
         out.put("ok", true);
         out.put("results", results);
@@ -1683,9 +1682,8 @@ public class Py4jEntryPoint {
                 m.put("busy", "true");
                 return m;
             }
-            kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
-            boolean saved = cfg.allowBreak;
-            cfg.allowBreak = withBreaking;
+            // withBreaking applies to THIS planning call only (TungstenConfig.withBreakAllowed); the
+            // global allowBreak, which a live route reads, is not touched.
             try {
                 // ⛔ FIXED 2026-09-05 (TODOS.md MCP-MISSING-WORLD-READ-TOOLS-2026-09-04's own
                 // "SEPARATE, MORE IMPORTANT FINDING"): this used to call
@@ -1703,8 +1701,10 @@ public class Py4jEntryPoint {
                 // requirement).
                 net.minecraft.util.math.BlockPos start = _mod.getPlayer().getBlockPos();
                 net.minecraft.util.math.BlockPos goal = new net.minecraft.util.math.BlockPos(x, y, z);
-                var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
-                        _mod.getWorld(), start, goal, 3000L);
+                final var fStart = start;
+                final var fGoal = goal;
+                var res = kaptainwutax.tungsten.TungstenConfig.withBreakAllowed(withBreaking,
+                        () -> kaptainwutax.tungsten.path.fast.FastPlanner.plan(_mod.getWorld(), fStart, fGoal, 3000L));
                 boolean found = !res.isEmpty();
                 m.put("found", String.valueOf(found));
                 if (found) {
@@ -1723,7 +1723,6 @@ public class Py4jEntryPoint {
                     m.put("reached", String.valueOf(res.complete));
                 }
             } finally {
-                cfg.allowBreak = saved;
             }
         } catch (Exception e) {
             m.put("error", String.valueOf(e));
@@ -4989,7 +4988,8 @@ public class Py4jEntryPoint {
                 + " plansDiscarded=" + kaptainwutax.tungsten.task.FastNavigator.navPlansDiscarded
                 + " driftAborts=" + kaptainwutax.tungsten.agent.Agent.driftAborts
                 + " driftAbortsAtStart=" + kaptainwutax.tungsten.agent.Agent.driftAbortsAtStart
-                + " staleRootDropped=" + kaptainwutax.tungsten.path.PathExecutor.staleRootDropped;
+                + " staleRootDropped=" + kaptainwutax.tungsten.path.PathExecutor.staleRootDropped
+                + " lateResultDropped=" + kaptainwutax.tungsten.path.PathFinder.lateResultDropped;
     }
 
     /** Follow a player by name with the engine built for MOVING targets -- the same one as the
@@ -5303,6 +5303,18 @@ public class Py4jEntryPoint {
                 if (_gotoExact) out.put("arrived", inCell && settled);
             }
             out.put("navActive", kaptainwutax.tungsten.task.FastNavigator.isActive());
+            // stopped: nothing of tungsten can move the body any more -- navigator, walker, executor
+            // and the physics search all idle. After stopPathing, navActive/walker/executor drop at
+            // once (the stop runs on the client thread); the physics search thread notices its stop
+            // flag on its next loop, which can take a few hundred ms under load. Wait on stopped.
+            boolean pfActive = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get();
+            boolean walking = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+            boolean executing = kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning();
+            out.put("pathfinderActive", pfActive);
+            out.put("walker", walking);
+            out.put("executor", executing);
+            out.put("stopped", !kaptainwutax.tungsten.task.FastNavigator.isActive() && !walking
+                    && !executing && !pfActive);
             var lpg = kaptainwutax.tungsten.task.FastNavigator.lastPlanGoal;
             var lpe = kaptainwutax.tungsten.task.FastNavigator.lastPlanEnd;
             if (lpg != null) {
