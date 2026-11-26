@@ -681,10 +681,34 @@ public class BlockPathWalker {
                 // opposite way to press into it.
                 Direction into = state.get(LadderBlock.FACING).getOpposite();
                 Vec3d support = Vec3d.ofCenter(cell.offset(into));
+                MinecraftClient lmc = MinecraftClient.getInstance();
+                // ⛔ DOWN A LADDER, DO NOT PRESS INTO IT (2026-11-27). Pressing into the ladder while
+                // climbing IS the climb in vanilla (horizontalCollision && isClimbing -> vy = 0.2),
+                // so this branch, pressing in for every waypoint, could not take a body down: on the
+                // mixed-height bench it never held a mid-ladder cell and never went down from a deck.
+                // baritone's MovementDownward.java:65-83 descends by letting go -- nothing pressed
+                // while centred (the climb slides down on its own), else a small step towards the
+                // CENTRE of the cell below, never towards the wall -- and so does this now.
+                if (wp.getY() < cell.getY() && kaptainwutax.tungsten.TungstenConfig.get().walkerLadderDescendSlides) {
+                    double dx = playerPos.x - (wp.getX() + 0.5);
+                    double dz = playerPos.z - (wp.getZ() + 0.5);
+                    boolean centred = Math.sqrt(dx * dx + dz * dz) < 0.2;
+                    if (!centred) {
+                        WindMouseRotation.INSTANCE.setTargetFast((float) DirectionHelper.calcYawFromVec3d(
+                                playerPos, new Vec3d(wp.getX() + 0.5, playerPos.y, wp.getZ() + 0.5)), 0);
+                    }
+                    lmc.options.forwardKey.setPressed(!centred);
+                    lmc.options.sprintKey.setPressed(false);
+                    lmc.options.backKey.setPressed(false);
+                    lmc.options.leftKey.setPressed(false);
+                    lmc.options.rightKey.setPressed(false);
+                    lmc.options.sneakKey.setPressed(false);
+                    lmc.options.jumpKey.setPressed(false);
+                    return;
+                }
                 WindMouseRotation.INSTANCE.setTargetFast(
                         (float) DirectionHelper.calcYawFromVec3d(playerPos, support), 0);
 
-                MinecraftClient lmc = MinecraftClient.getInstance();
                 lmc.options.forwardKey.setPressed(true);
                 lmc.options.sprintKey.setPressed(false);
                 lmc.options.backKey.setPressed(false);

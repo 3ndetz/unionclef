@@ -2114,6 +2114,12 @@ public class Py4jEntryPoint {
             keys.put("sneak", mc.options.sneakKey.isPressed());
             keys.put("sprint", mc.options.sprintKey.isPressed());
             out.put("speed", Math.sqrt(v.x * v.x + v.z * v.z));
+            // Contact and the route the walker is following, for entries onto ladders / steps.
+            out.put("climbing", p.isClimbing());
+            out.put("horizontalCollision", p.horizontalCollision);
+            out.put("verticalCollision", p.verticalCollision);
+            var wwp = kaptainwutax.tungsten.task.BlockPathWalker.getCurrentWaypoint();
+            out.put("walkerWaypoint", wwp == null ? null : wwp.getX() + "," + wwp.getY() + "," + wwp.getZ());
             // Is anything else driving right now? An agent's holdKey competes with these for yaw.
             out.put("navActive", kaptainwutax.tungsten.task.FastNavigator.isActive());
             out.put("walker", kaptainwutax.tungsten.task.BlockPathWalker.isRunning());

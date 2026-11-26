@@ -5121,6 +5121,11 @@ public class TungstenConfig {
      *  lands on it, instead of one point a quarter block inside the support. False = the one point. */
     public boolean builderSamplesFacePoints = true;
 
+    /** BlockPathWalker on a ladder with the next waypoint BELOW lets go (slides), stepping only
+     *  towards the centre of the cell below when off it (baritone MovementDownward.java:65-83),
+     *  instead of pressing into the ladder -- which climbs. False = press in, the old input. */
+    public boolean walkerLadderDescendSlides = true;
+
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 

@@ -100,7 +100,19 @@ def build_ladders():
             cmds([f"setblock {l[0]} {l[1]} {l[2]} minecraft:ladder[facing=north]"])
         for y in (21, 22):                            # above the wall's top, shifted one cell south
             l = m256(x, y, -159)
-            cmds([f"setblock {l[0]} {l[1]} {l[2]} minecraft:ladder[facing=north]"])
+            # The receipt records ids only, not these ladders' facing or what they hang on.
+            # Default "supported": side posts at x=1267 / x=1270 hold them (x=1268 faces east,
+            # x=1269 faces west), the north side stays open to the ladders below -- a layout a
+            # real map can have. "north": the old floating north-facing pair, whose plate sits on
+            # the deck side; kept as a negative control (the body is stopped by the plate).
+            variant = os.environ.get("UC_TOP_LADDER", "supported")
+            if variant == "north":
+                facing = "north"
+            else:
+                facing = "east" if x == 1268 else "west"
+                post = m256(1267 if x == 1268 else 1270, y, -159)
+                cmds([f"setblock {post[0]} {post[1]} {post[2]} minecraft:yellow_wool"])
+            cmds([f"setblock {l[0]} {l[1]} {l[2]} minecraft:ladder[facing={facing}]"])
 
 
 LADDERS = {
