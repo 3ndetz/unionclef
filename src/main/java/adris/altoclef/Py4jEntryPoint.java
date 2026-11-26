@@ -2237,7 +2237,10 @@ public class Py4jEntryPoint {
                     f.put("interactable", inter);
                     if (facing) {
                         anyFacing = true;
-                        var hit = w.raycast(new net.minecraft.world.RaycastContext(eye, fp,
+                        // Past the face, into the support: a ray that ENDS on the surface can come back
+                        // MISS (measured: an open floor face read "hit nothing", hence a false occluded).
+                        Vec3d through = fp.add(fp.subtract(eye).normalize().multiply(0.1));
+                        var hit = w.raycast(new net.minecraft.world.RaycastContext(eye, through,
                                 net.minecraft.world.RaycastContext.ShapeType.OUTLINE,
                                 net.minecraft.world.RaycastContext.FluidHandling.NONE, p));
                         boolean clear = hit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK

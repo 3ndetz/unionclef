@@ -92,9 +92,14 @@ for c, x in by.items():
                                                         "ray", "interactable")} for f in x.get("faces", [])]},
                      default=str), flush=True)
 # control: an open floor cell beside the body, away from the bed
-ctrl = (int(px) - 3, STAND_Y, int(pz) + 2)
+ctrl = (int(px) - 2, STAND_Y, int(pz) + 1)      # ~3.4 blocks from the eye, not behind the bed
 r, by = diag([ctrl])
 check("control: open floor cell in reach is placeable", list(by.values())[0].get("verdict") == "placeable",
+      list(by.values())[0])
+
+far = (int(px) - 5, STAND_Y, int(pz) + 3)        # same open floor, beyond 4.5
+r, by = diag([far])
+check("control: open floor cell beyond reach is out_of_reach", list(by.values())[0].get("verdict") == "out_of_reach",
       list(by.values())[0])
 
 # --- bw185: real (x, y, z) -> (x + 870, y - 97, z + 631) --------------------------------------
@@ -135,5 +140,5 @@ o = bot.py.call("getOriginStatus")
 check("origin in a stone box: standable, enclosed", o.get("standable") is True and o.get("enclosed") is True, o)
 cmds([f"fill {bx - 1} {by_} {bz - 1} {bx + 1} {by_ + 2} {bz + 1} minecraft:air",
       "forceload remove 690 690 810 710"])
-print(json.dumps({"summary": f"{6 - fails}/6 pass"}), flush=True)
+print(json.dumps({"summary": f"{7 - fails}/7 pass"}), flush=True)
 sys.exit(1 if fails else 0)
