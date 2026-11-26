@@ -689,7 +689,16 @@ public class BlockPathWalker {
                 // baritone's MovementDownward.java:65-83 descends by letting go -- nothing pressed
                 // while centred (the climb slides down on its own), else a small step towards the
                 // CENTRE of the cell below, never towards the wall -- and so does this now.
-                if (wp.getY() < cell.getY() && kaptainwutax.tungsten.TungstenConfig.get().walkerLadderDescendSlides) {
+                // The same applies to a waypoint at THIS level in another column (a 2-wide strip,
+                // the foot of an offset pair): pressing into the wall never moves the body sideways,
+                // so it slid between columns and climbed on every side contact (bw-256 foot: ended
+                // x 900.94 for cell 901). Step towards that cell's centre, as MovementDownward and
+                // MovementTraverse do (moveTowards the destination centre, MovementDownward.java:86-93).
+                boolean otherColumn = wp.getY() == cell.getY()
+                        && (wp.getX() != cell.getX() || wp.getZ() != cell.getZ())
+                        && kaptainwutax.tungsten.TungstenConfig.get().walkerLadderStepsToColumn;
+                if ((wp.getY() < cell.getY() || otherColumn)
+                        && kaptainwutax.tungsten.TungstenConfig.get().walkerLadderDescendSlides) {
                     double dx = playerPos.x - (wp.getX() + 0.5);
                     double dz = playerPos.z - (wp.getZ() + 0.5);
                     boolean centred = Math.sqrt(dx * dx + dz * dz) < 0.2;

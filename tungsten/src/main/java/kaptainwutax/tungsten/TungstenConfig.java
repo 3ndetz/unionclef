@@ -5126,6 +5126,11 @@ public class TungstenConfig {
      *  instead of pressing into the ladder -- which climbs. False = press in, the old input. */
     public boolean walkerLadderDescendSlides = true;
 
+    /** With walkerLadderDescendSlides: on a ladder with the next waypoint at the same level in
+     *  another column, step towards that cell's centre instead of pressing into the wall (which
+     *  never moves the body sideways). False = press in, the old input. */
+    public boolean walkerLadderStepsToColumn = true;
+
     /** FastPlanner treats the open cell over a ladder as walk-on (baritone MovementHelper.canWalkOn,
      *  MovementHelper.java:474): it can be stepped onto from the ground or from another ladder, and
      *  left downwards into the ladder (MovementDownward.cost, MovementDownward.java:61-67). Without it
