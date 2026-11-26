@@ -5115,6 +5115,10 @@ public class TungstenConfig {
      *  (setPath clears its stop flag) and the body walked on ~11 blocks. False = the old behaviour. */
     public boolean stoppedSearchDeliversNothing = true;
 
+    /** BlockPlaceHelper aims at a face from the camera position its face-check ray starts at
+     *  (getCameraPosVec), not from playerHead. The two differ while crouched. False = playerHead. */
+    public boolean builderAimFromCamera = true;
+
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 

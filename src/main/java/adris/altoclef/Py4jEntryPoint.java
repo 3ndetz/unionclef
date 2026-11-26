@@ -2138,6 +2138,47 @@ public class Py4jEntryPoint {
                 || st.createScreenHandlerFactory(w, pos) != null;
     }
 
+    /** What tungsten's builder (BlockPlaceHelper.drainQueue) decides about placing at {@code target}
+     *  against {@code against}, step by step, read-only: canPlaceAgainst, its face point (baritone
+     *  attemptToPlaceABlock:822-824), the rotation from its aim origin, rayTraceTowards (the same call
+     *  it makes), and whether it would accept the face. The same with the aim taken from the camera
+     *  the ray starts at, and both origins -- the A/B for "aim from the standing eye, ray from the
+     *  camera" when crouched (live bw153: sneak held, 4 cells with a clear face, all deferNoFace). */
+    private static Map<String, Object> builderAim(PlayerEntity p, net.minecraft.world.World w,
+                                                  net.minecraft.util.math.BlockPos target,
+                                                  net.minecraft.util.math.BlockPos against) {
+        Map<String, Object> m = new HashMap<>();
+        boolean considers = kaptainwutax.tungsten.helpers.RealPlacement.canPlaceAgainst(w, against);
+        m.put("considers", considers);
+        if (!considers) return m;
+        Vec3d head = kaptainwutax.tungsten.path.movements.RotationHelper.playerHead(p);
+        Vec3d camera = p.getCameraPosVec(1.0F);
+        m.put("aimOrigin", String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", head.x, head.y, head.z));
+        m.put("rayOrigin", String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", camera.x, camera.y, camera.z));
+        m.put("originGapY", Math.round((head.y - camera.y) * 1000) / 1000.0);
+        Vec3d face = new Vec3d((target.getX() + against.getX() + 1.0D) * 0.5D,
+                (target.getY() + against.getY() + 0.5D) * 0.5D,
+                (target.getZ() + against.getZ() + 1.0D) * 0.5D);
+        double reach = kaptainwutax.tungsten.path.movements.RotationHelper.blockReachDistance(p);
+        var current = kaptainwutax.tungsten.path.movements.RotationHelper.playerRotations(p);
+        for (var origin : new Object[][]{{"accepted", head}, {"acceptedFromCamera", camera}}) {
+            var rot = kaptainwutax.tungsten.path.movements.RotationHelper.calcRotationFromVec3d((Vec3d) origin[1], face, current);
+            var res = kaptainwutax.tungsten.path.movements.RotationHelper.rayTraceTowards(p, rot, reach);
+            boolean ok = res instanceof net.minecraft.util.hit.BlockHitResult bhr
+                    && res.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                    && bhr.getBlockPos().equals(against) && bhr.getBlockPos().offset(bhr.getSide()).equals(target);
+            m.put((String) origin[0], ok);
+            if ("accepted".equals(origin[0]) && res instanceof net.minecraft.util.hit.BlockHitResult bhr2
+                    && res.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                var hb = bhr2.getBlockPos();
+                m.put("builderRayHit", hb.getX() + "," + hb.getY() + "," + hb.getZ() + "/" + bhr2.getSide().asString());
+            } else if ("accepted".equals(origin[0])) {
+                m.put("builderRayHit", "nothing");
+            }
+        }
+        return m;
+    }
+
     /** The point at the centre of {@code side} of the block at {@code n}, on its OUTLINE shape (a bed's
      *  top is at 9/16, a bottom slab's at 1/2), or null when the block has no outline. */
     private static Vec3d faceCentre(net.minecraft.world.World w, net.minecraft.util.math.BlockPos n,
@@ -2265,6 +2306,7 @@ public class Py4jEntryPoint {
                             f.put("ray", h);
                         }
                     }
+                    f.put("builderAim", builderAim(p, w, t, nb));
                     faces.add(f);
                 }
                 r.put("faces", faces);
@@ -6927,6 +6969,11 @@ public class Py4jEntryPoint {
 
             Map<String, Object> self = new HashMap<>();
             self.put("hp", me.getHealth());
+            // Vanilla experience, as the client holds it (the HUD bar and the number above it):
+            // level, progress through that level 0..1, and the total. No server meaning is assumed.
+            self.put("experienceLevel", me.experienceLevel);
+            self.put("experienceProgress", me.experienceProgress);
+            self.put("totalExperience", me.totalExperience);
             self.put("maxHp", me.getMaxHealth());
             self.put("armor", me.getArmor());
             // Hunger and saturation: below 18 food health does not regenerate, which a full
@@ -7129,6 +7176,13 @@ public class Py4jEntryPoint {
                 out.put("block", MinecraftClient.getInstance().world
                         .getBlockState(bhr.getBlockPos()).getBlock().getName().getString());
                 out.put("pos", bhr.getBlockPos().toShortString());
+                // Added: which face the crosshair is on (a block placed now goes to pos + side) and
+                // where exactly, for face-oriented tools.
+                out.put("side", bhr.getSide().asString());
+                var hp = bhr.getPos();
+                out.put("hitPos", String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", hp.x, hp.y, hp.z));
+                var adj = bhr.getBlockPos().offset(bhr.getSide());
+                out.put("placeCell", adj.getX() + "," + adj.getY() + "," + adj.getZ());
             } else if (hit instanceof net.minecraft.util.hit.EntityHitResult ehr) {
                 out.put("entity", ehr.getEntity().getName().getString());
             }

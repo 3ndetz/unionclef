@@ -297,7 +297,14 @@ public final class BlockPlaceHelper {
         // the scan as "already built" and drop out of the queue on their own.
         if (kaptainwutax.tungsten.task.PillarTask.isActive()) return;
 
-        Vec3d eye = kaptainwutax.tungsten.path.movements.RotationHelper.playerHead(player);
+        // AIM FROM WHERE THE RAY STARTS (2026-11-27). The face check below traces from the camera
+        // (rayTraceTowards -> getCameraPosVec), so the rotation it is handed must be computed from the
+        // same point; aiming from playerHead and tracing from the camera put the two up to a sneak's
+        // eye drop apart. Live bw153: sneak held for the whole batch, four cells with a clear floor
+        // face from that stance, all deferNoFace. False = playerHead, the old origin, for A/B.
+        Vec3d eye = kaptainwutax.tungsten.TungstenConfig.get().builderAimFromCamera
+                ? player.getCameraPosVec(1.0F)
+                : kaptainwutax.tungsten.path.movements.RotationHelper.playerHead(player);
         double reach = kaptainwutax.tungsten.path.movements.RotationHelper.blockReachDistance(player);
         kaptainwutax.tungsten.path.movements.Rotation current =
                 kaptainwutax.tungsten.path.movements.RotationHelper.playerRotations(player);
