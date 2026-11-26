@@ -3,8 +3,8 @@
 
 Live bw153: blueprint.sneak=true, sneak held for the whole batch, 0 placed, deferNoFace=7; the
 read-only diagnostic says four of the cells have a clear floor face from that stance. Hypothesis
-(integration review): BlockPlaceHelper.drainQueue aimed from RotationHelper.playerHead but traced from
-getCameraPosVec, which differ while crouched. Per arm (builderAimFromCamera false = old, true = new) and
+(integration review): aim vs ray origin while crouched -- measured 0.000 apart here; the real
+difference is one aim point a quarter block inside the support vs baritone's face sampling. Per arm (builderSamplesFacePoints false = old one point, true = sampled) and
 pose (standing / crouched): rebuild the bed fixture, put the body on the bed's edge in the receipt's
 pose, read placeTargetsDiagnostic.builderAim (both origins, the builder's own accept), hand the four
 cells to buildBlocks, and count what was placed after 8 s. Also one experience read after xp set.
@@ -76,9 +76,10 @@ def placed_cells():
 
 cmds(["gamemode survival tester1", "forceload add 690 690 710 710"])
 rows = []
+bot.py.call("setBuilderWalks", False)       # as live: walkToBuild=False, the builder works from its stance
 for arm in (False, True):
     for crouch in (False, True):
-        bot.py.call("tungstenSetting", "builderAimFromCamera", "true" if arm else "false")
+        bot.py.call("tungstenSetting", "builderSamplesFacePoints", "true" if arm else "false")
         fixture()
         put()
         if crouch:
@@ -91,13 +92,13 @@ for arm in (False, True):
             for f in c.get("faces", []):
                 ba = f.get("builderAim") or {}
                 if f.get("side") == "up":
-                    aims[c["cell"]] = {k: ba.get(k) for k in ("accepted", "acceptedFromCamera", "builderRayHit",
-                                                             "aimOrigin", "rayOrigin", "originGapY")}
+                    aims[c["cell"]] = {k: ba.get(k) for k in ("accepted", "acceptedPoint", "points", "centreRayHit",
+                                                             "originGapY")}
         bot.py.call("buildBlocks", [[a, b, c, "lime_wool"] for a, b, c in CELLS])
         time.sleep(8)
         q = bot.py.call("buildQueue")
         got = placed_cells()
-        row = {"aimFromCamera": arm, "crouched": crouch, "sneak_key": pose.get("keys", {}).get("sneak"),
+        row = {"samplesFacePoints": arm, "crouched": crouch, "sneak_key": pose.get("keys", {}).get("sneak"),
                "pose_y": round(pose["y"], 3), "placed": len(got), "placed_cells": got,
                "queue": {k: q.get(k) for k in ("placed", "deferNoFace", "blockedByOwnBody", "deferredCount")},
                "builderAim_up_faces": aims}
@@ -110,6 +111,7 @@ for arm in (False, True):
 cmds(["xp set tester1 7 levels", "xp set tester1 3 points"])
 time.sleep(1.0)
 me = bot.py.call("getGameState").get("self", {})
-print(json.dumps({"experience": {k: me.get(k) for k in ("experienceLevel", "experienceProgress", "totalExperience")}}))
+print(json.dumps({"experience": {k: me.get(k) for k in ("experienceLevel", "experienceProgress")}}))
 cmds(["xp set tester1 0 levels", "xp set tester1 0 points", "forceload remove 690 690 710 710"])
-bot.py.call("tungstenSetting", "builderAimFromCamera", "true")
+bot.py.call("tungstenSetting", "builderSamplesFacePoints", "true")
+bot.py.call("setBuilderWalks", True)

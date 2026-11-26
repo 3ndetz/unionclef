@@ -286,6 +286,36 @@ public final class BlockPlaceHelper {
      * ({@code deferNoFace}) instead of being placed through the obstruction with a forged hit.
      * Walking to where the cell is placeable is BuilderProcess's other half and is not ported yet.
      */
+    /** Aim points on the face of {@code against} that touches the cell on its {@code dir.getOpposite()}
+     *  side, where {@code dir} points from the cell to {@code against}: baritone
+     *  BuilderProcess.possibleToPlace:511-515 on the support's outline box, with the multipliers of
+     *  aabbSideMultipliers:578-593 (centre first). Shared with the read-only diagnostic. */
+    public static Vec3d[] candidateAimPoints(net.minecraft.world.World world, BlockPos against, Direction dir) {
+        var shape = world.getBlockState(against).getOutlineShape(world, against);
+        net.minecraft.util.math.Box bb = shape.isEmpty()
+                ? new net.minecraft.util.math.Box(0, 0, 0, 1, 1, 1) : shape.getBoundingBox();
+        Vec3d[] mult;
+        switch (dir) {
+            case UP -> mult = new Vec3d[]{new Vec3d(0.5, 1, 0.5), new Vec3d(0.1, 1, 0.5), new Vec3d(0.9, 1, 0.5),
+                    new Vec3d(0.5, 1, 0.1), new Vec3d(0.5, 1, 0.9)};
+            case DOWN -> mult = new Vec3d[]{new Vec3d(0.5, 0, 0.5), new Vec3d(0.1, 0, 0.5), new Vec3d(0.9, 0, 0.5),
+                    new Vec3d(0.5, 0, 0.1), new Vec3d(0.5, 0, 0.9)};
+            default -> {
+                double x = dir.getOffsetX() == 0 ? 0.5 : (1 + dir.getOffsetX()) / 2D;
+                double z = dir.getOffsetZ() == 0 ? 0.5 : (1 + dir.getOffsetZ()) / 2D;
+                mult = new Vec3d[]{new Vec3d(x, 0.25, z), new Vec3d(x, 0.75, z)};
+            }
+        }
+        Vec3d[] pts = new Vec3d[mult.length];
+        for (int i = 0; i < mult.length; i++) {
+            Vec3d m = mult[i];
+            pts[i] = new Vec3d(against.getX() + bb.minX * m.x + bb.maxX * (1 - m.x),
+                    against.getY() + bb.minY * m.y + bb.maxY * (1 - m.y),
+                    against.getZ() + bb.minZ * m.z + bb.maxZ * (1 - m.z));
+        }
+        return pts;
+    }
+
     private static synchronized void drainQueue() {
         if (QUEUE.isEmpty()) return;
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -297,14 +327,7 @@ public final class BlockPlaceHelper {
         // the scan as "already built" and drop out of the queue on their own.
         if (kaptainwutax.tungsten.task.PillarTask.isActive()) return;
 
-        // AIM FROM WHERE THE RAY STARTS (2026-11-27). The face check below traces from the camera
-        // (rayTraceTowards -> getCameraPosVec), so the rotation it is handed must be computed from the
-        // same point; aiming from playerHead and tracing from the camera put the two up to a sneak's
-        // eye drop apart. Live bw153: sneak held for the whole batch, four cells with a clear floor
-        // face from that stance, all deferNoFace. False = playerHead, the old origin, for A/B.
-        Vec3d eye = kaptainwutax.tungsten.TungstenConfig.get().builderAimFromCamera
-                ? player.getCameraPosVec(1.0F)
-                : kaptainwutax.tungsten.path.movements.RotationHelper.playerHead(player);
+        Vec3d eye = kaptainwutax.tungsten.path.movements.RotationHelper.playerHead(player);
         double reach = kaptainwutax.tungsten.path.movements.RotationHelper.blockReachDistance(player);
         kaptainwutax.tungsten.path.movements.Rotation current =
                 kaptainwutax.tungsten.path.movements.RotationHelper.playerRotations(player);
@@ -367,21 +390,34 @@ public final class BlockPlaceHelper {
             for (Direction dir : Direction.values()) {
                 BlockPos against = target.offset(dir);
                 if (!RealPlacement.canPlaceAgainst(mc.world, against)) continue;
-                // The face point, MovementHelper.attemptToPlaceABlock:822-824 verbatim - including
-                // the asymmetric Y term, which is what puts the aim on the TOP face of a block
-                // below.
-                double faceX = (target.getX() + against.getX() + 1.0D) * 0.5D;
-                double faceY = (target.getY() + against.getY() + 0.5D) * 0.5D;
-                double faceZ = (target.getZ() + against.getZ() + 1.0D) * 0.5D;
-                kaptainwutax.tungsten.path.movements.Rotation place = kaptainwutax.tungsten.path.movements
-                        .RotationHelper.calcRotationFromVec3d(eye, new Vec3d(faceX, faceY, faceZ), current);
-                HitResult res = kaptainwutax.tungsten.path.movements.RotationHelper
-                        .rayTraceTowards(player, place, reach);
-                if (!(res instanceof BlockHitResult bhr) || res.getType() != HitResult.Type.BLOCK) continue;
-                if (!bhr.getBlockPos().equals(against)
-                        || !bhr.getBlockPos().offset(bhr.getSide()).equals(target)) {
-                    continue;   // that face is blocked from here - ask the next one
+                // SEVERAL POINTS ON THE FACE, NOT ONE (2026-11-27). This used to aim at the single
+                // point of MovementHelper.attemptToPlaceABlock:822-824, which for a floor face lies
+                // a quarter block INSIDE the block below; a bed half beside the cell cut that one
+                // ray while the face itself stood in plain view. Live bw153 (walking off): four cells
+                // with a clear floor face, all deferNoFace. The builder's own upstream samples the
+                // face instead -- BuilderProcess.possibleToPlace:511-525 with aabbSideMultipliers
+                // :578-593: five points on a top/bottom face, two on a side, on the support's
+                // outline box -- and takes the first whose trace lands on that face.
+                kaptainwutax.tungsten.path.movements.Rotation place = null;
+                Vec3d[] points = kaptainwutax.tungsten.TungstenConfig.get().builderSamplesFacePoints
+                        ? candidateAimPoints(mc.world, against, dir)
+                        // the old single point, attemptToPlaceABlock:822-824, for A/B
+                        : new Vec3d[]{new Vec3d((target.getX() + against.getX() + 1.0D) * 0.5D,
+                                (target.getY() + against.getY() + 0.5D) * 0.5D,
+                                (target.getZ() + against.getZ() + 1.0D) * 0.5D)};
+                for (Vec3d point : points) {
+                    kaptainwutax.tungsten.path.movements.Rotation r = kaptainwutax.tungsten.path.movements
+                            .RotationHelper.calcRotationFromVec3d(eye, point, current);
+                    HitResult res = kaptainwutax.tungsten.path.movements.RotationHelper
+                            .rayTraceTowards(player, r, reach);
+                    if (res instanceof BlockHitResult bhr && res.getType() == HitResult.Type.BLOCK
+                            && bhr.getBlockPos().equals(against)
+                            && bhr.getBlockPos().offset(bhr.getSide()).equals(target)) {
+                        place = r;
+                        break;
+                    }
                 }
+                if (place == null) continue;   // no point of that face is in view from here - next face
                 // This face works from where the player stands. Equip, turn the camera to it
                 // through the mouse pipeline, and place the moment the crosshair agrees.
                 if (!equipBlock(player, cell.blockName())) {

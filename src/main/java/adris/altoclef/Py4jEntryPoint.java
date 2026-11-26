@@ -2156,24 +2156,33 @@ public class Py4jEntryPoint {
         m.put("aimOrigin", String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", head.x, head.y, head.z));
         m.put("rayOrigin", String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", camera.x, camera.y, camera.z));
         m.put("originGapY", Math.round((head.y - camera.y) * 1000) / 1000.0);
-        Vec3d face = new Vec3d((target.getX() + against.getX() + 1.0D) * 0.5D,
-                (target.getY() + against.getY() + 0.5D) * 0.5D,
-                (target.getZ() + against.getZ() + 1.0D) * 0.5D);
         double reach = kaptainwutax.tungsten.path.movements.RotationHelper.blockReachDistance(p);
         var current = kaptainwutax.tungsten.path.movements.RotationHelper.playerRotations(p);
+        net.minecraft.util.math.Direction dir = null;
+        for (var d : net.minecraft.util.math.Direction.values()) if (target.offset(d).equals(against)) dir = d;
+        if (dir == null) return m;
+        var pts = kaptainwutax.tungsten.helpers.BlockPlaceHelper.candidateAimPoints(w, against, dir);
         for (var origin : new Object[][]{{"accepted", head}, {"acceptedFromCamera", camera}}) {
-            var rot = kaptainwutax.tungsten.path.movements.RotationHelper.calcRotationFromVec3d((Vec3d) origin[1], face, current);
-            var res = kaptainwutax.tungsten.path.movements.RotationHelper.rayTraceTowards(p, rot, reach);
-            boolean ok = res instanceof net.minecraft.util.hit.BlockHitResult bhr
-                    && res.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
-                    && bhr.getBlockPos().equals(against) && bhr.getBlockPos().offset(bhr.getSide()).equals(target);
-            m.put((String) origin[0], ok);
-            if ("accepted".equals(origin[0]) && res instanceof net.minecraft.util.hit.BlockHitResult bhr2
-                    && res.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
-                var hb = bhr2.getBlockPos();
-                m.put("builderRayHit", hb.getX() + "," + hb.getY() + "," + hb.getZ() + "/" + bhr2.getSide().asString());
-            } else if ("accepted".equals(origin[0])) {
-                m.put("builderRayHit", "nothing");
+            int firstOk = -1;
+            String firstHit = null;
+            for (int i = 0; i < pts.length; i++) {
+                var rot = kaptainwutax.tungsten.path.movements.RotationHelper.calcRotationFromVec3d((Vec3d) origin[1], pts[i], current);
+                var res = kaptainwutax.tungsten.path.movements.RotationHelper.rayTraceTowards(p, rot, reach);
+                boolean ok = res instanceof net.minecraft.util.hit.BlockHitResult bhr
+                        && res.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                        && bhr.getBlockPos().equals(against) && bhr.getBlockPos().offset(bhr.getSide()).equals(target);
+                if (firstHit == null) {
+                    firstHit = res instanceof net.minecraft.util.hit.BlockHitResult b2 && res.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                            ? b2.getBlockPos().getX() + "," + b2.getBlockPos().getY() + "," + b2.getBlockPos().getZ() + "/" + b2.getSide().asString()
+                            : "nothing";
+                }
+                if (ok) { firstOk = i; break; }
+            }
+            m.put((String) origin[0], firstOk >= 0);
+            if ("accepted".equals(origin[0])) {
+                m.put("acceptedPoint", firstOk);           // index into the face's points, 0 = centre
+                m.put("points", pts.length);
+                m.put("centreRayHit", firstHit);
             }
         }
         return m;
@@ -6970,10 +6979,10 @@ public class Py4jEntryPoint {
             Map<String, Object> self = new HashMap<>();
             self.put("hp", me.getHealth());
             // Vanilla experience, as the client holds it (the HUD bar and the number above it):
-            // level, progress through that level 0..1, and the total. No server meaning is assumed.
+            // level and progress through that level 0..1. No server meaning is assumed. (The total
+            // is left out: the server does not recompute it on xp set, it read 19940 at level 7.)
             self.put("experienceLevel", me.experienceLevel);
             self.put("experienceProgress", me.experienceProgress);
-            self.put("totalExperience", me.totalExperience);
             self.put("maxHp", me.getMaxHealth());
             self.put("armor", me.getArmor());
             // Hunger and saturation: below 18 food health does not regenerate, which a full
