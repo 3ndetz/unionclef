@@ -29,6 +29,20 @@ public class GotoCommand extends Command {
 	        try {
 
 	        	BlockTarget target = GotoTargetArgumentType.get(context);
+	        	// A new point for a route FastNavigator is already driving moves that route instead of
+	        	// being refused below or restarting it (FastNavigator.retarget): an agent following a
+	        	// moving player sends one every second.
+	        	if (TungstenConfig.get().fastBlockFirst && kaptainwutax.tungsten.task.FastNavigator.isActive()
+	        			&& !TungstenModDataContainer.PATHFINDER.stop.get()) {
+	        		Vec3d moved = kaptainwutax.tungsten.path.GoalSnap.snap(
+	        				target.getVec3d().add(0.5, 0, 0.5), TungstenMod.mc.world);
+	        		if (kaptainwutax.tungsten.task.FastNavigator.retarget(moved)) {
+	        			TungstenMod.TARGET = moved;
+	        			TungstenMod.markGotoTarget();
+	        			armArrival(moved, 0);
+	        			return SINGLE_SUCCESS;
+	        		}
+	        	}
 	        	if(!TungstenModDataContainer.PATHFINDER.active.get() && !TungstenModDataContainer.EXECUTOR.isRunning()) {
 	        		// A prior ;stop leaves stop=true forever (find() would reset it,
 	        		// but startWithRetry bails on the stale flag before ever calling
@@ -112,6 +126,11 @@ public class GotoCommand extends Command {
 		}
 
 		// Set callback: when pathfinder+executor finish, retry if not at target
+		armArrival(target, attempt);
+	}
+
+	/** The executor's end-of-path callback for this goto: stop on arrival, else retry. */
+	private static void armArrival(Vec3d target, int attempt) {
 		TungstenModDataContainer.EXECUTOR.cb = () -> {
 			if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
 			if (TungstenMod.mc.player == null) return;

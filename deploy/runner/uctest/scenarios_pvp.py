@@ -382,6 +382,64 @@ class ChaseFlat(Scenario):
                         f"freezes={ctx.freeze_windows}")
 
 
+class ChaseGoto(ChaseFlat):
+    """chase_flat driven the way an agent follows a player over MCP/py4j: no @follow, just
+    gotoXYZ to the runner's current cell once a second (2026-11-26, UberPersona's report:
+    "the navigator keeps recalculating and the client loses forward progress").
+    GOTO_STYLE "plain" re-sends gotoXYZ; "restart" calls stopPathing first, the other way an
+    agent gets a busy navigator to take a new point."""
+    id = "chase_goto"
+    GOTO_STYLE = "plain"
+    GOTO_EVERY_S = 1.0
+
+    def drive_start(self, ctx):
+        x, z = self.WAYPOINTS[0]
+        ctx.victim.cmd(f"@goto {x} {STAND_Y} {z}")
+        ctx.geo["last_goto"] = 0.0
+        ctx.geo["gotos"] = 0
+        ctx.bot.py.try_call("resetRunCounters")
+
+    def drive_tick(self, ctx, t):
+        super().drive_tick(ctx, t)
+        vp = ctx.samples[-1].get("victim") if ctx.samples else None
+        if not vp or t - ctx.geo.get("last_goto", 0.0) < self.GOTO_EVERY_S:
+            return
+        ctx.geo["last_goto"] = t
+        if self.GOTO_STYLE == "restart":
+            ctx.bot.py.try_call("stopPathing")
+        ctx.bot.py.try_call("gotoXYZ", int(vp[0] // 1), STAND_Y, int(vp[2] // 1))
+        ctx.geo["gotos"] += 1
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        ok, s = ctx.bot.py.try_call("navRetargetStats")
+        yield Criterion("navigator retargets (recorded, not gated)", True,
+                        f"gotos={ctx.geo.get('gotos')} {s if ok else '-'}", gate=False)
+
+
+class ChaseFollowApi(ChaseFlat):
+    """chase_flat started through the py4j/MCP lever followPlayer(name, radius) instead of the
+    @follow chat command -- the same follow engine, the agent's own entry point."""
+    id = "chase_follow_api"
+
+    def drive_start(self, ctx):
+        x, z = self.WAYPOINTS[0]
+        ctx.victim.cmd(f"@goto {x} {STAND_Y} {z}")
+        ok, r = ctx.bot.py.try_call("followPlayer", ctx.victim.name, 2.0)
+        ctx.geo["follow_call"] = r if ok else f"ERR {r}"
+
+    def judge(self, ctx):
+        yield Criterion("followPlayer accepted", isinstance(ctx.geo.get("follow_call"), dict)
+                        and ctx.geo["follow_call"].get("ok") is True, str(ctx.geo.get("follow_call")))
+        yield from super().judge(ctx)
+
+
+class ChaseGotoRestart(ChaseGoto):
+    """chase_goto with stopPathing before every gotoXYZ."""
+    id = "chase_goto_restart"
+    GOTO_STYLE = "restart"
+
+
 class ChaseTerrain(Scenario):
     """RW-9 bench on REAL generated terrain (gamer-server, seed 12345 — hills,
     trees, water, cliffs; NOT a hand-built strip). The victim is sent running
@@ -1542,6 +1600,6 @@ class SlabHole(Scenario):
                         f"freezes={ctx.freeze_windows}")
 
 
-SCENARIOS = [MeleeBasic, EdgeDuel, NarrowBridgeDuel, ChaseFlat, ChaseTerrain,
+SCENARIOS = [MeleeBasic, EdgeDuel, NarrowBridgeDuel, ChaseFlat, ChaseFollowApi, ChaseGoto, ChaseGotoRestart, ChaseTerrain,
              BowFlee, BowFleeHard, RangedMoving, BridgeAssault,
              BridgeAssaultDefended, AllRound, SlabHole]

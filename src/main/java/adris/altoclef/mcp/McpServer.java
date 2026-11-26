@@ -388,6 +388,17 @@ public class McpServer {
                 + "Fire-and-poll: then call pathStatus repeatedly until arrived.",
                 schema("x:int", "y:int", "z:int"),
                 a -> api.gotoXYZ(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
+        tool("followPlayer",
+                "Follow a player by name (movement only, never attacks) with the engine built for moving "
+                + "targets, the same as the in-game @follow: re-aims at the player's live position, holds "
+                + "within radius blocks (<= 0: 2). Runs until followStop. Prefer this to repeated gotoXYZ "
+                + "on a moving player. Poll followStatus.",
+                schema("name:string", "radius:number"),
+                a -> api.followPlayer(argStr(a, "name"), a.has("radius") ? a.get("radius").getAsDouble() : 0));
+        tool("followStatus",
+                "The follow engine: active, target, radius, seen (player loaded), distance (-1 unseen).",
+                schema(), a -> api.followStatus());
+        tool("followStop", "Stop following.", schema(), a -> api.followStop());
         tool("pathStatus",
                 "Poll the current navigation: busy/pos/distance-to-goal/arrived(<1.5). Loop after gotoXYZ until arrived.",
                 schema(), a -> api.pathStatus());
@@ -635,6 +646,7 @@ public class McpServer {
             switch (kv[1]) {
                 case "int":    prop.addProperty("type", "integer"); break;
                 case "bool":   prop.addProperty("type", "boolean"); break;
+                case "number": prop.addProperty("type", "number"); break;
                 case "strarray":
                     prop.addProperty("type", "array");
                     JsonObject items = new JsonObject();

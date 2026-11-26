@@ -4762,6 +4762,79 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** How a moving goto target was served: goals moved on a live route (retargets), legs swapped
+     *  onto the new point (swaps), retargets that waited for another engine (deferred), goals that
+     *  were not plain points (refused), plus the navigator's plan counters. One line, key=value. */
+    public String navRetargetStats() {
+        return "retargets=" + kaptainwutax.tungsten.task.FastNavigator.navRetargets
+                + " swaps=" + kaptainwutax.tungsten.task.FastNavigator.navRetargetSwaps
+                + " deferred=" + kaptainwutax.tungsten.task.FastNavigator.navRetargetDeferred
+                + " refused=" + kaptainwutax.tungsten.task.FastNavigator.navRetargetRefused
+                + " plansApplied=" + kaptainwutax.tungsten.task.FastNavigator.navPlansApplied
+                + " plansDiscarded=" + kaptainwutax.tungsten.task.FastNavigator.navPlansDiscarded;
+    }
+
+    /** Follow a player by name with the engine built for MOVING targets -- the same one as the
+     *  in-game @follow command (altoclef FollowPlayerTask -> tungsten FollowEntityTask: live
+     *  re-aim at the player's current position, block-route fallback, re-plan hysteresis,
+     *  re-discovery after a teleport or unload). Holds within {@code radius} blocks (<= 0: 2.0).
+     *  Movement only: it never attacks. Runs until followStop() or another task replaces it;
+     *  poll followStatus(). Use this rather than calling gotoXYZ on a player's position over
+     *  and over. */
+    public Map<String, Object> followPlayer(String name, double radius) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            if (MinecraftClient.getInstance().player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            if (name == null || name.isBlank()) { out.put("ok", false); out.put("reason", "no name"); return out; }
+            double r = radius > 0 ? radius : 2.0;
+            _mod.runUserTask(new adris.altoclef.tasks.movement.FollowPlayerTask(name, r));
+            out.put("ok", true);
+            out.put("target", name);
+            out.put("radius", r);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** The follow engine: {active, target, radius, seen (the player is in the loaded world),
+     *  distance (blocks, -1 when not seen)}. */
+    public Map<String, Object> followStatus() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            boolean on = kaptainwutax.tungsten.task.FollowPlayerTask.isActive();
+            String target = kaptainwutax.tungsten.task.FollowPlayerTask.getTargetName();
+            out.put("active", on);
+            out.put("target", target);
+            out.put("radius", kaptainwutax.tungsten.task.FollowPlayerTask.getFollowRadius());
+            double dist = -1;
+            var mc = MinecraftClient.getInstance();
+            if (target != null && mc.world != null && mc.player != null) {
+                for (var p : mc.world.getPlayers()) {
+                    if (p.getName().getString().equalsIgnoreCase(target)) {
+                        dist = mc.player.distanceTo(p);
+                        break;
+                    }
+                }
+            }
+            out.put("seen", dist >= 0);
+            out.put("distance", dist);
+            return out;
+        }, Map.of("active", false, "reason", "client thread timeout"));
+    }
+
+    /** Stop following (the user task and the tungsten follow engine). */
+    public Map<String, Object> followStop() {
+        return onClientThread(() -> {
+            kaptainwutax.tungsten.task.FollowPlayerTask.stop();
+            if (_mod.getUserTaskChain() != null
+                    && _mod.getUserTaskChain().getCurrentTask() instanceof adris.altoclef.tasks.movement.FollowPlayerTask) {
+                _mod.getUserTaskChain().cancel(_mod);
+            }
+            Map<String, Object> out = new HashMap<>();
+            out.put("ok", true);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Navigate toward a FAR target with a RECEDING HORIZON — never asks the
      *  pathfinder for the whole route (huge goals freeze the search). Picks a
      *  waypoint at most `horizon` blocks toward the target and gotos it. The

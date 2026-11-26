@@ -106,7 +106,71 @@ public final class FastNavigator {
     }
     private static double lastDist = Double.MAX_VALUE;
 
+    /** A retarget planned from the body: when that plan lands it REPLACES the leg being walked. */
+    private static volatile boolean swapOnNextPlan = false;
+    /** Goals moved on a live route; legs swapped onto the new goal; retargets that waited for an
+     *  engine holding the body; goals that were not plain points (restarted as before). */
+    public static volatile int navRetargets, navRetargetSwaps, navRetargetDeferred, navRetargetRefused;
+    /** A moved goal closer than this to the old one only updates the goal, no new search. */
+    private static final double RETARGET_REPLAN_DIST = 1.0;
+
     private FastNavigator() {}
+
+    /**
+     * ⛔ A MOVING GOAL MOVES THE ROUTE, IT DOES NOT RESTART IT (2026-11-26). An agent following a
+     * player sends a new point every second; start() begins with stop(), so each one dropped the
+     * walked leg, the leg prepared after it and the search in flight, and the body stood while a
+     * fresh plan was made -- "the navigator keeps recalculating and the client loses forward
+     * progress" (UberPersona, live BedWars). baritone's answer (PathingControlManager.java:144-176,
+     * REVALIDATE_GOAL_AND_PATH, which its FollowProcess uses): a new goal does not cancel the
+     * path being executed; the goal is swapped and the next segment is computed toward it, and
+     * only a path that ended in the old goal and not in the new one is cancelled, when that is
+     * safe (softCancelIfSafe). Here: the goal is swapped, what was prepared for the old point is
+     * dropped, and a plan is made from the body; when it lands it replaces the plain walked leg at
+     * once (applyPlan), trimmed to start where the body is. While another engine holds the body
+     * (movement queue, physics hand-off, digging, a bridge, a slime crossing) its manoeuvre
+     * finishes and the next leg is planned from its tail toward the new point, as before.
+     *
+     * @return false when this route is not a plain point route (reach / exact cell / condition)
+     *         or the navigator is idle -- the caller starts a route as before.
+     */
+    public static boolean retarget(Vec3d newGoal) {
+        if (newGoal == null || !TungstenConfig.get().navigatorRetargetsLive) return false;
+        ClientPlayerEntity player = TungstenMod.mc.player;
+        if (player == null || !active || goal == null) return false;
+        if (reachBlock != null || exactCell != null || arrivalTest != null || searchForArrival) {
+            navRetargetRefused++;
+            return false;
+        }
+        navRetargets++;
+        boolean moved = goal.distanceTo(newGoal) >= RETARGET_REPLAN_DIST;
+        goal = newGoal;
+        if (!moved) return true;
+        stallTicks = 0;
+        lastDist = Double.MAX_VALUE;
+        nextLeg = null;
+        nextLegBridge = false;
+        nextLegMovement = false;
+        nextPhysicsTarget = null;
+        nextBreakCells = null;
+        nextBreakStand = null;
+        planGeneration.incrementAndGet();   // a search in flight was for the old point
+        planning = false;
+        boolean plainWalk = BlockPathWalker.isRunning() && BlockPathWalker.isNavigatorLeg()
+                && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                && !awaitingPhysics && !awaitingBreak && pendingCrossing == null
+                && !kaptainwutax.tungsten.task.BridgeTask.isActive();
+        if (plainWalk) {
+            swapOnNextPlan = true;
+            planAhead(supportedFeet(player));
+        } else {
+            swapOnNextPlan = false;
+            navRetargetDeferred++;
+            // Walker idle: tick plans from the body. Another engine running: its tail is planned
+            // toward the new point when it is done (tick's walker branch / idle branch).
+        }
+        return true;
+    }
 
     /** Water in the feet cell AND the one above: a column there is something to swim up in.
      *  baritone's MovementPillar condition for "ascend by swimming" (MovementPillar.java:86-90). */
@@ -523,6 +587,7 @@ public final class FastNavigator {
     public static void stop() {
         planGeneration.incrementAndGet();
         planning = false;
+        swapOnNextPlan = false;
         active = false;
         goal = null;
         exactCell = null;
@@ -1432,6 +1497,36 @@ public final class FastNavigator {
         Debug.logWarning(sb.toString());
     }
 
+    /** retarget(): the plan made from the body for the moved goal replaces the leg being walked.
+     *  The cells the body has already passed while the plan was made are cut off the front, and
+     *  the walker is stopped so tick starts the new leg next tick. Only a plain walked leg is
+     *  swapped; anything else holding the body keeps it. */
+    private static void swapWalkedLeg(List<BlockPos> cells) {
+        ClientPlayerEntity player = TungstenMod.mc.player;
+        if (player == null || !BlockPathWalker.isRunning() || !BlockPathWalker.isNavigatorLeg()
+                || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning() || nextLegMovement
+                || nextLegBridge || awaitingPhysics || awaitingBreak) {
+            return;
+        }
+        Vec3d body = player.getEntityPos();
+        int best = 0;
+        double bestD = Double.MAX_VALUE;
+        for (int i = 0; i < Math.min(cells.size() - 1, 8); i++) {
+            double d = Vec3d.ofBottomCenter(cells.get(i)).squaredDistanceTo(body);
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        List<BlockPos> leg = best > 0 ? new java.util.ArrayList<>(cells.subList(best, cells.size())) : cells;
+        if (leg.size() < 2) return;
+        nextLeg = leg;
+        // The old leg's own hand-offs (a jump or a dig at its end) belong to the old route.
+        pendingPhysicsTarget = null;
+        pendingBreakCells = null;
+        pendingBreakStand = null;
+        legTail = null;
+        BlockPathWalker.stop();
+        navRetargetSwaps++;
+    }
+
     private static void planAhead(BlockPos from) {
         if (planning || goal == null) return;
         // ⛔ PLAN FROM WHERE THE BOT IS, NOT FROM WHERE THE LAST LEG SAID IT WOULD END.
@@ -1551,6 +1646,9 @@ public final class FastNavigator {
     /** Publish one current calculation on the client thread, including any walker handoff. */
     private static void applyPlan(net.minecraft.world.World world, BlockPos start,
                                   BlockPos goalCell, long budgetMs, FastPlanner.Result res) {
+        // A retarget's plan replaces the walked leg only if this very plan delivers a leg.
+        boolean swap = swapOnNextPlan;
+        swapOnNextPlan = false;
         if (res.isEmpty()) { navEmptyRes++; return; }
         if (res.path.size() == 1) {
             navShortRes++;
@@ -1857,6 +1955,7 @@ public final class FastNavigator {
             // the two must never both be armed (two owners of the keys is pitfall P1).
             nextLegBridge = builds && !movementLeg;
             nextLeg = cells;
+            if (swap) swapWalkedLeg(cells);
         } else if (nextPhysicsTarget != null) {
             // The jump is the very FIRST move from here — there is nothing to walk.
             // Hand it straight to physics instead of dropping the plan (the old code

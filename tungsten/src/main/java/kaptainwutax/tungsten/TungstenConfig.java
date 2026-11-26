@@ -5100,6 +5100,11 @@ public class TungstenConfig {
      *  for that long. Off by default. */
     public boolean noBreakPolicy = false;
 
+    /** A new goto point while FastNavigator is driving a plain point route moves the route
+     *  (FastNavigator.retarget, baritone REVALIDATE_GOAL_AND_PATH) instead of being refused
+     *  ("Already running!") or restarting it from a standstill. False = the old behaviour. */
+    public boolean navigatorRetargetsLive = true;
+
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 
