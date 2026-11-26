@@ -1848,6 +1848,57 @@ public class Py4jEntryPoint {
         }, Map.of("open", false, "error", "client thread timeout"));
     }
 
+    /** The ordinary client tooltip of one slot of the OPEN screen, read-only: the lines the game
+     *  itself would show on hover (name, lore, enchantments, attributes ...), from the vanilla
+     *  client-side stack (ItemStack.getTooltip, TooltipType.BASIC). Nothing is clicked or sent.
+     *  Server menus write prices, costs and descriptions into the lore, so this is how an agent
+     *  reads them instead of guessing from id/name/count.
+     *
+     *  <p>Checks, in order, each answering ok=false with a reason: a screen is open
+     *  ("no screen"); {@code expectedSyncId} (the syncId getOpenScreen returned; pass -1 to skip)
+     *  still matches the open window ("syncId changed" -- the server replaced the menu, read it
+     *  again); {@code windowSlot} is a slot of that window ("slot out of range").
+     *
+     *  @return {ok, syncId, revision, windowSlot, empty, item, name, count, lines:[...]}; lines[0]
+     *          is the name line as the tooltip shows it. revision changes whenever the server
+     *          updates the window's contents. */
+    public Map<String, Object> getOpenScreenTooltip(int windowSlot, int expectedSyncId) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.world == null || client.currentScreen == null) {
+                out.put("ok", false); out.put("reason", "no screen"); return out;
+            }
+            net.minecraft.screen.ScreenHandler h = client.player.currentScreenHandler;
+            out.put("syncId", h.syncId);
+            out.put("revision", h.getRevision());
+            if (expectedSyncId >= 0 && h.syncId != expectedSyncId) {
+                out.put("ok", false); out.put("reason", "syncId changed"); return out;
+            }
+            if (windowSlot < 0 || windowSlot >= h.slots.size()) {
+                out.put("ok", false); out.put("reason", "slot out of range");
+                out.put("slots", h.slots.size()); return out;
+            }
+            ItemStack st = h.getSlot(windowSlot).getStack();
+            out.put("ok", true);
+            out.put("windowSlot", windowSlot);
+            out.put("empty", st.isEmpty());
+            List<String> lines = new ArrayList<>();
+            if (!st.isEmpty()) {
+                out.put("item", net.minecraft.registry.Registries.ITEM.getId(st.getItem()).toString());
+                out.put("name", st.getName().getString());
+                out.put("count", st.getCount());
+                for (net.minecraft.text.Text line : st.getTooltip(
+                        net.minecraft.item.Item.TooltipContext.create(client.world), client.player,
+                        net.minecraft.item.tooltip.TooltipType.BASIC)) {
+                    lines.add(line.getString());
+                }
+            }
+            out.put("lines", lines);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Full player inventory: 36 main slots + armor + offhand + selected hotbar. */
     public Map<String, Object> getInventoryFull() {
         return onClientThread(() -> {

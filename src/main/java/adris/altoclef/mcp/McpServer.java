@@ -361,6 +361,14 @@ public class McpServer {
         tool("getOpenScreen",
                 "Read the open menu (title + every slot: item id / display name / count) — shop or chest.",
                 schema(), a -> api.getOpenScreen());
+        tool("getOpenScreenTooltip",
+                "Read-only: the client tooltip lines of one slot of the open menu (name, lore, enchants -- "
+                + "where server menus put costs and descriptions), as the game shows them on hover. "
+                + "windowSlot = index from getOpenScreen; expectedSyncId = its syncId (-1 to skip). Returns "
+                + "ok=false with reason 'no screen' / 'syncId changed' (menu replaced: read it again) / "
+                + "'slot out of range'. Clicks nothing.",
+                schema("windowSlot:int", "expectedSyncId:int"),
+                a -> api.getOpenScreenTooltip(argInt(a, "windowSlot"), argInt(a, "expectedSyncId")));
         tool("getRecentChat",
                 "Last n chat messages (event/error markers).",
                 schema("n:int"), a -> api.getRecentChat(argInt(a, "n")));
