@@ -2090,9 +2090,11 @@ public class Py4jEntryPoint {
     }
 
     /** The body's exact pose, read-only: x/y/z (unrounded), yaw/pitch (degrees, vanilla: yaw 0 =
-     *  +Z south, 90 = -X west, 180/-180 = -Z north, -90 = +X east), onGround, velocity, and which
-     *  movement keys are pressed right now. For checking an aim before acting and a settled
-     *  position after. */
+     *  +Z south, 90 = -X west, 180/-180 = -Z north, -90 = +X east), onGround, velocity vx/vy/vz and
+     *  horizontal speed, the key BINDING states (the mod's own holds may read false between ticks:
+     *  confirm movement by speed/position), and who else is driving the body right now -- navActive,
+     *  walker, executor, userTask -- since any of them can turn the yaw during a holdKey. For
+     *  checking an aim before acting and a settled position after. */
     public Map<String, Object> getSelfPose() {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
@@ -2106,6 +2108,10 @@ public class Py4jEntryPoint {
             out.put("onGround", p.isOnGround());
             Vec3d v = p.getVelocity();
             out.put("vx", v.x); out.put("vy", v.y); out.put("vz", v.z);
+            // Key BINDING state read between ticks. The mod's own holds (holdKey, the walker) go
+            // through a layer that re-applies the input inside the tick, so they may read false
+            // here while the body walks (walkdir_test: {} mid-hold, 3 blocks covered). Confirm
+            // movement with speed / position, not with these.
             Map<String, Object> keys = new HashMap<>();
             keys.put("forward", mc.options.forwardKey.isPressed());
             keys.put("back", mc.options.backKey.isPressed());
@@ -2114,6 +2120,12 @@ public class Py4jEntryPoint {
             keys.put("jump", mc.options.jumpKey.isPressed());
             keys.put("sneak", mc.options.sneakKey.isPressed());
             keys.put("sprint", mc.options.sprintKey.isPressed());
+            out.put("speed", Math.sqrt(v.x * v.x + v.z * v.z));
+            // Is anything else driving right now? An agent's holdKey competes with these for yaw.
+            out.put("navActive", kaptainwutax.tungsten.task.FastNavigator.isActive());
+            out.put("walker", kaptainwutax.tungsten.task.BlockPathWalker.isRunning());
+            out.put("executor", kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning());
+            out.put("userTask", hasActiveTask());
             out.put("keys", keys);
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
