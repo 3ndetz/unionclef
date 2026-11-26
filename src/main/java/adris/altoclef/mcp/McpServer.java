@@ -396,6 +396,19 @@ public class McpServer {
                 + "Fire-and-poll: then call pathStatus repeatedly until arrived.",
                 schema("x:int", "y:int", "z:int"),
                 a -> api.gotoXYZ(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
+        tool("gotoCell",
+                "Walk until standing IN block cell x,y,z (the FEET cell, slab-aware, body settled), "
+                + "unlike gotoXYZ's 'within 2 blocks'. Same movement engine. Poll pathStatus: arrived = "
+                + "inCell and settled; lastPlanComplete=false means the planner only found a route ending "
+                + "near the cell (lastPlanEndDistance).",
+                schema("x:int", "y:int", "z:int"),
+                a -> api.gotoCell(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
+        tool("canReachAny",
+                "Without moving: which of up to 8 candidate FEET cells ('x,y,z' strings) can the body stand "
+                + "in? Per candidate found/reached/endDistance/pathSize/breaks, and best = the reached one "
+                + "with the shortest route (null if none). budgetMs per candidate (100-1500, 0 = 600).",
+                schema("candidates:strarray", "withBreaking:bool", "budgetMs:int"),
+                a -> api.canReachAny(strList(a, "candidates"), argBool(a, "withBreaking"), argInt(a, "budgetMs")));
         tool("followPlayer",
                 "Follow a player by name (movement only, never attacks) with the engine built for moving "
                 + "targets, the same as the in-game @follow: re-aims at the player's live position, holds "

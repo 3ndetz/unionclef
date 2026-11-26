@@ -1377,6 +1377,15 @@ public class Py4jEntryPoint {
             }
             m.put("distance", String.format("%.1f", pos.distanceTo(selfPos)));
             m.put("position", String.format("%.0f, %.0f, %.0f", pos.x, pos.y, pos.z));
+            // Exact source position (kept beside the old rounded "position", which rounds -115.6
+            // to -116 and put a planner in the neighbouring cell). blockX/Y/Z is the cell the
+            // entity is in: floor, which is right for negative fractions too (-115.6 -> -116).
+            m.put("x", String.format(java.util.Locale.ROOT, "%.3f", pos.x));
+            m.put("y", String.format(java.util.Locale.ROOT, "%.3f", pos.y));
+            m.put("z", String.format(java.util.Locale.ROOT, "%.3f", pos.z));
+            m.put("blockX", String.valueOf(net.minecraft.util.math.MathHelper.floor(pos.x)));
+            m.put("blockY", String.valueOf(net.minecraft.util.math.MathHelper.floor(pos.y)));
+            m.put("blockZ", String.valueOf(net.minecraft.util.math.MathHelper.floor(pos.z)));
             boolean isItem = e instanceof net.minecraft.entity.ItemEntity;
             m.put("is_item", String.valueOf(isItem));
             if (isItem) {
@@ -1587,6 +1596,71 @@ public class Py4jEntryPoint {
         cfg.placeDenyZones.clear();
         cfg.breakDenyZones.clear();
         return Map.of("ok", true);
+    }
+
+    /** Which of several candidate cells can the body actually get to, without moving? Each
+     *  candidate "x,y,z" (the FEET cell to stand in) gets the navigator's own block planner from
+     *  where the body stands, as an exact-cell goal, budgetMs each (100-1500, default 600), at
+     *  most 8 candidates. withBreaking=false asks for a route that mines nothing.
+     *  @return {ok, results:[{cell, found, reached, endDistance, pathSize, breaks}], best}: reached
+     *          = the route ends IN that cell (not merely near it); best = the reached candidate with
+     *          the shortest route, or null. busy=true (nothing planned) while the physics search
+     *          runs. Read-only: no movement, no keys. */
+    public Map<String, Object> canReachAny(List<String> candidates, boolean withBreaking, int budgetMs) {
+        Map<String, Object> out = new HashMap<>();
+        if (_mod.getWorld() == null || _mod.getPlayer() == null) {
+            out.put("ok", false); out.put("reason", "not in game"); return out;
+        }
+        if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()) {
+            out.put("ok", false); out.put("busy", true); out.put("reason", "physics search running"); return out;
+        }
+        long budget = budgetMs <= 0 ? 600 : Math.max(100, Math.min(1500, budgetMs));
+        var startState = onClientThread(kaptainwutax.tungsten.path.fast.FastPlanner::captureStartState, null);
+        var startCell = onClientThread(() -> kaptainwutax.tungsten.task.FastNavigator.supportedFeet(
+                MinecraftClient.getInstance().player), null);
+        if (startState == null || startCell == null) {
+            out.put("ok", false); out.put("reason", "client thread timeout"); return out;
+        }
+        List<Map<String, Object>> results = new ArrayList<>();
+        Map<String, Object> best = null;
+        kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        boolean saved = cfg.allowBreak;
+        cfg.allowBreak = withBreaking;   // planning only; NoBreakGuard reads noBreakPolicy, not this
+        try {
+            int n = 0;
+            for (String c : candidates == null ? List.<String>of() : candidates) {
+                if (n++ >= 8) break;
+                Map<String, Object> r = new HashMap<>();
+                r.put("cell", c);
+                String[] p = String.valueOf(c).trim().split("\\s*,\\s*");
+                if (p.length != 3) { r.put("error", "expected x,y,z"); results.add(r); continue; }
+                net.minecraft.util.math.BlockPos goal;
+                try {
+                    goal = new net.minecraft.util.math.BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+                } catch (NumberFormatException e) { r.put("error", "expected integers"); results.add(r); continue; }
+                var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
+                        _mod.getWorld(), startCell, goal, budget, null, true, startState);
+                boolean found = !res.isEmpty();
+                r.put("found", found);
+                r.put("reached", found && res.complete);
+                if (found) {
+                    var end = res.path.get(res.path.size() - 1).pos;
+                    int breaks = 0;
+                    for (var w : res.path) if (w.toBreak != null) breaks += w.toBreak.size();
+                    r.put("pathSize", res.path.size());
+                    r.put("breaks", breaks);
+                    r.put("endDistance", Math.round(Math.sqrt(end.getSquaredDistance(goal)) * 10) / 10.0);
+                    if (res.complete && (best == null || res.path.size() < (int) best.get("pathSize"))) best = r;
+                }
+                results.add(r);
+            }
+        } finally {
+            cfg.allowBreak = saved;
+        }
+        out.put("ok", true);
+        out.put("results", results);
+        out.put("best", best == null ? null : best.get("cell"));
+        return out;
     }
 
     /** Reachability prediction: can the block-space pathfinder find a route to
@@ -4833,8 +4907,33 @@ public class Py4jEntryPoint {
      *  drive tungsten directly (ChatMessage(prefix+"goto x y z"), bridgeTo) or
      *  use altoclef @goto for the baritone/shredder navigator — this lever is
      *  the clean default. Server-agnostic (pure coords). */
+    /** True while _gotoGoal came from gotoCell (arrival = standing in the cell), false for gotoXYZ. */
+    private volatile boolean _gotoExact = false;
+
+    /** Walk until standing IN block cell (x,y,z) -- the feet cell, slab-aware, body settled --
+     *  rather than gotoXYZ's "within 2 blocks". For a counter, a generator, a spot to place from.
+     *  Same engine and movement as gotoXYZ (FastNavigator, exact-cell goal; baritone GoalBlock).
+     *  Returns immediately; poll pathStatus until arrived (= inCell and settled). y is the FEET
+     *  cell: the block the body stands IN, one above the floor. */
+    public Map<String, Object> gotoCell(int x, int y, int z) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            if (MinecraftClient.getInstance().player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            _gotoGoal = new int[]{x, y, z};
+            _gotoExact = true;
+            kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.stop.set(false);
+            kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.stop = false;
+            kaptainwutax.tungsten.task.FastNavigator.startExact(new net.minecraft.util.math.BlockPos(x, y, z));
+            out.put("ok", true);
+            out.put("goal", x + "," + y + "," + z);
+            out.put("exact", true);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     public Map<String, Object> gotoXYZ(int x, int y, int z) {
         _gotoGoal = new int[]{x, y, z};
+        _gotoExact = false;
         String p = kaptainwutax.tungsten.TungstenMod.getCommandPrefix();
         ChatMessage(p + "goto " + x + " " + y + " " + z);   // tungsten intercepts chat send
         Map<String, Object> out = new HashMap<>();
@@ -5154,6 +5253,32 @@ public class Py4jEntryPoint {
                 // reproduced case, not hypothetical) reported arrived=false forever afterward,
                 // because nothing is driving the body any closer once the walker has stopped.
                 out.put("arrived", dist <= kaptainwutax.tungsten.task.FastNavigator.ARRIVE_DIST);
+                // Added 2026-11-26, the fields above unchanged. feetCell is the cell the body
+                // stands IN (slab-aware, the navigator's own test); inCell compares it to the goal.
+                net.minecraft.util.math.BlockPos feet =
+                        kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(me);
+                boolean inCell = feet.getX() == _gotoGoal[0] && feet.getY() == _gotoGoal[1]
+                        && feet.getZ() == _gotoGoal[2];
+                boolean settled = (me.isOnGround() || me.isClimbing())
+                        && me.getVelocity().horizontalLengthSquared() < 0.005;
+                out.put("exact", _gotoExact);
+                out.put("feetCell", feet.getX() + "," + feet.getY() + "," + feet.getZ());
+                out.put("inCell", inCell);
+                out.put("settled", settled);
+                if (_gotoExact) out.put("arrived", inCell && settled);
+            }
+            out.put("navActive", kaptainwutax.tungsten.task.FastNavigator.isActive());
+            var lpg = kaptainwutax.tungsten.task.FastNavigator.lastPlanGoal;
+            var lpe = kaptainwutax.tungsten.task.FastNavigator.lastPlanEnd;
+            if (lpg != null) {
+                // Did the last plan REACH the goal, or end short of it in the open? endDistance is
+                // how far that end is from the goal cell.
+                out.put("lastPlanComplete", kaptainwutax.tungsten.task.FastNavigator.lastPlanComplete);
+                if (lpe != null) {
+                    out.put("lastPlanEnd", lpe.getX() + "," + lpe.getY() + "," + lpe.getZ());
+                    out.put("lastPlanEndDistance", String.format(java.util.Locale.ROOT, "%.1f",
+                            Math.sqrt(lpe.getSquaredDistance(lpg))));
+                }
             }
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));

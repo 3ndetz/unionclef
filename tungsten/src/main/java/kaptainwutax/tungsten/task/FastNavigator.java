@@ -111,6 +111,11 @@ public final class FastNavigator {
     /** Goals moved on a live route; legs swapped onto the new goal; retargets that waited for an
      *  engine holding the body; goals that were not plain points (restarted as before). */
     public static volatile int navRetargets, navRetargetSwaps, navRetargetDeferred, navRetargetRefused;
+    /** The last plan this navigator applied: its goal cell, whether it reaches it (FastPlanner's own
+     *  complete flag) or ends short of it in the open (a partial route), and where it ends. Lets a
+     *  caller tell "walking to the point" from "walking to the nearest place the planner found". */
+    public static volatile BlockPos lastPlanGoal, lastPlanEnd;
+    public static volatile boolean lastPlanComplete;
     /** A moved goal closer than this to the old one only updates the goal, no new search. */
     private static final double RETARGET_REPLAN_DIST = 1.0;
 
@@ -540,6 +545,9 @@ public final class FastNavigator {
                                       java.util.function.Predicate<BlockPos> reached,
                                       boolean fromDrive, boolean nearest) {
         stop();
+        lastPlanGoal = null;
+        lastPlanEnd = null;
+        lastPlanComplete = false;
         searchForArrival = nearest;
         // stop() must not drop the heuristic startNearest just set; a point search has none.
         if (!nearest) nearestHeuristic = null;
@@ -1649,6 +1657,9 @@ public final class FastNavigator {
         // A retarget's plan replaces the walked leg only if this very plan delivers a leg.
         boolean swap = swapOnNextPlan;
         swapOnNextPlan = false;
+        lastPlanGoal = goalCell;
+        lastPlanComplete = !res.isEmpty() && res.complete;
+        lastPlanEnd = res.isEmpty() ? null : res.path.get(res.path.size() - 1).pos;
         if (res.isEmpty()) { navEmptyRes++; return; }
         if (res.path.size() == 1) {
             navShortRes++;
