@@ -104,6 +104,10 @@ for case in CASES:
             st = bot.py.call("pathStatus")
             if st.get("arrived") and st.get("inCell"):
                 break
+        # Judge the SETTLED pose, read after the status: the loop's pose is from before the status
+        # read, and a body crossing the cell edge between the two reads was recorded one cell over.
+        time.sleep(0.5)
+        p = bot.py.call("getSelfPose")
         cell = [math.floor(p["x"]), math.floor(p["y"] + 0.1251), math.floor(p["z"])]
         row = {"case": case, "variant": VARIANT, "run": run, "t": round(time.time() - t0, 2),
                "firstMove_s": first_move, "arrived": bool(st.get("arrived") and st.get("inCell")) and cell == [tx, ty, tz],
