@@ -1,4 +1,4 @@
-"""Runs INSIDE the client container: call getInventoryFull, getEntitiesInfo(8), getCrosshairTarget over
+"""Runs INSIDE the client container: call getInventoryFull, getEntitiesInfo(8), getCrosshairTarget, getPlayerTeams(16) over
 py4j and over MCP (tools/call, the port and token from altoclef_settings.json; the token is never
 printed), and compare the results field by field (floats within 1e-6). Prints one JSON line per tool.
 (2026-11-27)"""
@@ -57,7 +57,8 @@ gw = JavaGateway(gateway_parameters=GatewayParameters(port=25333, auto_convert=T
 ep = gw.entry_point
 for name, args, call in (("getInventoryFull", {}, lambda: ep.getInventoryFull()),
                          ("getEntitiesInfo", {"limit": 8}, lambda: ep.getEntitiesInfo(8)),
-                         ("getCrosshairTarget", {}, lambda: ep.getCrosshairTarget())):
+                         ("getCrosshairTarget", {}, lambda: ep.getCrosshairTarget()),
+                         ("getPlayerTeams", {"limit": 16}, lambda: ep.getPlayerTeams(16))):
     a = to_py(call())
     b, err = mcp(name, args)
     diff = "MCP error" if err else same(a, b)

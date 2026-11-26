@@ -1,4 +1,4 @@
-"""MCP parity for getInventoryFull / getEntitiesInfo / getCrosshairTarget (2026-11-27).
+"""MCP parity for getInventoryFull / getEntitiesInfo / getCrosshairTarget / getPlayerTeams (2026-11-27).
 
 Sets up a non-empty state on the flat stand (a few items in the pack and one held, a dropped item and
 a pig close by, the crosshair on a block), then runs mcp_parity_inner.py inside the client container,
@@ -53,6 +53,36 @@ for c in [f"kill @e[type=pig,x={CX},y={STAND_Y},z={CZ},distance=..20]",
           f"kill @e[type=item,x={CX},y={STAND_Y},z={CZ},distance=..20]",
           f"forceload remove {CX - 8} {CZ - 8} {CX + 8} {CZ + 8}"]:
     rcon.cmd(c, allow_reject=True)
-ok = len(rows) == 3 and all(x["match"] for x in rows)
-print(json.dumps({"summary": f"{sum(1 for x in rows if x['match'])}/3 match"}))
+
+
+# Teams, read-only: tester1 in uc_gray; tester2 with no team, then another team, then the same one.
+# The expected value of every field is what the server was told by these rcon lines, nothing else.
+def teams_row(label, want_state, want_same):
+    time.sleep(1.0)
+    r = bot.py.call("getPlayerTeams", 16)
+    t2 = next((p for p in r.get("players", []) if p.get("name") == "tester2"), None)
+    t1 = next((p for p in r.get("players", []) if p.get("name") == "tester1"), None)
+    st = r.get("self", {}).get("team") or {}
+    ok = (bool(r.get("ok")) and t1 is not None and t2 is not None and t1.get("self") is True
+          and st.get("name") == "uc_gray" and st.get("color") == "gray"
+          and "team" in t2 and t2.get("teamState") == want_state and t2.get("sameTeamAsSelf") == want_same
+          and (want_state == "assigned") == (t2.get("team") is not None))
+    print(json.dumps({"teams": label, "ok": ok, "tester2": t2, "selfTeam": r.get("self", {}).get("team")}))
+    return ok
+
+
+cmds = ["team add uc_gray", "team add uc_red", "team modify uc_gray color gray",
+        "team modify uc_red color red", "team leave tester2", "team join uc_gray tester1"]
+for c in cmds:
+    rcon.cmd(c, allow_reject=True)
+team_ok = [teams_row("tester2 no team", "none", None)]
+rcon.cmd("team join uc_red tester2", allow_reject=True)
+team_ok.append(teams_row("tester2 other team", "assigned", False))
+rcon.cmd("team join uc_gray tester2", allow_reject=True)
+team_ok.append(teams_row("tester2 same team", "assigned", True))
+for c in ["team remove uc_gray", "team remove uc_red"]:
+    rcon.cmd(c, allow_reject=True)
+
+ok = len(rows) == 4 and all(x["match"] for x in rows) and all(team_ok)
+print(json.dumps({"summary": f"{sum(1 for x in rows if x['match'])}/4 match, teams {sum(team_ok)}/3"}))
 sys.exit(0 if ok else 1)

@@ -36,6 +36,10 @@ import adris.altoclef.Py4jEntryPoint;
 public class McpServer {
 
     private static final Gson GSON = new Gson();
+    // Plain Gson drops null map values. Tools whose contract is an EXPLICIT absent state
+    // (team = null) keep them, so MCP returns the same keys as py4j; every other tool is unchanged.
+    private static final Gson GSON_NULLS = new com.google.gson.GsonBuilder().serializeNulls().create();
+    private static final java.util.Set<String> KEEPS_NULLS = java.util.Set.of("getPlayerTeams");
     private static final String PROTOCOL_VERSION = "2024-11-05";
 
     private final Py4jEntryPoint api;
@@ -195,7 +199,7 @@ public class McpServer {
                 String text;
                 try {
                     Object result = t.handler.apply(args);
-                    text = GSON.toJson(result);
+                    text = (KEEPS_NULLS.contains(name) ? GSON_NULLS : GSON).toJson(result);
                 } catch (Exception e) {
                     isError = true;
                     text = "Tool error: " + e.getMessage();
@@ -374,6 +378,14 @@ public class McpServer {
                 "Read-only: what the crosshair is on now -- type; for a block: block, pos, side, hitPos and "
                 + "placeCell (where a block placed now would go); for an entity: entity. Same result as py4j.",
                 schema(), a -> api.getCrosshairTarget());
+        tool("getPlayerTeams",
+                "Read-only: the tab list with each player's vanilla scoreboard team as the server sent it "
+                + "(name, uuid, self, gameMode, tabName, loaded, teamState 'assigned'/'none', team {name, "
+                + "displayName, color, prefix, suffix, friendlyFire, seeFriendlyInvisibles} or null, "
+                + "sameTeamAsSelf true/false or null when either side has no team) plus self's team. "
+                + "No inference from armour or name colour: teamState 'none' means the server sent no team, "
+                + "not 'enemy'. limit = max rows (<=0 -> 64). Same result as py4j.",
+                schema("limit:int"), a -> api.getPlayerTeams(argInt(a, "limit")));
         tool("getOpenScreenTooltip",
                 "Read-only: the client tooltip lines of one slot of the open menu (name, lore, enchants -- "
                 + "where server menus put costs and descriptions), as the game shows them on hover. "

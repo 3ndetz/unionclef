@@ -7169,6 +7169,82 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "error", "client thread timeout"));
     }
 
+    /**
+     * Read-only: the server's tab list (PlayerListEntry) with each player's vanilla scoreboard team,
+     * exactly as the server sent it -- the data vanilla itself uses for name colours and friendly
+     * fire. Nothing is inferred: no armour colour, no name-colour guessing. A player the server put
+     * in no team has {@code team = null, teamState = "none"}; that means "the server said nothing",
+     * not "enemy". Returns {ok, self:{name, uuid, team...}, players:[{name, uuid, self, gameMode,
+     * tabName (the server's tab display text or null), loaded (an entity is in render range),
+     * teamState, team:{name, displayName, color, prefix, suffix, friendlyFire, seeFriendlyInvisibles}
+     * or null, sameTeamAsSelf (true/false, null when either side has no team)}], count}.
+     * Names sorted; at most {@code limit} rows (1-256, default 64 when <= 0).
+     */
+    public Map<String, Object> getPlayerTeams(int limit) {
+        int cap = limit <= 0 ? 64 : Math.min(limit, 256);
+        return onClientThread(() -> {
+            MinecraftClient client = MinecraftClient.getInstance();
+            Map<String, Object> out = new HashMap<>();
+            if (client.getNetworkHandler() == null || client.world == null || client.player == null) {
+                out.put("ok", false);
+                out.put("error", "not in a world");
+                return out;
+            }
+            String selfName = client.player.getName().getString();
+            net.minecraft.scoreboard.Team selfTeam = client.player.getScoreboardTeam();
+            Map<String, Object> self = new HashMap<>();
+            self.put("name", selfName);
+            self.put("uuid", client.player.getUuid().toString());
+            self.put("teamState", selfTeam == null ? "none" : "assigned");
+            self.put("team", teamInfo(selfTeam));
+            List<Map<String, Object>> players = new ArrayList<>();
+            for (net.minecraft.client.network.PlayerListEntry e : client.getNetworkHandler().getPlayerList()) {
+                var prof = e.getProfile();
+                //#if MC >= 12111
+                //$$ String name = prof.name();
+                //$$ java.util.UUID id = prof.id();
+                //#else
+                String name = prof.getName();
+                java.util.UUID id = prof.getId();
+                //#endif
+                net.minecraft.scoreboard.Team t = e.getScoreboardTeam();
+                Map<String, Object> pm = new HashMap<>();
+                pm.put("name", name);
+                pm.put("uuid", id == null ? null : id.toString());
+                pm.put("self", id != null && id.equals(client.player.getUuid()));
+                pm.put("gameMode", e.getGameMode() == null ? null
+                        : e.getGameMode().name().toLowerCase(java.util.Locale.ROOT));
+                pm.put("tabName", e.getDisplayName() == null ? null : e.getDisplayName().getString());
+                pm.put("loaded", id != null && client.world.getPlayerByUuid(id) != null);
+                pm.put("teamState", t == null ? "none" : "assigned");
+                pm.put("team", teamInfo(t));
+                pm.put("sameTeamAsSelf", t == null || selfTeam == null ? null : t.isEqual(selfTeam));
+                players.add(pm);
+            }
+            players.sort((a, b) -> String.valueOf(a.get("name")).compareToIgnoreCase(String.valueOf(b.get("name"))));
+            int total = players.size();
+            if (players.size() > cap) players = new ArrayList<>(players.subList(0, cap));
+            out.put("ok", true);
+            out.put("self", self);
+            out.put("players", players);
+            out.put("count", total);
+            return out;
+        }, Map.of("ok", false, "error", "client thread timeout"));
+    }
+
+    private static Map<String, Object> teamInfo(net.minecraft.scoreboard.Team t) {
+        if (t == null) return null;
+        Map<String, Object> m = new HashMap<>();
+        m.put("name", t.getName());
+        m.put("displayName", t.getDisplayName().getString());
+        m.put("color", t.getColor().getName());          // the server's team colour setting
+        m.put("prefix", t.getPrefix().getString());
+        m.put("suffix", t.getSuffix().getString());
+        m.put("friendlyFire", t.isFriendlyFireAllowed());
+        m.put("seeFriendlyInvisibles", t.shouldShowFriendlyInvisibles());
+        return m;
+    }
+
     /** Is the in-game voice chat (Plasmo/SVC) connected on this server? */
     public boolean isVoiceChatConnected() {
         return AltoclefVoicechat.VOICE_CONNECTED;
