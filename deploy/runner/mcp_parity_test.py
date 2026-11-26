@@ -23,6 +23,8 @@ CX, CZ = 450, 450
 rcon = Rcon("uctest-server")
 bot = Bot("uctest-mc-tester1", "tester1", rcon)
 bot.ensure_in_game("test-server")
+# the team rows need tester2 in the tab list, so wait for its client as well
+Bot("uctest-mc-tester2", "tester2", rcon).ensure_in_game("test-server")
 for c in [f"forceload add {CX - 8} {CZ - 8} {CX + 8} {CZ + 8}",
           f"fill {CX - 6} {F} {CZ - 6} {CX + 6} {F} {CZ + 6} minecraft:stone",
           f"fill {CX - 6} {STAND_Y} {CZ - 6} {CX + 6} {STAND_Y + 4} {CZ + 6} minecraft:air",

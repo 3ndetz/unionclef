@@ -5,6 +5,7 @@ printed), and compare the results field by field (floats within 1e-6). Prints on
 import json
 import urllib.request
 
+from py4j.java_collections import JavaArray, JavaList, JavaMap
 from py4j.java_gateway import GatewayParameters, JavaGateway
 
 cfg = json.load(open("/mc-data/altoclef/altoclef_settings.json", encoding="utf-8"))
@@ -13,9 +14,10 @@ token = cfg.get("mcpAuthToken", "")
 
 
 def to_py(o):
-    if hasattr(o, "keySet"):
-        return {str(k): to_py(o.get(k)) for k in o.keySet()}
-    if hasattr(o, "iterator") and not isinstance(o, str):
+    # Every py4j JavaObject answers hasattr() for any name, so test the converted types instead.
+    if isinstance(o, JavaMap) or isinstance(o, dict):
+        return {str(k): to_py(o[k]) for k in o.keys()}
+    if isinstance(o, (JavaList, JavaArray, list, tuple)):
         return [to_py(x) for x in o]
     return o
 
