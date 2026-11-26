@@ -361,6 +361,19 @@ public class McpServer {
         tool("getOpenScreen",
                 "Read the open menu (title + every slot: item id / display name / count) — shop or chest.",
                 schema(), a -> api.getOpenScreen());
+        tool("getInventoryFull",
+                "Read-only: the full player inventory -- slots 0-8 hotbar, 9-35 main, 36-39 armor, 40 offhand "
+                + "(index, empty, item id, display name, count), selectedHotbar, heldItem. Same result as py4j.",
+                schema(), a -> api.getInventoryFull());
+        tool("getEntitiesInfo",
+                "Read-only: up to `limit` nearby entities, nearest first -- name, type, distance, position "
+                + "(rounded) plus exact x/y/z and blockX/Y/Z, is_item (+ item, count), is_hostile, is_mob, "
+                + "health. Same result as py4j.",
+                schema("limit:int"), a -> api.getEntitiesInfo(argInt(a, "limit")));
+        tool("getCrosshairTarget",
+                "Read-only: what the crosshair is on now -- type; for a block: block, pos, side, hitPos and "
+                + "placeCell (where a block placed now would go); for an entity: entity. Same result as py4j.",
+                schema(), a -> api.getCrosshairTarget());
         tool("getOpenScreenTooltip",
                 "Read-only: the client tooltip lines of one slot of the open menu (name, lore, enchants -- "
                 + "where server menus put costs and descriptions), as the game shows them on hover. "
