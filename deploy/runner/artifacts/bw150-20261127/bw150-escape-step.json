@@ -1,0 +1,6 @@
+{
+  "server": "mclucky.me",
+  "dimension": "OVERWORLD",
+  "blocks": [[-1361, 11, 574, "minecraft:white_wool"]],
+  "anchors": [[-1360, 11, 574, "minecraft:polished_andesite"]]
+}
