@@ -49,9 +49,26 @@ def check(label, ok, got):
 
 
 def home():
+    """Back to the start, and PROVE it: a teleport that did not land leaves the bot wherever it was
+    (a run read feetCell -11,-60,20 with the course at 503,-60,500), which tests nothing."""
     bot.py.call("stopPathing")
-    rcon.cmd(f"tp tester1 {CX + 0.5} {STAND_Y} {CZ + 0.5} 0 0", allow_reject=True)
-    time.sleep(1.5)
+    # Rebuild the fixture: an earlier check may have dug it (gotoXYZ aims INTO the slab cell).
+    rcon.cmd(f"setblock {CX + 3} {STAND_Y} {CZ} minecraft:stone_slab[type=bottom]", allow_reject=True)
+    rcon.cmd(f"setblock {CX} {STAND_Y} {CZ + 4} minecraft:stone", allow_reject=True)
+    for attempt in range(3):
+        rcon.cmd(f"tp tester1 {CX + 0.5} {STAND_Y} {CZ + 0.5} 0 0", allow_reject=True)
+        for _ in range(20):
+            time.sleep(0.5)
+            p = bot.py.call("getSelfPose")
+            if abs(p["x"] - (CX + 0.5)) < 0.3 and abs(p["z"] - (CZ + 0.5)) < 0.3                     and abs(p["y"] - STAND_Y) < 0.05 and p.get("onGround"):
+                time.sleep(1.0)
+                return True
+    raise RuntimeError(f"teleport to the course start not confirmed: {p}")
+
+
+def slab_present():
+    out = rcon.cmd(f"execute if block {CX + 3} {STAND_Y} {CZ} minecraft:stone_slab[type=bottom]", allow_reject=True)
+    return "passed" in str(out).lower()
 
 
 def wait_arrived(limit_s=25):
@@ -76,10 +93,11 @@ t, st = wait_arrived()
 pose = bot.py.call("getSelfPose")
 check("gotoXYZ slab cell (old contract, recorded)", True,
       {"arrived_s": t, "feetCell": st.get("feetCell"), "goal": st.get("goal"), "inCell": st.get("inCell"),
-       "y": round(pose["y"], 3)})
+       "y": round(pose["y"], 3), "slab_still_there": slab_present()})
 
 # 2 exact cell on a slab, asked as the slab block: normalized to the feet cell above it
 home()
+slab_before = slab_present()
 g = bot.py.call("gotoCell", *slab)
 t, st = wait_arrived()
 pose = bot.py.call("getSelfPose")
@@ -88,7 +106,8 @@ check("gotoCell slab block -> stands on the slab, feet cell above it", t is not 
       and st.get("inCell") is True and st.get("feetCell") == g.get("goal")
       and abs(pose["y"] - (STAND_Y + 0.5)) < 0.01,
       {"reply": g, "arrived_s": t, "feetCell": st.get("feetCell"), "y": round(pose["y"], 3),
-       "lastPlanComplete": st.get("lastPlanComplete")})
+       "lastPlanComplete": st.get("lastPlanComplete"), "slab_before": slab_before,
+       "slab_after": slab_present(), "pose": {k: round(pose[k], 2) for k in ("x", "y", "z")}})
 
 # 3 one block up, asked as the full block
 home()
@@ -120,7 +139,9 @@ check("canReachAny sealed / open / step", r.get("ok") is True
       and res.get(cands[1], {}).get("reached") is True and res.get(cands[1], {}).get("normalized") is True
       and res.get(cands[2], {}).get("reached") is True and res.get(cands[2], {}).get("normalized") is False
       and r.get("best") in (cands[1], cands[2])
-      and abs(after["x"] - before["x"]) < 0.01 and abs(after["z"] - before["z"]) < 0.01, r)
+      and abs(after["x"] - before["x"]) < 0.01 and abs(after["z"] - before["z"]) < 0.01,
+      {"result": r, "pose_before": {k: round(before[k], 2) for k in ("x", "y", "z")},
+       "pose_after": {k: round(after[k], 2) for k in ("x", "y", "z")}})
 
 # 5 exact entity coordinates at a negative fractional position
 rcon.cmd("forceload add -20 -20 0 0", allow_reject=True)
