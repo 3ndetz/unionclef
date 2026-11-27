@@ -2474,6 +2474,49 @@ public class Py4jEntryPoint {
     }
 
     /**
+     * One vanilla attack press, only at a named target -- a guard, never an extra action. At the call
+     * (client thread) the crosshair must be on the entity with UUID {@code targetUuid} and, with
+     * {@code requireOtherTeam}, that entity must be a player whose vanilla scoreboard team differs
+     * from ours (both teams present). Then the same single press tapKey makes is given, and the SAME
+     * check runs again at the head of vanilla's doAttack on the tick it consumes the press; if it
+     * fails there, that one attack is cancelled. Reasons (suppressedBy here, refusedBy in
+     * getInputDispatches): notInGame, gui, cooldown (vanilla's attack timer > 0: it would refuse),
+     * noTarget, targetMismatch (call) / targetChanged (dispatch), teamUnknown, ally,
+     * waitingForRelease. Returns tapKeyReceipt's fields plus targetUuid, requireOtherTeam,
+     * attackCooldown and attackStrength (vanilla's swing charge 0..1, information only). Read
+     * getInputDispatches(dispatchSeq) after a tick: guard passed/refused and refusedBy. tapKey and
+     * tapKeyReceipt are unchanged and unguarded.
+     */
+    public Map<String, Object> tapAttackGuarded(String targetUuid, boolean requireOtherTeam) {
+        return onClientThread(() -> {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            Map<String, Object> out = new HashMap<>();
+            out.put("ok", true);
+            out.put("input", "attack");
+            out.put("targetUuid", targetUuid == null ? "none" : targetUuid);
+            out.put("requireOtherTeam", requireOtherTeam);
+            out.put("dispatchSeq", adris.altoclef.control.AttackDispatchLog.lastSeq());
+            out.put("tick", mc.world == null ? -1L : mc.world.getTime());
+            out.put("crosshairAtCall", adris.altoclef.control.AttackDispatchLog.describe(mc.crosshairTarget));
+            int cd = ((adris.altoclef.mixins.AttackCooldownAccessor) mc).altoclef$getAttackCooldown();
+            out.put("attackCooldown", cd);
+            out.put("attackStrength", mc.player == null ? 0.0 : (double) mc.player.getAttackCooldownProgress(0.5f));
+            String why = adris.altoclef.control.AttackDispatchLog.verdict(mc, targetUuid, requireOtherTeam, cd, false);
+            if (why != null) {
+                out.put("accepted", false);
+                out.put("suppressedBy", why);
+                return out;
+            }
+            adris.altoclef.control.AttackDispatchLog.arm(targetUuid, requireOtherTeam, mc.world.getTime());
+            boolean accepted = _mod.getInputControls().tryPress(kaptainwutax.tungsten.path.movements.Input.CLICK_LEFT);
+            if (!accepted) adris.altoclef.control.AttackDispatchLog.disarm();
+            out.put("accepted", accepted);
+            out.put("suppressedBy", accepted ? "none" : "waitingForRelease");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /**
      * Read-only: vanilla's player-input attacks (MinecraftClient.doAttack -- a pressed attack key,
      * from tapKey/holdKey or a human) with seq > sinceSeq, oldest first, at most limit (<= 0: 64).
      * Each: seq, tick, cooldown and refusedByCooldown (cooldown > 0: vanilla did nothing with the

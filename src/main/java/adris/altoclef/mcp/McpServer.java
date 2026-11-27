@@ -391,6 +391,15 @@ public class McpServer {
                 + "crosshairAtCall, dispatchSeq. For attack, read getInputDispatches(dispatchSeq) after a tick "
                 + "to see what vanilla's attack did with it.",
                 schema("name:string"), a -> api.tapKeyReceipt(argStr(a, "name")));
+        tool("tapAttackGuarded",
+                "One vanilla attack press only at a named target: the crosshair must be on the entity with "
+                + "targetUuid (and, with requireOtherTeam, a player of a different vanilla scoreboard team, both "
+                + "teams present) at the call AND again when vanilla consumes the press; a failed check at "
+                + "dispatch cancels that one attack. suppressedBy / refusedBy: notInGame, gui, cooldown, noTarget, "
+                + "targetMismatch, targetChanged, teamUnknown, ally, waitingForRelease. Read "
+                + "getInputDispatches(dispatchSeq) for the dispatch verdict. tapKeyReceipt stays unguarded.",
+                schema("targetUuid:string", "requireOtherTeam:bool"),
+                a -> api.tapAttackGuarded(argStr(a, "targetUuid"), argBool(a, "requireOtherTeam")));
         tool("getInputDispatches",
                 "Read-only: vanilla's player-input attacks (a pressed attack key, ours or a human's) after "
                 + "sinceSeq, oldest first: seq, tick, cooldown / refusedByCooldown (vanilla did nothing), crosshair at "

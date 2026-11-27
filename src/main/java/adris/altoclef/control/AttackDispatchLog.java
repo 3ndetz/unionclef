@@ -27,10 +27,84 @@ public final class AttackDispatchLog {
 
     private AttackDispatchLog() {}
 
+    // ---- optional guard for ONE armed press (tapAttackGuarded) --------------------------------
+    // Armed at the call after the same test passed there; checked again at the head of doAttack, on
+    // the tick vanilla consumes the press, against the crosshair vanilla is about to attack. A
+    // failed check cancels that one doAttack and is logged with its reason. Unarmed presses (tapKey,
+    // tapKeyReceipt, a human's mouse) never pass through it.
+    private static String guardUuid = null;
+    private static boolean guardOtherTeam = false;
+    private static long guardUntilTick = -1;
+    private static String lastGuard = "none";
+
+    public static synchronized void arm(String uuid, boolean otherTeam, long nowTick) {
+        guardUuid = uuid;
+        guardOtherTeam = otherTeam;
+        guardUntilTick = nowTick + 3;   // the press is consumed on the next client tick; 3 is slack
+    }
+
+    public static synchronized void disarm() {
+        guardUuid = null;
+    }
+
+    /**
+     * The guard's test, the same at the call and at dispatch: null = pass, else the reason --
+     * notInGame, gui (a screen is open: vanilla does not attack then), cooldown (vanilla's attack
+     * timer is running and it would refuse), noTarget (crosshair not on an entity), targetMismatch
+     * (call) / targetChanged (dispatch) (another entity under the crosshair), teamUnknown (a team
+     * check was asked and either side has no scoreboard team, or the target is not a player), ally
+     * (same scoreboard team as self).
+     */
+    public static String verdict(MinecraftClient mc, String uuid, boolean otherTeam, int cooldown, boolean atDispatch) {
+        if (mc.player == null || mc.world == null) return "notInGame";
+        if (mc.currentScreen != null) return "gui";
+        if (cooldown > 0) return "cooldown";
+        HitResult hr = mc.crosshairTarget;
+        if (!(hr instanceof EntityHitResult ehr) || hr.getType() != HitResult.Type.ENTITY) return "noTarget";
+        Entity e = ehr.getEntity();
+        if (uuid == null || !uuid.equals(e.getUuidAsString())) return atDispatch ? "targetChanged" : "targetMismatch";
+        if (otherTeam) {
+            if (!(e instanceof net.minecraft.entity.player.PlayerEntity)) return "teamUnknown";
+            net.minecraft.scoreboard.Team mine = mc.player.getScoreboardTeam();
+            net.minecraft.scoreboard.Team theirs = e.getScoreboardTeam();
+            if (mine == null || theirs == null) return "teamUnknown";
+            if (theirs.isEqual(mine)) return "ally";
+        }
+        return null;
+    }
+
+    /** At the head of doAttack: null when no guard is armed or it passes (then begin() follows);
+     *  else the reason, the dispatch already logged as refused -- the caller cancels doAttack. */
+    public static synchronized String checkAtDispatch(MinecraftClient mc, int cooldown, HitResult target) {
+        if (guardUuid == null) { lastGuard = "none"; return null; }
+        long now = mc.world == null ? -1L : mc.world.getTime();
+        String uuid = guardUuid;
+        boolean other = guardOtherTeam;
+        guardUuid = null;                                  // one press, one check
+        if (now > guardUntilTick) { lastGuard = "expired"; return null; }
+        String why = verdict(mc, uuid, other, cooldown, true);
+        if (why == null) { lastGuard = "passed"; return null; }
+        Map<String, Object> r = new HashMap<>();
+        r.put("seq", ++seq);
+        r.put("tick", now);
+        r.put("cooldown", cooldown);
+        r.put("refusedByCooldown", cooldown > 0);
+        r.put("crosshair", describe(target));
+        r.put("guard", "refused");
+        r.put("refusedBy", why);
+        r.put("vanillaReturn", false);
+        LOG.addLast(r);
+        while (LOG.size() > CAP) LOG.removeFirst();
+        return why;
+    }
+
     /** Called at the head of doAttack. */
     public static synchronized void begin(int cooldown, HitResult target) {
         open = new HashMap<>();
         open.put("seq", ++seq);
+        open.put("guard", lastGuard);   // none / passed / expired
+        open.put("refusedBy", "none");
+        lastGuard = "none";
         MinecraftClient mc = MinecraftClient.getInstance();
         open.put("tick", mc.world == null ? -1L : mc.world.getTime());
         open.put("cooldown", cooldown);   // > 0: vanilla refuses the attack (the miss-swing timer)
@@ -75,6 +149,7 @@ public final class AttackDispatchLog {
         if (hr instanceof EntityHitResult ehr && hr.getType() == HitResult.Type.ENTITY) {
             Entity e = ehr.getEntity();
             m.put("entityId", e.getId());
+            m.put("entityUuid", e.getUuidAsString());
             m.put("entityType", Registries.ENTITY_TYPE.getId(e.getType()).toString());
             m.put("entityName", e.getName().getString());
             MinecraftClient mc = MinecraftClient.getInstance();
