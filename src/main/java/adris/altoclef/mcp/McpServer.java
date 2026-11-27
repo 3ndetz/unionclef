@@ -488,6 +488,10 @@ public class McpServer {
                 "The follow engine: active, target, radius, seen (player loaded), distance (-1 unseen).",
                 schema(), a -> api.followStatus());
         tool("followStop", "Stop following.", schema(), a -> api.followStop());
+        tool("getLastPlan",
+                "Read-only: the last route the navigator applied -- goal, end, complete, its waypoints "
+                + "(x,y,z with +phys/+break/+place flags, max 128) and outcome. For explaining a route.",
+                schema(), a -> api.getLastPlan());
         tool("getIntentStatus",
                 "Read-only: the follow / flee / combat intents carried now -- legacyAttack / legacyAvoid (names "
                 + "marked by attackPlayer / avoidPlayer, 30 s timers not yet run out), punkActive/punkTarget "

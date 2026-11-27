@@ -115,6 +115,11 @@ public final class FastNavigator {
      *  complete flag) or ends short of it in the open (a partial route), and where it ends. Lets a
      *  caller tell "walking to the point" from "walking to the nearest place the planner found". */
     public static volatile BlockPos lastPlanGoal, lastPlanEnd;
+    /** The waypoints of the last applied plan, as the planner returned them: "x,y,z" plus a flag
+     *  suffix -- "+phys" (a jump left to the physics engine), "+break" / "+place" (cells to edit
+     *  first). Capped at 128. Read-only, for explaining a route after the fact (bw-239: a
+     *  "complete" plan whose walk ended in lava). Empty when the last plan was empty. */
+    public static volatile java.util.List<String> lastPlanCells = java.util.List.of();
     public static volatile boolean lastPlanComplete;
     /** A moved goal closer than this to the old one only updates the goal, no new search. */
     private static final double RETARGET_REPLAN_DIST = 1.0;
@@ -1691,6 +1696,19 @@ public final class FastNavigator {
         lastPlanGoal = goalCell;
         lastPlanComplete = !res.isEmpty() && res.complete;
         lastPlanEnd = res.isEmpty() ? null : res.path.get(res.path.size() - 1).pos;
+        if (res.isEmpty()) {
+            lastPlanCells = java.util.List.of();
+        } else {
+            java.util.List<String> cells = new java.util.ArrayList<>();
+            for (FastPlanner.Waypoint w : res.path) {
+                if (cells.size() >= 128) break;
+                cells.add(w.pos.getX() + "," + w.pos.getY() + "," + w.pos.getZ()
+                        + (w.needsPhysics ? "+phys" : "")
+                        + (w.toBreak != null && !w.toBreak.isEmpty() ? "+break" : "")
+                        + (w.toPlace != null && !w.toPlace.isEmpty() ? "+place" : ""));
+            }
+            lastPlanCells = java.util.List.copyOf(cells);
+        }
         if (res.isEmpty()) { navEmptyRes++; return; }
         if (res.path.size() == 1) {
             navShortRes++;

@@ -5374,6 +5374,23 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Read-only: the last plan the navigator applied -- goal, end, complete, and its waypoints as
+     *  "x,y,z" with "+phys" / "+break" / "+place" flags (capped at 128), plus how the route ended
+     *  (outcome, as in pathStatus). For explaining a route after the fact. */
+    public Map<String, Object> getLastPlan() {
+        Map<String, Object> out = new HashMap<>();
+        var g = kaptainwutax.tungsten.task.FastNavigator.lastPlanGoal;
+        var e = kaptainwutax.tungsten.task.FastNavigator.lastPlanEnd;
+        String oc = kaptainwutax.tungsten.task.FastNavigator.lastOutcome;
+        out.put("ok", true);
+        out.put("goal", g == null ? "none" : g.getX() + "," + g.getY() + "," + g.getZ());
+        out.put("end", e == null ? "none" : e.getX() + "," + e.getY() + "," + e.getZ());
+        out.put("complete", kaptainwutax.tungsten.task.FastNavigator.lastPlanComplete);
+        out.put("cells", new ArrayList<>(kaptainwutax.tungsten.task.FastNavigator.lastPlanCells));
+        out.put("outcome", kaptainwutax.tungsten.task.FastNavigator.isActive() ? "running" : oc == null ? "none" : oc);
+        return out;
+    }
+
     /**
      * Read-only: every follow / flee / combat intent the mod is carrying now. legacyAttack and
      * legacyAvoid = names marked by attackPlayer / avoidPlayer whose 30 s timer has not run out
