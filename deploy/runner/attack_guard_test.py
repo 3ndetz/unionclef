@@ -154,8 +154,8 @@ drop = []
 for i in range(6):
     time.sleep(1.0); aim_tester2()
     b1.py.call("lookAtPlayer", "tester2"); time.sleep(0.4)
-    r, _ = b1.py.batch([("tapAttackGuarded", uuid2, True), ("lookAt", CX + 0.5, STAND_Y + 0.5, CZ - 1.5),
-                        ("mouseClick", "right")])
+    r = b1.py.batch([("tapAttackGuarded", uuid2, True), ("lookAt", CX + 0.5, STAND_Y + 0.5, CZ - 1.5),
+                        ("mouseClick", "right")])[0]
     time.sleep(0.6)
     b1.py.call("closeOpenScreen"); time.sleep(0.4)
     aim_pig()
