@@ -41,16 +41,19 @@ public class InputControls {
         };
     }
 
-    public void tryPress(Input input) {
+    /** Press once. Returns false when the press was suppressed (the same input was pressed this tick
+     *  and is waiting for its release), true when it was handed to the key binding. */
+    public boolean tryPress(Input input) {
         // We just pressed, so let us release.
         if (_waitForRelease.contains(input)) {
-            return;
+            return false;
         }
         inputToKeyBinding(input).setPressed(true);
         // Also necessary to ensure the game registers the input as "pressed"
         KeyBinding.onKeyPressed(inputToKeyBinding(input).getDefaultKey());
         toUnpress.add(input);
         _waitForRelease.add(input);
+        return true;
     }
 
     /**

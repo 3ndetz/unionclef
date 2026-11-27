@@ -385,6 +385,18 @@ public class McpServer {
                 "Read-only: what the crosshair is on now -- type; for a block: block, pos, side, hitPos and "
                 + "placeCell (where a block placed now would go); for an entity: entity. Same result as py4j.",
                 schema(), a -> api.getCrosshairTarget());
+        tool("tapKeyReceipt",
+                "One press of a control (forward/back/left/right/jump/sneak/sprint/attack/use), with a receipt: "
+                + "accepted (false = suppressed, the same input already pressed this tick), suppressedBy, tick, "
+                + "crosshairAtCall, dispatchSeq. For attack, read getInputDispatches(dispatchSeq) after a tick "
+                + "to see what vanilla's attack did with it.",
+                schema("name:string"), a -> api.tapKeyReceipt(argStr(a, "name")));
+        tool("getInputDispatches",
+                "Read-only: vanilla's player-input attacks (a pressed attack key, ours or a human's) after "
+                + "sinceSeq, oldest first: seq, tick, cooldown (>0 = vanilla refused it), crosshair at dispatch, "
+                + "processed. Automatic combat is not listed. limit <= 0 -> 64.",
+                schema("sinceSeq:int", "limit:int"),
+                a -> api.getInputDispatches(argInt(a, "sinceSeq"), argInt(a, "limit")));
         tool("getPlayerTeams",
                 "Read-only: the tab list with each player's vanilla scoreboard team as the server sent it "
                 + "(name, uuid, self, gameMode, tabName, loaded, teamState 'assigned'/'none', team {name, "

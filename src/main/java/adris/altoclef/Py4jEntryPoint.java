@@ -2439,6 +2439,51 @@ public class Py4jEntryPoint {
         }, false));
     }
 
+    /**
+     * tapKey with a receipt, for measuring rather than acting differently: the same single press,
+     * plus what happened to it at the call. Returns {ok, input, accepted (false = suppressed: the
+     * same input was already pressed this tick and waits for its release -- tapKey reports true
+     * either way), suppressedBy ("none" / "waitingForRelease"), tick (client world time),
+     * crosshairAtCall {type MISS/BLOCK/ENTITY/NONE, entityId/entityType/entityName/distance or
+     * pos/side}, dispatchSeq (pass to getInputDispatches to read the attack this press produced)}.
+     * For "attack" the dispatch itself happens on the next client tick, in vanilla's doAttack.
+     */
+    public Map<String, Object> tapKeyReceipt(String name) {
+        var input = inputByName(name);
+        if (input == null) return Map.of("ok", false, "reason", "unknown input: " + name);
+        return onClientThread(() -> {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            Map<String, Object> out = new HashMap<>();
+            out.put("ok", true);
+            out.put("input", name);
+            out.put("dispatchSeq", adris.altoclef.control.AttackDispatchLog.lastSeq());
+            out.put("tick", mc.world == null ? -1L : mc.world.getTime());
+            out.put("crosshairAtCall", adris.altoclef.control.AttackDispatchLog.describe(mc.crosshairTarget));
+            boolean accepted = _mod.getInputControls().tryPress(input);
+            out.put("accepted", accepted);
+            out.put("suppressedBy", accepted ? "none" : "waitingForRelease");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /**
+     * Read-only: vanilla's player-input attacks (MinecraftClient.doAttack -- a pressed attack key,
+     * from tapKey/holdKey or a human) with seq > sinceSeq, oldest first, at most limit (<= 0: 64).
+     * Each: seq, tick, cooldown (> 0 means vanilla refused it), crosshair at dispatch (as in
+     * tapKeyReceipt), processed (vanilla handled it: an entity attack sent, a block started or a
+     * miss swing -- whether damage landed is the server's call). Automatic combat does not pass
+     * through doAttack and is not listed. Returns {ok, lastSeq, dispatches}.
+     */
+    public Map<String, Object> getInputDispatches(int sinceSeq, int limit) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            out.put("ok", true);
+            out.put("lastSeq", adris.altoclef.control.AttackDispatchLog.lastSeq());
+            out.put("dispatches", adris.altoclef.control.AttackDispatchLog.since(sinceSeq, limit));
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Hold a control for ms milliseconds (released by a scheduled client task). */
     public boolean holdKey(String name, int ms) {
         var input = inputByName(name);
