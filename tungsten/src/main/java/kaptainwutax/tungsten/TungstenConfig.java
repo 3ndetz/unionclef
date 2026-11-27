@@ -5141,6 +5141,17 @@ public class TungstenConfig {
      *  it. False = hop whenever facing and the landing is safe, the old rule. */
     public boolean walkerNoHopOnFinalStand = true;
 
+    /** BlockPathWalker compares waypoints with the slab-aware feet cell (baritone playerFeet) when
+     *  deciding a step up (jump, forced forward): over bottom slabs getBlockPos() is one cell low and
+     *  every level waypoint read as a step up. False = getBlockPos(), the old comparison. */
+    public boolean walkerSlabAwareFeet = true;
+
+    /** BlockPathWalker does not hop on the level when the feet cell or the next waypoint has an open
+     *  drop beside it (a one-wide bridge, an island edge): in the air the direction is fixed, and a
+     *  sideways drift or a stop mid-hop carries the body off. A step up still jumps; open ground keeps
+     *  the hop. False = hop whenever facing and the landing is safe, the old rule. */
+    public boolean walkerNoHopBesideDrop = true;
+
     /** FastPlanner treats the open cell over a ladder as walk-on (baritone MovementHelper.canWalkOn,
      *  MovementHelper.java:474): it can be stepped onto from the ground or from another ladder, and
      *  left downwards into the ladder (MovementDownward.cost, MovementDownward.java:61-67). Without it

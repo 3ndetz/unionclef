@@ -1,0 +1,125 @@
+[
+  {
+    "start": "2026-11-27T04:19:01.613Z",
+    "end": "2026-11-27T04:19:06.669Z",
+    "cmd": "const r=await tools.exec_command({cmd:\"python3 /repo/workspaces/minecraft/bedwars.py walk --target 937 37 -319 --seconds 2 --exact --require-complete --stop-on-damage && python3 /repo/workspaces/minecraft/bedwars.py opening --team",
+    "result": {
+      "target": [
+        937,
+        37,
+        -319
+      ],
+      "goal": [
+        937,
+        37,
+        -319
+      ],
+      "origin": [
+        938.0352553035536,
+        38.0,
+        -311.3696056327049
+      ],
+      "position": "937.5450704110638,36.5,-318.7202063115145",
+      "elapsed_seconds": 3.2,
+      "arrived": false,
+      "planner": {
+        "busy": true,
+        "navActive": true,
+        "inCell": false,
+        "settled": false,
+        "lastPlanEnd": "937,37,-319",
+        "lastPlanComplete": true,
+        "outcome": "running"
+      },
+      "request": {
+        "requested": "937,37,-319",
+        "goal": "937,37,-319",
+        "normalized": false,
+        "exact": true,
+        "ok": true
+      }
+    }
+  },
+  {
+    "start": "2026-11-27T04:19:33.452Z",
+    "end": "2026-11-27T04:19:38.131Z",
+    "cmd": "const r=await tools.exec_command({cmd:\"python3 /repo/workspaces/minecraft/bedwars.py walk --target 936 38 -324 --seconds 2 --exact --require-complete --stop-on-damage && python3 /repo/workspaces/minecraft/bedwars.py opening --team",
+    "result": {
+      "target": [
+        936,
+        38,
+        -324
+      ],
+      "goal": [
+        936,
+        39,
+        -324
+      ],
+      "origin": [
+        937.5220478641799,
+        36.5,
+        -318.74153043266494
+      ],
+      "position": "937.2057946035247,38.0,-322.69999998807907",
+      "elapsed_seconds": 3.03,
+      "arrived": false,
+      "planner": {
+        "busy": true,
+        "navActive": true,
+        "inCell": false,
+        "settled": false,
+        "lastPlanEnd": "936,39,-324",
+        "lastPlanComplete": true,
+        "outcome": "running"
+      },
+      "request": {
+        "requested": "936,38,-324",
+        "goal": "936,39,-324",
+        "normalized": true,
+        "exact": true,
+        "ok": true
+      }
+    }
+  },
+  {
+    "start": "2026-11-27T04:20:30.516Z",
+    "end": "2026-11-27T04:20:35.339Z",
+    "cmd": "const r=await tools.exec_command({cmd:\"python3 /repo/workspaces/minecraft/bedwars.py walk --target 937 37 -334 --seconds 2 --exact --require-complete --stop-on-damage && python3 /repo/workspaces/minecraft/bedwars.py opening --team",
+    "result": {
+      "target": [
+        937,
+        37,
+        -334
+      ],
+      "goal": [
+        937,
+        37,
+        -334
+      ],
+      "origin": [
+        937.2057946035247,
+        38.0,
+        -322.69999998807907
+      ],
+      "position": "936.6862964156011,36.43717636799826,-329.97002867453784",
+      "elapsed_seconds": 3.03,
+      "arrived": false,
+      "planner": {
+        "busy": true,
+        "navActive": true,
+        "inCell": false,
+        "settled": false,
+        "lastPlanEnd": "937,37,-334",
+        "lastPlanComplete": true,
+        "outcome": "running"
+      },
+      "request": {
+        "requested": "937,37,-334",
+        "goal": "937,37,-334",
+        "normalized": false,
+        "exact": true,
+        "ok": true
+      }
+    }
+  }
+]

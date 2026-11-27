@@ -1,4 +1,4 @@
-"""Side monitor for a nav course run (2026-11-27): every second, the navigator's own account --
+"""Side monitor for a nav course run (2026-11-27): every 2 s, in one docker exec, the navigator's own account --
 pathStatus (outcome, navActive, lastPlanEnd/Complete) and getLastPlan's waypoint count and end --
 plus the exact pose and FPS-relevant flags, one JSON line each, until killed or `secs` pass.
 For explaining a stall the suite only reports as a position ("freeze window at x=14.38").
@@ -20,9 +20,8 @@ t0 = time.time()
 with open(out, "w", encoding="utf-8") as f:
     while time.time() - t0 < secs:
         try:
-            st = py.call("pathStatus")
-            lp = py.call("getLastPlan")
-            p = py.call("getSelfPose")
+            # one docker exec for all three reads, every 2 s: the monitor must not cost the client FPS
+            st, lp, p = py.batch([("pathStatus",), ("getLastPlan",), ("getSelfPose",)])
             row = {"t": round(time.time() - t0, 1), "pos": [p.get("x"), p.get("y"), p.get("z")],
                    "onGround": p.get("onGround"), "speed": p.get("speed"),
                    "outcome": st.get("outcome"), "navActive": st.get("navActive"), "busy": st.get("busy"),
@@ -33,4 +32,4 @@ with open(out, "w", encoding="utf-8") as f:
             row = {"t": round(time.time() - t0, 1), "error": str(e)[:160]}
         f.write(json.dumps(row) + "\n")
         f.flush()
-        time.sleep(1.0)
+        time.sleep(2.0)

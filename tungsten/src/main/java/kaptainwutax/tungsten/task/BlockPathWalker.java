@@ -96,6 +96,21 @@ public class BlockPathWalker {
     public static volatile int walkerIntoHole = 0;
     /** Ticks a level hop was withheld on the final approach to the last stand of a route. */
     public static volatile int walkerFinalStandNoHop = 0;
+    /** Ticks a level hop was withheld because the footing had an open drop beside it. */
+    public static volatile int walkerNoHopBesideDrop = 0;
+
+    /** True when a cardinal neighbour of {@code cell} is an open drop: the body fits there and
+     *  nothing under it holds it (PlayerFit.supportTop NaN). A wall beside is not a drop. */
+    private static boolean besideDrop(net.minecraft.world.WorldView world, BlockPos cell) {
+        for (Direction d : Direction.Type.HORIZONTAL) {
+            BlockPos n = cell.offset(d);
+            if (Double.isNaN(kaptainwutax.tungsten.helpers.PlayerFit.supportTop(world, n))
+                    && kaptainwutax.tungsten.helpers.PlayerFit.bodyFits(world, n.getX() + 0.5, n.getY(), n.getZ() + 0.5)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /** Ticks the walker shut itself down because the physics executor claimed the body. */
     public static volatile int walkerYieldedToExecutor = 0;
@@ -818,7 +833,15 @@ public class BlockPathWalker {
         // hammered the jump key with X/Z frozen and Y oscillating for the rest of
         // the run (stand-measured at a 1-block ledge). When the waypoint is higher
         // and we are already on top of it horizontally, push forward regardless.
-        boolean climbing = wp.getY() > player.getBlockPos().getY() && dist < 1.6;
+        // The feet cell, slab-aware (baritone IPlayerContext.playerFeet, IPlayerContext.java:62-81): on
+        // a bottom slab the body stands at y+0.5 IN the cell above the slab, which is where the
+        // planner's waypoints are; getBlockPos() reads the slab's own cell, one lower, so every
+        // level waypoint over slabs looked like a step up -- forced forward and a jump on each step
+        // (bench bw-299 corridor: hops to y+1.75 over the slab floor, ending at its edge).
+        final int feetY = TungstenConfig.get().walkerSlabAwareFeet
+                ? kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).getY()
+                : player.getBlockPos().getY();
+        boolean climbing = wp.getY() > feetY && dist < 1.6;
         // TODOS.md C5.18, TungstenConfig.walkerFacingBypassNearZeroDist: the SAME numerical-
         // instability class the climbing case above already documents, generalised. A bearing
         // computed from a near-zero horizontal vector carries no usable direction, so gating
@@ -946,7 +969,7 @@ public class BlockPathWalker {
                     wp.getX(), wp.getY(), wp.getZ(), waypointIdx, path.size()));
         }
 
-        boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
+        boolean needJumpUp = wp.getY() > feetY;
         // YOU STEP OFF A HIGH LEDGE, YOU DO NOT LEAP OFF IT. A sprint-jump at a lip adds
         // height and forward momentum and stretches the arc far past the target — measured
         // on the bounce course at ~0.4 blocks/tick where a walk carries 0.28. Only a REAL
@@ -977,6 +1000,20 @@ public class BlockPathWalker {
                 && waypointIdx == path.size() - 1 && dist < 2.5) {
             canJump = false;
             walkerFinalStandNoHop++;
+        }
+        // ⛔ NO LEVEL HOP BESIDE A DROP (2026-11-27). In the air the direction is fixed; a hop that
+        // leaves with a little sideways speed, or is cut by a stop mid-flight, carries on sideways.
+        // On a one-wide strip that is the margin: bench bw-262 (a one-block wool strip over the void)
+        // hopped 3-4 times per run and a stop at 2 s left the body 0.5 off the axis, 0.3 from the
+        // edge; live the body left the strip at 0.81 off it. Baritone's MovementTraverse never jumps on
+        // the level; here a level hop is kept for open ground and dropped when the feet cell or the
+        // next waypoint has an open side with no floor under it (a wall beside is not a drop).
+        if (canJump && !needJumpUp && TungstenConfig.get().walkerNoHopBesideDrop
+                && (besideDrop(player.getEntityWorld(), wp)
+                    || besideDrop(player.getEntityWorld(),
+                            kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player)))) {
+            canJump = false;
+            walkerNoHopBesideDrop++;
         }
         mc.options.jumpKey.setPressed(canJump);
 
