@@ -5136,6 +5136,11 @@ public class TungstenConfig {
      *  passes the coast check, the old rule. */
     public boolean arrivalCoastCountsClimbing = true;
 
+    /** BlockPathWalker does not hop on the level within 2.5 blocks of a route's last waypoint (a
+     *  step up still jumps), so the body can settle in an exact 1x1 goal instead of hopping over
+     *  it. False = hop whenever facing and the landing is safe, the old rule. */
+    public boolean walkerNoHopOnFinalStand = true;
+
     /** FastPlanner treats the open cell over a ladder as walk-on (baritone MovementHelper.canWalkOn,
      *  MovementHelper.java:474): it can be stepped onto from the ground or from another ladder, and
      *  left downwards into the ladder (MovementDownward.cost, MovementDownward.java:61-67). Without it

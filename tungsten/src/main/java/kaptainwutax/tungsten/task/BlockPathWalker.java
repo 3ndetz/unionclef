@@ -94,6 +94,8 @@ public class BlockPathWalker {
     public static volatile int walkerHeldAboveWp = 0;
     /** G65: ticks the walk toward a cell below was made precise (no sprint, tight bearing, no hop). */
     public static volatile int walkerIntoHole = 0;
+    /** Ticks a level hop was withheld on the final approach to the last stand of a route. */
+    public static volatile int walkerFinalStandNoHop = 0;
 
     /** Ticks the walker shut itself down because the physics executor claimed the body. */
     public static volatile int walkerYieldedToExecutor = 0;
@@ -965,6 +967,16 @@ public class BlockPathWalker {
                 && !player.getEntityWorld().getFluidState(player.getBlockPos()).isEmpty()
                 && playerPos.y < wp.getY() + 0.6) {
             canJump = true;
+        }
+        // ⛔ NO HOP ONTO THE LAST STAND (2026-11-27). A level hop carries about a block; at the final
+        // waypoint of a route it overshoots the 1x1 goal cell, turns back and hops again, and an
+        // exact arrival -- settled in the cell -- never happens (bench deck_to_grass: the body
+        // hopped 899.7 <-> 901.6 around cell 900 until "no progress", 2 runs of 3). Baritone's
+        // MovementTraverse does not jump on the level at all; only a step up still jumps here.
+        if (canJump && !needJumpUp && TungstenConfig.get().walkerNoHopOnFinalStand
+                && waypointIdx == path.size() - 1 && dist < 2.5) {
+            canJump = false;
+            walkerFinalStandNoHop++;
         }
         mc.options.jumpKey.setPressed(canJump);
 
