@@ -159,4 +159,10 @@ for run in range(1, RUNS + 1):
         time.sleep(4.0)
         bot.ensure_in_game("test-server")
 bot.py.call("setBuildPolicy", False, True, True)
+if VARIANT == "ally":
+    # Park the teammate on solid ground: left where the next test clears the corridor it fell out of
+    # the world every ~4 s for an hour (782 deaths) and loaded the server under the next suite run.
+    from uctest.arena import STAND_Y  # noqa: E402
+    cmds([f"fill 446 {STAND_Y - 1} 446 454 {STAND_Y - 1} 454 minecraft:stone",
+          f"spawnpoint tester2 450 {STAND_Y} 450", f"tp tester2 450.5 {STAND_Y} 450.5"])
 print(json.dumps({"summary": {v: sum(1 for r in rows if r["verdict"] == v) for v in ("arrived", "fell", "stopped")}}))
