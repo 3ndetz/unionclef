@@ -20,7 +20,7 @@ Recorded: first movement, pathStatus.outcome (running / arrived / unreachable: .
 time to a terminal outcome, the plan end, final pose. Gate: the controls arrive; the pocket targets
 reach a terminal outcome that is not 'arrived', without leaving the pocket.
 
-    python deploy/runner/bw298_route_test.py [runs] [secs] [natural|nobreak|any] [empty|blocks] [case,...]
+    python deploy/runner/bw298_route_test.py [runs] [secs] [live|natural|nobreak|any] [empty|blocks] [case,...]
 """
 import json
 import math
@@ -40,8 +40,11 @@ SECS = float(sys.argv[2]) if len(sys.argv) > 2 else 12.0
 # breaking the wool. With the bench default (break anything) the route digs out -- measured: complete
 # plans, "arrived" inside the wool cell -287,19,87. "natural" = breakOnlyNatural (wool is not natural),
 # "nobreak" = allowBreak false. Bench default restored at the end (False, True, True).
-POLICY = sys.argv[3] if len(sys.argv) > 3 else "natural"
-POLICIES = {"natural": (True, True, True), "nobreak": (False, True, False), "any": (False, True, True)}
+POLICY = sys.argv[3] if len(sys.argv) > 3 else "live"
+# "live" = the actual LuckyWorld client, rechecked 2026-11-27 04:46 MSK: allowPlace=false and
+# allowBreak=false -- no edit of the map at all, so an unreachable verdict cannot depend on it.
+POLICIES = {"live": (False, False, False), "natural": (True, True, True), "nobreak": (False, True, False),
+            "any": (False, True, True)}
 # The inventory decides whether a place route exists. Live returned partial plans, so it had no
 # placeable block (or placing off): "empty" (default) clears it. "blocks" gives 32 cobblestone -- then
 # (-284,19,84) is reached by a one-block pillar; kept to repeat that arrival (one run read outcome
