@@ -996,8 +996,14 @@ public class BlockPathWalker {
         // exact arrival -- settled in the cell -- never happens (bench deck_to_grass: the body
         // hopped 899.7 <-> 901.6 around cell 900 until "no progress", 2 runs of 3). Baritone's
         // MovementTraverse does not jump on the level at all; only a step up still jumps here.
+        // ONLY AT THE ROUTE'S OWN END, NOT AT A LEG'S. A walker leg also ends where the navigator hands
+        // the rest to physics (a bridge edge, a jump); withholding the hop there changed the state the
+        // physics search started from, and the bench nav_bridge stopped at the gap edge with "physics
+        // found no way" in 500 and 2000 ms -- first try of every full gate series, while the same series
+        // with this rule pinned off passed. So: the last waypoint must be the navigator's goal cell.
+        boolean routeEnd = FastNavigator.isActive() && wp.equals(FastNavigator.lastPlanGoal);
         if (canJump && !needJumpUp && TungstenConfig.get().walkerNoHopOnFinalStand
-                && waypointIdx == path.size() - 1 && dist < 2.5) {
+                && waypointIdx == path.size() - 1 && dist < 2.5 && routeEnd) {
             canJump = false;
             walkerFinalStandNoHop++;
         }
