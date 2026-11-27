@@ -433,7 +433,7 @@ public class McpServer {
                 + "block to stand ON (a slab, the floor) is normalized to the cell above it, as the game "
                 + "counts feet; the reply has requested, goal and normalized. "
                 + "unlike gotoXYZ's 'within 2 blocks'. Same movement engine. Poll pathStatus: arrived = "
-                + "inCell and settled; lastPlanComplete=false means the planner only found a route ending "
+                + "inCell, settled and the navigator done; lastPlanComplete=false means the planner only found a route ending "
                 + "near the cell (lastPlanEndDistance).",
                 schema("x:int", "y:int", "z:int"),
                 a -> api.gotoCell(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));

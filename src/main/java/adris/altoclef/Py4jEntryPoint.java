@@ -5211,7 +5211,7 @@ public class Py4jEntryPoint {
     /** Walk until standing IN block cell (x,y,z) -- the feet cell, slab-aware, body settled --
      *  rather than gotoXYZ's "within 2 blocks". For a counter, a generator, a spot to place from.
      *  Same engine and movement as gotoXYZ (FastNavigator, exact-cell goal; baritone GoalBlock).
-     *  Returns immediately; poll pathStatus until arrived (= inCell and settled; a partial route
+     *  Returns immediately; poll pathStatus until arrived (= inCell, settled and the navigator done; a partial route
      *  never counts). The goal is the FEET cell, the one the body stands IN: a requested cell that
      *  holds something to stand on (a slab, the floor) with free space above is normalized to the
      *  cell above it (standCell). The reply carries requested, goal and normalized. */
@@ -5625,7 +5625,12 @@ public class Py4jEntryPoint {
                 out.put("feetCell", feet.getX() + "," + feet.getY() + "," + feet.getZ());
                 out.put("inCell", inCell);
                 out.put("settled", settled);
-                if (_gotoExact) out.put("arrived", inCell && settled);
+                // Not while the navigator is still driving: a route passing THROUGH the goal cell is
+                // in it and slow for a tick at a step landing, and reported arrived mid-route (bench
+                // carpet_to_platform: "arrived" at 0.9 s, then the body walked on into the next cell).
+                // The navigator's own exact arrival also checks the coast, and then it stops.
+                if (_gotoExact) out.put("arrived", inCell && settled
+                        && !kaptainwutax.tungsten.task.FastNavigator.isActive());
             }
             out.put("navActive", kaptainwutax.tungsten.task.FastNavigator.isActive());
             // stopped: nothing of tungsten can move the body any more -- navigator, walker, executor
