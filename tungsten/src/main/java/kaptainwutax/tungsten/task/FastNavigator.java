@@ -190,13 +190,25 @@ public final class FastNavigator {
      * Summing v + v*drag + ... also covers slippery supporting blocks.
      */
     private static boolean coastStaysInCell(ClientPlayerEntity player, BlockPos cell) {
-        if (!player.isOnGround()) return true;
-        BlockPos support = ((kaptainwutax.tungsten.mixin.AccessorEntity) player).tungsten$getVelocityAffectingPos();
-        //#if MC < 12111
-        //$$ double drag = player.getWorld().getBlockState(support).getBlock().getSlipperiness() * 0.91F;
-        //#else
-        double drag = player.getEntityWorld().getBlockState(support).getBlock().getSlipperiness() * 0.91F;
-        //#endif
+        // ON A LADDER THE BODY IS "SETTLED" IN THE AIR, AND STILL MOVING (2026-11-27). settledBody counts
+        // isClimbing, and this used to wave every off-ground body through -- so an exact goal at the foot
+        // of a 2-wide ladder strip arrived mid-slide at ~0.1 block/tick sideways and coasted into the
+        // next column (bw-256 foot: arrived at x 901.38, rested at 900.72). Off the ground vanilla's
+        // horizontal drag is the air value, 0.91 (LivingEntity.travel), so project with that.
+        boolean climbingCoast = !player.isOnGround() && player.isClimbing()
+                && TungstenConfig.get().arrivalCoastCountsClimbing;
+        if (!player.isOnGround() && !climbingCoast) return true;
+        double drag;
+        if (climbingCoast) {
+            drag = 0.91F;
+        } else {
+            BlockPos support = ((kaptainwutax.tungsten.mixin.AccessorEntity) player).tungsten$getVelocityAffectingPos();
+            //#if MC < 12111
+            //$$ drag = player.getWorld().getBlockState(support).getBlock().getSlipperiness() * 0.91F;
+            //#else
+            drag = player.getEntityWorld().getBlockState(support).getBlock().getSlipperiness() * 0.91F;
+            //#endif
+        }
         if (drag >= 1.0) return player.getVelocity().horizontalLengthSquared() == 0.0;
         double x = player.getX() + player.getVelocity().x / (1.0 - drag);
         double z = player.getZ() + player.getVelocity().z / (1.0 - drag);

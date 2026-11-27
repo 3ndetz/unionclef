@@ -5127,9 +5127,14 @@ public class TungstenConfig {
     public boolean walkerLadderDescendSlides = true;
 
     /** With walkerLadderDescendSlides: on a ladder with the next waypoint at the same level in
-     *  another column, step towards that cell's centre instead of pressing into the wall (which
+     *  any column (its own included), step towards that cell's centre instead of pressing into the wall (which
      *  never moves the body sideways). False = press in, the old input. */
     public boolean walkerLadderStepsToColumn = true;
+
+    /** An exact goal arriving on a ladder (climbing, off the ground) also needs its horizontal coast,
+     *  projected with air drag, to stay in the cell -- as on the ground. False = any off-ground body
+     *  passes the coast check, the old rule. */
+    public boolean arrivalCoastCountsClimbing = true;
 
     /** FastPlanner treats the open cell over a ladder as walk-on (baritone MovementHelper.canWalkOn,
      *  MovementHelper.java:474): it can be stepped onto from the ground or from another ladder, and

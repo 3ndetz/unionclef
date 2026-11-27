@@ -694,10 +694,12 @@ public class BlockPathWalker {
                 // so it slid between columns and climbed on every side contact (bw-256 foot: ended
                 // x 900.94 for cell 901). Step towards that cell's centre, as MovementDownward and
                 // MovementTraverse do (moveTowards the destination centre, MovementDownward.java:86-93).
-                boolean otherColumn = wp.getY() == cell.getY()
-                        && (wp.getX() != cell.getX() || wp.getZ() != cell.getZ())
+                // Also for the cell the body is already in: at the same level there is nothing to
+                // climb, and pressing in would climb (vy 0.2 on contact) away from an exact goal
+                // whose arrival is waiting for the body to stop.
+                boolean sameLevel = wp.getY() == cell.getY()
                         && kaptainwutax.tungsten.TungstenConfig.get().walkerLadderStepsToColumn;
-                if ((wp.getY() < cell.getY() || otherColumn)
+                if ((wp.getY() < cell.getY() || sameLevel)
                         && kaptainwutax.tungsten.TungstenConfig.get().walkerLadderDescendSlides) {
                     double dx = playerPos.x - (wp.getX() + 0.5);
                     double dz = playerPos.z - (wp.getZ() + 0.5);
