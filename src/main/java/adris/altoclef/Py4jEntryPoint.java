@@ -2118,6 +2118,13 @@ public class Py4jEntryPoint {
             out.put("climbing", p.isClimbing());
             out.put("horizontalCollision", p.horizontalCollision);
             out.put("verticalCollision", p.verticalCollision);
+            // Hazard contact as the client sees it (bw-239: a lava death the route did not report):
+            // inLava / inWater = the body touches that fluid; onFire = burning now (vanilla's flag,
+            // the server's word on a multiplayer client); fireTicks = burn time left as the client counts it.
+            out.put("inLava", p.isInLava());
+            out.put("inWater", p.isTouchingWater());
+            out.put("onFire", p.isOnFire());
+            out.put("fireTicks", p.getFireTicks());
             var wwp = kaptainwutax.tungsten.task.BlockPathWalker.getCurrentWaypoint();
             out.put("walkerWaypoint", wwp == null ? null : wwp.getX() + "," + wwp.getY() + "," + wwp.getZ());
             // Is anything else driving right now? An agent's holdKey competes with these for yaw.

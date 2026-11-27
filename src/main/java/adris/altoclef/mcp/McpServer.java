@@ -480,7 +480,7 @@ public class McpServer {
                 "Read-only, light: the body's exact pose -- x/y/z unrounded, yaw/pitch in degrees (vanilla: "
                 + "yaw 0 = +Z south, 90 = -X west, 180 = -Z north, -90 = +X east), onGround, velocity "
                 + "vx/vy/vz and speed, key binding states (the mod's own holds may read false: confirm "
-                + "movement by speed/position), and navActive/walker/executor/userTask = what else drives "
+                + "movement by speed/position), inLava/inWater/onFire/fireTicks (hazard contact now), and navActive/walker/executor/userTask = what else drives "
                 + "the body (any can turn the yaw during holdKey: stopPathing first). Check an aim before "
                 + "acting and a settled position after, without reading getGameState.",
                 schema(), a -> api.getSelfPose());
