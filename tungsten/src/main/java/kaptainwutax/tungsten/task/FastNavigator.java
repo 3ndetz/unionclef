@@ -557,6 +557,8 @@ public final class FastNavigator {
                                       java.util.function.Predicate<BlockPos> reached,
                                       boolean fromDrive, boolean nearest) {
         stop();
+        lastOutcome = null;
+        pendingGiveUpReason = null;
         lastPlanGoal = null;
         lastPlanEnd = null;
         lastPlanComplete = false;
@@ -604,7 +606,20 @@ public final class FastNavigator {
     /** True while a caller asked to stand IN one exact cell (the builder positioning itself). */
     public static boolean hasExactCell() { return active && exactCell != null && !exactFromDrive; }
 
+    /** How the last route ended, for callers that must tell "gave up" from "arrived" without reading
+     *  the log: "arrived", "unreachable: <why> at <cell>" (every give-up below), or "stopped" (ended
+     *  from outside). Null while a route runs or before the first one. */
+    public static volatile String lastOutcome = null;
+    private static volatile String pendingGiveUpReason = null;
+
+    /** Give the route up on the next tick, saying why (read back as lastOutcome). */
+    private static void giveUp(String reason) {
+        pendingGiveUpReason = reason;
+        pendingGiveUp = true;
+    }
+
     public static void stop() {
+        if (active && lastOutcome == null) lastOutcome = "stopped";
         planGeneration.incrementAndGet();
         planning = false;
         swapOnNextPlan = false;
@@ -653,6 +668,8 @@ public final class FastNavigator {
         if (pendingGiveUp) {
             pendingGiveUp = false;
             navStallGaveUp++;
+            lastOutcome = "unreachable: " + (pendingGiveUpReason == null ? "gave up" : pendingGiveUpReason)
+                    + " at " + player.getBlockPos().toShortString();
             BlockPathWalker.stop();
             stop();
             return;
@@ -717,6 +734,7 @@ public final class FastNavigator {
         if (!arrived && goalTest != null && sphereArrived) navArrivalRefusedByGoal++;
         if (arrived) {
             Debug.logMessage("FastNavigator: arrived (" + String.format("%.1f", dist) + ")");
+            lastOutcome = "arrived";
             BlockPathWalker.stop();
             if (TungstenConfig.get().arrivalNeedsSettledBody) {
                 var exA = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
@@ -832,6 +850,7 @@ public final class FastNavigator {
                 return;
             }
             navStallGaveUp++;
+            lastOutcome = "unreachable: no progress after a re-plan at " + here.toShortString();
             Debug.logWarning("FastNavigator: no progress at " + here.toShortString()
                     + " after a re-plan — goal unreachable from here, giving the route up");
             // TODOS.md, live void-death repro 2026-09-03: this said "handing over" but did not —
@@ -982,7 +1001,7 @@ public final class FastNavigator {
                                 physicsHandoffFrom.z, PHYSICS_PRIMARY_MS, PHYSICS_FAILURE_MS));
                         physicsFailStreak = 0;
                         physicsHandoffTarget = null;
-                        pendingGiveUp = true;
+                        giveUp("the physics hand-off failed");
                         return;
                     }
                     Debug.logMessage(String.format(
@@ -1133,7 +1152,7 @@ public final class FastNavigator {
                             "Wall too high to jump, but the goal is %.0f below — not towering up",
                             player.getY() - goal.y));
                     navTowerRefusedBelow++;
-                    pendingGiveUp = true;
+                    giveUp("wall too high to jump and the goal is below");
                     return;
                 }
                 // ⛔ AND A COLUMN THAT HAS ALREADY REFUSED A TOWER DOES NOT GET ASKED AGAIN (G62,
@@ -1148,7 +1167,7 @@ public final class FastNavigator {
                     Debug.logWarning("Wall too high to jump and this column has already refused a tower"
                             + " — giving the route up");
                     kaptainwutax.tungsten.task.PillarTask.pillarColumnRefused++;
-                    pendingGiveUp = true;
+                    giveUp("wall too high to jump and this column already refused a tower");
                     return;
                 }
                 // ⛔ A TOWER FROM INSIDE A CARPET IS A DIG FIRST (G82, 2026-09-13). The 22:39
@@ -1173,7 +1192,7 @@ public final class FastNavigator {
                             Debug.logWarning("Wall too high to jump and the " + fst.getBlock()
                                     + " the feet stand in cannot be broken — giving the route up");
                             navFeetRefused++;
-                            pendingGiveUp = true;
+                            giveUp("wall too high to jump and the feet block cannot be broken");
                             return;
                         }
                         Debug.logMessage("Wall too high to jump — clearing the " + fst.getBlock()
@@ -1216,7 +1235,7 @@ public final class FastNavigator {
                     if (unbreakable) {
                         Debug.logWarning("Wall too high to jump and the ceiling above cannot be mined — giving the route up");
                         navCeilingRefused++;
-                        pendingGiveUp = true;
+                        giveUp("wall too high to jump and the ceiling cannot be mined");
                         return;
                     }
                     if (!ceiling.isEmpty()) {
@@ -1262,7 +1281,7 @@ public final class FastNavigator {
                     Debug.logWarning("FastNavigator: physics already found no way to " + jump.toShortString()
                             + " twice — giving the route up");
                     navPhysicsGaveUp++;
-                    pendingGiveUp = true;
+                    giveUp("physics found no way to " + jump.toShortString() + " twice");
                     return;
                 }
                 // ⛔ THE ROOT IS THE BODY AT REPLAY TIME, SO THE BODY MUST BE AT REST WHEN THE
@@ -1790,7 +1809,7 @@ public final class FastNavigator {
                 Debug.logWarning(String.format(
                         "FastNavigator: no leg from here toward a goal %d below (%.1f -> %.1f) — giving the route up",
                         start.getY() - goalCell.getY(), before, after));
-                pendingGiveUp = true;
+                giveUp("no leg toward a goal below");
                 return;
             }
             if (!walkThePartial && before - after < MIN_PARTIAL_PROGRESS) {

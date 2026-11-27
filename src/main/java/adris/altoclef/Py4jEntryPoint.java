@@ -5633,6 +5633,11 @@ public class Py4jEntryPoint {
                         && !kaptainwutax.tungsten.task.FastNavigator.isActive());
             }
             out.put("navActive", kaptainwutax.tungsten.task.FastNavigator.isActive());
+            // How the last route ended: running / arrived / "unreachable: <why> at <cell>" / stopped /
+            // none -- the navigator's own verdict, so a give-up is not read as a silent stall.
+            String oc = kaptainwutax.tungsten.task.FastNavigator.lastOutcome;
+            out.put("outcome", kaptainwutax.tungsten.task.FastNavigator.isActive() ? "running"
+                    : oc == null ? "none" : oc);
             // stopped: nothing of tungsten can move the body any more -- navigator, walker, executor
             // and the physics search all idle. After stopPathing, navActive/walker/executor drop at
             // once (the stop runs on the client thread); the physics search thread notices its stop
