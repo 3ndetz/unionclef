@@ -9,7 +9,7 @@ scoreboard teams set by rcon. Cases (each waits out vanilla's attack timer first
   ally       tester2 in our team, requireOtherTeam: suppressedBy "ally", no dispatch, no damage;
   mismatch   crosshair on the pig, target = tester2: suppressedBy "targetMismatch", no dispatch;
   noteam     tester2 in no team: requireOtherTeam -> "teamUnknown"; without it -> accepted, passed;
-  cooldown   a plain miss swing first (vanilla's timer -> 10), then the guarded press: "cooldown";
+  cooldown   recorded only: 1.21.11 survival does not start vanilla's attack timer on a miss (measured);
   gui        a chest screen open: "gui"; closed afterwards;
   change     crosshair on tester2 at the call, tester2 teleported away right after it, repeated: each
              dispatch is either refused "targetChanged" or, if the press was consumed first, attacked
@@ -43,7 +43,9 @@ def cmds(lines):
 
 
 def place_tester2():
-    cmds([f"tp tester2 {CX + 0.5} {STAND_Y} {CZ + 3.0} 180 0"])
+    # back in front of tester1 and topped up: a hit knocks it back out of reach (3 blocks) -- the
+    # first version left it there and every later case read "noTarget"
+    cmds([f"tp tester2 {CX + 0.5} {STAND_Y} {CZ + 3.0} 180 0", "effect give tester2 minecraft:instant_health 1 3 true"])
     time.sleep(0.8)
 
 
@@ -53,7 +55,7 @@ cmds([f"forceload add {CX - 8} {CZ - 8} {CX + 8} {CZ + 8}",
       f"kill @e[type=pig,x={CX},y={STAND_Y},z={CZ},distance=..20]",
       f"setblock {CX} {STAND_Y} {CZ - 2} minecraft:chest",
       "gamemode survival tester1", "gamemode survival tester2", "clear tester1",
-      "effect give tester2 minecraft:resistance 600 1 true", "effect give tester2 minecraft:regeneration 600 2 true",
+      "effect clear tester2", "effect give tester2 minecraft:resistance 600 0 true",
       f"spawnpoint tester2 {CX} {STAND_Y} {CZ + 3}",
       f"tp tester1 {CX + 0.5} {STAND_Y} {CZ + 0.5} 0 0",
       f"summon pig {CX + 2.5} {STAND_Y} {CZ + 3.0} {{NoAI:1b,Health:10f}}",
@@ -69,6 +71,7 @@ def hp2():
 
 
 def aim_tester2():
+    place_tester2()
     b1.py.call("lookAtPlayer", "tester2")
     time.sleep(0.6)
 
@@ -89,7 +92,7 @@ checks, rows = {}, {}
 
 # enemy
 cmds(["team join uc_red tester2"]); time.sleep(1.2); aim_tester2()
-h0 = hp2(); r, ds = guarded(); time.sleep(0.4); h1 = hp2()
+h0 = hp2(); r, ds = guarded(); h1 = hp2()
 rows["enemy"] = {"receipt": r, "dispatches": ds, "hp": [h0, h1]}
 checks["enemy: accepted"] = r.get("accepted") is True and r.get("suppressedBy") == "none"
 checks["enemy: dispatch passed on tester2"] = (len(ds) == 1 and ds[0].get("guard") == "passed"
@@ -127,7 +130,11 @@ b1.py.call("tapKeyReceipt", "attack"); time.sleep(0.1)
 b1.py.call("lookAtPlayer", "tester2")
 r, ds = guarded(wait=0.3)
 rows["cooldown"] = {"receipt": r, "dispatches": ds}
-checks["cooldown: suppressed 'cooldown'"] = r.get("suppressedBy") == "cooldown" and r.get("attackCooldown", 0) > 0
+# NOT GATED: on 1.21.11 survival vanilla does not start its attack timer on a miss -- measured from
+# inside the container (guard_cooldown_inner.py), attackCooldown was 0 0.15 s after a miss, 3 of 3; the
+# only non-zero value seen was 10000 with a screen open, which the guard reports as "gui" first. The
+# "cooldown" reason stays as a safety net for when vanilla would refuse; it is recorded here, not gated.
+rows["cooldown_note"] = {"suppressedBy": r.get("suppressedBy"), "attackCooldown": r.get("attackCooldown")}
 
 # gui: open the chest behind
 time.sleep(1.0)
@@ -139,27 +146,31 @@ b1.py.call("closeOpenScreen"); time.sleep(0.5)
 rows["gui"] = {"screenOpen": bool(screen.get("open", screen.get("ok"))), "receipt": r}
 checks["gui: suppressed 'gui'"] = r.get("suppressedBy") == "gui"
 
-# change: tester2 moved away right after an accepted call
+# change: the view turned to the sky right after the guarded call, in the same py4j batch. Vanilla
+# consumes the press on the next tick, against the crosshair of the last rendered frame: if a frame is
+# drawn between the call and that tick the crosshair is already off tester2 and the guard must cancel
+# the attack at dispatch; if the tick comes first, the attack lands on tester2. (An rcon teleport is
+# always later than the tick: the first version saw 8/8 "passed on tester2".)
 change = []
-for i in range(8):
-    place_tester2(); time.sleep(1.0); aim_tester2()
-    r = b1.py.call("tapAttackGuarded", uuid2, True)
-    cmds([f"tp tester2 {CX + 4.5} {STAND_Y} {CZ - 4.0}"])
+for i in range(12):
+    time.sleep(1.0); aim_tester2()
+    r, _ = b1.py.batch([("tapAttackGuarded", uuid2, True), ("lookAt", CX + 0.5, STAND_Y + 40.0, CZ + 0.6)])
     time.sleep(0.5)
     ds = b1.py.call("getInputDispatches", int(r["dispatchSeq"]), 8).get("dispatches", [])
     change.append({"accepted": r.get("accepted"), "suppressedBy": r.get("suppressedBy"),
                    "dispatch": [{k: d.get(k) for k in ("guard", "refusedBy", "crosshair")} for d in ds]})
 rows["change"] = change
 checks["change: every dispatch attacked tester2 or was refused"] = all(
-    all((d["guard"] == "refused") or (d["guard"] == "passed" and d["crosshair"].get("entityUuid") == uuid2)
+    all((d["guard"] == "refused" and d.get("refusedBy") in ("noTarget", "targetChanged"))
+        or (d["guard"] == "passed" and d["crosshair"].get("entityUuid") == uuid2)
         for d in c["dispatch"]) for c in change)
 rows["change_tally"] = {
-    "refused_targetChanged": sum(1 for c in change for d in c["dispatch"] if d.get("refusedBy") == "targetChanged"),
+    "refused_at_dispatch": sum(1 for c in change for d in c["dispatch"] if d.get("guard") == "refused"),
     "passed_on_tester2": sum(1 for c in change for d in c["dispatch"] if d.get("guard") == "passed"),
     "suppressed_at_call": sum(1 for c in change if not c["accepted"])}
 
 # plain tap unchanged
-place_tester2(); time.sleep(1.0); aim_tester2()
+time.sleep(1.0); aim_tester2()
 r = b1.py.call("tapKeyReceipt", "attack"); time.sleep(0.4)
 ds = b1.py.call("getInputDispatches", int(r["dispatchSeq"]), 8).get("dispatches", [])
 rows["plain"] = {"receipt": r, "dispatches": ds}
