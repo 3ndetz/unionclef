@@ -1,0 +1,299 @@
+[
+  {
+    "id": "exec-65a35333-1f96-4b75-a1d8-c9d889d9620d",
+    "ms": 6638,
+    "receipt": {
+      "target": "Магазин",
+      "use_input_accepted": false,
+      "route": {
+        "target": [
+          -289,
+          19,
+          86
+        ],
+        "goal": [
+          -289,
+          19,
+          86
+        ],
+        "arrived": false,
+        "planner_arrived": false,
+        "origin": [
+          -283.4653398374713,
+          18.5,
+          89.6963238973905
+        ],
+        "position": "-282.30000001192093,18.5,89.65182479051109",
+        "request": {
+          "requested": "-289,19,86",
+          "goal": "-289,19,86",
+          "normalized": false,
+          "exact": true,
+          "ok": true
+        },
+        "stop_seconds": 0.21,
+        "planner": {
+          "busy": true,
+          "navActive": true,
+          "inCell": false,
+          "settled": false,
+          "lastPlanEnd": "-290,19,87",
+          "lastPlanComplete": false
+        },
+        "elapsed_seconds": 6.08
+      }
+    }
+  },
+  {
+    "id": "exec-e45e08e2-7e35-45bd-81ad-93ef7795ef73",
+    "ms": 2065,
+    "receipt": {
+      "target": "Магазин",
+      "use_input_accepted": false,
+      "route": {
+        "target": [
+          -286,
+          19,
+          88
+        ],
+        "goal": [
+          -286,
+          19,
+          88
+        ],
+        "arrived": false,
+        "planner_arrived": false,
+        "origin": [
+          -283.3318257330543,
+          18.5,
+          89.5212457293384
+        ],
+        "position": "-283.3318257330543,18.5,89.5212457293384",
+        "request": {
+          "requested": "-286,19,88",
+          "goal": "-286,19,88",
+          "normalized": false,
+          "exact": true,
+          "ok": true
+        },
+        "stop_seconds": 0.2,
+        "planner": {
+          "busy": false,
+          "navActive": false,
+          "inCell": false,
+          "settled": true,
+          "lastPlanEnd": "-284,19,88",
+          "lastPlanComplete": false
+        },
+        "current_footing": [
+          [
+            -284,
+            17,
+            89,
+            "minecraft:spruce_planks"
+          ],
+          [
+            -284,
+            18,
+            89,
+            "minecraft:cobblestone_slab"
+          ],
+          [
+            -284,
+            19,
+            89,
+            "minecraft:air"
+          ]
+        ],
+        "elapsed_seconds": 1.62
+      }
+    }
+  },
+  {
+    "id": "exec-5b5bab85-aebd-421c-9c77-7268dabfacb8",
+    "ms": 6571,
+    "receipt": {
+      "target": "Магазин",
+      "use_input_accepted": false,
+      "route": {
+        "target": [
+          -287,
+          19,
+          87
+        ],
+        "goal": [
+          -287,
+          19,
+          87
+        ],
+        "arrived": false,
+        "planner_arrived": false,
+        "origin": [
+          -285.577519693751,
+          19,
+          88.0923491786777
+        ],
+        "position": "-285.577519693751,19.0,88.0923491786777",
+        "request": {
+          "requested": "-287,19,87",
+          "goal": "-287,19,87",
+          "normalized": false,
+          "exact": true,
+          "ok": true
+        },
+        "stop_seconds": 0.2,
+        "planner": {
+          "busy": true,
+          "navActive": true,
+          "inCell": false,
+          "settled": true,
+          "lastPlanEnd": "-286,19,87",
+          "lastPlanComplete": false
+        },
+        "current_footing": [
+          [
+            -286,
+            18,
+            88,
+            "minecraft:cobblestone"
+          ],
+          [
+            -286,
+            19,
+            88,
+            "minecraft:air"
+          ],
+          [
+            -286,
+            20,
+            88,
+            "minecraft:air"
+          ]
+        ],
+        "elapsed_seconds": 6.2
+      }
+    }
+  },
+  {
+    "id": "exec-8d39244d-c0f1-4de5-9686-f8424bd08554",
+    "ms": 1878,
+    "receipt": {
+      "target": [
+        -284,
+        19,
+        84
+      ],
+      "goal": [
+        -284,
+        19,
+        84
+      ],
+      "arrived": false,
+      "planner_arrived": false,
+      "origin": [
+        -285.577519693751,
+        19,
+        88.0923491786777
+      ],
+      "position": "-285.577519693751,19.0,88.0923491786777",
+      "request": {
+        "requested": "-284,19,84",
+        "goal": "-284,19,84",
+        "normalized": false,
+        "exact": true,
+        "ok": true
+      },
+      "stop_seconds": 0.2,
+      "planner": {
+        "busy": false,
+        "navActive": false,
+        "inCell": false,
+        "settled": true,
+        "lastPlanEnd": "-286,19,87",
+        "lastPlanComplete": false
+      },
+      "current_footing": [
+        [
+          -286,
+          18,
+          88,
+          "minecraft:cobblestone"
+        ],
+        [
+          -286,
+          19,
+          88,
+          "minecraft:air"
+        ],
+        [
+          -286,
+          20,
+          88,
+          "minecraft:air"
+        ]
+      ],
+      "elapsed_seconds": 1.61
+    }
+  },
+  {
+    "id": "exec-f9f2e087-aedd-4660-b622-c5e615dc15fb",
+    "ms": 1981,
+    "receipt": {
+      "target": [
+        -284,
+        19,
+        87
+      ],
+      "goal": [
+        -284,
+        19,
+        87
+      ],
+      "arrived": false,
+      "planner_arrived": false,
+      "origin": [
+        -285.577519693751,
+        19,
+        88.0923491786777
+      ],
+      "position": "-285.577519693751,19.0,88.0923491786777",
+      "request": {
+        "requested": "-284,19,87",
+        "goal": "-284,19,87",
+        "normalized": false,
+        "exact": true,
+        "ok": true
+      },
+      "stop_seconds": 0.2,
+      "planner": {
+        "busy": false,
+        "navActive": false,
+        "inCell": false,
+        "settled": true,
+        "lastPlanEnd": "-286,19,87",
+        "lastPlanComplete": false
+      },
+      "current_footing": [
+        [
+          -286,
+          18,
+          88,
+          "minecraft:cobblestone"
+        ],
+        [
+          -286,
+          19,
+          88,
+          "minecraft:air"
+        ],
+        [
+          -286,
+          20,
+          88,
+          "minecraft:air"
+        ]
+      ],
+      "elapsed_seconds": 1.67
+    }
+  }
+]

@@ -1,0 +1,272 @@
+[
+  {
+    "id": "exec-65afc21e-3358-40f2-86a9-64541ffed718",
+    "type": "completed",
+    "durationMs": 5152,
+    "receipt": {
+      "route": {
+        "target": [
+          -284,
+          18,
+          89
+        ],
+        "goal": [
+          -284,
+          19,
+          89
+        ],
+        "arrived": true,
+        "planner_arrived": true,
+        "origin": [
+          -284.021988815534,
+          19,
+          82.51289477265786
+        ],
+        "position": "-283.4653398374713,18.5,89.6963238973905",
+        "request": {
+          "requested": "-284,18,89",
+          "goal": "-284,19,89",
+          "normalized": true,
+          "exact": true,
+          "ok": true
+        },
+        "stop_seconds": 0.2,
+        "planner": {
+          "busy": false,
+          "navActive": false,
+          "inCell": true,
+          "settled": true,
+          "lastPlanEnd": "-284,19,89",
+          "lastPlanComplete": true
+        },
+        "elapsed_seconds": 3.04,
+        "selection": {
+          "best": "-284,18,89",
+          "ok": true,
+          "results": [
+            {
+              "endDistance": 0,
+              "goal": "-284,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 9,
+              "normalized": true,
+              "reached": true,
+              "cell": "-284,18,90"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-284,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 9,
+              "normalized": false,
+              "reached": true,
+              "cell": "-284,19,90"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-283,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 9,
+              "normalized": true,
+              "reached": true,
+              "cell": "-283,18,90"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-283,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 9,
+              "normalized": false,
+              "reached": true,
+              "cell": "-283,19,90"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-284,19,89",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 8,
+              "normalized": true,
+              "reached": true,
+              "cell": "-284,18,89"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-284,19,89",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 8,
+              "normalized": false,
+              "reached": true,
+              "cell": "-284,19,89"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-284,19,91",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 10,
+              "normalized": true,
+              "reached": true,
+              "cell": "-284,18,91"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-284,19,91",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 10,
+              "normalized": false,
+              "reached": true,
+              "cell": "-284,19,91"
+            }
+          ]
+        }
+      },
+      "item": "minecraft:iron_ingot",
+      "before": 0,
+      "after": 20,
+      "verified": true,
+      "source": "experienceLevel"
+    }
+  },
+  {
+    "id": "exec-1913e666-2657-4f67-882e-60277a6137ad",
+    "type": "completed",
+    "durationMs": 3610,
+    "receipt": {
+      "route": {
+        "target": [
+          -284,
+          18,
+          89
+        ],
+        "goal": [
+          -284,
+          19,
+          89
+        ],
+        "arrived": true,
+        "planner_arrived": true,
+        "origin": [
+          -282.30000001192093,
+          18.5,
+          89.65182479051109
+        ],
+        "position": "-283.3098284920103,18.5,89.52402951251526",
+        "request": {
+          "requested": "-284,18,89",
+          "goal": "-284,19,89",
+          "normalized": true,
+          "exact": true,
+          "ok": true
+        },
+        "stop_seconds": 0.2,
+        "planner": {
+          "busy": false,
+          "navActive": false,
+          "inCell": true,
+          "settled": true,
+          "lastPlanEnd": "-284,19,89",
+          "lastPlanComplete": true
+        },
+        "elapsed_seconds": 1.54,
+        "selection": {
+          "best": "-284,18,89",
+          "ok": true,
+          "results": [
+            {
+              "endDistance": 1,
+              "goal": "-284,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 2,
+              "normalized": true,
+              "reached": false,
+              "cell": "-284,18,90"
+            },
+            {
+              "endDistance": 1,
+              "goal": "-284,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 2,
+              "normalized": false,
+              "reached": false,
+              "cell": "-284,19,90"
+            },
+            {
+              "endDistance": 1,
+              "goal": "-283,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 1,
+              "normalized": true,
+              "reached": false,
+              "cell": "-283,18,90"
+            },
+            {
+              "endDistance": 1,
+              "goal": "-283,19,90",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 1,
+              "normalized": false,
+              "reached": false,
+              "cell": "-283,19,90"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-284,19,89",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 2,
+              "normalized": true,
+              "reached": true,
+              "cell": "-284,18,89"
+            },
+            {
+              "endDistance": 0,
+              "goal": "-284,19,89",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 2,
+              "normalized": false,
+              "reached": true,
+              "cell": "-284,19,89"
+            },
+            {
+              "endDistance": 1,
+              "goal": "-284,19,91",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 5,
+              "normalized": true,
+              "reached": false,
+              "cell": "-284,18,91"
+            },
+            {
+              "endDistance": 1,
+              "goal": "-284,19,91",
+              "found": true,
+              "breaks": 0,
+              "pathSize": 5,
+              "normalized": false,
+              "reached": false,
+              "cell": "-284,19,91"
+            }
+          ]
+        }
+      },
+      "item": "minecraft:gold_ingot",
+      "before": 216,
+      "after": 244,
+      "verified": true,
+      "source": "experienceLevel"
+    }
+  }
+]
