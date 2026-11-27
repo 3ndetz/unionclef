@@ -26,6 +26,7 @@ public final class ClientTickMixin {
             at = @At("HEAD")
     )
     private void clientTick(CallbackInfo ci) {
+        adris.altoclef.control.AttackDispatchLog.onClientTick();   // the guarded-press tick counter
         EventBus.publish(new ClientTickEvent());
     }
 

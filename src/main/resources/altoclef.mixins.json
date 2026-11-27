@@ -31,6 +31,7 @@
     "InactivityFpsLimiterMixin",
     "AttackDispatchMixin",
     "AttackCooldownAccessor",
+    "KeyResetGuardMixin",
     "CameraMixin",
     "ConfirmScreenAccessor",
     "ChatInputMixin",

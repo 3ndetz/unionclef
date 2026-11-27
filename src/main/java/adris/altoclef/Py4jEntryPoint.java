@@ -2482,7 +2482,11 @@ public class Py4jEntryPoint {
      * fails there, that one attack is cancelled. Reasons (suppressedBy here, refusedBy in
      * getInputDispatches): notInGame, gui, cooldown (vanilla's attack timer > 0: it would refuse),
      * noTarget, targetMismatch (call) / targetChanged (dispatch), teamUnknown, ally,
-     * waitingForRelease. Returns tapKeyReceipt's fields plus targetUuid, requireOtherTeam,
+     * waitingForRelease; at dispatch also delayed (the press reached doAttack more than 3 client ticks
+     * late: cancelled, never let through) -- and if vanilla throws the press away (a screen opened, a
+     * world change: KeyBinding.unpressAll) the guard goes with it, logged as guard "dropped",
+     * refusedBy "pressCleared". The guard belongs to the press, not to a time window: it never
+     * lets an unchecked attack through. Returns tapKeyReceipt's fields plus targetUuid, requireOtherTeam,
      * attackCooldown and attackStrength (vanilla's swing charge 0..1, information only). Read
      * getInputDispatches(dispatchSeq) after a tick: guard passed/refused and refusedBy. tapKey and
      * tapKeyReceipt are unchanged and unguarded.

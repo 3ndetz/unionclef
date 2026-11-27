@@ -146,6 +146,30 @@ b1.py.call("closeOpenScreen"); time.sleep(0.5)
 rows["gui"] = {"screenOpen": bool(screen.get("open", screen.get("ok"))), "receipt": r}
 checks["gui: suppressed 'gui'"] = r.get("suppressedBy") == "gui"
 
+# drop: a screen opened right after the guarded call, in the same batch. If the screen comes before
+# the tick vanilla throws the press away (KeyBinding.unpressAll) and the guard must go with it,
+# logged "dropped"; if the tick comes first the press was checked normally. Either way an ordinary
+# tapKeyReceipt afterwards must dispatch unguarded ("none") -- a left-over guard must never touch it.
+drop = []
+for i in range(6):
+    time.sleep(1.0); aim_tester2()
+    b1.py.call("lookAtPlayer", "tester2"); time.sleep(0.4)
+    r, _ = b1.py.batch([("tapAttackGuarded", uuid2, True), ("lookAt", CX + 0.5, STAND_Y + 0.5, CZ - 1.5),
+                        ("mouseClick", "right")])
+    time.sleep(0.6)
+    b1.py.call("closeOpenScreen"); time.sleep(0.4)
+    aim_pig()
+    pr = b1.py.call("tapKeyReceipt", "attack"); time.sleep(0.4)
+    ds = b1.py.call("getInputDispatches", int(r["dispatchSeq"]), 8).get("dispatches", [])
+    plain = [d for d in ds if d.get("seq", 0) > int(pr["dispatchSeq"])]
+    drop.append({"guarded": [(d.get("guard"), d.get("refusedBy")) for d in ds if d.get("seq", 0) <= int(pr["dispatchSeq"])],
+                 "plainAfter": [(d.get("guard"), d["crosshair"].get("entityType")) for d in plain]})
+rows["drop"] = drop
+checks["drop: the ordinary press after it is unguarded and hits the pig"] = all(
+    len(x["plainAfter"]) == 1 and x["plainAfter"][0] == ("none", "minecraft:pig") for x in drop)
+checks["drop: no guarded press attacked anything but tester2"] = all(
+    g[0] in ("passed", "dropped", "refused") for x in drop for g in x["guarded"])
+
 # change: the view turned to the sky right after the guarded call, in the same py4j batch. Vanilla
 # consumes the press on the next tick, against the crosshair of the last rendered frame: if a frame is
 # drawn between the call and that tick the crosshair is already off tester2 and the guard must cancel

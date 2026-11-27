@@ -32,19 +32,57 @@ public final class AttackDispatchLog {
     // the tick vanilla consumes the press, against the crosshair vanilla is about to attack. A
     // failed check cancels that one doAttack and is logged with its reason. Unarmed presses (tapKey,
     // tapKeyReceipt, a human's mouse) never pass through it.
+    //
+    // ⛔ THE GUARD BELONGS TO THE PRESS, NOT TO A TIME WINDOW (2026-11-27). It used to expire by WORLD
+    // time (armed + 3) and an expired guard let the press through unchecked. World time on a client is
+    // re-synced from the server: after any lag it jumps many ticks at once, and the press then hit
+    // whatever was under the crosshair -- bench guard_race_probe.py under "tick sprint": 10 of 25
+    // guarded presses dispatched "expired" onto a pig next to the target. Now: an armed guard is
+    // always checked at dispatch; a press that arrives more than 3 CLIENT ticks late is cancelled once
+    // ("delayed"); a press vanilla throws away (KeyBinding.unpressAll: a screen, a world change, focus
+    // loss) takes its guard with it ("dropped", logged), so a later ordinary click is never affected;
+    // every doAttack in the tick the press is consumed is checked, so no other press queued with it
+    // can take its place.
     private static String guardUuid = null;
     private static boolean guardOtherTeam = false;
-    private static long guardUntilTick = -1;
+    private static long armedClientTick = -1;
+    private static long checkedClientTick = -1;
+    private static long clientTicks = 0;
     private static String lastGuard = "none";
 
     public static synchronized void arm(String uuid, boolean otherTeam, long nowTick) {
         guardUuid = uuid;
         guardOtherTeam = otherTeam;
-        guardUntilTick = nowTick + 3;   // the press is consumed on the next client tick; 3 is slack
+        armedClientTick = clientTicks;
+        checkedClientTick = -1;
     }
 
     public static synchronized void disarm() {
         guardUuid = null;
+        checkedClientTick = -1;
+    }
+
+    /** Head of every client tick (ClientTickMixin): a guard already checked in an earlier tick is done. */
+    public static synchronized void onClientTick() {
+        clientTicks++;
+        if (guardUuid != null && checkedClientTick >= 0 && clientTicks > checkedClientTick) disarm();
+    }
+
+    /** KeyBinding.unpressAll (a screen opened, a world change, focus lost): vanilla throws pending
+     *  presses away, so the armed press is gone too -- drop its guard, with a receipt. */
+    public static synchronized void onKeysReset() {
+        if (guardUuid == null || checkedClientTick >= 0) return;
+        Map<String, Object> r = new HashMap<>();
+        MinecraftClient mc = MinecraftClient.getInstance();
+        r.put("seq", ++seq);
+        r.put("tick", mc.world == null ? -1L : mc.world.getTime());
+        r.put("guard", "dropped");
+        r.put("refusedBy", "pressCleared");
+        r.put("crosshair", describe(mc.crosshairTarget));
+        r.put("vanillaReturn", false);
+        LOG.addLast(r);
+        while (LOG.size() > CAP) LOG.removeFirst();
+        disarm();
     }
 
     /**
@@ -78,11 +116,14 @@ public final class AttackDispatchLog {
     public static synchronized String checkAtDispatch(MinecraftClient mc, int cooldown, HitResult target) {
         if (guardUuid == null) { lastGuard = "none"; return null; }
         long now = mc.world == null ? -1L : mc.world.getTime();
-        String uuid = guardUuid;
-        boolean other = guardOtherTeam;
-        guardUuid = null;                                  // one press, one check
-        if (now > guardUntilTick) { lastGuard = "expired"; return null; }
-        String why = verdict(mc, uuid, other, cooldown, true);
+        String why;
+        if (checkedClientTick < 0 && clientTicks - armedClientTick > 3) {
+            why = "delayed";                               // fail closed: see the note above
+            checkedClientTick = clientTicks;               // the rest of this tick is checked too
+        } else {
+            if (checkedClientTick < 0) checkedClientTick = clientTicks;   // this tick's doAttacks all checked
+            why = verdict(mc, guardUuid, guardOtherTeam, cooldown, true);
+        }
         if (why == null) { lastGuard = "passed"; return null; }
         Map<String, Object> r = new HashMap<>();
         r.put("seq", ++seq);
@@ -102,7 +143,7 @@ public final class AttackDispatchLog {
     public static synchronized void begin(int cooldown, HitResult target) {
         open = new HashMap<>();
         open.put("seq", ++seq);
-        open.put("guard", lastGuard);   // none / passed / expired
+        open.put("guard", lastGuard);   // none / passed
         open.put("refusedBy", "none");
         lastGuard = "none";
         MinecraftClient mc = MinecraftClient.getInstance();

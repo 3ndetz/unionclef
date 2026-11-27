@@ -396,7 +396,8 @@ public class McpServer {
                 + "targetUuid (and, with requireOtherTeam, a player of a different vanilla scoreboard team, both "
                 + "teams present) at the call AND again when vanilla consumes the press; a failed check at "
                 + "dispatch cancels that one attack. suppressedBy / refusedBy: notInGame, gui, cooldown, noTarget, "
-                + "targetMismatch, targetChanged, teamUnknown, ally, waitingForRelease. Read "
+                + "targetMismatch, targetChanged, teamUnknown, ally, waitingForRelease, delayed; a press vanilla "
+                + "throws away (screen, world change) drops its guard (guard 'dropped', 'pressCleared'). Read "
                 + "getInputDispatches(dispatchSeq) for the dispatch verdict. tapKeyReceipt stays unguarded.",
                 schema("targetUuid:string", "requireOtherTeam:bool"),
                 a -> api.tapAttackGuarded(argStr(a, "targetUuid"), argBool(a, "requireOtherTeam")));
