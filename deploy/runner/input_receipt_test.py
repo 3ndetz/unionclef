@@ -6,8 +6,9 @@ whether or not the press was suppressed (InputControls.tryPress is a no-op while
 for its release), and says nothing about the crosshair when vanilla's doAttack consumed the press.
 Cases:
   entity   aim at a NoAI pig 2.5 blocks away, one receipt press: accepted, crosshair ENTITY at the
-           call and at dispatch, processed, cooldown 0; the pig's health drops (server-side truth);
-  miss     aim at the sky: accepted, dispatch crosshair MISS, processed (a miss swing), no entity;
+           call and at dispatch, not refused by cooldown, vanillaReturn false (doAttack returns true
+           only for a block it starts breaking); the pig's health drops (server-side truth);
+  miss     aim at the sky: accepted, dispatch crosshair MISS, not refused (a miss swing);
   double   two receipt presses back to back: if they land in one tick the second is suppressed
            (recorded, not forced -- RPC timing decides), and only accepted presses dispatch.
 tapKey itself is unchanged and not called here.
@@ -64,18 +65,18 @@ r, ds = press_and_read()
 hp1 = pig_hp()
 rows["entity"] = {"receipt": r, "dispatches": ds, "pigHp": [hp0, hp1]}
 checks["entity: accepted, ENTITY at call"] = r.get("accepted") is True and r["crosshairAtCall"].get("type") == "ENTITY"
-checks["entity: one dispatch, ENTITY, processed, cooldown 0"] = (
-    len(ds) == 1 and ds[0]["crosshair"].get("type") == "ENTITY" and ds[0].get("processed") is True
-    and ds[0].get("cooldown") == 0)
+checks["entity: one dispatch, ENTITY, not refused"] = (
+    len(ds) == 1 and ds[0]["crosshair"].get("type") == "ENTITY" and ds[0].get("refusedByCooldown") is False
+    and ds[0].get("vanillaReturn") is False)
 checks["entity: pig health dropped"] = hp0 is not None and hp1 is not None and hp1 < hp0
 
-bot.py.call("lookAt", CX + 0.5, STAND_Y + 40, CZ + 0.6)
+bot.py.call("lookAt", CX + 0.5, STAND_Y + 40.0, CZ + 0.6)   # all floats: py4j picks lookAt(double x3)
 time.sleep(1.2)
 r, ds = press_and_read()
 rows["miss"] = {"receipt": r, "dispatches": ds}
-checks["miss: accepted, MISS dispatched and processed"] = (
+checks["miss: accepted, MISS dispatched, not refused"] = (
     r.get("accepted") is True and len(ds) == 1 and ds[0]["crosshair"].get("type") == "MISS"
-    and ds[0].get("processed") is True)
+    and ds[0].get("refusedByCooldown") is False)
 
 time.sleep(1.2)
 seq0 = bot.py.call("getInputDispatches", 0, 1)["lastSeq"]

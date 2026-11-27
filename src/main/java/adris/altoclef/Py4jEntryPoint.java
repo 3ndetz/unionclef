@@ -2476,9 +2476,11 @@ public class Py4jEntryPoint {
     /**
      * Read-only: vanilla's player-input attacks (MinecraftClient.doAttack -- a pressed attack key,
      * from tapKey/holdKey or a human) with seq > sinceSeq, oldest first, at most limit (<= 0: 64).
-     * Each: seq, tick, cooldown (> 0 means vanilla refused it), crosshair at dispatch (as in
-     * tapKeyReceipt), processed (vanilla handled it: an entity attack sent, a block started or a
-     * miss swing -- whether damage landed is the server's call). Automatic combat does not pass
+     * Each: seq, tick, cooldown and refusedByCooldown (cooldown > 0: vanilla did nothing with the
+     * press), crosshair at dispatch (as in tapKeyReceipt) -- what an unrefused press attacked: an
+     * ENTITY, a BLOCK started, or a MISS swing -- and vanillaReturn (doAttack's raw value: true only
+     * when a block began breaking, false for entity hits and misses alike). Whether damage landed is
+     * the server's call. Automatic combat does not pass
      * through doAttack and is not listed. Returns {ok, lastSeq, dispatches}.
      */
     public Map<String, Object> getInputDispatches(int sinceSeq, int limit) {

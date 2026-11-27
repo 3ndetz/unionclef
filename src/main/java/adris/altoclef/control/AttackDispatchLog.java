@@ -34,14 +34,17 @@ public final class AttackDispatchLog {
         MinecraftClient mc = MinecraftClient.getInstance();
         open.put("tick", mc.world == null ? -1L : mc.world.getTime());
         open.put("cooldown", cooldown);   // > 0: vanilla refuses the attack (the miss-swing timer)
+        open.put("refusedByCooldown", cooldown > 0);
         open.put("crosshair", describe(target));
     }
 
-    /** Called at the return of doAttack: true when vanilla processed it (an entity hit, a block
-     *  started, or a miss swing) -- not that damage was dealt; the server decides that. */
-    public static synchronized void end(boolean processed) {
+    /** Called at the return of doAttack with its raw return value. That value is NOT "the attack
+     *  happened": vanilla returns true only when the press started breaking a block, and false for
+     *  an entity attack and a miss swing alike (measured: a pig hit that cost it a heart read false).
+     *  Kept as vanillaReturn; refusedByCooldown is the real "vanilla did nothing" signal. */
+    public static synchronized void end(boolean vanillaReturn) {
         if (open == null) return;
-        open.put("processed", processed);
+        open.put("vanillaReturn", vanillaReturn);
         LOG.addLast(open);
         while (LOG.size() > CAP) LOG.removeFirst();
         open = null;

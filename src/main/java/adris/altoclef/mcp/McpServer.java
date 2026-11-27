@@ -393,8 +393,9 @@ public class McpServer {
                 schema("name:string"), a -> api.tapKeyReceipt(argStr(a, "name")));
         tool("getInputDispatches",
                 "Read-only: vanilla's player-input attacks (a pressed attack key, ours or a human's) after "
-                + "sinceSeq, oldest first: seq, tick, cooldown (>0 = vanilla refused it), crosshair at dispatch, "
-                + "processed. Automatic combat is not listed. limit <= 0 -> 64.",
+                + "sinceSeq, oldest first: seq, tick, cooldown / refusedByCooldown (vanilla did nothing), crosshair at "
+                + "dispatch (what an unrefused press attacked), vanillaReturn (true only when a block began "
+                + "breaking). Automatic combat is not listed. limit <= 0 -> 64.",
                 schema("sinceSeq:int", "limit:int"),
                 a -> api.getInputDispatches(argInt(a, "sinceSeq"), argInt(a, "limit")));
         tool("getPlayerTeams",
